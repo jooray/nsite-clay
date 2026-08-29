@@ -138,24 +138,27 @@
   }
   @keyframes blink { 50% { opacity: 0; } }
 
-  /* ---- the feed, dressed as command output ---- */
+  /* ---- the feed, dressed as command output ------------------------------
+     feed.js appends its own fallback stylesheet to <head> at runtime, which
+     lands after this block, so every rule below carries the container
+     selector to win the cascade. */
 
-  .nc-feed { gap: .35rem; margin-bottom: .3rem; }
-  .nc-item {
+  [nc\:feed].nc-feed { gap: .35rem; margin-bottom: .3rem; }
+  [nc\:feed] .nc-item {
     background: transparent;
     border: 0;
     border-left: 2px solid var(--nc-edge);
     border-radius: 0;
     padding: .1rem 0 .75rem .9rem;
   }
-  .nc-by { font-size: .82rem; opacity: 1; color: var(--nc-ink-dim); margin-bottom: .25rem; }
-  .nc-by .nc-name { color: var(--amber); font-weight: 400; }
-  .nc-avatar { border-radius: 2px; width: 18px; height: 18px; }
-  .nc-title { font-size: 1rem; color: var(--amber); }
-  .nc-text, .nc-summary { color: var(--nc-ink); font-size: .95rem; }
-  .nc-text a, .nc-summary a { color: var(--amber); }
-  .nc-feed-status { color: var(--nc-ink-dim); }
-  .nc-tags { color: var(--nc-accent); opacity: .8; }
+  [nc\:feed] .nc-by { font-size: .82rem; opacity: 1; color: var(--nc-ink-dim); margin-bottom: .25rem; }
+  [nc\:feed] .nc-by .nc-name { color: var(--amber); font-weight: 400; }
+  [nc\:feed] .nc-avatar { border-radius: 2px; width: 18px; height: 18px; }
+  [nc\:feed] .nc-title { font-size: 1rem; color: var(--amber); }
+  [nc\:feed] .nc-text, [nc\:feed] .nc-summary { color: var(--nc-ink); font-size: .95rem; opacity: 1; }
+  [nc\:feed] .nc-text a, [nc\:feed] .nc-summary a { color: var(--amber); }
+  [nc\:feed] .nc-feed-status { color: var(--nc-ink-dim); opacity: 1; }
+  [nc\:feed] .nc-tags { color: var(--nc-accent); opacity: .8; }
 
   footer.sig { margin: 2.5rem 0 0; color: var(--nc-ink-dim); font-size: .85rem; }
 
@@ -180,13 +183,13 @@
 
   <div class="body">
 
-    <p class="cmd" data-prompt="$"><b>hush</b> --version</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> --version</p>
     <div class="out" editable>
       <p>hush 0.9.3 (build 2026-07-14, MIT-0)<br>
       A command-line tool that strips metadata out of photos before they leave your machine.</p>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>cat</b> README</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> README</p>
     <div class="out" editable>
       <p>Every phone camera writes more into a JPEG than the picture. The GPS
       fix, the serial number of the body, the timestamp down to the second, and
@@ -200,7 +203,7 @@
       stdin. It has no config file, no daemon and no update checker.</p>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>hush</b> --help</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> --help</p>
     <div class="out">
       <div class="rows" editable>
         <span class="k">-o, --out DIR</span><span class="n">path</span><span class="d">write cleaned copies here instead of in place</span>
@@ -215,7 +218,7 @@
       photos on a phone sideways.</p>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>hush</b> -n ~/Pictures/roll-14</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> -n ~/Pictures/roll-14</p>
     <div class="out">
       <pre class="block" editable>roll-14/IMG_0091.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.4 kB
 roll-14/IMG_0092.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.1 kB
@@ -225,7 +228,7 @@ roll-14/scan-A.tif     XMP history (7)    Epson V600        -41.2 kB
 4 files, 87.3 kB of metadata, nothing written (dry run)</pre>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>ls</b> releases/</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>ls</b> releases/</p>
     <div class="out">
       <div class="rows" editable>
         <span class="k">0.9.3</span><span class="n">2026-07-14</span><span class="d">TIFF support, and a fix for HEIC files written by iOS 18</span>
@@ -237,7 +240,7 @@ roll-14/scan-A.tif     XMP history (7)    Epson V600        -41.2 kB
       Every release is reproducible from a clean checkout.</p>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>cat</b> INSTALL</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> INSTALL</p>
     <div class="out">
       <pre class="block" editable># macOS and Linux, from source
 git clone https://example.org/hush.git
@@ -253,7 +256,7 @@ sha256sum -c hush-0.9.3.sums</pre>
       </div>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>cat</b> docs/limits.md</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> docs/limits.md</p>
     <div class="out" editable>
       <p>hush does not touch the pixels, so it cannot help with anything the
       pixels give away. A window in the background is still a window in the
@@ -266,7 +269,7 @@ sha256sum -c hush-0.9.3.sums</pre>
       why a Nikon NEF comes out of it smaller than you expect.</p>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>nostr</b> feed --kind note --limit 4</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>nostr</b> feed --kind note --limit 4</p>
     <div class="out">
       <div nc:feed="notes"
            nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
@@ -274,7 +277,7 @@ sha256sum -c hush-0.9.3.sums</pre>
            nc:style="list"></div>
     </div>
 
-    <p class="cmd" data-prompt="$"><b>cat</b> CONTRIBUTING</p>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> CONTRIBUTING</p>
     <div class="out" editable>
       <p>Patches by email, plain diff or git format-patch, either is fine. Bug
       reports want the camera model and a file that shows the problem. If you
@@ -298,7 +301,7 @@ sha256sum -c hush-0.9.3.sums</pre>
   <button class="nc-owner-only" data-nc-history>History</button>
   <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
 </div>
-<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>

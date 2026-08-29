@@ -40,6 +40,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* With scripting off there is no edit gate, so the toolbar would sit there
+     doing nothing. Hide the chrome until the runtime has started. */
+  html:not([nc\:ready]) .nc-ui-chrome { display: none; }
   body {
     margin: 0; color: var(--nc-ink); font: 17px/1.65 var(--sans);
     background-color: var(--nc-bg);
@@ -89,11 +92,11 @@
   .book p { margin: 0 0 .9rem; color: var(--nc-ink-dim); max-width: 52ch; }
   .book p:last-child { margin: 0; }
 
-  .after-feed { margin: 1.1rem 0 0; font-size: .92rem; }
+  .after-feed { margin: 1.1rem 0 0; font-size: .92rem; color: var(--nc-ink-dim); }
 
   /* both feeds: one author, so the avatar and the repeated name are noise */
   .nc-avatar, .nc-name { display: none; }
-  .nc-by .nc-when { margin-left: 0; }
+  .nc-feed .nc-by .nc-when { margin-left: 0; }
   .nc-by { opacity: 1; }
   .nc-when { font: .73rem/1 var(--nc-mono); letter-spacing: .1em; text-transform: uppercase;
              color: var(--nc-ink-dim); text-decoration: none; }
@@ -105,7 +108,8 @@
   .nc-feed-articles .nc-cover { height: 8rem; }
   .nc-feed-articles .nc-title { font: 600 1.14rem/1.3 var(--serif); margin: .45rem 0 .45rem; }
   .nc-feed-articles .nc-title a:hover { color: var(--nc-accent); }
-  .nc-feed-articles .nc-summary { font-size: .92rem; }
+  .nc-feed-articles .nc-summary { font-size: .92rem; display: -webkit-box;
+    -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
   .nc-feed-articles .nc-tags { color: var(--nc-accent); opacity: .75; }
 
   /* short notes: a timeline down the left, no boxes */
@@ -148,7 +152,7 @@
 
   <section id="now">
     <div class="sec-head">
-      <h2 editable="single-line">What I am on about</h2>
+      <h2 editable="single-line">What I'm on about</h2>
       <span class="side" editable="single-line">now</span>
     </div>
     <div class="now" editable>
@@ -168,8 +172,8 @@
       <h3 editable="single-line">Tamers of Entropy</h3>
       <div editable>
         <p>Mesh networks, infrastructure, surveillance, and people who see a wall and start
-          digging. Underneath all of it, identity: none of the characters, authors or
-          collaborators use a surname, and a few of them have no name at all.</p>
+          digging. Underneath all of it, identity. None of the characters, authors or
+          collaborators use a surname, and a few of the characters have no name at all.</p>
         <p>Several of the characters have their own keypairs and post as themselves. Read the
           book and you find out what lens they were looking through.</p>
       </div>
@@ -197,11 +201,11 @@
 
   <footer>
     <div editable>
-      <p>Reach me at <a href="lightning:juraj-bzzz@pay.cypherpunk.today">juraj-bzzz@pay.cypherpunk.today</a>
-        or at the npub above. No form, no mailing list.</p>
+      <p>Zaps go to <a href="lightning:juraj-bzzz@pay.cypherpunk.today">juraj-bzzz@pay.cypherpunk.today</a>.
+        For anything else, the npub above.</p>
       <p>This page is a single HTML file that edits and republishes itself, built with
-        <a href="https://github.com/jooray/nsite-clay">nsite-clay</a>. Nothing here is stored on
-        a server anybody has to keep running.</p>
+        <a href="https://github.com/jooray/nsite-clay">nsite-clay</a>. Nothing behind it is a
+        server I have to keep running.</p>
     </div>
   </footer>
 

@@ -72,6 +72,21 @@ nc.editable.enable() / .disable()  // re-run enable() after inserting new [edita
 nc.editable.block("H2")            // what the block menu calls
 nc.reloadToLatest()                // reload through a URL no cache can satisfy
 
+// structure: the DOM is the database, these are the operations on it
+nc.dom.clone(el) / .remove(el) / .move(el, +1|-1, selector)
+nc.dom.insert(target, html, "beforeend") / .addFrom("template-id", container)
+nc.dom.toggle(el, "hidden") / .set(el, "data-status", "done")
+nc.dom.cloneClosest(btn, ".card")        // from a control inside the block
+nc.dom.removeClosest(btn, ".card") / .removeClosestAsk(btn, ".card", "this card")
+nc.dom.moveClosest(btn, -1, ".card") / .toggleClosest(btn, ".card", "hidden")
+nc.dom.all(".card") / .by(".card", "data-status")   // reading it back
+
+// state with no visual form, kept in a JSON script block in the page
+nc.state.get() / .set({…}) / .update({…})           // optional id, default "app-state"
+
+// a published post, rendered into the page and stamped with its address
+nc.compose.bake(event, container) / .refreshBaked() / .addressOf(event)
+
 nc.addDocumentTransform(fn)        // fn(clone, doc) runs on the save clone
 nc.addEventListener("nsiteclay:status", handler)
 // also: ready, login, logout, connect-uri, outdated
@@ -111,9 +126,17 @@ A save keeps the `editable` attribute as an inert marker and drops the rest: no
 | `clay="no-snapshot"` or `no-snapshot` | never leaves the live page |
 | `nc:chrome` | runtime UI; always stripped |
 | `nc:keep-editable` | keep `contenteditable` on this element in the saved file |
+| `nc:no-persist` | a form control whose value is not written into the file |
+| `nc:baked` | where `bake()` puts a post when no container is named |
+| `nc:from` | on a baked post: the `naddr` or `nevent` it was rendered from |
 
 Form state is written into markup before serialising, so inputs, checkboxes and selects survive
-a save. Password and file inputs never are.
+a save: a checked box is still checked for the next visitor, which is what makes the document a
+database. Password and file inputs never are, and `nc:no-persist` opts a search box or a filter
+out.
+
+Where a given thing belongs, in the document or on relays, is
+**[docs/state.md](state.md)**.
 
 State that should not persist belongs in a JavaScript property or a `WeakMap`, not an
 attribute. Serialising captures attributes, so anything in `dataset` is in the file forever.

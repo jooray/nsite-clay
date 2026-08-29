@@ -19,7 +19,8 @@ import { Media, parseVideoUrl } from "./media.js";
 import { Feed, readFeedConfig } from "./feed.js";
 import { Compose } from "./compose.js";
 import { Settings } from "./settings.js";
-import { toast, field, modal } from "./ui.js";
+import { Dom, State } from "./dom.js";
+import { toast, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
 
@@ -55,6 +56,8 @@ class NsiteClay extends EventTarget {
     this.feed = new Feed(this);
     this.compose = new Compose(this);
     this.settings = new Settings(this);
+    this.dom = new Dom(this);
+    this.state = new State(this);
     this.status = "idle";
     this._subs = [];
     this._transforms = [];
@@ -451,7 +454,7 @@ nc.ready = (async () => {
 })();
 
 Object.assign(nc, {
-  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal,
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
 });
 

@@ -35,6 +35,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* `.btn` sets a display, which would otherwise win over the browser's own
+     rule for [hidden]. A control that ships hidden has to stay hidden. */
+  [hidden] { display: none !important; }
   body {
     margin: 0;
     background: var(--nc-bg);
@@ -47,9 +50,6 @@
       text-decoration-color: var(--nc-accent); }
   a:hover { color: var(--nc-accent); }
   p { margin: 0 0 1rem; }
-
-  /* Anything set in mono is a detail off the poster, so it is tracked wide. */
-  .mono { font-family: var(--nc-mono); letter-spacing: .22em; text-transform: lowercase; }
 
   /* ---- the head of the invitation --------------------------------------- */
 
@@ -141,6 +141,11 @@
   footer { margin: 4rem 0 0; padding-top: 1.6rem; border-top: 1px solid var(--line);
            font: .7rem/1.8 var(--nc-mono); letter-spacing: .14em; color: var(--nc-ink-dim); }
 
+  /* Nothing sets nc:editing until the runtime has read the edit gate, so with
+     scripting off the toolbar would sit there as dead furniture. Hide the
+     chrome until the gate has actually been decided. */
+  html:not([nc\:editing]) .nc-ui-chrome { display: none !important; }
+
   /* The editing outline is white-on-black too; the base stylesheet's accent
      ring would be the only red on the page that is not the ostrich. */
   [editable]:focus { outline-color: var(--nc-accent); }
@@ -170,27 +175,27 @@
 
   <dl class="facts">
     <div class="fact">
-      <dt>kedy</dt>
+      <dt editable="single-line no-toolbar">kedy</dt>
       <dd>
         <div class="big" id="ev-date" editable="single-line no-toolbar">sobota 12. 9. 2026</div>
         <div class="big" id="ev-time" editable="single-line no-toolbar">13:30–15:00</div>
       </dd>
     </div>
     <div class="fact">
-      <dt>kde</dt>
+      <dt editable="single-line no-toolbar">kde</dt>
       <dd>
         <div class="big place" id="ev-place" editable="single-line no-toolbar">Amfiteáter ChainCamp CZ</div>
       </dd>
     </div>
     <div class="fact">
-      <dt>počasie</dt>
+      <dt editable="single-line no-toolbar">počasie</dt>
       <dd class="note" id="ev-weather" editable="single-line">Amfiteáter vonku v prípade priaznivého počasia, v blízkosti vchodu do budovy v prípade nepriaznivého počasia</dd>
     </div>
   </dl>
 
   <div class="about" id="ev-desc" editable>
     <p>Pokec, ukazovanie si npubov, appiek a zdieľanie zážitkov zo zapathonov.</p>
-    <p>Príď aj vtedy, ak si na Nostri týždeň. Kto onboardne Nostričov rovno na chaincampe a donesie ich, je najväčší vedúci.</p>
+    <p>Príďte aj vtedy, ak ste na Nostri týždeň. Kto onboardne Nostričov rovno na chaincampe a donesie ich, je najväčší vedúci.</p>
   </div>
 
   <div class="actions">
@@ -204,13 +209,13 @@
     <p class="tags" editable="single-line no-toolbar">#NostrFrens #ChainCamp2026</p>
   </section>
 
-  <h2 class="feed-head">Čo píše organizátor</h2>
+  <h2 class="feed-head" editable="single-line no-toolbar">Čo píše organizátor</h2>
   <div nc:feed="notes" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="3"></div>
 
   <p class="signoff" editable="single-line no-toolbar">Vidíme sa v amfiteátri.</p>
 
   <footer>
-    <p>Táto pozvánka je jeden HTML súbor. Býva na Nostri a na Blossome a prepisuje sa sama.</p>
+    <p editable="single-line">Táto pozvánka je jeden HTML súbor. Býva na Nostri a na Blossome a prepisuje sa sama.</p>
   </footer>
 
 </main>
@@ -325,7 +330,7 @@
 
   btn.onclick = () => {
     const file = ics();
-    if (!file) return nc.toast("Dátum sa nedá prečítať. Napíš ho ako 12. 9. 2026.");
+    if (!file) return nc.toast("Dátum sa nedá prečítať. Napíšte ho ako 12. 9. 2026.");
     const name = (text("#ev-title").toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pozvanka") + ".ics";

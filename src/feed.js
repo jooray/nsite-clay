@@ -250,6 +250,7 @@ export class Feed {
     this._styled = true;
     const s = this.doc.createElement("style");
     s.setAttribute("nc:chrome", "");
+    s.setAttribute("data-nc-fallback", "");
     s.textContent = `
 .nc-feed { display: grid; gap: 1rem; }
 .nc-feed-grid { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
@@ -278,7 +279,10 @@ export class Feed {
 .nc-embed-play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 3rem;
   color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,.7); }
 `;
-    this.doc.head.appendChild(s);
+    // First child, not last: this is a fallback so an unstyled page still looks
+    // deliberate, and a linked stylesheet must be able to override it at equal
+    // specificity rather than losing to whatever was injected later.
+    this.doc.head.insertBefore(s, this.doc.head.firstChild);
   }
 
   // ---- the insert dialog --------------------------------------------------

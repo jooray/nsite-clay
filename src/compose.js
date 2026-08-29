@@ -6,16 +6,54 @@
 // field that matters here, and why editing an article means loading the newest
 // event for a slug and republishing under the same one.
 //
-// Nothing here touches the document itself. A post goes to relays; the page is
-// saved separately. They are two different publishing acts and conflating them
-// would make it impossible to fix a typo in a note without republishing a site.
+// A post goes to relays and the page is saved separately: two publishing acts,
+// deliberately not conflated, so fixing a typo in a note does not republish the
+// whole site.
+//
+// They can still meet. `bake()` writes a rendered copy of a published post into
+// the document and stamps it with the event's address, so the page is
+// self-contained and readable without JavaScript while the post stays a
+// first-class Nostr object that every other client can see. The event is the
+// original; the markup is a cached rendering that knows where it came from.
+// See docs/state.md for which of the two anything belongs in.
 import { verifyEvent, nip19 } from "nostr-tools";
-import { modal, field, toast } from "./ui.js";
+import { modal, field, checkbox, toast } from "./ui.js";
 
 const slugify = (s) => String(s || "").toLowerCase().trim()
   .replace(/['"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
 
 const tag = (ev, name) => ev.tags.find((t) => t[0] === name)?.[1];
+
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// Long-form content is Markdown, and a baked copy has to be readable without
+// JavaScript, so it is rendered once at bake time. This handles the parts a
+// post actually uses. A page that needs full Markdown should bake the HTML it
+// wants instead of asking this to grow.
+function markdownish(md) {
+  const blocks = String(md || "").replace(/\r\n/g, "\n").split(/\n{2,}/);
+  const inline = (t) => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|\W)\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>');
+  return blocks.map((b) => {
+    const line = b.trim();
+    if (!line) return "";
+    const h = line.match(/^(#{1,4})\s+(.*)$/s);
+    if (h) { const n = Math.min(h[1].length + 1, 5); return `<h${n}>${inline(h[2])}</h${n}>`; }
+    if (/^```/.test(line)) return `<pre><code>${esc(line.replace(/^```\w*\n?|```$/g, ""))}</code></pre>`;
+    if (/^>\s/.test(line)) return `<blockquote><p>${inline(line.replace(/^>\s?/gm, ""))}</p></blockquote>`;
+    if (/^[-*]\s/.test(line)) {
+      return "<ul>" + line.split("\n").map((li) => `<li>${inline(li.replace(/^[-*]\s+/, ""))}</li>`).join("") + "</ul>";
+    }
+    if (/^\d+\.\s/.test(line)) {
+      return "<ol>" + line.split("\n").map((li) => `<li>${inline(li.replace(/^\d+\.\s+/, ""))}</li>`).join("") + "</ol>";
+    }
+    return `<p>${inline(line).replace(/\n/g, "<br>")}</p>`;
+  }).join("\n");
+}
 
 export class Compose {
   constructor(nc) { this.nc = nc; this.doc = nc.doc; }
@@ -97,11 +135,94 @@ export class Compose {
     return [...byD.values()].sort((a, b) => b.created_at - a.created_at);
   }
 
+  // ---- baking a published post into the page ------------------------------
+
+  // The address a baked copy remembers. For an article that is the naddr, which
+  // survives the author editing it; for a note there is only the event id.
+  addressOf(ev) {
+    return ev.kind === 30023
+      ? nip19.naddrEncode({ kind: 30023, pubkey: ev.pubkey, identifier: tag(ev, "d") || "" })
+      : nip19.neventEncode({ id: ev.id, author: ev.pubkey });
+  }
+
+  // Render a published event as ordinary markup. Deliberately plain: a template
+  // styles it, and anything cleverer would be a second renderer to keep in step
+  // with the feed one.
+  render(ev) {
+    const el = this.doc.createElement("article");
+    el.className = ev.kind === 30023 ? "nc-baked nc-baked-article" : "nc-baked nc-baked-note";
+    el.setAttribute("nc:from", this.addressOf(ev));
+    el.setAttribute("nc:at", String(ev.created_at));
+    const when = new Date((Number(tag(ev, "published_at")) || ev.created_at) * 1000)
+      .toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+    if (ev.kind === 30023) {
+      const title = tag(ev, "title") || tag(ev, "d") || "Untitled";
+      const summary = tag(ev, "summary") || "";
+      el.innerHTML =
+        `<h2 editable="single-line">${esc(title)}</h2>` +
+        `<p class="nc-baked-when"><time datetime="${new Date(ev.created_at * 1000).toISOString()}">${esc(when)}</time></p>` +
+        (summary ? `<p class="nc-baked-summary" editable="single-line">${esc(summary)}</p>` : "") +
+        `<div class="nc-baked-body" editable>${markdownish(ev.content)}</div>` +
+        `<p class="nc-baked-link"><a href="https://njump.me/${esc(this.addressOf(ev))}" rel="noopener">Read it on Nostr</a></p>`;
+    } else {
+      el.innerHTML =
+        `<div class="nc-baked-body" editable>${markdownish(ev.content)}</div>` +
+        `<p class="nc-baked-when"><a href="https://njump.me/${esc(this.addressOf(ev))}" rel="noopener">` +
+        `<time datetime="${new Date(ev.created_at * 1000).toISOString()}">${esc(when)}</time></a></p>`;
+    }
+    return el;
+  }
+
+  // Put it in the page. Re-baking the same address replaces the old copy rather
+  // than stacking a second one, which is what makes this repeatable.
+  bake(ev, container = null) {
+    const address = this.addressOf(ev);
+    const existing = this.doc.querySelector(`[nc\\:from="${CSS.escape(address)}"]`);
+    const el = this.render(ev);
+    if (existing) existing.replaceWith(el);
+    else {
+      const host = (typeof container === "string" ? this.doc.querySelector(container) : container)
+        || this.doc.querySelector("[nc\\:baked]")
+        || this.doc.querySelector("[editable]")?.parentElement
+        || this.doc.body;
+      host.appendChild(el);
+    }
+    this.nc.editable.refresh();
+    this.nc.dirty = true;
+    this.nc._emit("nsiteclay:baked", { address, event: ev });
+    return el;
+  }
+
+  // Bring every baked copy back in line with what the relays now hold. An
+  // author who fixed a typo in a Nostr client gets the fix here too.
+  async refreshBaked() {
+    const nodes = [...this.doc.querySelectorAll("[nc\\:from]")];
+    let updated = 0;
+    for (const node of nodes) {
+      const from = node.getAttribute("nc:from");
+      let filter;
+      try {
+        const d = nip19.decode(from);
+        filter = d.type === "naddr"
+          ? { kinds: [d.data.kind], authors: [d.data.pubkey], "#d": [d.data.identifier], limit: 1 }
+          : { ids: [d.data.id ?? d.data], limit: 1 };
+      } catch { continue; }
+      const ev = await this.nc.pool.get(this.relays, filter);
+      if (!ev || !verifyEvent(ev)) continue;
+      if (Number(node.getAttribute("nc:at")) >= ev.created_at) continue;
+      node.replaceWith(this.render(ev));
+      updated++;
+    }
+    if (updated) { this.nc.editable.refresh(); this.nc.dirty = true; }
+    return updated;
+  }
+
   // ---- the editor ---------------------------------------------------------
 
   // `existing` is a kind-30023 event to edit; omit it to start a new article.
   async openArticle(existing = null) {
-    let slug, title, summary, image, tags, content;
+    let slug, title, summary, image, tags, content, bake;
     const startedAt = existing ? Number(tag(existing, "published_at")) || existing.created_at : null;
     const out = await modal({
       doc: this.doc,
@@ -127,6 +248,13 @@ export class Compose {
           value: existing ? existing.tags.filter((t) => t[0] === "t").map((t) => t[1]).join(", ") : "",
         });
         content = field(body, { label: "Content, in Markdown", rows: 16, value: existing ? existing.content : "" });
+        bake = checkbox(body, {
+          label: "Also put a copy in this page",
+          checked: !!this.doc.querySelector("[nc\\:baked]"),
+          note: "The post goes to relays either way, so every Nostr client sees it. A copy in " +
+                "the page makes it readable without JavaScript and keeps working if the relays " +
+                "do not answer. Save the page afterwards to keep it.",
+        });
       },
       onSubmit: async (h) => {
         h.status("signing…");
@@ -144,6 +272,7 @@ export class Compose {
     });
     if (out) {
       toast(`Published “${tag(out, "title") || tag(out, "d")}”`, { doc: this.doc });
+      if (bake?.checked) this.bake(out);
       this.nc.feed?.refresh();
     }
     return out;

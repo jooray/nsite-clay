@@ -45,7 +45,7 @@ authored markup and stays).
   <button class="nc-owner-only" data-nc-history>History</button>
   <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
 </div>
-<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>
@@ -61,6 +61,28 @@ no save handler and no version dialog of its own.
 
 Mark everything an owner would plausibly want to change. A template nobody can
 edit without opening a text editor has missed the point.
+
+## Contextual controls
+
+A page that is a board or a list needs more than typing. Put the controls on the
+thing they act on, mark them `nc-gear` so they appear only for a signed-in owner
+who is editing, and `clay="no-save"` so they never reach the file:
+
+```html
+<article class="card" data-status="active">
+  <h3 editable="single-line">Fix Blossom sync</h3>
+  <menu class="nc-gear" clay="no-save">
+    <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+    <button type="button" onclick="nc.dom.moveClosest(this, -1, '.card')">Up</button>
+    <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+  </menu>
+</article>
+```
+
+`nc.dom` arms new markup for editing and marks the page unsaved, so a control is
+one attribute rather than a closure. State with no visual form goes in a JSON
+block through `nc.state`. What belongs in the document and what belongs on relays
+is [docs/state.md](../../docs/state.md).
 
 ## Nostr content
 

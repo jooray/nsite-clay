@@ -47,6 +47,8 @@ await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
 
 const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   await nc.ready;
+  // bake() only reads tags and content, so an unsigned template is enough here.
+  const finalizeEventInPage = (t) => ({ ...t, pubkey: PUB, id: "0".repeat(64), sig: "0".repeat(128) });
   const out = [];
   const t = (name, pass, detail = "") => out.push({ name, pass, detail });
   const err = async (fn) => { try { await fn(); return null; } catch (e) { return e.message; } };
@@ -263,6 +265,84 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   location.hash = "";
   nc.settings.editGate = "always";
   nc._dirty = false;
+
+  // --- the document as a database ------------------------------------------
+  nc.editable.enable();          // structural edits only arm regions while editing is on
+  const board = document.getElementById("board");
+  const cards = () => nc.dom.all(".card", board);
+
+  t("a card can be duplicated", (nc.dom.clone(cards()[0]), cards().length === 3));
+  t("the copy carries no id from the original",
+    !nc.dom.all(".card[id]", board).length);
+  t("a duplicate is armed for editing straight away",
+    cards()[1].querySelector("[editable]").isContentEditable);
+
+  nc.dom.remove(cards()[1]);
+  t("a card can be removed", cards().length === 2);
+
+  const first = cards()[0].querySelector("[editable]").textContent;
+  nc.dom.move(cards()[0], 1, ".card");
+  t("a card can be moved past its sibling",
+    cards()[1].querySelector("[editable]").textContent === first);
+
+  nc.dom.addFrom("card-tpl", board);
+  t("a <template> can be added to a container", cards().length === 3);
+
+  const gear = board.querySelector(".nc-gear button");
+  t("a gear addresses the block it sits in",
+    nc.dom.cloneClosest(gear, ".card")?.classList.contains("card") === true);
+  nc.dom.removeClosest(board.querySelector(".card"), ".card");
+
+  const grouped = nc.dom.by(".card", "data-status", board);
+  t("elements group by attribute, which is the query a board wants",
+    grouped.size >= 1 && [...grouped.values()].every((v) => Array.isArray(v)));
+
+  // state with no visual form
+  nc.state.set({ theme: "lunarpunk", tab: "development" });
+  t("JSON state round-trips through the document", nc.state.get().theme === "lunarpunk");
+  nc.state.update({ tab: "design" });
+  t("update merges rather than replacing",
+    nc.state.get().tab === "design" && nc.state.get().theme === "lunarpunk");
+  t("state is saved with the page", nc.getHTML().includes("lunarpunk"));
+  nc.state.set({ evil: "</script><img src=x>" });
+  t("a closing script tag in the data cannot end the block",
+    !/<\/script><img/.test(nc.state.block().textContent) &&
+    nc.state.get().evil === "</script><img src=x>");
+  nc.state.set({});
+
+  // gears are controls, not content
+  t("a gear never reaches the file", !nc.getHTML().includes('class="nc-gear"'));
+
+  nc.editable.disable();
+
+  // persistence, and the opt-out
+  document.getElementById("filter").value = "changed-filter";
+  const withForms = nc.getHTML();
+  t("a control persists its value by default", withForms.includes('value="changed"'));
+  t("nc:no-persist keeps a filter out of the file", !withForms.includes("changed-filter"));
+
+  // --- a post can live in both places --------------------------------------
+  {
+    const article = finalizeEventInPage({
+      kind: 30023, created_at: 4000,
+      tags: [["d", "hosting"], ["title", "Hosting without a host"],
+             ["summary", "The manifest is the deploy."], ["published_at", "4000"]],
+      content: "# Why\n\nThe manifest is a **replaceable** event.\n\n- one\n- two",
+    });
+    const el = nc.compose.bake(article, document.body);
+    t("a published post can be baked into the page", !!el && el.classList.contains("nc-baked"));
+    t("the baked copy remembers the event it came from",
+      /^naddr1/.test(el.getAttribute("nc:from") || ""));
+    t("Markdown becomes real markup", /<h2>Why<\/h2>/.test(el.innerHTML) && /<strong>/.test(el.innerHTML));
+    t("a list survives", /<li>one<\/li>/.test(el.innerHTML));
+    t("the baked copy is editable", el.querySelector("[editable]") !== null);
+    t("it is in the saved file, so a reader needs no relay", nc.getHTML().includes("Hosting without a host"));
+
+    const again = nc.compose.bake(article, document.body);
+    t("re-baking replaces rather than stacking",
+      document.querySelectorAll('[nc\\:from="' + again.getAttribute("nc:from") + '"]').length === 1);
+    el.remove(); again.remove();
+  }
 
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));

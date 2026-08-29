@@ -7,6 +7,13 @@
 <body>
   <div id="prose" editable><p>first paragraph</p></div>
   <h1 id="line" editable="single-line">a title</h1>
+  <div id="board">
+    <article class="card" data-status="active"><span editable="single-line">one</span>
+      <menu class="nc-gear" clay="no-save"><button type="button">x</button></menu></article>
+    <article class="card" data-status="done"><span editable="single-line">two</span></article>
+  </div>
+  <template id="card-tpl"><article class="card" data-status="active"><span editable="single-line">new</span></article></template>
+  <input id="filter" nc:no-persist value="typed-filter">
   <input id="f" value="typed">
   <input id="secret" type="password" value="">
   <input id="upload" type="file">

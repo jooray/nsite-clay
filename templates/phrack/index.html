@@ -76,8 +76,8 @@
 
   .center { text-align: center; }
 
-  header .line { display: block; margin: 0; }
-  header .zine { letter-spacing: .35em; font-weight: 700; }
+  header .line { display: block; margin: 0; font-size: 1em; font-weight: 400; }
+  header .zine { font-weight: 700; }
   header .title { font-weight: 700; margin-top: 1.5em; }
 
   /* ---- table of contents ---- */
@@ -129,26 +129,28 @@
 
   .back { display: inline-block; margin-top: .75em; }
 
-  /* ---- the feed, dressed as forwarded mail ------------------------------- */
+  /* ---- the feed, dressed as forwarded mail -------------------------------
+     feed.js appends its own fallback stylesheet to <head> at runtime, after
+     this block, so each rule here carries the container selector to win. */
 
-  .nc-feed { gap: 1.5em; }
-  .nc-item {
+  [nc\:feed].nc-feed { gap: 1.5em; }
+  [nc\:feed] .nc-item {
     background: transparent; border: 0; border-radius: 0;
     padding: 0 0 0 2ch; border-left: 1px solid var(--nc-ink);
   }
-  .nc-by {
+  [nc\:feed] .nc-by {
     display: block; opacity: 1; color: var(--nc-ink);
     font-size: 1em; margin-bottom: .75em;
   }
-  .nc-by .nc-name { font-weight: 400; }
-  .nc-by .nc-name::before { content: "From: "; }
-  .nc-by .nc-when { margin: 0; display: block; }
-  .nc-by .nc-when::before { content: "Date: "; }
-  .nc-avatar { display: none; }
-  .nc-title { font-size: 1em; font-weight: 700; margin: 0 0 .75em; }
-  .nc-text, .nc-summary { color: var(--nc-ink); font-size: 1em; }
-  .nc-tags { opacity: 1; font-size: 1em; }
-  .nc-feed-status { color: var(--nc-ink-dim); font-size: 1em; }
+  [nc\:feed] .nc-by .nc-name { font-weight: 400; }
+  [nc\:feed] .nc-by .nc-name::before { content: "From: "; }
+  [nc\:feed] .nc-by .nc-when { margin: 0; display: block; }
+  [nc\:feed] .nc-by .nc-when::before { content: "Date: "; }
+  [nc\:feed] .nc-avatar { display: none; }
+  [nc\:feed] .nc-title { font-size: 1em; font-weight: 700; margin: 0 0 .75em; }
+  [nc\:feed] .nc-text, [nc\:feed] .nc-summary { color: var(--nc-ink); font-size: 1em; opacity: 1; }
+  [nc\:feed] .nc-tags { opacity: 1; font-size: 1em; }
+  [nc\:feed] .nc-feed-status { color: var(--nc-ink-dim); font-size: 1em; opacity: 1; }
 
   @media (max-width: 30rem) { body { font-size: 13px; padding-top: 1rem; } }
 </style>
@@ -168,8 +170,8 @@
 
 <div class="rule" aria-hidden="true"></div>
 
-<nav aria-label="Contents">
-  <p>Contents</p>
+<nav id="contents" aria-label="Contents">
+  <p editable="single-line">Contents</p>
   <ol>
     <li><a href="#s00"><span class="n">  0x00  </span><span class="t">Introduction</span></a></li>
     <li><a href="#s01"><span class="n">  0x01  </span><span class="t">What it does</span></a></li>
@@ -195,7 +197,7 @@
     It has been running on a virtual machine with 256 MB of memory for eleven
     months and the process has never gone above 9 MB resident.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -219,7 +221,7 @@
     path is a file offset and a copy. That decision is the reason a paste
     server needs 900 lines rather than 9000.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -238,7 +240,7 @@
     <p>Run it behind whatever terminates TLS for you. It speaks plain HTTP/1.1
     and it will not pretend otherwise.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -267,7 +269,7 @@
     <code>rename</code>. On the box I use, eleven months of pastes compacted
     from 2.1 GB down to 340 MB in about four seconds.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -289,7 +291,7 @@
     <p>The server answers a HEAD with the expiry in a header, which is enough
     for a shell script to decide whether to re-upload.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -308,7 +310,7 @@
     <dd>The parser splits on the last colon, so <code>-l [::1]:7070</code>
     does not work. Patch welcome.</dd>
   </dl>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -322,7 +324,7 @@
        nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
        nc:limit="3"
        nc:style="list"></div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule-thin" aria-hidden="true"></div>
@@ -336,7 +338,7 @@
     on a gopher hole in Trondheim.</p>
     <p>Mail to mox at lowband dot org. Plain text, please.</p>
   </div>
-  <p><a class="back" href="#s00">[top]</a></p>
+  <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
 <div class="rule" aria-hidden="true"></div>
@@ -354,7 +356,7 @@
   <button class="nc-owner-only" data-nc-history>History</button>
   <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
 </div>
-<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>

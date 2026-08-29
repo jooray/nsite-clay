@@ -184,3 +184,32 @@ export function field(body, { label, type = "text", value = "", placeholder = ""
   body.appendChild(wrap);
   return input;
 }
+
+// A labelled checkbox with a note under it. Same shape as field(), so a dialog
+// can mix the two without special-casing either.
+export function checkbox(body, { label, checked = false, note = "" }) {
+  const doc = body.ownerDocument;
+  const wrap = doc.createElement("div");
+  wrap.className = "nc-field";
+  const l = doc.createElement("label");
+  l.style.cssText = "display:flex;gap:.55rem;align-items:flex-start;cursor:pointer;color:inherit";
+  const input = doc.createElement("input");
+  input.type = "checkbox";
+  input.checked = !!checked;
+  input.style.cssText = "width:auto;margin-top:.25rem;flex:0 0 auto";
+  const text = doc.createElement("span");
+  const strong = doc.createElement("b");
+  strong.style.fontWeight = "600";
+  strong.textContent = label;
+  text.appendChild(strong);
+  if (note) {
+    const small = doc.createElement("span");
+    small.style.cssText = "display:block;color:#9a92ad;font-size:.85em;margin-top:.15rem";
+    small.textContent = note;
+    text.appendChild(small);
+  }
+  l.append(input, text);
+  wrap.appendChild(l);
+  body.appendChild(wrap);
+  return input;
+}

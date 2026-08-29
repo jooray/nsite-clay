@@ -18,7 +18,7 @@
   /* A contents page, not a stack of buttons. Numbers down the left margin,
      dotted leaders between rows, the destination printed under every label the
      way a book prints a page number. Serif for the names, mono for anything a
-     machine reads. One red, used four times. */
+     machine reads. One red, and it only turns up where a hand goes. */
   :root {
     --nc-ink: #191512;
     --nc-ink-dim: #6e6353;
@@ -51,6 +51,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* `.btn` sets a display, which would otherwise win over the browser's own
+     rule for [hidden]. A control that ships hidden has to stay hidden. */
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--nc-bg); color: var(--nc-ink);
     font: 17px/1.6 var(--serif);
@@ -128,12 +131,16 @@
   html[nc\:editable="true"] .go [editable] { pointer-events: auto; }
 
   .kill {
-    position: absolute; top: .55rem; right: -.2rem; opacity: 0;
+    display: none; position: absolute; top: .55rem; right: -.2rem; opacity: 0;
     font: 1rem/1 var(--nc-mono); padding: .2rem .45rem; cursor: pointer;
     border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink-dim);
+    transition: opacity .12s;
   }
   .kill:hover { border-color: var(--nc-accent); color: var(--nc-accent); }
-  html[nc\:editable="true"] li:hover .kill, .kill:focus-visible { opacity: 1; }
+  /* Out of the page entirely for a reader, out of the way until wanted for the
+     owner: a row's delete control should never be one stray tab away. */
+  html[nc\:editable="true"] .kill { display: block; }
+  html[nc\:editable="true"] li:hover .kill, html[nc\:editable="true"] .kill:focus-visible { opacity: 1; }
 
   .add {
     display: none; width: 100%; margin: 0; padding: 1.05rem 0 1.05rem 2.9rem;
@@ -145,6 +152,11 @@
   .add:hover { color: var(--nc-accent); }
   .tip { display: none; margin: .9rem 0 0; font: .72rem/1.6 var(--nc-mono); color: var(--nc-ink-dim); }
   html[nc\:owner-here="true"] .tip { display: block; }
+
+  /* Nothing sets nc:editing until the runtime has read the edit gate, so with
+     scripting off the toolbar would sit there as dead furniture. Hide the
+     chrome until the gate has actually been decided. */
+  html:not([nc\:editing]) .nc-ui-chrome { display: none !important; }
 
   /* ---- zap ---------------------------------------------------------------- */
 
@@ -200,7 +212,7 @@
     </div>
   </header>
 
-  <h2 class="label">Contents</h2>
+  <h2 class="label" editable="single-line no-toolbar">Contents</h2>
 
   <ul class="links" id="links">
     <li>
@@ -244,7 +256,7 @@
         <span class="num" aria-hidden="true"></span>
         <span>
           <span class="name" editable="single-line no-toolbar">Newsletter</span>
-          <span class="desc" editable="single-line no-toolbar">One email a month. No tracking pixels in it.</span>
+          <span class="desc" editable="single-line no-toolbar">One email a month. Nobody but me ever sees the address list.</span>
           <span class="url" editable="single-line no-toolbar">https://example.com/mail</span>
         </span>
         <span class="arrow" aria-hidden="true">&rarr;</span>
@@ -256,17 +268,17 @@
   <button type="button" class="add nc-ui-chrome" id="add">+ Add a row</button>
   <p class="tip nc-ui-chrome">Type over the address under a label to point the row somewhere else.</p>
 
-  <h2 class="label">Lately on Nostr</h2>
+  <h2 class="label" editable="single-line no-toolbar">Lately on Nostr</h2>
   <div nc:feed="notes" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="3"></div>
 
-  <h2 class="label">Zap</h2>
+  <h2 class="label" editable="single-line no-toolbar">Zap</h2>
   <p class="zap">
     <span class="addr" id="lud16" editable="single-line no-toolbar">you@your.wallet</span>
     <button type="button" class="copy" id="copy-lud16" hidden>copy</button>
   </p>
 
   <footer>
-    <p>One HTML file. It lives on Nostr and Blossom, and it rewrites itself.</p>
+    <p editable="single-line">One HTML file. It lives on Nostr and Blossom, and it rewrites itself.</p>
   </footer>
 
 </main>

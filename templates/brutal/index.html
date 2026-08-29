@@ -76,7 +76,7 @@
   }
   h1 .two { display: block; margin-left: clamp(0px, 6vw, 5.5rem); color: var(--blue); }
 
-  .facts { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.75rem; }
+  .facts { display: flex; flex-wrap: wrap; gap: 1.15rem; margin-bottom: 2rem; }
   .fact {
     border: var(--edge) solid #000; box-shadow: var(--drop-sm);
     padding: .55rem .9rem; font-weight: 900; text-transform: uppercase;
@@ -151,23 +151,28 @@
   }
   .shout small { display: block; text-transform: none; font-size: 1rem; font-weight: 500; line-height: 1.5; margin-top: 1rem; letter-spacing: 0; }
 
-  /* ---- the feed, as stickers ---- */
+  /* ---- the feed, as stickers ---------------------------------------------
+     feed.js appends its own fallback stylesheet to <head> at runtime, after
+     this block, so each rule here carries the container selector to win. */
 
-  .nc-feed { gap: 1.4rem; }
-  .nc-feed-grid { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
-  .nc-item {
+  [nc\:feed].nc-feed { gap: 1.6rem; }
+  [nc\:feed].nc-feed-grid { grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+  [nc\:feed] .nc-item {
     border: var(--edge) solid #000; border-radius: 0; box-shadow: var(--drop-sm);
-    background: var(--nc-bg); padding: 1.1rem 1.2rem;
+    background: var(--nc-bg); padding: 1.1rem 1.2rem; overflow: visible;
   }
-  .nc-item:nth-child(3n+1) { background: var(--yellow); transform: rotate(-.8deg); }
-  .nc-item:nth-child(3n+2) { background: var(--cyan); transform: rotate(.6deg); }
-  .nc-item:nth-child(3n+3) { background: var(--nc-bg); transform: rotate(-.2deg); }
-  .nc-by { opacity: 1; font-weight: 900; text-transform: uppercase; font-size: .78rem; letter-spacing: .04em; border-bottom: 2px solid #000; padding-bottom: .45rem; }
-  .nc-avatar { border-radius: 0; border: 2px solid #000; }
-  .nc-title { font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; }
-  .nc-text, .nc-summary { color: #000; font-weight: 500; }
-  .nc-tags { opacity: 1; font-weight: 900; }
-  .nc-feed-status { color: #000; font-weight: 700; }
+  [nc\:feed] .nc-item:nth-child(3n+1) { background: var(--yellow); transform: rotate(-.8deg); }
+  [nc\:feed] .nc-item:nth-child(3n+2) { background: var(--cyan); transform: rotate(.6deg); }
+  [nc\:feed] .nc-item:nth-child(3n+3) { background: var(--nc-bg); transform: rotate(-.2deg); }
+  [nc\:feed] .nc-by {
+    opacity: 1; font-weight: 900; text-transform: uppercase; font-size: .78rem;
+    letter-spacing: .04em; border-bottom: 2px solid #000; padding-bottom: .45rem;
+  }
+  [nc\:feed] .nc-avatar { border-radius: 0; border: 2px solid #000; }
+  [nc\:feed] .nc-title { font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; }
+  [nc\:feed] .nc-text, [nc\:feed] .nc-summary { color: #000; font-weight: 500; opacity: 1; }
+  [nc\:feed] .nc-tags { opacity: 1; font-weight: 900; }
+  [nc\:feed] .nc-feed-status { color: #000; font-weight: 700; opacity: 1; }
 
   footer { border-top: var(--edge) solid #000; padding-top: 1.5rem; font-weight: 700; }
 
@@ -212,8 +217,8 @@
       <h3 editable="single-line">Afternoon: keep it up</h3>
       <div editable>
         <p>Backups, domains, what happens when the host raises the price, and
-        how to move a site in an afternoon. The part nobody covers because it is
-        not exciting until it is urgent.</p>
+        how to move a site in an afternoon. All of it feels dull right up to the
+        morning it is the only thing that matters.</p>
       </div>
     </div>
     <div class="card block">
@@ -308,7 +313,7 @@
   <button class="nc-owner-only" data-nc-history>History</button>
   <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
 </div>
-<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>

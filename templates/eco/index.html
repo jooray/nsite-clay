@@ -40,8 +40,8 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -.01em; margin: 0 0 .4rem; }
-  h2 { font-size: 1.05rem; font-weight: 600; margin: 3.5rem 0 .9rem; }
+  h1 { font-size: 2rem; font-weight: 600; letter-spacing: -.02em; margin: 0 0 .5rem; }
+  h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; margin: 3.5rem 0 1rem; }
   p { margin: 0 0 1.1rem; }
   a { color: var(--nc-accent); text-underline-offset: 3px; }
 
@@ -62,17 +62,19 @@
   }
   #weight { color: var(--nc-ink); font-variant-numeric: tabular-nums; }
 
-  /* The feed inherits the page: a rule between notes, nothing else. */
-  .nc-feed { gap: 0; }
-  .nc-item {
+  /* The feed inherits the page: a rule between notes, nothing else. feed.js
+     appends its fallback stylesheet after this one, so these carry the
+     container selector. */
+  [nc\:feed].nc-feed { gap: 0; }
+  [nc\:feed] .nc-item {
     background: transparent; border: 0; border-top: 1px solid var(--nc-edge);
     border-radius: 0; padding: 1.1rem 0;
   }
-  .nc-by { font-size: .85rem; margin-bottom: .35rem; }
-  .nc-avatar { display: none; }
-  .nc-text, .nc-summary { color: var(--nc-ink); font-size: 1rem; }
-  .nc-title { font-size: 1.05rem; font-weight: 600; }
-  .nc-feed-status { font-size: .92rem; }
+  [nc\:feed] .nc-by { font-size: .85rem; margin-bottom: .35rem; }
+  [nc\:feed] .nc-avatar { display: none; }
+  [nc\:feed] .nc-text, [nc\:feed] .nc-summary { color: var(--nc-ink); font-size: 1rem; opacity: 1; }
+  [nc\:feed] .nc-title { font-size: 1.05rem; font-weight: 600; }
+  [nc\:feed] .nc-feed-status { font-size: .92rem; color: var(--nc-ink-dim); opacity: 1; }
 </style>
 </head>
 <body>
@@ -144,22 +146,12 @@
 </div>
 
 <footer>
-  <p editable>This page keeps to the same budget as the ones we sell. The
-  number below is measured in your browser with the Performance API, not typed
-  in by us.</p>
+  <p editable>The page you are reading holds to the same budget, with one
+  exception we have not solved: the script that lets us edit this text in the
+  browser is heavier than everything else here put together. Both numbers come
+  from the Performance API in your own browser rather than from us.</p>
   <p>Transferred on load: <span id="weight">not measured</span></p>
 </footer>
-
-<div class="nc-bar nc-ui-chrome">
-  <span class="nc-dot"></span>
-  <span class="nc-who" data-nc-who>read-only</span>
-  <button data-nc-signin>Sign in</button>
-  <button class="nc-owner-only" data-nc-write>Write</button>
-  <button class="nc-owner-only" data-nc-settings>Settings</button>
-  <button class="nc-owner-only" data-nc-history>History</button>
-  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
-</div>
-<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
 
 <script>
   // The only script this template ships. Sum what the browser actually pulled
@@ -178,10 +170,21 @@
     var el = document.getElementById("weight");
     if (!el) return;
     el.textContent = wire
-      ? kb(wire) + ", of which this document is " + kb(nav.transferSize || 0)
+      ? kb(wire) + " in total, " + kb(nav.transferSize || 0) + " of it this document"
       : kb(body) + " compressed, served from your cache";
   });
 </script>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>

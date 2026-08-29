@@ -43,6 +43,15 @@ html[nc\:editable="true"] [editable]:hover:not(:focus) {
 
 html[nc\:editing="false"] .nc-ui-chrome { display: none !important; }
 
+/* Before the runtime boots, and for a reader with scripting off, nothing has
+ * set nc:editing at all. Without this the toolbar renders as live furniture on
+ * a static page. */
+html:not([nc\:editing]) .nc-ui-chrome { display: none !important; }
+
+/* A template's own button rules routinely outrank the user-agent [hidden] rule,
+ * which ships JavaScript-only controls to readers as visible dead buttons. */
+[hidden] { display: none !important; }
+
 /* ---- the standard toolbar ----------------------------------------------- */
 
 .nc-bar {
@@ -74,10 +83,26 @@ html[nc\:status="error"]  .nc-bar .nc-dot { background: var(--nc-bad); }
 html[nc\:owner-here="true"] .nc-owner-only { display: inline-flex; }
 html[nc\:owner-here="true"] .nc-guest-only { display: none; }
 
-/* A hint for the owner who has not added #edit yet. Templates may show it. */
-.nc-edit-hint { position: fixed; right: 1rem; bottom: 1rem; z-index: 59;
-  font: .75rem var(--nc-mono); color: var(--nc-ink-dim); opacity: .5; }
-html[nc\:editing="true"] .nc-edit-hint { display: none; }
+/* A hint for an owner who is signed in but has not added #edit yet. Hidden from
+ * everyone else, including readers, so it is not furniture on a public page. */
+.nc-edit-hint { display: none; position: fixed; right: 1rem; bottom: 1rem; z-index: 59;
+  font: .75rem var(--nc-mono); color: var(--nc-ink-dim); opacity: .55; }
+html[nc\:owner-here="true"][nc\:editing="false"] .nc-edit-hint { display: block; }
+
+/* ---- contextual controls -------------------------------------------------
+ * The gear pattern: controls that live on the object they act on, visible only
+ * to the owner while editing, and stripped from every save. Put clay="no-save"
+ * on them so they never reach the file, and nc-gear so they appear at the right
+ * moment without each template writing the same three rules. */
+
+.nc-gear { display: none; }
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: flex; gap: .25rem; }
+.nc-gear button {
+  font: inherit; font-size: .78rem; line-height: 1; cursor: pointer;
+  padding: .3rem .5rem; border-radius: 6px;
+  border: 1px solid var(--nc-edge); background: var(--nc-panel); color: var(--nc-ink);
+}
+.nc-gear button:hover { border-color: var(--nc-accent); }
 
 /* ---- media inserted by the toolbar -------------------------------------- */
 

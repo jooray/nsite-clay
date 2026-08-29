@@ -46,6 +46,9 @@
   }
 
   * { box-sizing: border-box; }
+  /* With scripting off there is no edit gate, so the toolbar would sit there
+     doing nothing. Hide the chrome until the runtime has started. */
+  html:not([nc\:ready]) .nc-ui-chrome { display: none; }
   body {
     margin: 0; background: var(--nc-bg); color: var(--nc-ink);
     font: 17px/1.65 var(--sans);
@@ -87,6 +90,7 @@
   /* bands: a label in the left margin, the content beside it */
   .band { border-top: 1px solid var(--nc-edge); padding: 3.2rem 0; }
   .band-in { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2.2rem; }
+  .band-in > * { min-width: 0; }
   .band-label { font: 600 .7rem/1.5 var(--nc-mono); letter-spacing: .14em; text-transform: uppercase;
                 color: var(--nc-ink-dim); }
   .band-label b { display: block; color: var(--nc-accent); font-weight: 600; }
@@ -95,7 +99,7 @@
   .band p { margin: 0 0 1rem; }
   .dim { color: var(--nc-ink-dim); }
   @media (max-width: 46rem) {
-    .band-in { grid-template-columns: 1fr; gap: .9rem; }
+    .band-in { grid-template-columns: minmax(0, 1fr); gap: .9rem; }
     .band-label b { display: inline; }
   }
 

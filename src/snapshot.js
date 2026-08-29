@@ -13,6 +13,14 @@ function syncFormState(root) {
   for (const el of root.querySelectorAll("input, textarea, select")) {
     const type = (el.getAttribute("type") || "").toLowerCase();
     if (type === "password" || type === "file") { el.removeAttribute("value"); continue; }
+    // Controls persist by default: a checked box should still be checked for
+    // the next visitor, which is what "the DOM is the database" means. A search
+    // box or a filter is the exception, and says so.
+    if (el.hasAttribute("nc:no-persist")) {
+      el.removeAttribute("value");
+      el.removeAttribute("checked");
+      continue;
+    }
     if (type === "checkbox" || type === "radio") {
       el.checked ? el.setAttribute("checked", "") : el.removeAttribute("checked");
     } else if (el.tagName === "TEXTAREA") {
