@@ -180,6 +180,21 @@
       It runs nsite-clay and saves itself the same way.</p>
   </section>
 
+  <section id="geeks">
+    <h2 editable="single-line">Description for Nostr geeks</h2>
+    <div editable>
+      <p class="lede">An nsite is web hosting. Not long-form notes, whole HTML files. That is all
+        an nsite is.</p>
+      <p class="lede">nsite-clay adds one thing to it: the page edits and updates itself, so the
+        CMS sits inside the static HTML rather than behind it.</p>
+      <p class="lede">You change the DOM. Click around the page and edit things, or open your
+        browser's DOM inspector and change it there; the page does not care which. The new version
+        is uploaded to your Blossom servers, and one replaceable event is republished saying which
+        Blossom hash <code>/</code> or <code>/about-us</code> now points to. Any nsite gateway
+        renders it.</p>
+    </div>
+  </section>
+
   <section id="document">
     <h2 editable="single-line">The whole integration</h2>
     <p class="lede" editable="single-line">One attribute says who owns the file, one marks what people can type into, one script tag does the rest.</p>
@@ -260,6 +275,37 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
         needs to know what a hard refresh is.</p>
     </div>
     <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Full deployment guide</a></p>
+  </section>
+
+  <section id="agents">
+    <h2 editable="single-line">Built by agents</h2>
+    <div editable>
+      <p class="lede">Most pages made with this will be built by an agent rather than by hand, so
+        the project ships instructions for one. Point your coding agent at that file and ask it
+        for the page you want.</p>
+      <p class="lede">It covers what to ask you for, how to pick and rework a template, how to get
+        the page online with a remote signer rather than a raw key, and the handful of things that
+        go wrong. It links the documentation rather than restating it, and works as
+        <code>AGENTS.md</code> in a project built on top of nsite-clay.</p>
+    </div>
+    <p><a class="btn primary" href="/llms.txt">llms.txt</a> <a class="btn" href="/templates.html">Templates</a></p>
+  </section>
+
+  <section id="gateways">
+    <h2 editable="single-line">Where it gets served</h2>
+    <div editable>
+      <p class="lede">A gateway resolves your manifest and serves the files. They all read the same
+        events, so your site is not tied to any of them. If one is down, swap the hostname.</p>
+    </div>
+    <ul class="limits">
+      <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> and
+        <a href="https://nwb.tf">nwb.tf</a> are public gateways.</li>
+      <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
+        and <a href="https://shakespeare.to">shakespeare.to</a> are reference implementations.
+        nsite.run also has the clearest explanation of what an nsite is.</li>
+      <li>A CNAME at any of them gives you a custom domain, and <code>npm run devnet</code> runs
+        one on your laptop.</li>
+    </ul>
   </section>
 
   <section id="limits">

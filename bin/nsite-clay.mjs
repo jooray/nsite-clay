@@ -207,9 +207,21 @@ const aggregate = (paths) => bytesToHex(sha256(Buffer.from(
 
 // --------------------------------------------------------------------- init
 
+function templates() {
+  try { return readdirSync(join(PKG, "templates")).filter((n) => !n.startsWith("_")).sort(); }
+  catch { return []; }
+}
+
 function cmdInit() {
   const dir = positional[0] || "site";
   if (existsSync(join(dir, "index.html"))) die(`${dir}/index.html already exists`);
+
+  // A template is a starting point, not a blank page. Everything ships with the
+  // chrome wired up and the edit gate on.
+  const name = flags.template ? String(flags.template) : null;
+  if (name && !templates().includes(name)) {
+    die(`no template called "${name}". Available: ${templates().join(", ") || "none built yet"}`);
+  }
   mkdirSync(dir, { recursive: true });
 
   let owner = flags.npub;
@@ -220,13 +232,31 @@ function cmdInit() {
     generated = nip19.nsecEncode(sec);
   }
 
-  const tpl = readFileSync(join(PKG, "examples", "notes.html"), "utf8")
+  const source = name
+    ? join(PKG, "templates", name, "index.html")
+    : join(PKG, "examples", "notes.html");
+  const tpl = readFileSync(source, "utf8")
     .replace(/nc:owner="[^"]*"/, `nc:owner="${owner}"`)
     .replace(/nc:site="[^"]*"\n\s*/, "");           // a fresh site is a root site
   writeFileSync(join(dir, "index.html"), tpl);
   copyFileSync(join(PKG, "dist", "nsite-clay.js"), join(dir, "nsite-clay.js"));
 
-  console.log(`Created ${dir}/index.html and ${dir}/nsite-clay.js`);
+  // Templates link these from the root rather than carrying copies, so one
+  // upgrade fixes every page built from them.
+  const shared = join(PKG, "templates", "_shared");
+  for (const f of ["nsite-clay-base.css", "nsite-clay-chrome.js"]) {
+    if (existsSync(join(shared, f))) copyFileSync(join(shared, f), join(dir, f));
+  }
+  // A template may bring its own assets.
+  if (name) {
+    for (const f of readdirSync(join(PKG, "templates", name))) {
+      if (f === "index.html" || f.startsWith(".")) continue;
+      const from = join(PKG, "templates", name, f);
+      if (statSync(from).isFile()) copyFileSync(from, join(dir, f));
+    }
+  }
+
+  console.log(`Created ${dir}/ from the ${name || "default"} template`);
   console.log(`Owner: ${owner}`);
   if (generated) {
     console.log(`\nThis key was generated for you. It is the only thing that can publish`);
@@ -234,6 +264,7 @@ function cmdInit() {
     console.log(`  ${generated}\n`);
   }
   console.log(`Publish it with:\n  nsite-clay deploy ${dir} --sec=nsec1…`);
+  console.log(`Then edit it in the browser at your page's address with #edit on the end.`);
 }
 
 // ------------------------------------------------------------------- deploy
@@ -354,6 +385,8 @@ function cmdHelp() {
   console.log(`nsite-clay — a single HTML file that edits and republishes itself
 
   nsite-clay init [dir]        scaffold a site (generates a key unless --npub is given)
+                               --template=<name> to start from one of:
+                               ${templates().join(", ") || "(none built yet)"}
   nsite-clay deploy <dir>      publish a directory as an nsite
   nsite-clay keygen            print a fresh keypair and the URL it would live at
 

@@ -39,6 +39,20 @@ The idea is [HyperClay](https://hyperclay.com)'s and the editing model follows
 [ClayJS](https://clayjs.com); this is that model with Nostr underneath instead of a hosting
 platform.
 
+## Description for Nostr geeks
+
+An nsite is web hosting. Not long-form notes, whole HTML files. That is all an
+nsite is.
+
+nsite-clay adds one thing to it: the page edits and updates itself, so the CMS
+sits inside the static HTML rather than behind it.
+
+You change the DOM. Click around the page and edit things, or open your
+browser's DOM inspector and change it there; the page does not care which. The
+new version is uploaded to your Blossom servers, and one replaceable event is
+republished saying which Blossom hash `/` or `/about-us` now points to. Any
+nsite gateway renders it.
+
 ## Try it
 
 A live document is published under a throwaway key, and the key is public on purpose:
@@ -144,6 +158,25 @@ original date stays put.
 Posts and pages are separate. Writing a note does not change your page, and saving your page
 does not touch your posts.
 
+## Editing without a visible editor
+
+Templates ship with `nc:edit-gate="hash"`, so a reader gets the page and nothing
+to click. Add `#edit` to the URL and the toolbar appears:
+
+```
+https://<your npub>.nsite.lol/#edit
+```
+
+Worth remembering, because a page with no visible way in looks broken to someone
+who has forgotten. `nc.settings.open()` turns the gate off if you would rather
+have the toolbar always there.
+
+Autosave is off by default. Every save stores the whole page again and files a
+version, so saving on a timer publishes a dozen versions of one paragraph.
+Turn it on in the same settings panel. Both settings are attributes on `<html>`,
+so they are saved with the page and travel with the file rather than living in
+one browser.
+
 ## Signing in
 
 Ranked by how much you have to trust the page in front of you:
@@ -156,6 +189,37 @@ Ranked by how much you have to trust the page in front of you:
   The key stays in the tab's memory for the session and is written nowhere. It sits in a
   password field deliberately: the snapshot algorithm never writes those values into markup, so
   a save cannot bake your key into the document it publishes.
+
+## Built by agents
+
+Most pages made with this will be built by an agent rather than by hand, so the
+project ships instructions for one:
+
+**<https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt>**
+
+Point your coding agent at that file and ask it for the page you want. It covers
+what to ask you for, how to pick and rework a template, how to get the page
+online with a remote signer rather than a raw key, and the handful of things
+that go wrong. It deliberately does not restate the documentation; it links it.
+
+Hand it to Claude Code, Codex, Cursor, or anything else that reads a URL. The
+same file works as `AGENTS.md` in a project built on top of nsite-clay.
+
+## Templates
+
+Ten starting points, all sharing one stylesheet and one runtime so an engine
+change does not mean editing ten files:
+
+`event` `blog` `project` `personal` `links` `gallery` `terminal` `phrack`
+`brutal` `eco`
+
+```bash
+npx nsite-clay init mysite --template=blog --npub=npub1…
+```
+
+Browse them at [/templates.html](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html),
+or read the source in [`templates/`](templates/). The rules a template follows
+are in [`templates/_shared/CONTRACT.md`](templates/_shared/CONTRACT.md).
 
 ## Deploying
 
@@ -200,6 +264,23 @@ custom domain.
 
 Named sites need a `d` tag of 1 to 13 characters from `[a-z0-9-]`, because a DNS label is 63
 characters and the base36 pubkey uses 50 of them.
+
+### Where it gets served
+
+An nsite gateway resolves your manifest and serves the files. They all read the
+same events, so a site is not tied to any of them:
+
+| Gateway | |
+|---|---|
+| [nsite.lol](https://nsite.lol) | public gateway |
+| [nsite.run](https://nsite.run) | reference implementation, and the clearest explanation of what an nsite is |
+| [nosto.re](https://nosto.re) | public gateway |
+| [nwb.tf](https://nwb.tf) | public gateway |
+| [nsite.cloud](https://nsite.cloud) | reference implementation |
+| [shakespeare.to](https://shakespeare.to) | reference implementation |
+
+If one is down, swap the hostname and your site is still there. A CNAME at any
+of them gives you a custom domain, and `npm run devnet` runs one on your laptop.
 
 ### Relays and Blossom servers
 

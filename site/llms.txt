@@ -1,0 +1,175 @@
+# nsite-clay
+
+> A self-editable nsite. One HTML file holds a page's markup, styling, content
+> and state, and republishes itself: the browser serialises the document, stores
+> it on Blossom, and publishes a NIP-5A manifest pointing at it. Relays hold the
+> manifest, Blossom holds the bytes, and there is no server in between.
+
+This file is for agents. If you are building someone a website with nsite-clay,
+read this first and follow it. It tells you what to ask, what to decide, and
+where the details are. It does not repeat the documentation.
+
+- Human walkthrough: https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html
+- Runtime reference: https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md
+- Templates: https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html
+- Source: https://github.com/jooray/nsite-clay
+- What an nsite is: https://nsite.run
+
+## What you are actually building
+
+One `index.html`. It links two files from the site root and nothing else:
+
+```html
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+```
+
+Your job is the markup, the styling and the words. Sign-in, saving, versions,
+media upload, feeds and the composer already exist. Writing your own is the
+commonest mistake: check the runtime reference before you implement anything.
+
+## Start from a template
+
+Do not start from a blank file. Ten templates cover the usual shapes:
+
+`event` `blog` `project` `personal` `links` `gallery` `terminal` `phrack`
+`brutal` `eco`
+
+```bash
+npx nsite-clay init mysite --template=blog --npub=npub1…
+```
+
+Pick by what the page is for, not by which looks nicest, then redesign it. The
+template gives you a working page with the chrome wired up; the design is yours
+to change. Change the CSS variables on `:root` first, because the shared
+toolbar follows them, and only then write your own rules.
+
+Read `templates/_shared/CONTRACT.md` in the repo before editing one. It is
+short and it is binding.
+
+## What to ask the person
+
+Four things, and you can usually infer three of them.
+
+1. **Their npub.** Required. It goes in `nc:owner` and it is the only key that
+   can ever change the page. If they do not have one, they need a Nostr key
+   before anything else works.
+2. **What the page is for.** This picks the template.
+3. **What should come from Nostr.** Their notes, their articles, their photos,
+   somebody else's. Feeds are markup: `nc:feed="articles" nc:authors="npub1…"`.
+4. **Whether anyone else needs to edit it.** The answer is no. One key writes
+   the document; there is no shared editing. Say so early rather than building
+   toward it.
+
+Do not ask for their nsec. You do not need it and you should not have it.
+
+## Getting it online
+
+```bash
+npx nsite-clay deploy mysite --sec=nsec1…          # a raw key
+NOSTR_BUNKER_URI="bunker://…" npx nsite-clay deploy mysite   # a remote signer
+```
+
+Prefer the bunker. It keeps the key off the machine running the deploy, which
+matters when that machine is yours rather than theirs. Pass the URI in the
+environment, never as an argument: an argument is visible to every process on
+the box.
+
+The page lands at `https://<their npub>.nsite.lol/`. Other gateways serve the
+same site from the same events: `nsite.lol`, `nsite.run`, `nosto.re`, `nwb.tf`,
+`nsite.cloud`, `shakespeare.to`. A CNAME at any of them gives a custom domain.
+
+After the first deploy the page publishes itself, and they never need a
+terminal again. Tell them that.
+
+## Signing in: recommend a remote signer
+
+Three ways in. Steer them to the second.
+
+1. **A NIP-07 browser extension.** Fine on their own machine.
+2. **A remote signer over NIP-46**, Amber on Android or nsec.app. The key stays
+   on their phone and every save is approved there. This is the right default
+   for a page served by a gateway, and it is what you should suggest first.
+3. **Pasting a key into the page.** It works, it stays in the tab, and it is
+   written nowhere. It is still the weakest option and you should say so rather
+   than defaulting to it.
+
+The toolbar handles all three. You do not write sign-in code.
+
+## The edit gate
+
+Every template ships with `nc:edit-gate="hash"` on `<html>`. Readers see the
+page and nothing to click. The owner adds `#edit` to the URL and the toolbar
+appears.
+
+Tell them this explicitly, because a page with no visible way in looks broken
+to someone who has forgotten. Their editing URL is:
+
+```
+https://<their npub>.nsite.lol/#edit
+```
+
+Worth putting in the handover note. `nc.settings.open()` turns the gate off if
+they would rather have the toolbar always visible.
+
+## Autosave is off, deliberately
+
+Every save stores the whole page again and files a version, so saving on a
+timer publishes a dozen versions of one paragraph. Leave it off unless they ask.
+Leaving the page with unsaved work already warns them.
+
+## Customising a template
+
+Work in this order. It saves rewriting.
+
+1. **The variables.** `--nc-ink`, `--nc-bg`, `--nc-panel`, `--nc-edge`,
+   `--nc-accent`, `--nc-radius`, `--nc-chrome-font`, `--nc-mono`. Setting these
+   restyles the toolbar, the dialogs and the feeds at once.
+2. **The content.** Real words. Everything a person would plausibly change gets
+   `editable` (a container, where Enter makes a paragraph) or
+   `editable="single-line"` (a heading, a caption, a row).
+3. **The layout and type.** Your own rules, under the variables.
+4. **The feeds.** Style `.nc-item`, `.nc-title`, `.nc-by`, `.nc-summary`. Do not
+   change what the feed emits; change how it looks.
+
+If you insert markup while the page is being edited, call
+`nc.editable.refresh()` before focusing it, or the new region will not be
+typeable.
+
+Never copy `nsite-clay.js` or `nsite-clay-base.css` into the site. They live at
+the root so that one upgrade fixes every page.
+
+## Things that will bite you
+
+- **A save must not reference a file the manifest does not list.** The runtime
+  refuses to publish that, and the error names the file. Deploy the whole
+  directory with the CLI rather than hand-editing the path table.
+- **Assets are content-fingerprinted.** `/logo-9f2a1e.png` changes when the file
+  changes. Do not hardcode a fingerprint you saw once.
+- **Relays disagree.** Publish to several, and include `wss://relay.nsite.lol`
+  so the gateway sees changes promptly.
+- **Blossom servers are picky.** Several refuse `text/html`. `cdn.hzrd149.com`
+  and `blossom.primal.net` work.
+- **Feeds are fetched, not stored.** A save keeps the widget's configuration and
+  none of the posts, so a reader with scripting off sees an empty block. Design
+  for that.
+- **One key, no conflict detection.** Two devices editing at once lose one
+  side's work.
+
+## Writing
+
+The words matter more than the design and they are the part most often left as
+filler. No em or en dashes. No "there are several ways to". No sentence that
+announces what the next sentence will do. Write what the page is, for someone
+who has not seen it.
+
+If the page is in a language other than English, write it as a native speaker
+would, with that language's punctuation and typography, not English rules in
+translated words.
+
+## Handing it over
+
+Tell them, in this order: the address of their page, the same address with
+`#edit`, which key controls it, and that the page now updates itself. That is
+the whole operating manual.
