@@ -95,7 +95,9 @@
 
   /* ---- shared frame ------------------------------------------------------ */
 
-  .ph { display: block; text-decoration: none; color: inherit; outline: none; }
+  .ph { display: block; text-decoration: none; color: inherit; outline: none;
+        -webkit-user-drag: none; }
+  .ph img { -webkit-user-drag: none; }
   .ph-in {
     display: block; background: var(--matte); padding: 8px;
     box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 26px 50px -34px #000;
@@ -485,13 +487,18 @@
   wipe();
   const body = T("div");
   body.setAttribute("nc:transient", "");
+  // A first tap on a node lights it, a second opens it. Kept in a variable
+  // rather than on the element: attributes are serialised, this is not.
+  let justLit = null;
 
   function frame(p) {
     const a = T("a", "ph");
     a.href = p.href; a.rel = "noopener"; a.target = "_blank";
+    a.draggable = false;
     const inner = T("span", "ph-in");
     const img = T("img");
     img.src = p.url; img.alt = p.alt; img.loading = "lazy"; img.decoding = "async";
+    img.draggable = false;
     if (p.w && p.h) { img.width = p.w; img.height = p.h; }
     if (!p.w || !p.h) {
       img.addEventListener("load", () => {
@@ -506,7 +513,7 @@
     a.appendChild(inner);
     a.addEventListener("click", (e) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-      if (a.dataset.justLit === "1") { a.dataset.justLit = "0"; e.preventDefault(); return; }
+      if (justLit === a) { justLit = null; e.preventDefault(); return; }
       e.preventDefault();
       openLightbox(p.i);
     });
@@ -827,7 +834,7 @@
       if (lit === a) return;
       if (lit) lit.classList.remove("lit");
       lit = a; a.classList.add("lit");
-      a.dataset.justLit = "1";
+      justLit = a;
     }
 
     return {
@@ -959,7 +966,8 @@
   // ---- keys ---------------------------------------------------------------
 
   document.addEventListener("keydown", (e) => {
-    if (e.target.closest("[contenteditable], input, textarea, select")) return;
+    const t = e.target;
+    if (t && t.closest && t.closest("[contenteditable], input, textarea, select")) return;
     if (!lb.hidden) return onLightboxKey(e);
     if (/^[1-4]$/.test(e.key)) { setMode(order[+e.key - 1]); e.preventDefault(); return; }
     if (e.key === "p" || e.key === "P") { setMode(mode === "plain" ? "canvas" : "plain"); e.preventDefault(); return; }

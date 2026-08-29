@@ -20,6 +20,7 @@ import { Feed, readFeedConfig } from "./feed.js";
 import { Compose } from "./compose.js";
 import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
+import { qrSvg, qrElement } from "./qr.js";
 import { toast, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
@@ -454,7 +455,7 @@ nc.ready = (async () => {
 })();
 
 Object.assign(nc, {
-  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox,
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
 });
 

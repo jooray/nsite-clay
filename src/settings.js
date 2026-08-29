@@ -7,7 +7,7 @@
 // are visible in the markup, and a save persists them like everything else.
 //
 // Nothing private goes here. Anyone can read a published page.
-import { modal, toast } from "./ui.js";
+import { modal, checkbox, toast } from "./ui.js";
 
 export class Settings {
   constructor(nc) {
@@ -52,28 +52,13 @@ export class Settings {
       hint: "These are attributes on this page, so they are saved with it and travel with the file.",
       submitLabel: "Apply",
       build: (body) => {
-        const doc = this.doc;
-        const mk = (label, checked, note) => {
-          const wrap = doc.createElement("div");
-          wrap.className = "nc-field";
-          const l = doc.createElement("label");
-          l.style.cssText = "display:flex;gap:.55rem;align-items:flex-start;cursor:pointer;color:inherit";
-          const cb = doc.createElement("input");
-          cb.type = "checkbox"; cb.checked = checked;
-          cb.style.cssText = "width:auto;margin-top:.25rem;flex:0 0 auto";
-          const txt = doc.createElement("span");
-          txt.innerHTML = `<b style="font-weight:600">${label}</b><br><span style="color:#9a92ad;font-size:.85em">${note}</span>`;
-          l.append(cb, txt);
-          wrap.appendChild(l);
-          body.appendChild(wrap);
-          return cb;
-        };
-        autosave = mk("Save automatically", this.autosave,
+        autosave = checkbox(body, { label: "Save automatically", checked: this.autosave, note:
           "Publishes a new version a few seconds after you stop typing. Off by default, because " +
-          "every save stores the whole page again and files a version.");
-        gate = mk("Hide the editing controls until the URL ends in #edit", this.editGate === "hash",
+          "every save stores the whole page again and files a version." });
+        gate = checkbox(body, { label: "Hide the editing controls until the URL ends in #edit",
+          checked: this.editGate === "hash", note:
           "Readers get the page with nothing to click. Add #edit to the address to bring the " +
-          "controls back.");
+          "controls back." });
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always" }),
     });

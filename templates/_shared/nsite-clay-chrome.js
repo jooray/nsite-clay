@@ -47,11 +47,9 @@
         b.style.cssText = "width:100%;margin-bottom:.4rem";
         b.onclick = () => {
           const { uri, ready } = nc.connectRemote();
-          const img = document.createElement("img");
-          img.alt = "Sign-in code";
-          img.width = 220; img.height = 220;
-          img.style.cssText = "display:block;margin:.8rem auto;background:#fff;padding:.6rem;border-radius:10px";
-          img.src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(uri);
+          // Drawn in the page. A QR service would be handed the connection
+          // secret, and whoever rendered the image could answer the connection.
+          const img = nc.qrElement(uri, { size: 220 });
           const link = document.createElement("p");
           link.style.textAlign = "center";
           link.innerHTML = `<a href="${uri}">Open in your signer app</a>`;

@@ -344,6 +344,19 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     el.remove(); again.remove();
   }
 
+  // A nostrconnect URI carries the client key and the one-time secret, so the
+  // sign-in code has to be drawn here rather than fetched from a QR service.
+  {
+    const uri = "nostrconnect://" + "a".repeat(64) + "?relay=wss://nos.lol&secret=deadbeef";
+    const svg = nc.qrSvg(uri, { size: 200 });
+    t("§8.2 the sign-in code is an inline SVG", svg.startsWith("<svg") && svg.includes("<path"));
+    // The only URL in it is the SVG namespace declaration, which fetches nothing.
+    const urls = (svg.match(/https?:\/\/[^"'\s]+/g) || []).filter((u) => u !== "http://www.w3.org/2000/svg");
+    t("§8.2 it fetches nothing from anywhere", urls.length === 0, urls.join(","));
+    const el = nc.qrElement(uri);
+    t("§8.2 and comes back as a real element", el.tagName.toLowerCase() === "svg");
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

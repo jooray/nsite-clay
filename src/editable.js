@@ -256,9 +256,14 @@ export class Editable {
     bar.setAttribute("nc:chrome", "");        // stripped from every save
     bar.setAttribute("role", "toolbar");
     bar.setAttribute("aria-label", "Text formatting");
+    // Styled from the page's own variables, so the toolbar belongs to the
+    // document rather than looking like a visitor from another application.
     bar.style.cssText = "position:absolute;z-index:2147483646;display:none;gap:2px;align-items:center;" +
-      "padding:4px;border-radius:9px;background:#14181c;color:#eef2f4;" +
-      "box-shadow:0 10px 30px -12px rgba(0,0,0,.7);font:13px/1 ui-sans-serif,system-ui,sans-serif";
+      "padding:4px;border-radius:var(--nc-radius,9px);" +
+      "background:var(--nc-panel,#14181c);color:var(--nc-ink,#eef2f4);" +
+      "border:1px solid var(--nc-edge,transparent);" +
+      "box-shadow:var(--nc-shadow,0 10px 30px -12px rgba(0,0,0,.7));" +
+      "font:13px/1 var(--nc-chrome-font,ui-sans-serif,system-ui,sans-serif)";
 
     const mk = (tag, css, attrs = {}) => {
       const el = this.doc.createElement(tag);
@@ -266,10 +271,10 @@ export class Editable {
       Object.assign(el, attrs);
       return el;
     };
-    const btnCss = "font:inherit;cursor:pointer;border:0;border-radius:6px;background:transparent;" +
-      "color:inherit;padding:5px 8px;min-width:28px";
+    const btnCss = "font:inherit;cursor:pointer;border:0;border-radius:var(--nc-radius-sm,6px);" +
+      "background:transparent;color:inherit;padding:5px 8px;min-width:28px";
 
-    const select = mk("select", btnCss + ";background:#1e242a;padding:5px 6px", { title: "Block style" });
+    const select = mk("select", btnCss + ";background:var(--nc-bg,#1e242a);color:inherit;padding:5px 6px", { title: "Block style" });
     for (const b of BLOCKS) {
       const o = this.doc.createElement("option");
       o.value = b.cmd; o.textContent = b.label;
@@ -279,7 +284,7 @@ export class Editable {
     bar.appendChild(select);
     this.select = select;
 
-    const sep = () => bar.appendChild(mk("span", "width:1px;height:18px;background:#39424a;margin:0 3px"));
+    const sep = () => bar.appendChild(mk("span", "width:1px;height:18px;background:var(--nc-edge,#39424a);margin:0 3px"));
     sep();
 
     this.markBtns = [];
@@ -364,7 +369,9 @@ export class Editable {
     const single = tokensOf(host).has("single-line");
     this.select.style.display = single ? "none" : "";
     this.select.value = st.list ? "P" : st.block;
-    for (const [b, cmd] of this.markBtns) b.style.background = st[cmd] ? "#31404b" : "transparent";
+    for (const [b, cmd] of this.markBtns) {
+      b.style.background = st[cmd] ? "color-mix(in srgb, var(--nc-accent, #31404b) 30%, transparent)" : "transparent";
+    }
   }
 }
 

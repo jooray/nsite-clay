@@ -252,7 +252,8 @@
     const { uri, ready } = nc.connectRemote();
     $("#amber-box").hidden = false;
     $("#amber-link").href = uri;
-    $("#qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=" + encodeURIComponent(uri);
+    // Drawn locally: a QR service would receive the connection secret.
+    $("#qr").replaceWith(nc.qrElement(uri, { size: 256 }));
     ready.then(() => { $("#signin").close(); })
          .catch((e) => { $("#amber-status").textContent = "Failed: " + e.message; });
   };

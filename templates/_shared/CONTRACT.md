@@ -101,8 +101,14 @@ its variables gets a feed that matches without touching feed markup.
 Set these on `:root` and the shared chrome follows the template:
 
 `--nc-ink`, `--nc-ink-dim`, `--nc-bg`, `--nc-panel`, `--nc-edge`, `--nc-accent`,
-`--nc-accent-ink`, `--nc-ok`, `--nc-bad`, `--nc-radius`, `--nc-chrome-font`,
-`--nc-mono`.
+`--nc-accent-ink`, `--nc-ok`, `--nc-bad`, `--nc-radius`, `--nc-radius-sm`,
+`--nc-shadow`, `--nc-chrome-font`, `--nc-mono`.
+
+They reach every surface the runtime draws: the toolbar, the sign-in and
+settings dialogs, the version list, the media and feed pickers, the floating
+text toolbar, the toasts and the feeds. A page with square corners and no
+shadows sets `--nc-radius: 0`, `--nc-radius-sm: 0` and `--nc-shadow: none`, and
+the chrome squares off with it.
 
 ## Writing
 

@@ -171,6 +171,9 @@ export class Feed {
 
   paint(el, cfg, message) {
     this.clear(el);
+    // Classes first: a status paragraph appears before any item does, and a
+    // selector written against .nc-feed should match it.
+    el.classList.add("nc-feed", `nc-feed-${cfg.type}`, `nc-feed-${cfg.style}`);
     const p = this.doc.createElement("p");
     p.className = "nc-feed-status";
     p.setAttribute("nc:transient", "");
@@ -248,6 +251,14 @@ export class Feed {
   injectStyles() {
     if (this._styled) return;
     this._styled = true;
+    // The base stylesheet already carries these rules, written against the
+    // template's variables. Injecting a second copy at runtime would land after
+    // the linked one and beat it at equal specificity, so a template that
+    // restyled .nc-item would silently lose. Probe for a variable only the base
+    // stylesheet defines, and stay out of the way when it is there.
+    const styled = getComputedStyle(this.doc.documentElement)
+      .getPropertyValue("--nc-radius").trim();
+    if (styled) return;
     const s = this.doc.createElement("style");
     s.setAttribute("nc:chrome", "");
     s.setAttribute("data-nc-fallback", "");
