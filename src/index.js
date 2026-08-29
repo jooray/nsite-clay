@@ -18,7 +18,7 @@ import { Editable } from "./editable.js";
 import { Media, parseVideoUrl } from "./media.js";
 import { Feed, readFeedConfig } from "./feed.js";
 import { Compose } from "./compose.js";
-import { toast } from "./ui.js";
+import { toast, field, modal } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
 
@@ -374,7 +374,7 @@ nc.ready = (async () => {
 })();
 
 Object.assign(nc, {
-  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl,
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
 });
 

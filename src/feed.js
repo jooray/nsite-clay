@@ -284,15 +284,18 @@ export class Feed {
   // ---- the insert dialog --------------------------------------------------
 
   async promptInsert() {
-    let type, authors, limit, style, minLength, topic, pinned;
+    let type, authors, limit, style, minLength, topic;
+    const picked = new Set();          // slugs for articles, ids for notes
+
     const out = await modal({
       doc: this.doc,
+      wide: true,
       title: "Insert a Nostr feed",
-      hint: "The feed is fetched when the page loads and every event's signature is checked in " +
-            "the browser. It is not written into the file, so a reader with JavaScript off sees " +
-            "an empty block.",
+      hint: "Pick who to show, then click any post to pin it to the top. Signatures are checked in " +
+            "the browser; the posts are fetched when the page loads rather than stored in it.",
       submitLabel: "Insert",
-      build: (body) => {
+      build: (body, h) => {
+        const doc = this.doc;
         type = field(body, { label: "What to show", options: [
           { value: "notes", label: "Short notes (kind 1)" },
           { value: "articles", label: "Long-form articles (kind 30023)" },
@@ -303,27 +306,83 @@ export class Feed {
           value: this.nc.npub || "",
           placeholder: "npub1…, npub1…",
         });
-        const row = this.doc.createElement("div");
-        row.className = "nc-row";
-        body.appendChild(row);
+        const row = doc.createElement("div"); row.className = "nc-row"; body.appendChild(row);
         limit = field(row, { label: "How many", type: "number", value: "5" });
         style = field(row, { label: "Style", options: ["list", "grid"] });
         minLength = field(row, { label: "Minimum length", type: "number", value: "0" });
         topic = field(body, { label: "Only events tagged (optional)", placeholder: "nostr" });
-        pinned = field(body, {
-          label: "Pin to the top: article slugs, or event ids for notes",
-          placeholder: "my-first-post, another-slug",
-        });
+
+        const pickLabel = doc.createElement("label");
+        pickLabel.textContent = "Their posts. Click to pin one to the top.";
+        const pick = doc.createElement("ul");
+        pick.className = "nc-pick";
+        body.append(pickLabel, pick);
+
+        // Show the real posts rather than asking for ids nobody has memorised.
+        const browse = async () => {
+          const list = authors.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean).map(toHex).filter(Boolean);
+          if (!list.length) { pick.innerHTML = ""; return; }
+          pick.innerHTML = "<li style='color:#7e768f;font-size:.82rem'>looking…</li>";
+          const kind = KINDS[type.value];
+          try {
+            const evs = await this.nc.pool.querySync(this.relaysFor({ relays: [] }), {
+              kinds: [kind], authors: list, limit: 30,
+            });
+            const good = evs.filter((ev) => verifyEvent(ev) && list.includes(ev.pubkey))
+              .sort((a, b) => b.created_at - a.created_at);
+            pick.innerHTML = "";
+            if (!good.length) {
+              pick.innerHTML = "<li style='color:#7e768f;font-size:.82rem'>nothing found on these relays</li>";
+              return;
+            }
+            for (const ev of good.slice(0, 20)) {
+              const key = kind === 30023 ? (tag(ev, "d") || "") : ev.id;
+              if (!key) continue;
+              const li = doc.createElement("li");
+              const btn = doc.createElement("button");
+              btn.type = "button";
+              btn.setAttribute("aria-pressed", String(picked.has(key)));
+              const mark = doc.createElement("span");
+              mark.className = "nc-mark";
+              mark.textContent = picked.has(key) ? "\u2713" : "";
+              const text = doc.createElement("span");
+              text.className = "nc-body-text";
+              const label = kind === 30023
+                ? (tag(ev, "title") || key)
+                : (ev.content.slice(0, 110) + (ev.content.length > 110 ? "…" : ""));
+              const b = doc.createElement("b");
+              b.textContent = label;
+              const meta = doc.createElement("small");
+              meta.textContent = when(ev.created_at) + (kind === 30023 ? ` · ${key}` : "");
+              text.append(b, meta);
+              btn.append(mark, text);
+              btn.onclick = () => {
+                picked.has(key) ? picked.delete(key) : picked.add(key);
+                btn.setAttribute("aria-pressed", String(picked.has(key)));
+                mark.textContent = picked.has(key) ? "\u2713" : "";
+                h.status(picked.size ? `${picked.size} pinned` : "");
+              };
+              li.appendChild(btn);
+              pick.appendChild(li);
+            }
+          } catch (e) {
+            pick.innerHTML = `<li style='color:#e79191;font-size:.82rem'>could not reach the relays: ${e.message}</li>`;
+          }
+        };
+
+        let debounce;
+        authors.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(browse, 500); });
+        type.addEventListener("change", () => { picked.clear(); browse(); });
+        browse();
       },
       onSubmit: () => {
-        const list = authors.value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+        const list = authors.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
         if (!list.length) throw new Error("Give at least one npub");
         const bad = list.find((a) => !toHex(a));
         if (bad) throw new Error(`Not a valid npub: ${bad}`);
         return {
           type: type.value, authors: list, limit: limit.value, style: style.value,
-          minLength: minLength.value, topic: topic.value.trim(),
-          pinned: pinned.value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean),
+          minLength: minLength.value, topic: topic.value.trim(), pinned: [...picked],
         };
       },
     });

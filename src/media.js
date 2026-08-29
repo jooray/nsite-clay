@@ -9,7 +9,7 @@
 // The saved file therefore contains no third-party frame, works with JavaScript
 // off (the link goes to the video), and costs a reader nothing until they ask.
 import { modal, field, toast } from "./ui.js";
-import { uploadAll } from "./blossom.js";
+import { uploadAll, list } from "./blossom.js";
 
 const EXT = {
   "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp",
@@ -177,32 +177,89 @@ export class Media {
     const out = await modal({
       doc: this.doc,
       title: "Insert an image",
-      hint: "Paste a URL, or upload a file to the Blossom servers this document already uses.",
+      hint: "Drop a file, pick one you have already uploaded, or paste a URL.",
       submitLabel: "Insert",
       build: (body, h) => {
-        url = field(body, { label: "Image URL", placeholder: "https://…" });
-        const l = body.ownerDocument.createElement("label");
-        l.textContent = "…or upload a file";
-        const file = body.ownerDocument.createElement("input");
-        file.type = "file"; file.accept = "image/*";
-        body.append(l, file);
-        alt = field(body, { label: "Alt text: what the image shows, for anyone who cannot see it" });
-        cap = field(body, { label: "Caption (optional)" });
-        file.onchange = async () => {
-          const f = file.files?.[0];
+        const doc = body.ownerDocument;
+
+        // Drop target first, because dragging a file in is what people try.
+        const drop = doc.createElement("div");
+        drop.className = "nc-drop";
+        drop.textContent = "Drop an image here, or click to choose a file";
+        const file = doc.createElement("input");
+        file.type = "file"; file.accept = "image/*"; file.hidden = true;
+        body.append(drop, file);
+
+        const take = async (f) => {
           if (!f) return;
-          h.status("uploading…"); h.busy(true);
+          h.status(`uploading ${(f.size / 1024).toFixed(0)} KB…`); h.busy(true);
           try {
             const r = await this.upload(f);
             url.value = r.url;
-            h.status(`uploaded ${(r.size / 1024).toFixed(0)} KB`);
+            preview(r.url);
+            h.status("uploaded");
           } catch (e) { h.status(e.message, true); }
           finally { h.busy(false); }
         };
+        drop.onclick = () => file.click();
+        file.onchange = () => take(file.files?.[0]);
+        for (const ev of ["dragenter", "dragover"]) {
+          drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("nc-over"); });
+        }
+        for (const ev of ["dragleave", "drop"]) {
+          drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("nc-over"); });
+        }
+        drop.addEventListener("drop", (e) => take(e.dataTransfer?.files?.[0]));
+
+        // Everything this key has uploaded before, as a grid to click.
+        const galleryLabel = doc.createElement("label");
+        galleryLabel.textContent = "Already uploaded";
+        const gallery = doc.createElement("div");
+        gallery.className = "nc-grid";
+        gallery.innerHTML = "<p style='grid-column:1/-1;color:#7e768f;font-size:.82rem;margin:0'>looking…</p>";
+        body.append(galleryLabel, gallery);
+
+        const chosen = (btn) => {
+          for (const b of gallery.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b === btn));
+        };
+        list(this.servers, this.nc.pubkey, { signer: this.nc.signer })
+          .then((blobs) => {
+            const images = blobs.filter((b) => (b.type || "").startsWith("image/")).slice(0, 40);
+            gallery.innerHTML = "";
+            if (!images.length) {
+              galleryLabel.remove(); gallery.remove();
+              return;
+            }
+            for (const b of images) {
+              const btn = doc.createElement("button");
+              btn.type = "button"; btn.setAttribute("aria-pressed", "false");
+              btn.title = `${(b.size / 1024).toFixed(0)} KB`;
+              const img = doc.createElement("img");
+              img.src = b.url; img.alt = ""; img.loading = "lazy";
+              btn.appendChild(img);
+              btn.onclick = () => { url.value = b.url; chosen(btn); preview(b.url); };
+              gallery.appendChild(btn);
+            }
+          })
+          .catch(() => { galleryLabel.remove(); gallery.remove(); });
+
+        url = field(body, { label: "…or an image URL", placeholder: "https://…" });
+        alt = field(body, { label: "Alt text: what the image shows, for anyone who cannot see it" });
+        cap = field(body, { label: "Caption (optional)" });
+
+        // A live look at what will be inserted.
+        const shown = doc.createElement("img");
+        shown.style.cssText = "display:none;max-height:9rem;border-radius:9px;margin-top:.7rem";
+        body.appendChild(shown);
+        const preview = (src) => {
+          shown.src = src;
+          shown.style.display = src ? "block" : "none";
+        };
+        url.addEventListener("input", () => preview(url.value.trim()));
       },
-      onSubmit: (h) => {
+      onSubmit: () => {
         const src = url.value.trim();
-        if (!src) throw new Error("Give a URL or upload a file");
+        if (!src) throw new Error("Drop a file, pick one, or paste a URL");
         if (!/^https?:\/\//i.test(src)) throw new Error("Only http(s) URLs can be used");
         return { url: src, alt: alt.value.trim(), caption: cap.value.trim() };
       },

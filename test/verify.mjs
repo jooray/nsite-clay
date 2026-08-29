@@ -199,6 +199,19 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("a feed's own markup is saved", withMedia.includes('nc:feed="notes"'));
   t("what a feed fetched is not", !withMedia.includes("fetched at view time"));
 
+  // A dropdown built with no explicit value must keep its first option.
+  // Assigning "" to a <select> clears the selection, which silently submitted
+  // an empty string and made the feed dialog query kind `undefined`.
+  {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const sel = nc.field(host, { label: "t", options: [{ value: "notes", label: "Notes" }, { value: "articles", label: "Articles" }] });
+    t("a dropdown defaults to its first option", sel.value === "notes", sel.value);
+    const preset = nc.field(host, { label: "t", options: ["list", "grid"], value: "grid" });
+    t("a dropdown honours an explicit value", preset.value === "grid");
+    host.remove();
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

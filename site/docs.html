@@ -7,8 +7,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>nsite-clay: how it works</title>
-<meta name="description" content="Deploy a self-editable nsite, edit it in the browser, add images, video and Nostr feeds, and write long-form posts from inside the page.">
+<title>nsite-clay: a walkthrough</title>
+<meta name="description" content="Get a page online, then edit it in the browser: text, pictures, video, your Nostr posts, and writing new ones.">
 <link rel="icon" href="/nsite-clay-mark.svg">
 <style>
   :root {
@@ -21,63 +21,63 @@
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink); font: 16.5px/1.68 var(--sans);
+    margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.7 var(--sans);
     background-image:
-      radial-gradient(60rem 40rem at 82% -14%, rgba(139,100,225,.18), transparent 62%),
-      radial-gradient(46rem 34rem at 4% 6%, rgba(86,60,170,.14), transparent 60%);
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.16), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
     background-attachment: fixed;
   }
   a { color: var(--violet); text-underline-offset: 3px; }
   a:hover { color: #C9AAFF; }
-  code { font: .88em var(--mono); color: #D6C4F5; }
-  .wrap { max-width: 58rem; margin: 0 auto; padding: 0 1.4rem; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.4rem; }
 
-  header.top { padding: 3.2rem 0 1.6rem; }
-  .crumb { display: flex; align-items: center; gap: .6rem; font-size: .85rem; color: var(--ink-faint); }
-  .crumb img { width: 30px; height: 30px; }
+  header.top { padding: 3rem 0 1.4rem; }
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--ink-faint); }
+  .crumb img { width: 28px; height: 28px; }
   .crumb a { color: var(--ink-dim); text-decoration: none; }
   .crumb a:hover { color: var(--violet); }
-  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.2rem 0 .5rem; }
-  .lede { color: var(--ink-dim); font-size: 1.1rem; max-width: 42rem; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--ink-dim); font-size: 1.12rem; max-width: 40rem; }
 
   nav.toc { border: 1px solid var(--edge); border-radius: 12px; background: var(--panel);
-            padding: 1rem 1.2rem; margin: 2rem 0 0; }
+            padding: .9rem 1.2rem; margin: 2rem 0 0; font-size: .95rem; }
   nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
-  nav.toc li { margin: .15rem 0; }
+  nav.toc li { margin: .12rem 0; }
   nav.toc a { color: var(--ink-dim); text-decoration: none; }
   nav.toc a:hover { color: var(--violet); }
   @media (max-width: 40rem) { nav.toc ol { columns: 1; } }
 
-  section { padding: 3rem 0 .5rem; border-top: 1px solid var(--edge); margin-top: 2.6rem; }
-  section > h2 { font-size: 1.5rem; letter-spacing: -.015em; margin: 0 0 .2rem; }
+  section { padding: 2.8rem 0 .5rem; border-top: 1px solid var(--edge); margin-top: 2.4rem; }
   .step { font: 600 .72rem/1 var(--mono); letter-spacing: .12em; color: var(--violet); }
-  h3 { font-size: 1.05rem; margin: 1.8rem 0 .4rem; }
+  section > h2 { font-size: 1.55rem; letter-spacing: -.02em; margin: .35rem 0 .8rem; }
+  h3 { font-size: 1.03rem; margin: 1.8rem 0 .4rem; }
   p { margin: 0 0 1rem; }
-  ul, ol { padding-left: 1.3rem; }
-  li { margin: .3rem 0; }
+  ul, ol { padding-left: 1.35rem; }
+  li { margin: .35rem 0; }
 
   pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
-        padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1.1rem;
-        font: .85rem/1.7 var(--mono); color: #D9CCF3; }
+        padding: .95rem 1.15rem; overflow-x: auto; margin: 0 0 1.1rem;
+        font: .85rem/1.75 var(--mono); color: #D9CCF3; }
   pre .c { color: var(--ink-faint); }
-  pre .k { color: var(--violet); }
-  pre .s { color: #9FD8B0; }
 
-  figure { margin: 1.4rem 0 1.8rem; }
+  figure { margin: 1.3rem 0 1.6rem; }
   figure img { width: 100%; height: auto; display: block; border-radius: 12px;
                border: 1px solid var(--edge); box-shadow: 0 26px 60px -34px rgba(0,0,0,.95); }
-  figcaption { font-size: .85rem; color: var(--ink-faint); margin-top: .6rem; }
+  figcaption { font-size: .86rem; color: var(--ink-faint); margin-top: .55rem; }
 
-  table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: .92rem; }
-  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--edge); vertical-align: top; }
-  th { color: var(--ink-dim); font-weight: 600; font-size: .82rem; }
+  .keys { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: .94rem; }
+  .keys td { padding: .42rem .6rem; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  .keys td:first-child { width: 11rem; color: var(--ink); }
+  kbd { font: .82em var(--mono); border: 1px solid var(--edge); border-bottom-width: 2px;
+        border-radius: 5px; padding: .08em .38em; background: var(--bg-2); }
 
   .note { border-left: 3px solid var(--violet-3); background: rgba(86,60,170,.12);
-          padding: .85rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; }
+          padding: .8rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; font-size: .96rem; }
   .note p:last-child { margin-bottom: 0; }
   .note b { color: var(--ink); }
 
-  footer { border-top: 1px solid var(--edge); margin-top: 3rem; padding: 2.4rem 0 4rem;
+  footer { border-top: 1px solid var(--edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
            color: var(--ink-faint); font-size: .9rem; }
 
   [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
@@ -97,346 +97,264 @@
 <div class="wrap">
 
   <header class="top">
-    <p class="crumb"><img src="/nsite-clay-transparent.png" alt=""> <a href="/">nsite-clay</a> / how it works</p>
-    <h1 editable="single-line">How it works</h1>
-    <p class="lede" editable="single-line">Publish a page, edit it in the browser, and republish it from inside itself. Every screenshot below was taken from a real page running on a local relay, Blossom server and gateway.</p>
+    <p class="crumb"><img src="/nsite-clay-transparent.png" alt=""> <a href="/">nsite-clay</a> / walkthrough</p>
+    <h1 editable="single-line">A walkthrough</h1>
+    <p class="lede" editable="single-line">Two commands to get a page online. After that everything happens in the browser: writing, pictures, video, your Nostr posts. Every screenshot below is the real thing.</p>
 
     <nav class="toc">
       <ol>
-        <li><a href="#loop">The loop</a></li>
-        <li><a href="#install">Install and deploy</a></li>
-        <li><a href="#local">Work locally</a></li>
-        <li><a href="#signin">Sign in</a></li>
-        <li><a href="#text">Edit text</a></li>
-        <li><a href="#media">Images and video</a></li>
-        <li><a href="#feeds">Nostr feeds</a></li>
-        <li><a href="#write">Write notes and articles</a></li>
-        <li><a href="#versions">Versions</a></li>
-        <li><a href="#current">Staying current</a></li>
-        <li><a href="#limits">What it will not do</a></li>
+        <li><a href="#online">Get your page online</a></li>
+        <li><a href="#signin">Open it and sign in</a></li>
+        <li><a href="#text">Change the words</a></li>
+        <li><a href="#picture">Add a picture</a></li>
+        <li><a href="#video">Add a video</a></li>
+        <li><a href="#posts">Show your Nostr posts</a></li>
+        <li><a href="#write">Write a post</a></li>
+        <li><a href="#save">Save your changes</a></li>
+        <li><a href="#history">Go back to an earlier version</a></li>
+        <li><a href="#share">Your page's address</a></li>
       </ol>
     </nav>
   </header>
 
-  <section id="loop">
-    <p class="step">01 THE LOOP</p>
-    <h2>What happens when you press Save</h2>
+  <section id="online">
+    <p class="step">01</p>
+    <h2>Get your page online</h2>
     <div editable>
-      <p>The document holds its own interface, behaviour, content and state. Saving serialises the
-        live DOM into one string and does three things with it.</p>
-      <ol>
-        <li>The bytes go to a Blossom server as a blob addressed by their own sha256. Uploading is
-          authorised by a signed kind-24242 token.</li>
-        <li>A NIP-5A manifest maps <code>/index.html</code> to that hash. It is a replaceable event,
-          so publishing a new one is the deploy.</li>
-        <li>A kind-5128 snapshot records that set of hashes as a permanent version.</li>
-      </ol>
-      <p>A gateway resolves the manifest, fetches the blob, checks that the bytes hash to what the
-        manifest claims, and serves them. Nothing in that loop is a server you run.</p>
+      <p>This is the only part that happens in a terminal, and it is two commands. You need
+        <a href="https://nodejs.org">Node.js</a> installed.</p>
     </div>
-    <div class="note">
-      <p><b>The DOM is the database.</b> There is no second place where state lives. Save the page,
-        open the file in a text editor, and what you typed is right there in the markup.</p>
-    </div>
-  </section>
-
-  <section id="install">
-    <p class="step">02 DEPLOY</p>
-    <h2>Getting a page online</h2>
-    <div editable>
-      <p>The CLI publishes the first version. After that the page republishes itself, and you come
-        back to the CLI only for changes made outside the browser.</p>
-    </div>
-<pre><span class="c"># scaffold a document and generate a key for it</span>
-npx nsite-clay init mysite
-
-<span class="c"># publish</span>
+<pre>npx nsite-clay init mysite
 npx nsite-clay deploy mysite --sec=nsec1…</pre>
     <div editable>
-      <p><code>init</code> prints the key once and stores it nowhere. It is the only thing that can
-        publish the site, so save it before you close the terminal. To use a key you already have,
-        pass <code>--npub=</code> instead and the document is written with that owner.</p>
-      <p>Signing through a remote signer keeps the key off the machine doing the deploy, which is
-        what you want on a shared machine or in CI:</p>
+      <p>The first command makes a folder with your page in it and prints a key. That key is the
+        only thing that can ever change the page, and it is not stored anywhere, so copy it
+        somewhere safe before you close the terminal. The second command puts the page online and
+        prints its address.</p>
+      <p>Already have a Nostr key? Pass your npub to the first command instead, and the page belongs
+        to you from the start:</p>
     </div>
-<pre><span class="c"># prefer the environment: an argument is visible in the process list</span>
-export NOSTR_BUNKER_URI="bunker://…"
-npx nsite-clay deploy mysite</pre>
-    <div editable>
-      <p>The connection belongs to a client key, which is saved per bunker under
-        <code>~/.config/nsite-clay/bunkers.json</code> and reused. A <code>bunker://</code> secret is
-        single use, so without that the second deploy would arrive as an app the signer has never
-        seen.</p>
-    </div>
-    <h3>Where it ends up</h3>
-    <table>
-      <tr><th>Site</th><th>URL</th></tr>
-      <tr><td>root site (the default)</td><td><code>https://&lt;npub&gt;.nsite.lol/</code></td></tr>
-      <tr><td>named site (<code>--site=blog</code>)</td><td><code>https://&lt;base36 pubkey&gt;blog.nsite.lol/</code></td></tr>
-      <tr><td>one specific version</td><td><code>https://v&lt;base36 snapshot id&gt;.nsite.lol/</code></td></tr>
-    </table>
-    <div editable>
-      <p>Any NIP-5A gateway serves the same site, so a CNAME pointed at one gives you a custom
-        domain. A key has one root site and as many named sites as you like.</p>
-    </div>
-  </section>
-
-  <section id="local">
-    <p class="step">03 LOCALLY</p>
-    <h2>A whole stack on your laptop</h2>
-    <div editable>
-      <p>Developing against public relays means publishing every experiment to somebody else's disk
-        and every half-finished draft to a public gateway. None of the three services involved is
-        complicated enough to justify that, so the repository ships all three, in memory.</p>
-    </div>
-<pre>npm run devnet
-
-  relay    ws://127.0.0.1:4869
-  blossom  http://127.0.0.1:4870
-  gateway  http://127.0.0.1:4871</pre>
-    <div editable>
-      <p>Deploy into it by pointing the two flags at localhost, then open the site at its canonical
-        hostname. Browsers resolve anything under <code>.localhost</code> to the loopback address, so
-        the npub goes in the hostname exactly as it does in production.</p>
-    </div>
-<pre>npx nsite-clay deploy mysite --sec=nsec1… \
-  --relays=ws://127.0.0.1:4869 --servers=http://127.0.0.1:4870
-
-open http://npub1….localhost:4871/</pre>
+<pre>npx nsite-clay init mysite --npub=npub1…</pre>
     <div class="note">
-      <p><b>It keeps nothing.</b> Stop the process and every event and blob is gone, which is the
-        point. It is a development fixture: it trusts its caller and should never be reachable from
-        anywhere but your own machine.</p>
+      <p><b>That is the last command you need.</b> From here on, the page changes itself. You only
+        come back to the terminal if you want to edit the file by hand.</p>
     </div>
   </section>
 
   <section id="signin">
-    <p class="step">04 SIGN IN</p>
-    <h2>Reading, then editing</h2>
+    <p class="step">02</p>
+    <h2>Open it and sign in</h2>
+    <div editable>
+      <p>Open the address the deploy printed. This is what anyone visiting sees: your page, and
+        nothing to click.</p>
+    </div>
     <figure>
-      <img src="/shots/01-visitor.png" alt="The page as a visitor sees it: content, no editing controls">
-      <figcaption>A visitor gets a plain static document. No editing controls, nothing to sign in to.</figcaption>
+      <img src="/shots/g1-your-page.png" alt="A published page as a visitor sees it">
+      <figcaption>A visitor sees the page. No editing controls, no login prompt.</figcaption>
     </figure>
     <div editable>
-      <p>Signing in as the owner arms the editable regions and reveals the save controls. Three ways
-        in, ranked by how much you have to trust the page in front of you.</p>
+      <p>Press <b>Sign in</b> in the corner. There are three ways in, and the first one that applies
+        to you is the one to use.</p>
+    </div>
+    <figure>
+      <img src="/shots/g2-sign-in.png" alt="The sign-in panel offering a browser extension, a remote signer, or pasting a key">
+      <figcaption>Sign in with a browser extension, with Amber on your phone, or by pasting your key.</figcaption>
+    </figure>
+    <div editable>
       <ul>
-        <li><b>A NIP-07 extension.</b> The key never enters the page.</li>
-        <li><b>Amber or another NIP-46 signer.</b> The key never enters the browser. The page shows a
-          <code>nostrconnect://</code> QR and a deep link, and each signature is approved on your
-          phone. This is the right default for a page served by a gateway you do not control.</li>
-        <li><b>A typed key.</b> <code>nsec1…</code>, 64 hex characters, or a NIP-49
-          <code>ncryptsec1…</code> with its password. It lives in the tab for the session and is
-          written nowhere. The field is a password field on purpose: the snapshot algorithm never
-          writes those values into markup, so a save cannot bake your key into the page it
-          publishes.</li>
+        <li><b>A browser extension</b> such as Alby or nos2x. One click, nothing to type.</li>
+        <li><b>Amber, or another signer app.</b> Press the button, scan the code with your phone, and
+          approve each change there. Your key never touches the browser, which makes this the safest
+          option.</li>
+        <li><b>Paste your key.</b> Your <code>nsec</code>, or an encrypted <code>ncryptsec</code> with
+          its password. It stays in the tab until you close it and is never saved anywhere.</li>
       </ul>
     </div>
     <figure>
-      <img src="/shots/02-signed-in.png" alt="The same page after signing in, with save controls visible">
-      <figcaption>The same document with the owner signed in. Everything marked <code>editable</code> is now live text.</figcaption>
+      <img src="/shots/g3-signed-in.png" alt="The same page after signing in, with editing controls in the corner">
+      <figcaption>Signed in as the owner. The corner now says who you are and offers Save.</figcaption>
     </figure>
+    <div class="note">
+      <p><b>Only your key can change the page.</b> Anyone else who signs in gets the same read-only
+        page a visitor sees.</p>
+    </div>
   </section>
 
   <section id="text">
-    <p class="step">05 TEXT</p>
-    <h2>Adding a paragraph, or a heading</h2>
+    <p class="step">03</p>
+    <h2>Change the words</h2>
     <div editable>
-      <p>Mark a container <code>editable</code> and type into it. Enter starts a new paragraph.
-        Selecting text raises a toolbar whose first control is a block menu, which turns the current
-        block into a heading, a list, a quote or a code block.</p>
+      <p>Click into any text and type. Press Enter for a new paragraph. Select some text and a small
+        toolbar appears above it.</p>
     </div>
     <figure>
-      <img src="/shots/03-toolbar.png" alt="The floating toolbar over selected text, showing the block menu and formatting controls">
-      <figcaption>The toolbar follows the selection. Block menu, bold, italic, strikethrough, lists,
-        link, the three insert buttons, and clear formatting.</figcaption>
+      <img src="/shots/g4-toolbar.png" alt="The formatting toolbar floating above selected text">
+      <figcaption>The first control is the style menu. It turns whatever you are standing in into a
+        heading, a list, a quote, or a code block.</figcaption>
     </figure>
-    <table>
-      <tr><th>Keys</th><th>Does</th></tr>
-      <tr><td><code>⌘B ⌘I ⌘U</code></td><td>bold, italic, underline</td></tr>
-      <tr><td><code>⌘K</code></td><td>link, or unlink when the selection is already one</td></tr>
-      <tr><td><code>⌘⇧7 ⌘⇧8 ⌘⇧9</code></td><td>numbered list, bulleted list, quote</td></tr>
-      <tr><td><code>⌥0</code> to <code>⌥3</code></td><td>paragraph, then the three heading levels</td></tr>
-      <tr><td><code># </code> <code>- </code> <code>&gt; </code></td><td>at the start of a block, the same thing by typing</td></tr>
-      <tr><td><code>⌘S</code></td><td>save, whether or not <code>autosave</code> is on</td></tr>
+    <div editable>
+      <p>The rest of the toolbar is bold, italic, strikethrough, bulleted and numbered lists, a link
+        button, the three insert buttons covered below, and one to strip formatting back out.</p>
+    </div>
+    <table class="keys">
+      <tr><td><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd></td><td>bold, italic, underline</td></tr>
+      <tr><td><kbd>⌘K</kbd></td><td>make a link, or remove one</td></tr>
+      <tr><td><kbd>⌘⇧8</kbd></td><td>bulleted list (<kbd>⌘⇧7</kbd> numbered, <kbd>⌘⇧9</kbd> quote)</td></tr>
+      <tr><td><kbd>⌥1</kbd> <kbd>⌥2</kbd> <kbd>⌥3</kbd></td><td>the three heading sizes, <kbd>⌥0</kbd> back to normal</td></tr>
+      <tr><td><code># </code> <code>- </code> <code>&gt; </code></td><td>type these at the start of a line for the same thing</td></tr>
     </table>
     <div editable>
-      <p>Use <code>editable="single-line"</code> for a title or a list row, where Enter should do
-        nothing and a block menu makes no sense.</p>
-      <p>What reaches the file is markup a person could have written. The <code>editable</code>
-        attribute stays as an inert marker; the <code>contenteditable</code> it implies, the toolbar,
-        and the debris browsers emit from editing commands are all stripped. Pasted markup goes
-        through a sanitiser, so copying out of a word processor does not smuggle a stylesheet into
-        your document.</p>
+      <p>Pasting from a word processor is safe. The formatting gets cleaned up on the way in, so you
+        do not end up with someone else's fonts in your page.</p>
     </div>
   </section>
 
-  <section id="media">
-    <p class="step">06 MEDIA</p>
-    <h2>Images and video</h2>
+  <section id="picture">
+    <p class="step">04</p>
+    <h2>Add a picture</h2>
     <div editable>
-      <p>Both live on the toolbar and both take either a URL you already have or a file, uploaded to
-        the same Blossom servers the document is stored on. An uploaded file is content-addressed, so
-        its URL never has to change.</p>
+      <p>Put the cursor where you want it and press the picture button on the toolbar.</p>
     </div>
     <figure>
-      <img src="/shots/04-image-dialog.png" alt="The insert image dialog, with a URL field, a file picker, alt text and caption">
-      <figcaption>Alt text is a field rather than an afterthought, because a picture nobody described
-        is a picture some readers do not get.</figcaption>
-    </figure>
-    <figure>
-      <img src="/shots/05-video-dialog.png" alt="The insert video dialog with a YouTube URL filled in">
-      <figcaption>A YouTube or Vimeo link becomes a click-to-play thumbnail. A video file is uploaded
-        and played from Blossom.</figcaption>
+      <img src="/shots/g5-add-picture.png" alt="The insert image panel with a drop area, a grid of previously uploaded images, and fields for a URL, alt text and caption">
+      <figcaption>Drag a file in, click one you have used before, or paste a web address.</figcaption>
     </figure>
     <div editable>
-      <p>An embed is inserted as a facade rather than an iframe: a poster image and a real link to the
-        video. The player is only loaded once a reader clicks it.</p>
-    </div>
-    <figure>
-      <img src="/shots/06-video-facade.png" alt="A video embedded in the page as a thumbnail with a play button">
-      <figcaption>The saved file contains no third-party frame. With JavaScript off the thumbnail is
-        still a working link to the video.</figcaption>
-    </figure>
-    <div class="note">
-      <p><b>Why a facade.</b> An iframe in the saved markup would load a third-party player, and its
-        cookies, for every reader who never asked to watch anything. Here nothing external runs until
-        someone clicks.</p>
+      <p>Anything you upload is stored alongside the page itself, and everything you have uploaded
+        before shows up in that grid, so you never have to hunt for the same picture twice.</p>
+      <p>Fill in the alt text. It is what people using a screen reader hear, and what shows if the
+        image ever fails to load. A caption is optional and appears under the picture.</p>
     </div>
   </section>
 
-  <section id="feeds">
-    <p class="step">07 FEEDS</p>
-    <h2>Pulling Nostr content into the page</h2>
+  <section id="video">
+    <p class="step">05</p>
+    <h2>Add a video</h2>
     <div editable>
-      <p>A feed widget shows short notes, long-form articles or picture posts from any npubs you
-        name. The vocabulary follows <a href="https://github.com/dtonon/oracolo">oracolo</a>'s blocks,
-        which got the shape right: a type, how many, a style, and an optional minimum length.</p>
+      <p>The video button next to it takes a YouTube or Vimeo link, or a video file to upload.</p>
     </div>
     <figure>
-      <img src="/shots/07-feed-dialog.png" alt="The insert Nostr feed dialog, with type, authors, count, style and pinning">
-      <figcaption>The dialog writes the attributes for you; the result is ordinary markup you can
-        edit by hand afterwards.</figcaption>
+      <img src="/shots/g6-add-video.png" alt="The insert video panel with a YouTube link filled in">
+      <figcaption>Paste the link you would normally share.</figcaption>
     </figure>
-<pre>&lt;div <span class="k">nc:feed</span>=<span class="s">"articles"</span> <span class="k">nc:authors</span>=<span class="s">"npub1…, npub1…"</span>
-     <span class="k">nc:limit</span>=<span class="s">"5"</span> <span class="k">nc:style</span>=<span class="s">"grid"</span> <span class="k">nc:pinned</span>=<span class="s">"my-first-post"</span>&gt;&lt;/div&gt;</pre>
-    <table>
-      <tr><th>Attribute</th><th>Meaning</th></tr>
-      <tr><td><code>nc:feed</code></td><td><code>notes</code> (kind 1), <code>articles</code> (kind 30023), <code>images</code> (kind 20)</td></tr>
-      <tr><td><code>nc:authors</code></td><td>one or more npubs, comma separated</td></tr>
-      <tr><td><code>nc:limit</code></td><td>how many to show</td></tr>
-      <tr><td><code>nc:style</code></td><td><code>list</code> or <code>grid</code></td></tr>
-      <tr><td><code>nc:min-length</code></td><td>skip anything shorter, for filtering out one-liners</td></tr>
-      <tr><td><code>nc:topic</code></td><td>only events carrying this <code>t</code> tag</td></tr>
-      <tr><td><code>nc:pinned</code></td><td>article slugs, or event ids for notes, held at the top</td></tr>
-      <tr><td><code>nc:feed-relays</code></td><td>relays for this widget, if not the document's own</td></tr>
-    </table>
     <figure>
-      <img src="/shots/08-feed-rendered.png" alt="An article card and two note cards rendered from a relay inside the page">
-      <figcaption>An articles widget and a notes widget, composed in the browser from signed events.</figcaption>
+      <img src="/shots/g7-video-in-page.png" alt="The video sitting in the page as a thumbnail with a play button">
+      <figcaption>It lands as a thumbnail with a play button.</figcaption>
     </figure>
-    <div editable>
-      <p>Pinning an article uses its slug, not its event id. Long-form posts are replaceable, so the
-        id changes every time the author fixes a typo and an id-pin would break; the slug does not
-        move.</p>
-      <p>Every event's signature is checked in the browser before anything is displayed, and its
-        content is sanitised. Relays are transports, not authorities.</p>
-    </div>
     <div class="note">
-      <p><b>A feed is fetched, not stored.</b> Its items are marked transient, so a save writes the
-        widget's configuration into the file but never the posts it happened to be showing. A reader
-        with JavaScript off sees an empty block, the same way any client-rendered feed behaves.</p>
+      <p><b>The player only loads if someone presses play.</b> Until then your readers are not being
+        tracked by YouTube, and the thumbnail still works as a link even for people browsing with
+        JavaScript turned off.</p>
+    </div>
+  </section>
+
+  <section id="posts">
+    <p class="step">06</p>
+    <h2>Show your Nostr posts</h2>
+    <div editable>
+      <p>The lightning button puts a feed of Nostr posts into the page. Choose whether you want short
+        notes, long-form articles or picture posts, and whose.</p>
+    </div>
+    <figure>
+      <img src="/shots/g8-pick-posts.png" alt="The Nostr feed panel listing real posts, with one ticked to pin it">
+      <figcaption>Their actual posts are listed underneath. Click any one to pin it to the top.</figcaption>
+    </figure>
+    <div editable>
+      <p>You can name more than one npub, so a page can show a whole group. The rest of the controls
+        are how many posts to show, whether they sit in a list or a grid, a minimum length to filter
+        out one-liners, and a tag to narrow it down to one topic.</p>
+    </div>
+    <figure>
+      <img src="/shots/g9-posts-in-page.png" alt="An article and two notes rendered inside the page">
+      <figcaption>The feed in place. It refreshes itself whenever the page is opened.</figcaption>
+    </figure>
+    <div editable>
+      <p>Post something new later and it turns up here on its own. You do not have to touch the page
+        again.</p>
     </div>
   </section>
 
   <section id="write">
-    <p class="step">08 WRITE</p>
-    <h2>Notes and articles, from inside the page</h2>
+    <p class="step">07</p>
+    <h2>Write a post</h2>
     <div editable>
-      <p>If the page can show your posts, it may as well write them. The composer lists what you have
-        published and opens an editor for more.</p>
+      <p>If the page can show your posts, it can write them too. Everything you have published is
+        listed, and you can edit any article from here.</p>
     </div>
     <figure>
-      <img src="/shots/09-composer.png" alt="The composer listing published articles with edit and view buttons">
-      <figcaption>Your own articles and notes, read back from the same relays the document uses.</figcaption>
+      <img src="/shots/g10-your-posts.png" alt="A list of published articles with edit and view buttons">
+      <figcaption>Your articles and notes, with a Write button for a new one.</figcaption>
     </figure>
     <figure>
-      <img src="/shots/10-article-editor.png" alt="The long-form editor with title, slug, summary, image, topics and a Markdown body">
-      <figcaption>Long-form posts are kind 30023, and their content is Markdown.</figcaption>
+      <img src="/shots/g11-write-article.png" alt="The article editor with title, address, summary, image, topics and body">
+      <figcaption>Long-form posts take a title, a summary, an optional header image, topics, and the
+        text itself.</figcaption>
     </figure>
     <div editable>
-      <p>The slug is the field that matters. A kind-30023 event is addressable, so publishing again
-        under a slug you have used before <em>is</em> the edit: every long-form client shows the new
-        text at the same address. The editor keeps <code>published_at</code> from the original so the
-        date does not jump when you fix a sentence.</p>
-      <p>Short notes are kind 1 and are not replaceable. Once a note is out, it is out, and the
-        composer says so before you publish one.</p>
-      <p>Posting and saving are separate acts. A note goes to relays; the page is published on its
-        own. Conflating them would make it impossible to fix a typo in a note without republishing
-        the whole site.</p>
+      <p>The <b>address</b> is the part worth getting right. It is how your article is linked, and
+        publishing again under the same address is how you edit it. Fix a typo, publish, and every
+        Nostr app shows the corrected version at the same link. The original date stays put.</p>
+      <p>Short notes work the same way with one difference: they cannot be edited afterwards. The
+        panel says so before you publish one.</p>
+      <p>Posts and pages are separate. Writing a note does not change your page, and saving your page
+        does not touch your posts.</p>
     </div>
   </section>
 
-  <section id="versions">
-    <p class="step">09 VERSIONS</p>
-    <h2>Every save is kept</h2>
+  <section id="save">
+    <p class="step">08</p>
+    <h2>Save your changes</h2>
     <div editable>
-      <p>Each save files a kind-5128 snapshot naming an immutable set of hashes. Blobs deduplicate, so
-        a history of a hundred saves costs about as much as the distinct documents in it.</p>
+      <p>Press <b>Save</b>, or <kbd>⌘S</kbd>. The dot in the corner turns green when it is done, and
+        anyone opening your page from that moment sees the new version.</p>
+      <p>Saving takes about a second. If nothing has changed since the last save, it says so and does
+        nothing, so pressing it twice is harmless.</p>
+      <p>Anyone still reading the old version gets told a newer one exists, and their page updates
+        itself. Nobody has to know what a hard refresh is.</p>
     </div>
-<pre>await nc.versions()          <span class="c">// snapshots, newest first</span>
-await nc.readVersion(v)      <span class="c">// that version's HTML, hash-verified</span>
-await nc.restore(v)          <span class="c">// republish it as the current one</span></pre>
-    <div editable>
-      <p>Reading a version fetches its blob straight from Blossom and refuses bytes that do not hash
-        to what the snapshot claims, so no gateway is trusted for it. Restoring files another version,
-        so nothing is ever destroyed. Each version also has its own permanent URL, which does mean
-        your history is public.</p>
-    </div>
-  </section>
-
-  <section id="current">
-    <p class="step">10 FRESHNESS</p>
-    <h2>Nobody should need a hard refresh</h2>
-    <div editable>
-      <p>A published document hardcodes its asset URLs, and gateways serve them with a cache lifetime.
-        Replacing a file at the same path is therefore invisible to a browser that already has one.
-        Two mechanisms deal with it, and they only work together.</p>
-      <ul>
-        <li>Assets are published at paths carrying their content hash, so a new build is a new URL
-          that no cache can satisfy from stock. The unfingerprinted path stays in the manifest as an
-          alias to the same blob, so a reader holding the previous document does not break.</li>
-        <li>Each document watches its own manifest. That manifest is a replaceable event, so a new
-          version arrives as a push rather than a poll: when the hash for the document's path stops
-          matching the bytes the tab was served, the page says so and reloads itself through a
-          cache-proof URL.</li>
-      </ul>
-      <p>A page with unsaved work is never reloaded out from under you, and the watch only runs on the
-        document's canonical address. A local copy is a different artifact, not a stale one.</p>
+    <div class="note">
+      <p><b>If a save fails</b>, it says why rather than failing quietly. The usual cause is a signer
+        app that has gone to sleep: wake it, approve, and press Save again.</p>
     </div>
   </section>
 
-  <section id="limits">
-    <p class="step">11 LIMITS</p>
-    <h2>What it will not do</h2>
+  <section id="history">
+    <p class="step">09</p>
+    <h2>Go back to an earlier version</h2>
     <div editable>
-      <ul>
-        <li><b>One key writes the document.</b> The manifest carries one signature. No shared editing,
-          no per-visitor content.</li>
-        <li><b>No conflict detection.</b> A replaceable event has no compare-and-swap, so two devices
-          editing at once will silently lose one side's work.</li>
-        <li><b>The gateway is trusted for the first byte.</b> Everything the document loads afterwards
-          is hash-checked and every event is signature-checked, but the entry document cannot verify
-          itself. The manifest, the blobs and the history all live outside the gateway, so you can
-          check the same document through another one or run your own.</li>
-        <li><b>No server code.</b> If the project needs a backend, this is the wrong tool.</li>
-      </ul>
+      <p>Every save is kept. <b>History</b> lists them all.</p>
+    </div>
+    <figure>
+      <img src="/shots/g12-history.png" alt="The version history listing saves by date, each with a read button">
+      <figcaption>Read any earlier version, or put it back.</figcaption>
+    </figure>
+    <div editable>
+      <p>Restoring an old version does not throw the current one away. It becomes just another entry
+        in the list, so you can change your mind again.</p>
+    </div>
+  </section>
+
+  <section id="share">
+    <p class="step">10</p>
+    <h2>Your page's address</h2>
+    <div editable>
+      <p>Your page lives at your npub:</p>
+    </div>
+<pre>https://&lt;your npub&gt;.nsite.lol/</pre>
+    <div editable>
+      <p>That address is yours because the key is yours. Nobody assigned it and nobody can take it
+        away. The same page is also served by other gateways, so if one is down, swap
+        <code>nsite.lol</code> for <code>nsite.run</code> and it is still there.</p>
+      <p>For a domain of your own, point a CNAME record at a gateway and your page answers there
+        instead.</p>
+      <p>You can also have more than one page. Add <code>--site=blog</code> when you deploy and that
+        one gets its own address, with the same key behind it.</p>
     </div>
   </section>
 
   <footer>
-    <p><a href="/">Back to the homepage</a> · <a href="https://github.com/jooray/nsite-clay">Source on GitHub</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">Runtime reference</a></p>
-    <p>This page is an nsite-clay document. It edits and republishes itself, the same as everything described above.</p>
+    <p><a href="/">Homepage</a> · <a href="https://github.com/jooray/nsite-clay">Source on GitHub</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">For developers</a></p>
+    <p>This page is one of these pages. It was written in itself.</p>
   </footer>
 </div>
 
@@ -464,9 +382,12 @@ await nc.restore(v)          <span class="c">// republish it as the current one<
 
   $("#signin-btn").onclick = async () => {
     if (nc.pubkey) return nc.logout();
-    const key = prompt("nsec, ncryptsec or 64 hex characters. A NIP-07 extension is used automatically if you have one.");
-    try { key ? await nc.login("nsec", { key }) : await nc.login("nip07"); }
-    catch (e) { nc.toast(e.message); }
+    try { await nc.login("auto"); }
+    catch {
+      const key = prompt("Paste your nsec or ncryptsec.");
+      if (!key) return;
+      try { await nc.login("nsec", { key }); } catch (e) { nc.toast(e.message); }
+    }
   };
   $("#save").onclick = async () => {
     try {

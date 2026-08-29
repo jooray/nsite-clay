@@ -20,6 +20,8 @@ const CSS = `
 .nc-ui-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
 .nc-ui-card p.nc-hint { margin: 0 0 1rem; color: #9a92ad; font-size: .86rem; }
 .nc-ui label { display: block; font-size: .78rem; color: #9a92ad; margin: .85rem 0 .3rem; }
+.nc-ui .nc-field { margin-top: .85rem; }
+.nc-ui .nc-field label { margin: 0 0 .3rem; }
 .nc-ui input[type=text], .nc-ui input[type=number], .nc-ui textarea, .nc-ui select {
   width: 100%; font: inherit; font-size: .9rem; padding: .55rem .65rem; border-radius: 8px;
   border: 1px solid #322c40; background: #0e0c14; color: inherit;
@@ -27,7 +29,8 @@ const CSS = `
 .nc-ui textarea { min-height: 9rem; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
 .nc-ui input:focus, .nc-ui textarea:focus, .nc-ui select:focus { outline: 2px solid #6f5ad1; outline-offset: 1px; }
 .nc-ui .nc-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-.nc-ui .nc-row > * { flex: 1 1 8rem; }
+.nc-ui .nc-row > .nc-field { flex: 1 1 8rem; }
+.nc-ui .nc-field label { margin-top: 0; }
 .nc-ui .nc-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.2rem; flex-wrap: wrap; }
 .nc-ui button {
   font: inherit; font-size: .88rem; padding: .5rem .95rem; border-radius: 8px; cursor: pointer;
@@ -47,6 +50,23 @@ const CSS = `
   border: 1px solid #322c40; border-radius: 9px; background: #0e0c14; font-size: .86rem; }
 .nc-ui .nc-list li b { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nc-ui .nc-list li time { color: #7e768f; font-size: .78rem; }
+.nc-ui .nc-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  max-height: 15rem; overflow: auto; padding: .2rem; }
+.nc-ui .nc-grid button { padding: 0; border-radius: 9px; overflow: hidden; aspect-ratio: 1; background: #0e0c14; }
+.nc-ui .nc-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nc-ui .nc-grid button[aria-pressed=true] { outline: 3px solid #6f5ad1; outline-offset: -3px; }
+.nc-ui .nc-drop { border: 1px dashed #453b5c; border-radius: 10px; padding: 1rem; text-align: center;
+  color: #9a92ad; font-size: .85rem; }
+.nc-ui .nc-drop.nc-over { border-color: #6f5ad1; background: rgba(111,90,209,.12); color: #ece9f2; }
+.nc-ui .nc-pick { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem;
+  max-height: 17rem; overflow: auto; }
+.nc-ui .nc-pick button { display: flex; gap: .6rem; align-items: flex-start; width: 100%; text-align: left;
+  padding: .55rem .7rem; border-radius: 9px; background: #0e0c14; font-size: .85rem; line-height: 1.45; }
+.nc-ui .nc-pick button[aria-pressed=true] { border-color: #6f5ad1; background: rgba(111,90,209,.16); }
+.nc-ui .nc-pick .nc-mark { flex: 0 0 auto; width: 1.1rem; color: #6f5ad1; font-weight: 700; }
+.nc-ui .nc-pick .nc-body-text { flex: 1; min-width: 0; }
+.nc-ui .nc-pick b { display: block; font-weight: 600; }
+.nc-ui .nc-pick small { color: #7e768f; }
 .nc-toast {
   position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 2147483647;
   background: #14121a; color: #ece9f2; border: 1px solid #322c40; border-radius: 10px;
@@ -151,8 +171,16 @@ export function field(body, { label, type = "text", value = "", placeholder = ""
     input.type = type;
   }
   input.id = id;
-  input.value = value;
+  // Assigning "" to a <select> clears the selection, so a dropdown with no
+  // explicit value would silently submit an empty string rather than its first
+  // option. Only assign when there is something to assign.
+  if (value !== "" && value != null) input.value = value;
   if (placeholder) input.placeholder = placeholder;
-  body.append(l, input);
+  // Label and input travel together, so a row lays them out as columns rather
+  // than interleaving every label with somebody else's field.
+  const wrap = body.ownerDocument.createElement("div");
+  wrap.className = "nc-field";
+  wrap.append(l, input);
+  body.appendChild(wrap);
   return input;
 }

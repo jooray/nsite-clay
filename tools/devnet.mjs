@@ -131,7 +131,7 @@ new WebSocketServer({ server: relayHttp }).on("connection", (ws) => {
 
 // -------------------------------------------------------------- the blossom
 
-const blobs = new Map();   // sha256 -> { bytes, type }
+const blobs = new Map();   // sha256 -> { bytes, type, uploader, uploaded }
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -160,8 +160,15 @@ createServer(async (req, res) => {
       res.writeHead(401, { ...CORS, "X-Reason": "Missing Blossom authorization" });
       return res.end("Missing Blossom authorization");
     }
+    // Who uploaded it, so BUD-12 listing can answer. A real server reads this
+    // from the verified token; this one takes the pubkey on trust.
+    let uploader = "";
+    try { uploader = JSON.parse(Buffer.from(auth.slice(6), "base64").toString()).pubkey || ""; } catch {}
     const created = !blobs.has(hash);
-    blobs.set(hash, { bytes: body, type: req.headers["content-type"] || "application/octet-stream" });
+    blobs.set(hash, {
+      bytes: body, type: req.headers["content-type"] || "application/octet-stream",
+      uploader, uploaded: Math.floor(Date.now() / 1000),
+    });
     log(`  blossom <- ${hash.slice(0, 12)} ${String(body.length).padStart(8)} B ${created ? "stored" : "dedup"}`);
     res.writeHead(created ? 201 : 200, { ...CORS, "Content-Type": "application/json" });
     return res.end(JSON.stringify({
@@ -169,6 +176,20 @@ createServer(async (req, res) => {
       sha256: hash, size: body.length,
       type: blobs.get(hash).type, uploaded: Math.floor(Date.now() / 1000),
     }));
+  }
+
+  // BUD-12: what this pubkey has uploaded.
+  const listing = (req.url || "").match(/^\/list\/([0-9a-f]{64})/i);
+  if (listing) {
+    const mine = [...blobs.entries()]
+      .filter(([, b]) => b.uploader === listing[1].toLowerCase())
+      .map(([sha256, b]) => ({
+        sha256, size: b.bytes.length, type: b.type, uploaded: b.uploaded,
+        url: `http://127.0.0.1:${BLOB_PORT}/${sha256}`,
+      }))
+      .sort((a, b) => b.uploaded - a.uploaded);
+    res.writeHead(200, { ...CORS, "Content-Type": "application/json" });
+    return res.end(JSON.stringify(mine));
   }
 
   const hash = (req.url || "").slice(1).split(/[.?]/)[0];

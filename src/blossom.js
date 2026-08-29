@@ -73,6 +73,28 @@ export async function uploadAll(servers, bytes, opts) {
   return { hash: hashBytes(bytes), ok, failed };
 }
 
+// What this key has already uploaded (BUD-12). Servers that do not implement it
+// are skipped rather than treated as an error, because the listing is a
+// convenience: everything still works by URL or by uploading again.
+export async function list(servers, pubkey, { signer } = {}) {
+  const seen = new Map();
+  await Promise.all(servers.map(async (server) => {
+    const base = server.replace(/\/+$/, "");
+    try {
+      const headers = signer
+        ? { Authorization: await authHeader(signer, { verb: "list", reason: "List uploads", urlsafe: true }) }
+        : {};
+      const res = await fetch(`${base}/list/${pubkey}`, { headers });
+      if (!res.ok) return;
+      for (const blob of await res.json()) {
+        if (!blob?.sha256 || seen.has(blob.sha256)) continue;
+        seen.set(blob.sha256, { ...blob, url: blob.url || `${base}/${blob.sha256}`, server: base });
+      }
+    } catch { /* a server without a listing is not a failure */ }
+  }));
+  return [...seen.values()].sort((a, b) => (b.uploaded || 0) - (a.uploaded || 0));
+}
+
 // Fetch a blob and refuse it unless the bytes hash to what the manifest claims.
 // This is what makes a gateway untrusted for everything except the entry document.
 export async function fetchVerified(servers, hash, { as = "text" } = {}) {

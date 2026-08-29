@@ -110,6 +110,40 @@ stays behind as an inert marker; the `contenteditable` it implies, the toolbar, 
 browsers emit from editing commands are all stripped. Pasted markup goes through a sanitiser, so
 copying out of a word processor does not smuggle a stylesheet into your document.
 
+## Pictures, video and Nostr posts
+
+Three more buttons on the same toolbar.
+
+**Pictures.** Drag a file in, pick one you have uploaded before from a grid, or paste a URL.
+Uploads go to the same Blossom servers the document is stored on, so an image is
+content-addressed and its URL never has to change.
+
+**Video.** A YouTube or Vimeo link becomes a click-to-play thumbnail rather than an iframe, so
+nothing third-party loads until a reader presses play and the thumbnail still works as a link
+with JavaScript off. A video file is uploaded and played from Blossom.
+
+**Nostr feeds.** A widget showing short notes, long-form articles or picture posts from any
+npubs you name. The dialog lists their actual posts so you can click the ones to pin rather than
+hunting for event ids. Pinning an article uses its slug, not its event id, because kind 30023 is
+replaceable and an id-pin breaks the moment the author fixes a typo. Every event is
+signature-checked and sanitised in the browser, and the posts are fetched at view time rather
+than stored in the file.
+
+```html
+<div nc:feed="articles" nc:authors="npub1…" nc:limit="5" nc:style="grid"
+     nc:pinned="my-first-post"></div>
+```
+
+## Writing Nostr posts
+
+The composer lists what you have published and opens an editor for more: short notes (kind 1)
+and long-form articles (kind 30023). Publishing an article again under a slug you have used
+before is the edit, so every long-form client shows the new text at the same address and the
+original date stays put.
+
+Posts and pages are separate. Writing a note does not change your page, and saving your page
+does not touch your posts.
+
 ## Signing in
 
 Ranked by how much you have to trust the page in front of you:
@@ -227,6 +261,26 @@ Full attribute and API reference: **[docs/RUNTIME-API.md](docs/RUNTIME-API.md)**
   document through another one and compare aggregate hashes. Running a local gateway removes the
   trust entirely.
 - **No server code.** If your project needs a backend, this is the wrong tool.
+
+## Developing locally
+
+```bash
+npm run devnet
+```
+
+A relay, a Blossom server and a NIP-5A gateway on localhost, all in memory, so experiments do
+not land on other people's disks or a public gateway. Deploy into it and open the site at its
+canonical hostname, since browsers resolve anything under `.localhost` to the loopback address:
+
+```bash
+npx nsite-clay deploy mysite --sec=nsec1… \
+  --relays=ws://127.0.0.1:4869 --servers=http://127.0.0.1:4870
+
+open http://npub1….localhost:4871/
+```
+
+Stop the process and everything it held is gone. It trusts its caller and should never be
+reachable from anywhere else.
 
 ## Building from source
 
