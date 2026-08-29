@@ -33,6 +33,15 @@
     --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
     --lit: 0 0 26px -6px color-mix(in srgb, var(--nc-accent) 55%, transparent);
     --measure: 40rem;
+
+    /* Picture geometry. --ar is one picture's width divided by its height, a
+     * plain number so the same value can drive both aspect-ratio and the height
+     * cap. The script overwrites it per entry once the file has decoded; until
+     * then every frame holds this shape so the page does not jump. --cap is how
+     * tall a picture may get before it is made narrower instead of cut. */
+    --ar: 1.5;
+    --plate: 13rem;
+    --cap: 26rem;
   }
 
   * { box-sizing: border-box; }
@@ -124,6 +133,8 @@
     box-shadow: 0 0 0 1px rgba(124,243,192,.18), 0 0 60px -8px rgba(124,243,192,.5);
     animation: halo 13s ease-in-out infinite;
   }
+  /* The avatar file is 450x450 and the frame is round, so the declared box is
+   * square and the circle is the only crop. */
   .moon img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
               filter: saturate(.85) brightness(.95); }
   @keyframes halo {
@@ -177,97 +188,156 @@
   .lede { margin: -.6rem 0 1.4rem; font-size: .88rem; color: var(--nc-ink-dim); }
 
   /* ---- entries -----------------------------------------------------------
-   * Each card carries the article's own cover art behind the words, blurred
-   * back until it is only light. Any shape of image works, because nothing is
-   * cropped to a fixed frame. */
+   * A picture is shown as a picture: never cropped, never stretched, and never
+   * turned into a wash behind the words. The frame carries the file's own
+   * ratio, so a panorama comes out wide and short and a tower comes out narrow
+   * and tall. --cap is the only limit, and it is reached by making a tall
+   * picture narrower rather than by cutting it.
+   *
+   * One author writes everything here, so the byline is a dateline: the avatar
+   * and the name come off and the date stays on the left, which is why there is
+   * no nc-feed-spread on the widget. No nc-feed-cards either, because nothing
+   * here needs clipping. */
 
-  .page .nc-feed { gap: 1.5rem; }
+  #flow { gap: 2.75rem; }
 
-  .page .nc-feed-articles .nc-item {
-    position: relative; isolation: isolate; overflow: hidden;
-    padding: 1.6rem 1.7rem 1.5rem;
+  #flow .nc-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    /* No row gap on purpose. The picture spans more rows than a card without
+     * tags actually fills, and a row gap would show up as dead space under it.
+     * The text blocks carry their own margins instead. */
+    row-gap: 0; column-gap: 1.5rem;
+    padding: 1.5rem 1.6rem 1.4rem;
     border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
-    background: linear-gradient(160deg, rgba(14,26,26,.9), rgba(6,10,13,.94));
+    background: linear-gradient(160deg, rgba(14,26,26,.72), rgba(6,10,13,.86));
     transition: border-color .5s, transform .5s, box-shadow .5s;
   }
-  .page .nc-feed-articles .nc-item::after {
-    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(75% 130% at 10% -12%, rgba(124,243,192,.16), transparent 62%),
-      linear-gradient(158deg, rgba(4,8,10,.34), rgba(4,8,10,.86));
-  }
-  .page .nc-feed-articles .nc-cover {
-    position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%;
-    margin: 0; border-radius: 0; object-fit: cover;
-    filter: blur(20px) saturate(.85) brightness(.52);
-    opacity: .42; transform: scale(1.16);
-    transition: opacity .6s, filter .6s;
-  }
-  .page .nc-feed-articles .nc-item:hover,
-  .page .nc-feed-articles .nc-item:focus-within {
+  #flow .nc-item:hover,
+  #flow .nc-item:focus-within {
     border-color: color-mix(in srgb, var(--nc-accent) 45%, var(--nc-edge));
     box-shadow: var(--lit);
     transform: translateY(-2px);
   }
-  .page .nc-feed-articles .nc-item:hover .nc-cover,
-  .page .nc-feed-articles .nc-item:focus-within .nc-cover {
-    opacity: .6; filter: blur(13px) saturate(1) brightness(.62);
+
+  #flow .nc-cover,
+  #flow .plate {
+    display: block; margin: 0 0 1rem;
+    width: 100%;
+    /* min() holds a tall picture inside --cap by narrowing it, so the frame
+     * stays exactly the file's shape. */
+    max-width: min(100%, calc(var(--cap) * var(--ar)));
+    height: auto;
+    aspect-ratio: var(--ar);
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--nc-accent) 12%, var(--nc-edge));
+    background: #070c0e;
+    filter: saturate(.82) brightness(.9);
+    transition: filter .5s, border-color .5s;
+  }
+  #flow .nc-item:hover .nc-cover,
+  #flow .nc-item:focus-within .nc-cover {
+    filter: saturate(1) brightness(1);
+    border-color: color-mix(in srgb, var(--nc-accent) 38%, var(--nc-edge));
   }
 
-  /* One author writes everything here, so the by-line is only a date. */
-  .page .nc-avatar,
-  .page .nc-name { display: none; }
-  .page .nc-by {
+  /* A cover whose file is no longer on the server it was uploaded to. Drawn
+   * here rather than fetched, so it costs nothing and belongs to the page. */
+  #flow .plate {
+    aspect-ratio: 3 / 2; max-width: min(100%, calc(var(--cap) * 1.5));
+    display: grid; place-items: center;
+    background:
+      radial-gradient(circle at 38% 34%, rgba(124,243,192,.16), transparent 58%),
+      radial-gradient(circle at 74% 78%, rgba(169,140,255,.12), transparent 60%),
+      #070c0e;
+    filter: none;
+  }
+  #flow .plate small {
+    font: .64rem/1 var(--nc-mono); letter-spacing: .16em; text-transform: uppercase;
+    color: var(--nc-ink-dim); opacity: .8;
+  }
+
+  /* The newest entry runs its picture full width above the writing. */
+  #flow article.nc-item:first-of-type .nc-cover,
+  #flow article.nc-item:first-of-type .plate { order: -1; --cap: 28rem; }
+
+  /* Everything after it sets the picture beside the writing. Below this width
+   * there is no room for a column, so it stacks the way the first one does. */
+  @media (min-width: 34rem) {
+    #flow article.nc-item:not(:first-of-type) {
+      grid-template-columns: var(--plate) minmax(0, 1fr);
+    }
+    #flow article.nc-item:not(:first-of-type) > * { grid-column: 2; }
+    /* The widget writes at most five children into a card: byline, cover,
+     * title, summary, tags. Five rows covers all of them whatever an entry
+     * happens to carry, and the leftovers are empty rows of no height. */
+    #flow article.nc-item:not(:first-of-type) > .nc-cover,
+    #flow article.nc-item:not(:first-of-type) > .plate {
+      grid-column: 1; grid-row: 1 / span 5; align-self: start; margin-bottom: 0;
+      /* A column beside the writing, so a tall picture is held shorter than it
+       * would be stacked above it. */
+      --cap: 18rem;
+    }
+  }
+
+  .nc-avatar, .nc-name { display: none; }
+  .nc-by {
     margin: 0 0 .5rem; opacity: 1;
     font: .72rem/1 var(--nc-mono); letter-spacing: .12em; text-transform: uppercase;
     color: var(--nc-ink-dim);
   }
-  .page .nc-by .nc-when { margin-left: 0; }
-  .page .nc-by a { text-decoration: none; color: var(--nc-ink-dim); }
-  .page .nc-by a:hover { color: var(--nc-accent); }
+  .nc-by a { text-decoration: none; color: var(--nc-ink-dim); }
+  .nc-by a:hover { color: var(--nc-accent); }
 
-  .page .nc-feed-articles .nc-title {
-    font: 400 clamp(1.35rem, 2.6vw, 1.85rem)/1.2 var(--serif);
-    margin: 0 0 .55rem; letter-spacing: -.01em; max-width: 26ch;
+  #flow .nc-title {
+    font: 400 clamp(1.3rem, 2.4vw, 1.7rem)/1.2 var(--serif);
+    margin: 0 0 .5rem; letter-spacing: -.01em; max-width: 26ch;
   }
-  .page .nc-feed-articles .nc-title a { color: var(--nc-ink); }
-  .page .nc-feed-articles .nc-item:hover .nc-title a { color: #eafff5; }
-  .page .nc-feed-articles .nc-summary {
+  #flow .nc-title a { color: var(--nc-ink); }
+  #flow .nc-item:hover .nc-title a { color: #eafff5; }
+  #flow .nc-summary,
+  #flow .nc-text {
     max-width: var(--measure); color: color-mix(in srgb, var(--nc-ink) 74%, transparent);
     font-size: .97rem;
   }
-  .page .nc-tags {
+  /* A promoted note is a whole post, not a summary, so it gets a cut-off. */
+  #flow .nc-text {
+    display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .nc-tags {
     margin-top: 1rem; gap: .5rem; opacity: 1;
     font: .68rem/1 var(--nc-mono); letter-spacing: .08em; color: var(--nc-ink-dim);
   }
-  .page .nc-tag {
+  .nc-tag {
     border: 1px solid var(--nc-edge); border-radius: 999px; padding: .3rem .6rem;
     background: rgba(124,243,192,.04);
   }
 
   /* ---- understory --------------------------------------------------------
-   * The short notes. Most of them are earlier drafts of the essays, so they
-   * get less room and a cut-off rather than a full column of repetition. */
+   * Whatever was posted without a picture. On this account that is the replies
+   * and a couple of asides, so it gets a thin strand rather than a column. */
 
-  .page .understory .nc-feed { gap: .85rem; }
-  .page .understory .nc-item {
+  #floor { gap: .85rem; }
+  #floor .nc-item {
     border: 0; border-left: 1px solid var(--nc-edge); border-radius: 0;
     background: none; padding: .1rem 0 .1rem 1rem;
     transition: border-color .4s;
   }
-  .page .understory .nc-item:hover { border-left-color: var(--nc-accent); }
-  .page .understory .nc-by { margin-bottom: .3rem; font-size: .66rem; }
-  .page .understory .nc-text {
+  #floor .nc-item:hover { border-left-color: var(--nc-accent); }
+  #floor .nc-by { margin-bottom: .3rem; font-size: .66rem; }
+  #floor .nc-text {
     font-size: .87rem; line-height: 1.55; color: var(--nc-ink-dim);
     display: -webkit-box; -webkit-line-clamp: 5; line-clamp: 5;
     -webkit-box-orient: vertical; overflow: hidden;
     -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
     mask-image: linear-gradient(to bottom, #000 55%, transparent);
   }
-  .page .understory .nc-item:hover .nc-text { color: var(--nc-ink); }
-  .page .understory .nc-text a { color: var(--nc-ink-dim); text-decoration: underline; }
+  #floor .nc-item:hover .nc-text { color: var(--nc-ink); }
+  #floor .nc-text a { color: var(--nc-ink-dim); text-decoration: underline; }
 
-  .page .nc-feed-status {
+  .nc-feed-status {
     font: .78rem var(--nc-mono); letter-spacing: .1em; color: var(--nc-ink-dim);
   }
 
@@ -322,7 +392,7 @@
   <header class="masthead">
     <div class="moon">
       <img src="https://profilepics.nostur.com/profilepic_v1/1f3b4c33d0d568e49e2ab3c1b228f67a60ba6f37828313848cf9305672104c7a/profilepic.jpg?1701244525"
-           alt="" width="136" height="136">
+           alt="" width="130" height="130">
     </div>
     <h1 editable="single-line">Lunarpunk Almanach</h1>
     <p class="tagline" editable="single-line">Shinrin-yoku in the dark forest</p>
@@ -342,7 +412,8 @@
 
     <section>
       <h2 class="band" editable="single-line">Entries</h2>
-      <div nc:feed="articles"
+      <div id="flow"
+           nc:feed="articles"
            nc:authors="npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
            nc:limit="12"
            nc:style="list"></div>
@@ -356,11 +427,11 @@
 
     <aside class="understory">
       <h2 class="band" editable="single-line">Understory</h2>
-      <p class="lede" editable="single-line">Shorter notes. Most of the essays above started here first.</p>
-      <div nc:feed="notes"
+      <p class="lede" editable="single-line">What was posted without a picture: the replies and the odd aside.</p>
+      <div id="floor"
+           nc:feed="notes"
            nc:authors="npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
-           nc:limit="8"
-           nc:min-length="200"
+           nc:limit="12"
            nc:style="list"></div>
     </aside>
 
@@ -390,5 +461,180 @@
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-chrome.js"></script>
+<script>
+/* Pictures, and which strand an entry lands in because of one.
+ *
+ * The feed widget does the fetching, the signature checking and the replaceable
+ * dedupe. Two things are left, and both are this page's own business.
+ *
+ * Where an entry goes. An entry published with a picture belongs in the main
+ * flow with the picture shown; an entry published without one goes to the
+ * understory. That is read off the event, not off the network, so a cover whose
+ * file has since gone missing does not move its entry: it was still published
+ * with a picture, and it says so where the picture would have been.
+ *
+ * A kind 1 note carrying the same picture as an article is this author's own
+ * trailer for it, posted the same day with the same words. Printing both would
+ * print every essay twice, so the note goes and the article stands.
+ *
+ * How a picture is framed. Kind 30023 carries a bare `image` url with no dim,
+ * so nothing knows a shape before the file lands. Every frame starts on the
+ * neutral --ar in the stylesheet and is recut to the real intrinsic size on
+ * load, the way the gallery template recuts a frame whose imeta disagreed with
+ * the file. Nothing is cropped and nothing is stretched.
+ *
+ * Everything touched here is inside an nc:transient card, so a save writes the
+ * frame and none of the entries. */
+(async () => {
+  await nc.ready;
+
+  const flow = document.getElementById("flow");
+  const floor = document.getElementById("floor");
+  if (!flow || !floor) return;
+
+  const IMG = /\.(?:jpe?g|png|gif|webp|avif|bmp)(?:[?#].*)?$/i;
+  const LIMIT = Math.max(1, parseInt(flow.getAttribute("nc:limit") || "12", 10) || 12);
+
+  /* nostrcheck.me answers a request for a file it no longer holds with 200 OK
+   * and a 650x650 "file not found" drawing, so the error event never fires and
+   * a dead cover renders as a placeholder rather than as nothing. Every cover
+   * this account published is in that state today. One row per host known to do
+   * this; take the row out when the host stops, or when the files come back. */
+  const SENTINEL = [{ host: "nostrcheck.me", w: 650, h: 650 }];
+  function sentinel(img) {
+    let host = "";
+    try { host = new URL(img.currentSrc || img.src, location.href).hostname; } catch { return false; }
+    return SENTINEL.some((s) => host === s.host && img.naturalWidth === s.w && img.naturalHeight === s.h);
+  }
+
+  const at = (el) => Number(el.getAttribute("nc:at") || 0);
+
+  // Newest first, the order both feeds already arrive in.
+  function place(box, card) {
+    for (const other of box.querySelectorAll(".nc-item")) {
+      if (other !== card && at(other) < at(card)) { box.insertBefore(card, other); return; }
+    }
+    box.appendChild(card);
+  }
+
+  function gone(card, el) {
+    card.dataset.pic = "gone";
+    if (card.querySelector(".plate")) return;
+    const plate = document.createElement("span");
+    plate.className = "plate";
+    plate.setAttribute("role", "img");
+    plate.setAttribute("aria-label",
+      "The cover picture for this entry is no longer on the server it was uploaded to");
+    const note = document.createElement("small");
+    note.textContent = "cover gone";
+    plate.appendChild(note);
+    el.replaceWith(plate);
+  }
+
+  function fit(card, img) {
+    const cut = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return gone(card, img);
+      if (sentinel(img)) return gone(card, img);
+      // Both the attributes and the custom property, so the shape holds whether
+      // or not the stylesheet arrived.
+      img.width = img.naturalWidth;
+      img.height = img.naturalHeight;
+      card.style.setProperty("--ar", (img.naturalWidth / img.naturalHeight).toFixed(4));
+      card.dataset.pic = "ok";
+    };
+    img.decoding = "async";
+    img.loading = "lazy";
+    if (img.complete) { cut(); return; }
+    card.dataset.pic = "wait";
+    img.addEventListener("load", cut, { once: true });
+    img.addEventListener("error", () => gone(card, img), { once: true });
+  }
+
+  // The widget has no reason to describe a cover, and the title is the only
+  // description this page has. Better than the empty alt a screen reader skips
+  // over on a card whose picture is the thing being pointed at.
+  function describe(card, img) {
+    if (img.getAttribute("alt")) return;
+    const title = card.querySelector(".nc-title");
+    const text = card.querySelector(".nc-text, .nc-summary");
+    const label = (title && title.textContent.trim())
+      || (text && text.textContent.trim().slice(0, 70))
+      || "";
+    img.alt = label ? "Cover picture for " + label : "";
+  }
+
+  // A note keeps its pictures as links, which is where one is found.
+  function noteLink(card) {
+    for (const a of card.querySelectorAll(".nc-text a[href]")) {
+      if (IMG.test(a.getAttribute("href") || "")) return a;
+    }
+    return null;
+  }
+
+  function route() {
+    const shown = new Set();
+
+    // The flow first, so a note is measured against the articles already in it.
+    for (const card of [...flow.querySelectorAll(".nc-item")]) {
+      // data-pic is the decision, and it is made once. Reading the DOM again
+      // would get it wrong the moment a dead cover has been swapped for a
+      // plate: the entry was still published with a picture, and it stays.
+      // data-cover keeps the url the plate no longer carries, so a note that
+      // reuses it is still recognised as this article's trailer.
+      if (card.dataset.pic) {
+        if (card.dataset.cover) shown.add(card.dataset.cover);
+        continue;
+      }
+      const img = card.querySelector("img.nc-cover");
+      if (!img) {                       // published without a picture: downstairs
+        card.dataset.pic = "none";
+        place(floor, card);
+        continue;
+      }
+      card.dataset.cover = img.getAttribute("src");
+      shown.add(card.dataset.cover);
+      describe(card, img);
+      fit(card, img);
+    }
+
+    for (const card of [...floor.querySelectorAll(".nc-item")]) {
+      if (card.dataset.pic) continue;
+      const link = noteLink(card);
+      if (!link) { card.dataset.pic = "none"; continue; }
+      const url = link.getAttribute("href");
+      if (shown.has(url)) { card.remove(); continue; }   // its article is upstairs
+      shown.add(url);
+
+      const img = document.createElement("img");
+      img.className = "nc-cover";
+      img.src = url;
+      link.remove();
+      card.insertBefore(img, card.firstChild);
+      card.dataset.cover = url;
+      place(flow, card);
+      describe(card, img);
+      fit(card, img);
+    }
+
+    // The two widgets count separately, so a note whose article is older than
+    // anything the article widget returned would otherwise reappear underneath
+    // the flow and print that essay a second time. Merge first, then cut once:
+    // the flow is the newest LIMIT entries that have a picture, whichever kind
+    // each one came from. place() already keeps the list newest first.
+    for (const card of [...flow.querySelectorAll(".nc-item")].slice(LIMIT)) card.remove();
+  }
+
+  // Both feeds fill in on their own schedule and routing moves cards between
+  // them, so this has to be idempotent rather than one-shot. Every card route()
+  // has finished with carries data-pic and is skipped on the next pass, so the
+  // run that follows a move does nothing and the loop settles.
+  let pending;
+  const kick = () => { clearTimeout(pending); pending = setTimeout(route, 80); };
+  const watch = new MutationObserver(kick);
+  watch.observe(flow, { childList: true });
+  watch.observe(floor, { childList: true });
+  kick();
+})();
+</script>
 </body>
 </html>

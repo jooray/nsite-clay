@@ -9,7 +9,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: templates</title>
-<meta name="description" content="Ten starting points for a self-editable nsite. Pick one, change the words, change the colours, publish.">
+<meta name="description" content="Eleven starting points for a self-editable nsite. Pick one, change the words, change the colours, publish.">
+<link rel="alternate" hreflang="en" href="/templates.html">
+<link rel="alternate" hreflang="es" href="/es/templates.html">
+<link rel="alternate" hreflang="sk" href="/sk/templates.html">
+<link rel="alternate" hreflang="cs" href="/cs/templates.html">
+<link rel="alternate" hreflang="x-default" href="/templates.html">
 <link rel="icon" href="/nsite-clay-mark.svg">
 <link rel="stylesheet" href="/nsite-clay-base.css">
 <style>
@@ -82,7 +87,7 @@
     <a href="/templates.html" aria-current="page">Templates</a>
     <a href="/llms.txt">For agents</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-    <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+    <div class="nc-lang"><a href="/templates.html" hreflang="en" aria-current="page">EN</a><a href="/es/templates.html" hreflang="es">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs">CS</a></div>
   </nav>
   <h1 editable="single-line">Templates</h1>
   <p class="lede" editable="single-line">Eleven starting points. Each is a working page with the editing controls already wired up, so you change the words and the colours rather than building from nothing.</p>
@@ -211,7 +216,7 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p class="lede">Every template links the same <code>/nsite-clay-base.css</code> and the same
         <code>/nsite-clay.js</code> from the site root, and none of them carries a copy. Styling
         happens through CSS variables, so the toolbar, the dialogs and the feeds follow whatever
-        palette a template sets. Changing the engine means editing one file, not ten.</p>
+        palette a template sets. Changing the engine means editing one file, not eleven.</p>
       <p class="lede">The rules a template follows are in
         <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
         If you are handing this to an agent, point it at <a href="/llms.txt">llms.txt</a> instead

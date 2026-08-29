@@ -9,6 +9,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: a walkthrough</title>
 <meta name="description" content="Get a page online, then edit it in the browser: text, pictures, video, your Nostr posts, and writing new ones.">
+<link rel="alternate" hreflang="en" href="/docs.html">
+<link rel="alternate" hreflang="es" href="/es/docs.html">
+<link rel="alternate" hreflang="sk" href="/sk/docs.html">
+<link rel="alternate" hreflang="cs" href="/cs/docs.html">
+<link rel="alternate" hreflang="x-default" href="/docs.html">
 <link rel="icon" href="/nsite-clay-mark.svg">
 <link rel="stylesheet" href="/nsite-clay-base.css">
 <style>
@@ -109,10 +114,10 @@
       <a href="/templates.html">Templates</a>
       <a href="/llms.txt">For agents</a>
       <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-      <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+      <div class="nc-lang"><a href="/docs.html" hreflang="en" aria-current="page">EN</a><a href="/es/docs.html" hreflang="es">ES</a><a href="/sk/docs.html" hreflang="sk">SK</a><a href="/cs/docs.html" hreflang="cs">CS</a></div>
     </nav>
     <h1 editable="single-line">A walkthrough</h1>
-    <p class="lede" editable="single-line">Two commands to get a page online. After that everything happens in the browser: writing, pictures, video, your Nostr posts. Every screenshot below is the real thing.</p>
+    <p class="lede" editable="single-line">Two commands to get a page online. After that everything happens in the browser: writing, pictures, video, your Nostr posts. Every screenshot below is the real thing, taken on a page like the one you are about to make. The controls it describes live on your page, not on this one.</p>
 
     <nav class="toc">
       <ol>
@@ -166,8 +171,7 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <figcaption>A visitor sees the page. No editing controls, no login prompt.</figcaption>
     </figure>
     <div editable>
-      <p>Press <b>Sign in</b> in the corner. There are three ways in, and the first one that applies
-        to you is the one to use.</p>
+      <p>Press <b>Sign in</b> in the corner. There are three ways in. Use the first one that applies to you.</p>
     </div>
     <figure>
       <img src="/shots/g2-sign-in.png" alt="The sign-in panel offering a browser extension, a remote signer, or pasting a key">

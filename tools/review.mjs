@@ -62,6 +62,17 @@ server.listen(PORT, () => {
   line("/templates.html", "the template gallery");
   line("/llms.txt", "the brief handed to agents");
 
+  // Translations live in a directory named after the language, so finding them
+  // is a matter of looking rather than keeping a list here in step with site/.
+  const LANGS = { es: "Spanish", sk: "Slovak", cs: "Czech" };
+  for (const [code, name] of Object.entries(LANGS)) {
+    if (!existsSync(join(ROOT, code, "index.html"))) continue;
+    console.log(`\nThe site in ${name}`);
+    line(`/${code}/`, "homepage");
+    if (existsSync(join(ROOT, code, "docs.html"))) line(`/${code}/docs.html`, "the walkthrough");
+    if (existsSync(join(ROOT, code, "templates.html"))) line(`/${code}/templates.html`, "the template gallery");
+  }
+
   const templates = existsSync(join(ROOT, "t")) ? readdirSync(join(ROOT, "t")).sort() : [];
   if (templates.length) {
     console.log(`\nTemplates (${templates.length})`);

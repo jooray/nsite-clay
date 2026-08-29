@@ -103,6 +103,16 @@ export function toast(message, { doc = document, ms = 2600 } = {}) {
   return el;
 }
 
+// The one word every modal shows whether or not its caller passed any labels.
+// Taken from <html lang> so a translated page does not end up with a lone
+// English button; an unknown language falls back to English.
+const CANCEL = { es: "Cancelar", sk: "Zrušiť", cs: "Zrušit", de: "Abbrechen",
+                 fr: "Annuler", it: "Annulla", pt: "Cancelar", nl: "Annuleren" };
+function cancelLabel(doc) {
+  const lang = (doc.documentElement.lang || "en").slice(0, 2).toLowerCase();
+  return CANCEL[lang] || "Cancel";
+}
+
 // A modal that resolves to whatever `onSubmit` returns, or null if dismissed.
 // `build(body, helpers)` fills in the fields; helpers.submit() triggers the
 // primary action, so a form can resolve on Enter.
@@ -118,11 +128,12 @@ export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, do
     card.innerHTML =
       `<h3></h3>${hint ? '<p class="nc-hint"></p>' : ""}<div class="nc-body"></div>` +
       `<div class="nc-actions"><span class="nc-status"></span>` +
-      `<button type="button" class="nc-cancel">Cancel</button>` +
+      `<button type="button" class="nc-cancel"></button>` +
       `<button type="submit" class="nc-primary"></button></div>`;
     card.querySelector("h3").textContent = title;
     if (hint) card.querySelector(".nc-hint").textContent = hint;
     card.querySelector(".nc-primary").textContent = submitLabel;
+    card.querySelector(".nc-cancel").textContent = cancelLabel(doc);
     if (noCancel) card.querySelector(".nc-cancel").remove();
 
     const status = card.querySelector(".nc-status");
@@ -175,6 +186,15 @@ export function field(body, { label, type = "text", value = "", placeholder = ""
   } else {
     input = body.ownerDocument.createElement("input");
     input.type = type;
+    // The only password field here holds a Nostr secret key. Offering to
+    // remember it, or to autofill a website password into it, is wrong in both
+    // directions, so the browser is told to stay out of it.
+    if (type === "password") {
+      input.autocomplete = "off";
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("autocapitalize", "off");
+      input.spellcheck = false;
+    }
   }
   input.id = id;
   // Assigning "" to a <select> clears the selection, so a dropdown with no

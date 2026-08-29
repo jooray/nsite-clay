@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="cs"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/cs/templates.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: šablony</title>
+<meta name="description" content="Jedenáct výchozích bodů pro nsite, který se edituje sám. Vyber si, změň text, změň barvy, publikuj.">
+<link rel="alternate" hreflang="en" href="/templates.html">
+<link rel="alternate" hreflang="es" href="/es/templates.html">
+<link rel="alternate" hreflang="sk" href="/sk/templates.html">
+<link rel="alternate" hreflang="cs" href="/cs/templates.html">
+<link rel="alternate" hreflang="x-default" href="/templates.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F; --nc-radius: 12px;
+    --violet: #AB82F1; --ink-faint: #6F5D8E;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink); font: 16.5px/1.68 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 66rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+           color: var(--ink-faint); padding-top: 3rem; }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--nc-ink-dim); font-size: 1.1rem; max-width: 42rem; }
+
+  pre { background: #100722; border: 1px solid var(--nc-edge); border-radius: 12px;
+        padding: .9rem 1.1rem; overflow-x: auto; margin: 1.4rem 0 0; max-width: 42rem;
+        font: .85rem/1.7 var(--mono); color: #D9CCF3; }
+  pre .c { color: var(--ink-faint); }
+
+  .grid { display: grid; gap: 1.4rem; margin: 3rem 0 0;
+          grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); }
+  .card { border: 1px solid var(--nc-edge); border-radius: 14px; background: var(--nc-panel);
+          overflow: hidden; display: flex; flex-direction: column; }
+  .card > a.shot { display: block; aspect-ratio: 16 / 10; background: #100722; overflow: hidden; }
+  .card > a.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center;
+                       display: block; transition: transform .5s ease; }
+  .card:hover > a.shot img { transform: scale(1.03); }
+  .card .missing { display: grid; place-items: center; height: 100%; color: var(--ink-faint);
+                   font: .8rem var(--mono); }
+  .card .body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; flex: 1; }
+  .card h2 { font-size: 1.08rem; margin: 0 0 .1rem; }
+  .card h2 a { text-decoration: none; color: inherit; }
+  .card .name { font: .74rem var(--mono); color: var(--violet); letter-spacing: .04em; }
+  .card p { margin: .45rem 0 0; font-size: .92rem; color: var(--nc-ink-dim); flex: 1; }
+  .card .row { display: flex; gap: .5rem; margin-top: .9rem; flex-wrap: wrap; }
+  .card .row a { font: 600 .8rem var(--sans); text-decoration: none; padding: .38rem .75rem;
+                 border-radius: 8px; border: 1px solid var(--nc-edge); color: var(--nc-ink); }
+  .card .row a:hover { border-color: var(--nc-accent); }
+  .card .row a.primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); }
+
+  section.tail { border-top: 1px solid var(--nc-edge); margin-top: 3.5rem; padding: 2.6rem 0 0; }
+  section.tail h2 { font-size: 1.4rem; margin: 0 0 .5rem; }
+  footer { border-top: 1px solid var(--nc-edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nc-nav">
+    <a class="nc-brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/cs/">Domů</a>
+    <a href="/cs/docs.html">Jak to funguje</a>
+    <a href="/cs/templates.html" aria-current="page">Šablony</a>
+    <a href="/llms.txt">Pro agenty</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <div class="nc-lang"><a href="/templates.html" hreflang="en">EN</a><a href="/es/templates.html" hreflang="es">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs" aria-current="page">CS</a></div>
+  </nav>
+  <h1 editable="single-line">Šablony</h1>
+  <p class="lede" editable="single-line">Jedenáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
+
+  <pre><span class="c"># začni od jedné z nich</span>
+npx nsite-clay init mysite --template=blog --npub=npub1…
+npx nsite-clay deploy mysite --sec=nsec1…</pre>
+
+  <div class="grid" id="cards">
+
+    <article class="card">
+      <a class="shot" href="/t/event/"><img src="/shots/t-event.png" alt="Šablona pozvánky na akci" loading="lazy"></a>
+      <div class="body">
+        <span class="name">event</span>
+        <h2><a href="/t/event/">Pozvánka na akci</a></h2>
+        <p>Stránka na sraz, černobílá, s údaji dost velkými, aby se daly přečíst přes celou místnost. Přidá kalendářový soubor ke stažení a ukáže poslední poznámky pořadatele.</p>
+        <div class="row"><a class="primary" href="/t/event/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/event/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/blog/"><img src="/shots/t-blog.png" alt="Šablona blogu" loading="lazy"></a>
+      <div class="body">
+        <span class="name">blog</span>
+        <h2><a href="/t/blog/">Blog</a></h2>
+        <p>Dlouhé články a krátké poznámky tažené z tvého npubu, na černé, s pomalou září. Pro toho, kdo už na Nostru píše a chce pro to mít domov.</p>
+        <div class="row"><a class="primary" href="/t/blog/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/blog/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/project/"><img src="/shots/t-project.png" alt="Šablona projektu" loading="lazy"></a>
+      <div class="body">
+        <span class="name">project</span>
+        <h2><a href="/t/project/">Domovská stránka projektu</a></h2>
+        <p>Co ta věc je, proč bys ji chtěl, dva příkazy na vyzkoušení a co neumí. K tomu feed s tím, co projekt sám píše.</p>
+        <div class="row"><a class="primary" href="/t/project/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/project/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/personal/"><img src="/shots/t-personal.png" alt="Šablona osobní stránky" loading="lazy"></a>
+      <div class="body">
+        <span class="name">personal</span>
+        <h2><a href="/t/personal/">Osobní stránka</a></h2>
+        <p>Kdo jsi a co poslední dobou píšeš, s poznámkami i články taženými z relayí. Sáhni po ní, když chceš jednu adresu, která je tvoje.</p>
+        <div class="row"><a class="primary" href="/t/personal/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/personal/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/links/"><img src="/shots/t-links.png" alt="Šablona seznamu odkazů" loading="lazy"></a>
+      <div class="body">
+        <span class="name">links</span>
+        <h2><a href="/t/links/">Seznam odkazů</a></h2>
+        <p>Jedna stránka, na které je všechno, co publikuješ. Odkazy přidáváš a mažeš přímo v ní, dole zap adresa a krátký feed.</p>
+        <div class="row"><a class="primary" href="/t/links/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/links/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="Šablona galerie" loading="lazy"></a>
+      <div class="body">
+        <span class="name">gallery</span>
+        <h2><a href="/t/gallery/">Fotogalerie</a></h2>
+        <p>Fotky z npubu ve třech rozloženích, mezi kterými se dá přepínat: plátno, po kterém taháš, řídké rozložení s prostorem k dýchání a tmavá mapa náhledů, které se samy odkrývají.</p>
+        <div class="row"><a class="primary" href="/t/gallery/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/gallery/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/terminal/"><img src="/shots/t-terminal.png" alt="Šablona terminálu" loading="lazy"></a>
+      <div class="body">
+        <span class="name">terminal</span>
+        <h2><a href="/t/terminal/">Terminál</a></h2>
+        <p>Stránka projektu jako sezení v shellu: prompt, příkazy a jejich výstup. Přečteš ji celou, aniž bys na cokoli zmáčkl.</p>
+        <div class="row"><a class="primary" href="/t/terminal/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/terminal/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="Šablona textového souboru" loading="lazy"></a>
+      <div class="body">
+        <span class="name">phrack</span>
+        <h2><a href="/t/phrack/">Textový soubor</a></h2>
+        <p>Neproporcionální písmo, sedmdesát devět sloupců, ASCII linky a číslovaná hlavička ve tvaru starých zinů. Celý design je v té zdrženlivosti.</p>
+        <div class="row"><a class="primary" href="/t/phrack/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/phrack/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/brutal/"><img src="/shots/t-brutal.png" alt="Neobrutalistická šablona" loading="lazy"></a>
+      <div class="body">
+        <span class="name">brutal</span>
+        <h2><a href="/t/brutal/">Neobrutalistická</a></h2>
+        <p>Tlusté rámečky, tvrdé stíny, plochá barva a písmo, které křičí. Hlučná schválně a kontrast přesto projde.</p>
+        <div class="row"><a class="primary" href="/t/brutal/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/brutal/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/irc/"><img src="/shots/t-irc.png" alt="Šablona IRC logu" loading="lazy"></a>
+      <div class="body">
+        <span class="name">irc</span>
+        <h2><a href="/t/irc/">Log kanálu</a></h2>
+        <p>Stránka, do které pořád přidáváš řádky: poznámky, deník, changelog. Přihlas se a dole se objeví okénko na psaní, co do něj napíšeš, se stane součástí stránky. Přepis na téhle šabloně je konverzace, ze které vznikla.</p>
+        <div class="row"><a class="primary" href="/t/irc/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/irc/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/eco/"><img src="/shots/t-eco.png" alt="Šablona s nízkou váhou" loading="lazy"></a>
+      <div class="body">
+        <span class="name">eco</span>
+        <h2><a href="/t/eco/">Nízká váha</a></h2>
+        <p>Systémová písma, málo obrázků, tak málo CSS a JavaScriptu, kolik práce dovolí. Sama si změří a vypíše, kolik dat přenesla.</p>
+        <div class="row"><a class="primary" href="/t/eco/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/eco/index.html">Zdroj</a></div>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="tail">
+    <h2 editable="single-line">Mají společný engine</h2>
+    <div editable>
+      <p class="lede">Každá šablona odkazuje na tentýž <code>/nsite-clay-base.css</code> a tentýž
+        <code>/nsite-clay.js</code> z kořene webu a žádná si nenese kopii. Styluje se přes CSS
+        proměnné, takže lišta, dialogy i feedy jdou za paletou, kterou si šablona nastaví. Změnit
+        engine znamená upravit jeden soubor, ne deset.</p>
+      <p class="lede">Pravidla, kterými se šablona řídí, jsou v
+        <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
+        Jestli tohle předáváš agentovi, nasměruj ho radši na <a href="/llms.txt">llms.txt</a>
+        a nech ho vybrat.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><a href="/cs/">Domovská stránka</a> · <a href="/cs/docs.html">Průvodce</a> · <a href="/llms.txt">Pro agenty</a> · <a href="https://github.com/jooray/nsite-clay">Zdrojový kód</a></p>
+    <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
+      Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+      MIT-0.</p>
+  </footer>
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">stránku upravíš, když k URL přidáš #edit</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

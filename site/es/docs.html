@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/es/docs.html"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: guía paso a paso</title>
+<meta name="description" content="Pon una página en línea y edítala en el navegador: texto, imágenes, video, tus publicaciones de Nostr y cómo escribir nuevas.">
+<link rel="alternate" hreflang="en" href="/docs.html">
+<link rel="alternate" hreflang="es" href="/es/docs.html">
+<link rel="alternate" hreflang="sk" href="/sk/docs.html">
+<link rel="alternate" hreflang="cs" href="/cs/docs.html">
+<link rel="alternate" hreflang="x-default" href="/docs.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+
+    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
+    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
+    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.7 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.16), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  header.top { padding: 3rem 0 1.4rem; }
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--ink-faint); }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--ink-dim); text-decoration: none; }
+  .crumb a:hover { color: var(--violet); }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--ink-dim); font-size: 1.12rem; max-width: 40rem; }
+
+  nav.toc { border: 1px solid var(--edge); border-radius: 12px; background: var(--panel);
+            padding: .9rem 1.2rem; margin: 2rem 0 0; font-size: .95rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
+  nav.toc li { margin: .12rem 0; }
+  nav.toc a { color: var(--ink-dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--violet); }
+  @media (max-width: 40rem) { nav.toc ol { columns: 1; } }
+
+  section { padding: 2.8rem 0 .5rem; border-top: 1px solid var(--edge); margin-top: 2.4rem; }
+  .step { font: 600 .72rem/1 var(--mono); letter-spacing: .12em; color: var(--violet); }
+  section > h2 { font-size: 1.55rem; letter-spacing: -.02em; margin: .35rem 0 .8rem; }
+  h3 { font-size: 1.03rem; margin: 1.8rem 0 .4rem; }
+  p { margin: 0 0 1rem; }
+  ul, ol { padding-left: 1.35rem; }
+  li { margin: .35rem 0; }
+
+  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
+        padding: .95rem 1.15rem; overflow-x: auto; margin: 0 0 1.1rem;
+        font: .85rem/1.75 var(--mono); color: #D9CCF3; }
+  pre .c { color: var(--ink-faint); }
+
+  figure { margin: 1.3rem 0 1.6rem; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 12px;
+               border: 1px solid var(--edge); box-shadow: 0 26px 60px -34px rgba(0,0,0,.95); }
+  figcaption { font-size: .86rem; color: var(--ink-faint); margin-top: .55rem; }
+
+  .keys { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: .94rem; }
+  .keys td { padding: .42rem .6rem; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  .keys td:first-child { width: 11rem; color: var(--ink); }
+  kbd { font: .82em var(--mono); border: 1px solid var(--edge); border-bottom-width: 2px;
+        border-radius: 5px; padding: .08em .38em; background: var(--bg-2); }
+
+  .note { border-left: 3px solid var(--violet-3); background: rgba(86,60,170,.12);
+          padding: .8rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; font-size: .96rem; }
+  .note p:last-child { margin-bottom: 0; }
+  .note b { color: var(--ink); }
+
+  footer { border-top: 1px solid var(--edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+
+  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
+  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
+         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
+         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
+  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
+                background: var(--bg-2); color: var(--ink); cursor: pointer; }
+  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600;
+               display: none; }
+  html[nc\:owner-here="true"] .bar .save { display: inline-block; }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
+  html[nc\:status="saved"] .dot { background: #7FC08C; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+<nav class="nc-nav">
+      <a class="nc-brand" href="/es/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+      <a href="/es/">Inicio</a>
+      <a href="/es/docs.html" aria-current="page">Cómo funciona</a>
+      <a href="/es/templates.html">Plantillas</a>
+      <a href="/llms.txt">Para agentes</a>
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+      <div class="nc-lang"><a href="/docs.html" hreflang="en">EN</a><a href="/es/docs.html" hreflang="es" aria-current="page">ES</a><a href="/sk/docs.html" hreflang="sk">SK</a><a href="/cs/docs.html" hreflang="cs">CS</a></div>
+    </nav>
+    <h1 editable="single-line">Guía paso a paso</h1>
+    <p class="lede" editable="single-line">Dos comandos para poner una página en línea. Después todo ocurre en el navegador: escribir, imágenes, video, tus publicaciones de Nostr. Todas las capturas de abajo son reales.</p>
+
+    <nav class="toc">
+      <ol>
+        <li><a href="#online">Pon tu página en línea</a></li>
+        <li><a href="#signin">Ábrela e inicia sesión</a></li>
+        <li><a href="#text">Cambia el texto</a></li>
+        <li><a href="#picture">Añade una imagen</a></li>
+        <li><a href="#video">Añade un video</a></li>
+        <li><a href="#posts">Muestra tus publicaciones de Nostr</a></li>
+        <li><a href="#write">Escribe una publicación</a></li>
+        <li><a href="#save">Guarda los cambios</a></li>
+        <li><a href="#history">Vuelve a una versión anterior</a></li>
+        <li><a href="#share">La dirección de tu página</a></li>
+      </ol>
+    </nav>
+  </header>
+
+  <section id="online">
+    <p class="step">01</p>
+    <h2>Pon tu página en línea</h2>
+    <div editable>
+      <p>Esta es la única parte que ocurre en una terminal, y son dos comandos. Necesitas tener
+        <a href="https://nodejs.org">Node.js</a> instalado.</p>
+    </div>
+<pre>npx nsite-clay init mysite
+npx nsite-clay deploy mysite --sec=nsec1…</pre>
+    <div editable>
+      <p>El primer comando crea una carpeta con tu página dentro e imprime una clave. Esa clave es
+        lo único que podrá cambiar la página, y no se guarda en ningún sitio, así que cópiala a un
+        lugar seguro antes de cerrar la terminal. El segundo comando pone la página en línea e
+        imprime su dirección.</p>
+      <p>¿Ya tienes una clave de Nostr? Pásale tu npub al primer comando y la página será tuya
+        desde el principio:</p>
+    </div>
+<pre>npx nsite-clay init mysite --npub=npub1…</pre>
+    <div class="note">
+      <p><b>Ese es el último comando que necesitas.</b> A partir de aquí la página se cambia sola.
+        Solo vuelves a la terminal si quieres editar el archivo a mano.</p>
+    </div>
+  </section>
+
+  <section id="signin">
+    <p class="step">02</p>
+    <h2>Ábrela e inicia sesión</h2>
+    <div editable>
+      <p>Abre la dirección que imprimió el despliegue. Esto es lo que ve cualquier visitante: tu
+        página y nada en lo que hacer clic.</p>
+    </div>
+    <figure>
+      <img src="/shots/g1-your-page.png" alt="Una página publicada tal como la ve un visitante">
+      <figcaption>Un visitante ve la página. Sin controles de edición y sin ningún aviso para iniciar sesión.</figcaption>
+    </figure>
+    <div editable>
+      <p>Pulsa <b>Iniciar sesión</b> en la esquina. Hay tres maneras de entrar; usa la primera que
+        encaje contigo.</p>
+    </div>
+    <figure>
+      <img src="/shots/g2-sign-in.png" alt="El panel de inicio de sesión, con extensión del navegador, firmante remoto o pegar una clave">
+      <figcaption>Inicia sesión con una extensión del navegador, con Amber en el teléfono o pegando tu clave.</figcaption>
+    </figure>
+    <div editable>
+      <ul>
+        <li><b>Una extensión del navegador</b> como Alby o nos2x. Un clic y nada que escribir.</li>
+        <li><b>Amber u otra app de firma.</b> Pulsa el botón, escanea el código con el teléfono y
+          aprueba cada cambio ahí. Tu clave nunca toca el navegador, y por eso es la opción más
+          segura.</li>
+        <li><b>Pega tu clave.</b> Tu <code>nsec</code>, o un <code>ncryptsec</code> cifrado con su
+          contraseña. Se queda en la pestaña hasta que la cierres y no se guarda en ningún sitio.</li>
+      </ul>
+    </div>
+    <figure>
+      <img src="/shots/g3-signed-in.png" alt="La misma página después de iniciar sesión, con los controles de edición en la esquina">
+      <figcaption>Sesión iniciada como propietario. La esquina ahora dice quién eres y ofrece Guardar.</figcaption>
+    </figure>
+    <div class="note">
+      <p><b>Solo tu clave puede cambiar la página.</b> Cualquier otra persona que inicie sesión ve
+        la misma página de solo lectura que un visitante.</p>
+    </div>
+  </section>
+
+  <section id="text">
+    <p class="step">03</p>
+    <h2>Cambia el texto</h2>
+    <div editable>
+      <p>Haz clic en cualquier texto y escribe. Pulsa Enter para un párrafo nuevo. Selecciona algo
+        de texto y aparece una barra pequeña encima.</p>
+    </div>
+    <figure>
+      <img src="/shots/g4-toolbar.png" alt="La barra de formato flotando sobre el texto seleccionado">
+      <figcaption>El primer control es el menú de estilo. Convierte el bloque en el que estés en un
+        título, una lista, una cita o un bloque de código.</figcaption>
+    </figure>
+    <div editable>
+      <p>El resto de la barra es negrita, cursiva, tachado, listas con viñetas y numeradas, un botón
+        de enlace, los tres botones de insertar —que se explican más abajo— y otro para quitar el
+        formato.</p>
+    </div>
+    <table class="keys">
+      <tr><td><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd></td><td>negrita, cursiva, subrayado</td></tr>
+      <tr><td><kbd>⌘K</kbd></td><td>crear un enlace, o quitarlo</td></tr>
+      <tr><td><kbd>⌘⇧8</kbd></td><td>lista con viñetas (<kbd>⌘⇧7</kbd> numerada, <kbd>⌘⇧9</kbd> cita)</td></tr>
+      <tr><td><kbd>⌥1</kbd> <kbd>⌥2</kbd> <kbd>⌥3</kbd></td><td>los tres tamaños de título, <kbd>⌥0</kbd> para volver a normal</td></tr>
+      <tr><td><code># </code> <code>- </code> <code>&gt; </code></td><td>escríbelos al principio de una línea y hacen lo mismo</td></tr>
+    </table>
+    <div editable>
+      <p>Pegar desde un procesador de textos no da problemas. El formato se limpia al entrar, así
+        que no acabas con las fuentes de otro programa dentro de tu página.</p>
+    </div>
+  </section>
+
+  <section id="picture">
+    <p class="step">04</p>
+    <h2>Añade una imagen</h2>
+    <div editable>
+      <p>Pon el cursor donde la quieras y pulsa el botón de imagen en la barra.</p>
+    </div>
+    <figure>
+      <img src="/shots/g5-add-picture.png" alt="El panel de insertar imagen, con una zona para soltar archivos, una cuadrícula de imágenes ya subidas y campos para la URL, el texto alternativo y el pie de foto">
+      <figcaption>Arrastra un archivo, haz clic en una que ya hayas usado o pega una dirección web.</figcaption>
+    </figure>
+    <div editable>
+      <p>Todo lo que subes se guarda junto a la propia página, y todo lo que has subido antes
+        aparece en esa cuadrícula, así que nunca tienes que buscar dos veces la misma imagen.</p>
+      <p>Rellena el texto alternativo. Es lo que oye quien usa un lector de pantalla y lo que se
+        muestra si la imagen no llega a cargar. El pie de foto es opcional y aparece debajo de la imagen.</p>
+    </div>
+  </section>
+
+  <section id="video">
+    <p class="step">05</p>
+    <h2>Añade un video</h2>
+    <div editable>
+      <p>El botón de video que hay al lado acepta un enlace de YouTube o de Vimeo, o un archivo de
+        video para subir.</p>
+    </div>
+    <figure>
+      <img src="/shots/g6-add-video.png" alt="El panel de insertar video con un enlace de YouTube ya escrito">
+      <figcaption>Pega el enlace que compartirías normalmente.</figcaption>
+    </figure>
+    <figure>
+      <img src="/shots/g7-video-in-page.png" alt="El video dentro de la página, como una miniatura con un botón de reproducción">
+      <figcaption>Queda como una miniatura con un botón de reproducción.</figcaption>
+    </figure>
+    <div class="note">
+      <p><b>El reproductor solo se carga si alguien le da al play.</b> Hasta entonces YouTube no
+        rastrea a tus lectores, y la miniatura sigue funcionando como enlace incluso para quien
+        navega con JavaScript desactivado.</p>
+    </div>
+  </section>
+
+  <section id="posts">
+    <p class="step">06</p>
+    <h2>Muestra tus publicaciones de Nostr</h2>
+    <div editable>
+      <p>El botón del rayo inserta un feed de publicaciones de Nostr en la página. Eliges si quieres
+        notas cortas, artículos largos o publicaciones con fotos, y de quién.</p>
+    </div>
+    <figure>
+      <img src="/shots/g8-pick-posts.png" alt="El panel del feed de Nostr, con publicaciones reales listadas y una marcada para fijarla">
+      <figcaption>Debajo se listan sus publicaciones reales. Haz clic en cualquiera para fijarla arriba.</figcaption>
+    </figure>
+    <div editable>
+      <p>Puedes indicar más de un npub, así que una página puede mostrar a todo un grupo. Los demás
+        controles son cuántas publicaciones mostrar, si van en lista o en cuadrícula, una longitud
+        mínima para filtrar las de una sola línea y una etiqueta para reducirlo a un solo tema.</p>
+    </div>
+    <figure>
+      <img src="/shots/g9-posts-in-page.png" alt="Un artículo y dos notas renderizados dentro de la página">
+      <figcaption>El feed ya colocado. Se actualiza solo cada vez que se abre la página.</figcaption>
+    </figure>
+    <div editable>
+      <p>Publica algo nuevo más adelante y aparecerá aquí por su cuenta. No tienes que volver a
+        tocar la página.</p>
+    </div>
+  </section>
+
+  <section id="write">
+    <p class="step">07</p>
+    <h2>Escribe una publicación</h2>
+    <div editable>
+      <p>Si la página puede mostrar tus publicaciones, también puede escribirlas. Aparece listado
+        todo lo que has publicado, y puedes editar cualquier artículo desde aquí.</p>
+    </div>
+    <figure>
+      <img src="/shots/g10-your-posts.png" alt="Una lista de artículos publicados con botones para editar y ver">
+      <figcaption>Tus artículos y notas, con un botón de Escribir para uno nuevo.</figcaption>
+    </figure>
+    <figure>
+      <img src="/shots/g11-write-article.png" alt="El editor de artículos, con título, dirección, resumen, imagen, temas y cuerpo">
+      <figcaption>Los artículos largos llevan título, resumen, una imagen de cabecera opcional,
+        temas y el texto en sí.</figcaption>
+    </figure>
+    <div editable>
+      <p>La <b>dirección</b> es la parte que conviene acertar: es cómo se enlaza tu artículo, y
+        volver a publicar con la misma dirección es cómo se edita. Corrige una errata, publica, y
+        todas las apps de Nostr muestran la versión corregida en el mismo enlace. La fecha original
+        no se mueve.</p>
+      <p>Las notas cortas funcionan igual con una diferencia: no se pueden editar después. El panel
+        te lo dice antes de que publiques una.</p>
+      <p>Las publicaciones y las páginas van por separado. Escribir una nota no cambia tu página, y
+        guardar la página no toca tus publicaciones.</p>
+    </div>
+  </section>
+
+  <section id="save">
+    <p class="step">08</p>
+    <h2>Guarda los cambios</h2>
+    <div editable>
+      <p>Pulsa <b>Guardar</b>, o <kbd>⌘S</kbd>. El punto de la esquina se pone verde cuando termina,
+        y a partir de ese momento quien abra tu página ve la versión nueva.</p>
+      <p>Guardar tarda alrededor de un segundo. Si no ha cambiado nada desde el guardado anterior,
+        te lo dice y no hace nada, así que pulsarlo dos veces no rompe nada.</p>
+      <p>A quien siga leyendo la versión antigua se le avisa de que existe una más nueva, y su
+        página se actualiza sola. Nadie tiene que saber qué es una recarga forzada.</p>
+    </div>
+    <div class="note">
+      <p><b>Si un guardado falla</b>, te dice por qué en vez de fallar en silencio. La causa
+        habitual es una app de firma que se ha dormido: despiértala, aprueba y vuelve a pulsar
+        Guardar.</p>
+    </div>
+  </section>
+
+  <section id="history">
+    <p class="step">09</p>
+    <h2>Vuelve a una versión anterior</h2>
+    <div editable>
+      <p>Cada guardado se conserva. <b>Historial</b> los lista todos.</p>
+    </div>
+    <figure>
+      <img src="/shots/g12-history.png" alt="El historial de versiones, con los guardados por fecha y un botón para leer cada uno">
+      <figcaption>Lee cualquier versión anterior, o vuelve a ponerla.</figcaption>
+    </figure>
+    <div editable>
+      <p>Restaurar una versión antigua no tira la actual. Pasa a ser una entrada más de la lista,
+        así que puedes volver a cambiar de opinión.</p>
+    </div>
+  </section>
+
+  <section id="share">
+    <p class="step">10</p>
+    <h2>La dirección de tu página</h2>
+    <div editable>
+      <p>Tu página vive en tu npub:</p>
+    </div>
+<pre>https://&lt;tu npub&gt;.nsite.lol/</pre>
+    <div editable>
+      <p>Esa dirección es tuya porque la clave es tuya: nadie te la asignó y nadie puede quitártela.
+        Varios gateways sirven la misma página a partir de los mismos eventos, así que si uno se cae
+        cambias el nombre de host y no se mueve nada más:</p>
+      <ul>
+        <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> y
+          <a href="https://nwb.tf">nwb.tf</a></li>
+        <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
+          y <a href="https://shakespeare.to">shakespeare.to</a>, que además corren la implementación
+          de referencia. <a href="https://nsite.run">nsite.run</a> tiene la explicación más clara de
+          qué es un nsite, si quieres el contexto.</li>
+      </ul>
+      <p>Para tener dominio propio, apunta un registro CNAME a un gateway y tu página responderá
+        ahí.</p>
+      <p>También puedes tener más de una página. Añade <code>--site=blog</code> al desplegar y esa
+        recibe su propia dirección, con la misma clave detrás.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><a href="/es/">Inicio</a> · <a href="https://github.com/jooray/nsite-clay">Código en GitHub</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">Para desarrolladores</a></p>
+    <p>Esta página es una de estas páginas. Se escribió dentro de sí misma.</p>
+    <p class="nc-credit">Hecho por <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
+      El proyecto publica como <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+      MIT-0.</p>
+  </footer>
+</div>
+
+<div class="bar">
+  <span class="dot"></span>
+  <span id="who">solo lectura</span>
+  <button id="signin-btn">Iniciar sesión</button>
+  <button class="save" id="save">Guardar</button>
+</div>
+
+<script src="/nsite-clay.js"></script>
+<script>
+(async () => {
+  await nc.ready;
+  const $ = (s) => document.querySelector(s);
+  const setMode = () => {
+    $("#who").textContent = nc.pubkey
+      ? (nc.isOwner ? "propietario · " + nc.npub.slice(0, 12) + "…" : "sesión iniciada, no eres el propietario")
+      : "solo lectura";
+    $("#signin-btn").textContent = nc.pubkey ? "Cerrar sesión" : "Iniciar sesión";
+  };
+  nc.addEventListener("nsiteclay:login", setMode);
+  nc.addEventListener("nsiteclay:logout", setMode);
+  setMode();
+
+  $("#signin-btn").onclick = async () => {
+    if (nc.pubkey) return nc.logout();
+    try { await nc.login("auto"); }
+    catch {
+      const key = prompt("Pega tu nsec o tu ncryptsec.");
+      if (!key) return;
+      try { await nc.login("nsec", { key }); } catch (e) { nc.toast(e.message); }
+    }
+  };
+  $("#save").onclick = async () => {
+    try {
+      const r = await nc.save();
+      $("#who").textContent = r.skipped ? "no ha cambiado nada" : `guardado: ${r.bytes.toLocaleString()} B`;
+    } catch (e) { $("#who").textContent = "error al guardar: " + e.message; }
+  };
+})();
+</script>
+</body>
+</html>

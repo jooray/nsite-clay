@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en"
+<html lang="cs"
       nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/cs/index.html"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net"
-      nc:path="/index.html">
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>nsite-clay: a self-editable nsite</title>
-<meta name="description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
+<title>nsite-clay: nsite, který se edituje sám</title>
+<meta name="description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.">
 <link rel="alternate" hreflang="en" href="/">
 <link rel="alternate" hreflang="es" href="/es/">
 <link rel="alternate" hreflang="sk" href="/sk/">
@@ -16,7 +16,7 @@
 <link rel="alternate" hreflang="x-default" href="/">
 <link rel="icon" href="/nsite-clay-mark.svg">
 <meta property="og:title" content="nsite-clay">
-<meta property="og:description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
+<meta property="og:description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.">
 <meta property="og:image" content="/nsite-clay.png">
 <link rel="stylesheet" href="/nsite-clay-base.css">
 <style>
@@ -152,73 +152,73 @@
 <div class="wrap">
 
   <nav class="nc-nav">
-    <a class="nc-brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
-    <a href="/" aria-current="page">Home</a>
-    <a href="/docs.html">How it works</a>
-    <a href="/templates.html">Templates</a>
-    <a href="/llms.txt">For agents</a>
+    <a class="nc-brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/cs/" aria-current="page">Domů</a>
+    <a href="/cs/docs.html">Jak to funguje</a>
+    <a href="/cs/templates.html">Šablony</a>
+    <a href="/llms.txt">Pro agenty</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-    <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+    <div class="nc-lang"><a href="/" hreflang="en">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs" aria-current="page">CS</a></div>
   </nav>
 
   <header>
     <img src="/nsite-clay-transparent.png" alt="nsite-clay">
     <h1 editable="single-line">nsite-clay</h1>
-    <p class="tag" editable="single-line">A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.</p>
+    <p class="tag" editable="single-line">Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
-      <a class="btn" href="/docs.html">How it works</a>
-      <a class="btn" href="#try">Try the live demo</a>
-      <a class="btn" href="#deploy">Deploy your own</a>
+      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHubu</a>
+      <a class="btn" href="/cs/docs.html">Jak to funguje</a>
+      <a class="btn" href="#try">Vyzkoušej živé demo</a>
+      <a class="btn" href="#deploy">Nasaď si vlastní</a>
     </div>
     <figure class="shot">
-      <img src="/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="1600" height="860">
-      <figcaption editable="single-line">Editing a published page. The heading is live text. The toolbar comes from the runtime.</figcaption>
+      <img src="/editing.png" alt="Nadpis publikované stránky se upravuje přímo v prohlížeči, otevřená nabídka bloků" width="1600" height="860">
+      <figcaption editable="single-line">Úprava publikované stránky. Nadpis je živý text, lištu kreslí runtime.</figcaption>
     </figure>
   </header>
 
   <section id="what">
-    <h2 editable="single-line">What it is</h2>
+    <h2 editable="single-line">Co to je</h2>
     <div editable>
-      <p class="lede">Open the page, sign in with your key, and type into it. The document
-        serialises its own DOM, pushes those bytes to a Blossom server as one content-addressed
-        blob, and republishes the NIP-5A nsite manifest that points at it. Anyone else loading
-        the page gets a plain static document with your changes already in it.</p>
-      <p class="lede">Nothing in that round trip is a server you have to run. Relays hold the manifest,
-        Blossom servers hold the bytes, and the browser does the rest. Ownership is a keypair, so
-        who may edit this page is not a row in somebody else's database.</p>
+      <p class="lede">Otevřeš stránku, přihlásíš se svým klíčem a píšeš do ní. Dokument si
+        serializuje vlastní DOM, pošle ty bajty na Blossom server jako jeden blob adresovaný
+        obsahem a znovu publikuje NIP-5A manifest nsite, který na něj ukazuje. Kdokoli další si
+        stránku načte, dostane obyčejný statický dokument, ve kterém už tvoje změny jsou.</p>
+      <p class="lede">V té smyčce není žádný server, který bys musel provozovat. Manifest drží
+        relaye, bajty drží Blossom servery, zbytek udělá prohlížeč. Vlastnictví je pár klíčů,
+        takže kdo smí tuhle stránku upravovat, není řádek v cizí databázi.</p>
     </div>
 
     <ol class="steps">
       <li><span class="n">01 SNAPSHOT</span>
-        <p>The page clones its own DOM, cleans it up, and serialises the whole document.</p></li>
+        <p>Stránka naklonuje vlastní DOM, uklidí ho a serializuje celý dokument.</p></li>
       <li><span class="n">02 BLOSSOM</span>
-        <p>Those bytes go to a Blossom server as a blob addressed by its own sha256.</p></li>
+        <p>Ty bajty jdou na Blossom server jako blob adresovaný vlastní sha256.</p></li>
       <li><span class="n">03 MANIFEST</span>
-        <p>A replaceable nsite event maps the path to that hash. Publishing it is the deploy.</p></li>
+        <p>Nahraditelný nsite event přiřadí cestě ten hash. Publikovat ho znamená nasadit.</p></li>
     </ol>
-    <p style="margin-top:1.4rem" class="lede">This page you are reading is one of those documents.
-      It runs nsite-clay and saves itself the same way.</p>
+    <p style="margin-top:1.4rem" class="lede">Stránka, kterou právě čteš, je jeden z těch
+      dokumentů. Běží na nsite-clay a ukládá se úplně stejně.</p>
   </section>
 
   <section id="geeks">
-    <h2 editable="single-line">Description for Nostr geeks</h2>
+    <h2 editable="single-line">Popis pro Nostr geeky</h2>
     <div editable>
-      <p class="lede">An nsite is web hosting. Not long-form notes, whole HTML files. That is all
-        an nsite is.</p>
-      <p class="lede">nsite-clay adds one thing to it: the page edits and updates itself, so the
-        CMS sits inside the static HTML rather than behind it.</p>
-      <p class="lede">You change the DOM. Click around the page and edit things, or open your
-        browser's DOM inspector and change it there; the page does not care which. The new version
-        is uploaded to your Blossom servers, and one replaceable event is republished saying which
-        Blossom hash <code>/</code> or <code>/about-us</code> now points to. Any nsite gateway
-        renders it.</p>
+      <p class="lede">Nsite je webhosting. Ne dlouhé texty, ale celé HTML soubory. Nic víc nsite
+        není.</p>
+      <p class="lede">nsite-clay k tomu přidává jedinou věc: stránka se upravuje a aktualizuje
+        sama, takže CMS sedí uvnitř statického HTML, ne za ním.</p>
+      <p class="lede">Měníš DOM. Klikej po stránce a uprav, co chceš, nebo si otevři v prohlížeči
+        inspektor DOM a změň to tam. Stránce je to jedno. Nová verze se nahraje na tvoje Blossom
+        servery a znovu se publikuje jeden nahraditelný event s tím, na jaký Blossom hash teď
+        <code>/</code> nebo <code>/about-us</code> ukazuje. Vykreslí to kterákoli nsite
+        gateway.</p>
     </div>
   </section>
 
   <section id="document">
-    <h2 editable="single-line">The whole integration</h2>
-    <p class="lede" editable="single-line">One attribute says who owns the file, one marks what people can type into, one script tag does the rest.</p>
+    <h2 editable="single-line">Celá integrace</h2>
+    <p class="lede" editable="single-line">Jeden atribut říká, kdo soubor vlastní, druhý označí, kam se dá psát, a jeden script tag udělá zbytek.</p>
 <pre><span class="c">&lt;!DOCTYPE html&gt;</span>
 &lt;html lang="en" <span class="k">autosave</span> <span class="k">nc:owner</span>=<span class="s">"npub1…"</span>&gt;
 &lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Notes&lt;/title&gt;&lt;/head&gt;
@@ -231,162 +231,163 @@
 &lt;/body&gt;
 &lt;/html&gt;</pre>
     <div editable>
-      <p class="lede">Save it, then open the file in a text editor: your words are in the HTML.
-        The DOM is the database, so there is no other place for state to live.</p>
+      <p class="lede">Ulož a otevři soubor v textovém editoru: tvoje slova jsou v HTML. Databází
+        je DOM, takže stav nemá kde jinde bydlet.</p>
     </div>
   </section>
 
   <section id="editing">
-    <h2 editable="single-line">Editing</h2>
+    <h2 editable="single-line">Úpravy</h2>
     <div class="cols">
       <div editable>
-        <p class="lede">Mark a container <code>editable</code> and it becomes rich text for the
-          owner and ordinary markup for everybody else.</p>
-        <p class="lede">Enter starts a new paragraph. Selecting text raises a floating toolbar
-          whose first control is a block menu: Paragraph, Heading 1 to 3, Quote, Code block.</p>
+        <p class="lede">Označ kontejner jako <code>editable</code> a pro vlastníka se z něj stane
+          formátovaný text, pro všechny ostatní obyčejné značky.</p>
+        <p class="lede">Enter začne nový odstavec. Když označíš text, vyjede plovoucí lišta a jejím
+          prvním ovládacím prvkem je nabídka bloků: odstavec, nadpis 1 až 3, citace, blok kódu.</p>
       </div>
       <div editable>
-        <p class="lede">Keyboard shortcuts work as you would expect, and typing <code>#&nbsp;</code>,
-          <code>-&nbsp;</code> or <code>&gt;&nbsp;</code> at the start of a line does too.</p>
-        <p class="lede">What reaches the file is markup a person could have written by hand. The
-          toolbar and the debris browsers emit from editing commands never get saved.</p>
+        <p class="lede">Klávesové zkratky fungují, jak čekáš, a napsat <code>#&nbsp;</code>,
+          <code>-&nbsp;</code> nebo <code>&gt;&nbsp;</code> na začátek řádku funguje taky.</p>
+        <p class="lede">Do souboru se dostane značkování, jaké mohl napsat člověk ručně. Lišta ani
+          smetí, které prohlížeče při editačních příkazech produkují, se nikdy neuloží.</p>
       </div>
     </div>
   </section>
 
   <section id="try">
-    <h2 editable="single-line">Try it, with a real key</h2>
+    <h2 editable="single-line">Vyzkoušej si to s opravdovým klíčem</h2>
     <div editable>
-      <p class="lede">A live document is published under a throwaway key, and the key is public
-        on purpose. Open it, press Sign in, paste the nsec, and edit the page. Your save
-        rewrites the real document for everyone.</p>
+      <p class="lede">Pod jednorázovým klíčem je publikovaný živý dokument a ten klíč je veřejný
+        schválně. Otevři ho, klikni na Přihlásit se, vlož nsec a uprav stránku. Tvoje uložení přepíše
+        skutečný dokument pro všechny.</p>
     </div>
-    <p><a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Open the demo</a></p>
+    <p><a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Otevřít demo</a></p>
     <div class="keybox">
-      <label for="demokey">Demo key. Public, shared, treat it as a sandbox</label>
+      <label for="demokey">Demo klíč. Veřejný, sdílený, ber ho jako pískoviště</label>
       <div class="keyrow">
         <input id="demokey" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y">
-        <button type="button" id="copykey">Copy</button>
+        <button type="button" id="copykey">Kopírovat</button>
       </div>
     </div>
-    <p class="warn">Anyone can rewrite that page, so whatever you find there is other people's
-      leftovers. Never paste a key you care about into a page you did not publish yourself.</p>
+    <p class="warn">Tu stránku může přepsat kdokoli, takže co tam najdeš, jsou zbytky po
+      ostatních. Nikdy nevkládej klíč, na kterém ti záleží, do stránky, kterou jsi nepublikoval
+      sám.</p>
   </section>
 
   <section id="deploy">
-    <h2 editable="single-line">Deploy your own</h2>
+    <h2 editable="single-line">Nasaď si vlastní</h2>
     <div editable>
-      <p class="lede">The CLI publishes the first version. After that the page saves itself, and
-        you only come back for changes made outside the browser.</p>
+      <p class="lede">První verzi publikuje CLI. Pak už se stránka ukládá sama a vracíš se sem jen
+        kvůli změnám, které děláš mimo prohlížeč.</p>
     </div>
-<pre><span class="c"># scaffold a site and generate a key for it</span>
+<pre><span class="c"># vytvoř kostru webu a vygeneruj k němu klíč</span>
 npx nsite-clay init mysite
 
-<span class="c"># publish it</span>
+<span class="c"># publikuj ho</span>
 npx nsite-clay deploy mysite --sec=nsec1…
 
-<span class="c"># or keep the key off this machine and sign through a bunker</span>
+<span class="c"># nebo nech klíč mimo tenhle stroj a podepisuj přes bunker</span>
 npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <div editable>
-      <p class="lede">Your site is served at <code>https://&lt;npub&gt;.nsite.lol/</code>. Named sites
-        get their own subdomain, every save files a permanent version with its own URL, and any
-        NIP-5A gateway serves the same site, so you can point a CNAME at one for a custom domain.</p>
-      <p class="lede">Assets are published at paths carrying their content hash, and each
-        document watches its own manifest and reloads itself when a newer version appears. Nobody
-        needs to know what a hard refresh is.</p>
+      <p class="lede">Tvůj web přistane na <code>https://&lt;npub&gt;.nsite.lol/</code>.
+        Pojmenované weby dostanou vlastní subdoménu, každé uložení založí trvalou verzi s vlastní
+        URL a stejný web servíruje kterákoli NIP-5A gateway, takže na jednu můžeš namířit CNAME
+        a mít vlastní doménu.</p>
+      <p class="lede">Soubory se publikují na cestách, které nesou hash obsahu, a každý dokument
+        sleduje vlastní manifest a načte se znovu, jakmile se objeví novější verze. Nikdo nemusí
+        vědět, co je to tvrdý refresh.</p>
     </div>
-    <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Full deployment guide</a></p>
+    <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Celý návod na nasazení</a></p>
   </section>
 
   <section id="agents">
-    <h2 editable="single-line">Built for agents, because the web is now built by agents</h2>
+    <h2 editable="single-line">Postavené pro agenty, protože web teď staví agenti</h2>
     <div editable>
-      <p class="lede">Most pages made with this will be built by an agent rather than by hand, so
-        the project ships a brief written for one. Point your coding agent at <code>llms.txt</code>
-        and ask it for the page you want.</p>
-      <p class="lede">The brief covers what to ask you for, how to pick and rework a template, how to get
-        the page online with a remote signer rather than a raw key, and the handful of things that
-        go wrong. It links the documentation rather than restating it, and works as
-        <code>AGENTS.md</code> in a project built on top of nsite-clay.</p>
+      <p class="lede">Většinu stránek z tohohle nepostaví člověk ručně, ale agent, a tak k projektu
+        patří instrukce právě pro něj. Nasměruj svého kódovacího agenta na ten soubor a řekni si
+        o stránku, jakou chceš.</p>
+      <p class="lede">Je v nich, na co se tě má zeptat, jak vybrat a předělat šablonu, jak dostat
+        stránku na web přes vzdálený signer místo holého klíče a těch pár věcí, co se obvykle
+        pokazí. Odkazují na dokumentaci, místo aby ji opisovaly, a v projektu
+        postaveném nad nsite-clay fungují jako <code>AGENTS.md</code>.</p>
     </div>
-    <p><a class="btn primary" href="/llms.txt">llms.txt</a> <a class="btn" href="/templates.html">Templates</a></p>
+    <p><a class="btn primary" href="/llms.txt">llms.txt</a> <a class="btn" href="/cs/templates.html">Šablony</a></p>
   </section>
 
   <section id="gateways">
-    <h2 editable="single-line">Gateways, and where your page gets served</h2>
+    <h2 editable="single-line">Odkud se to servíruje</h2>
     <div editable>
-      <p class="lede">A gateway resolves your manifest and serves the files. They all read the same
-        events, so your site is not tied to any of them. If one is down, swap the hostname.</p>
+      <p class="lede">Gateway přeloží tvůj manifest a naservíruje soubory. Všechny čtou stejné
+        eventy, takže tvůj web na žádné z nich nevisí. Když jedna nejede, vyměň hostname.</p>
     </div>
     <ul class="limits">
-      <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> and
-        <a href="https://nwb.tf">nwb.tf</a> are public gateways.</li>
+      <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> a
+        <a href="https://nwb.tf">nwb.tf</a> jsou veřejné gateway.</li>
       <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
-        and <a href="https://shakespeare.to">shakespeare.to</a> are reference implementations.
-        nsite.run also has the clearest explanation of what an nsite is.</li>
-      <li>A CNAME at any of them gives you a custom domain, and <code>npm run devnet</code> runs
-        one on your laptop.</li>
+        a <a href="https://shakespeare.to">shakespeare.to</a> jsou referenční implementace.
+        Na nsite.run navíc najdeš nejsrozumitelnější vysvětlení, co to nsite vlastně je.</li>
+      <li>CNAME na kteroukoli z nich ti dá vlastní doménu a <code>npm run devnet</code> rozjede
+        jednu na notebooku.</li>
     </ul>
   </section>
 
   <section id="limits">
-    <h2 editable="single-line">What it does not do</h2>
+    <h2 editable="single-line">Co to neumí</h2>
     <ul class="limits">
-      <li><strong>One key writes the document.</strong> The manifest carries one signature. No
-        shared editing, no per-visitor content.</li>
-      <li><strong>No conflict detection.</strong> A replaceable event has no compare-and-swap, so
-        two devices editing at once will silently lose one side's work.</li>
-      <li><strong>The gateway is trusted for the first byte.</strong> The entry document cannot
-        verify itself. Everything it depends on is hash-checked, and the manifest, blobs and
-        history all live outside the gateway, so you can verify through another one or run your
-        own.</li>
-      <li><strong>No server code.</strong> If your project needs a backend, this is the wrong
-        tool.</li>
+      <li><strong>Dokument zapisuje jeden klíč.</strong> Manifest nese jeden podpis. Žádná
+        společná editace, žádný obsah podle toho, kdo přišel.</li>
+      <li><strong>Žádná detekce konfliktů.</strong> Nahraditelný event nemá compare-and-swap,
+        takže když píšeš ze dvou zařízení naráz, práce jednoho z nich potichu zmizí.</li>
+      <li><strong>Prvnímu bajtu musíš u gateway věřit.</strong> Vstupní dokument se nedokáže
+        ověřit sám. Všechno, na čem stojí, se kontroluje hashem, a manifest, bloby i historie
+        leží mimo gateway, takže si to můžeš ověřit přes jinou nebo si spustit vlastní.</li>
+      <li><strong>Žádný kód na serveru.</strong> Jestli tvůj projekt potřebuje backend, tohle je
+        špatný nástroj.</li>
     </ul>
   </section>
 
   <footer>
-    <p>MIT-0. The malleable-HTML idea and the editing model come from
-      <a href="https://hyperclay.com">HyperClay</a> and <a href="https://clayjs.com">ClayJS</a>.
-      Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
-      nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
+    <p>MIT-0. Nápad s tvárným HTML a model editace pocházejí z
+      <a href="https://hyperclay.com">HyperClay</a> a <a href="https://clayjs.com">ClayJS</a>.
+      Hosting stojí na nsites podle <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
+      a na <a href="https://github.com/hzrd149/blossom">Blossomu</a>.</p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
-    <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
-      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+    <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
+      Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
       MIT-0.</p>
   </footer>
 </div>
 
 <div class="bar">
   <span class="dot"></span>
-  <span id="who">read-only</span>
-  <button id="signin-btn">Sign in</button>
-  <button class="save" id="save">Save</button>
+  <span id="who">jen ke čtení</span>
+  <button id="signin-btn">Přihlásit se</button>
+  <button class="save" id="save">Uložit</button>
 </div>
 
 <dialog id="signin">
-  <h3>Sign in to edit this page</h3>
-  <p class="lede">Only the owner's signature can republish it. Everyone else gets the page you
-    are looking at now.</p>
+  <h3>Přihlas se, ať můžeš stránku upravovat</h3>
+  <p class="lede">Znovu ji publikuje jedině podpis vlastníka. Všichni ostatní dostanou stránku,
+    na kterou se právě díváš.</p>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <button class="btn" id="use-nip07">Browser extension</button>
-    <button class="btn" id="use-amber">Amber / remote signer</button>
+    <button class="btn" id="use-nip07">Rozšíření prohlížeče</button>
+    <button class="btn" id="use-amber">Amber / vzdálený signer</button>
   </div>
   <div id="amber-box" hidden>
-    <img id="qr" alt="nostrconnect QR code" width="230" height="230">
-    <p style="text-align:center"><a id="amber-link" href="#">Open in Amber</a></p>
+    <img id="qr" alt="QR kód nostrconnect" width="230" height="230">
+    <p style="text-align:center"><a id="amber-link" href="#">Otevřít v Amberu</a></p>
   </div>
   <form id="nsec-form" autocomplete="off">
-    <label for="nsec-input">…or paste a key</label>
+    <label for="nsec-input">…nebo vlož klíč</label>
     <input id="nsec-input" type="password" autocomplete="off" spellcheck="false"
-           placeholder="nsec1… · ncryptsec1… · 64 hex characters">
-    <input id="nsec-pass" type="password" autocomplete="off" placeholder="password for that ncryptsec" hidden>
-    <button type="submit">Sign in with this key</button>
+           placeholder="nsec1… · ncryptsec1… · 64 hex znaků">
+    <input id="nsec-pass" type="password" autocomplete="off" placeholder="heslo k tomu ncryptsecu" hidden>
+    <button type="submit">Přihlásit se tímhle klíčem</button>
     <span id="nsec-status" role="status"></span>
-    <p class="warn">The key stays in this tab's memory and is written nowhere, but you are typing
-      it into a page served by a gateway. A remote signer never hands the key over.</p>
+    <p class="warn">Klíč zůstane v paměti téhle karty a nikam se nezapisuje, ale píšeš ho do
+      stránky, kterou servíruje gateway. Vzdálený signer klíč nikdy nevydá.</p>
   </form>
-  <p style="text-align:right;margin:1rem 0 0"><button class="btn" id="close-signin">Close</button></p>
+  <p style="text-align:right;margin:1rem 0 0"><button class="btn" id="close-signin">Zavřít</button></p>
 </dialog>
 
 <script src="/nsite-clay.js"></script>
@@ -397,9 +398,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
 
   const setMode = () => {
     $("#who").textContent = nc.pubkey
-      ? (nc.isOwner ? "owner · " + nc.npub.slice(0, 12) + "…" : "signed in, not the owner")
-      : "read-only";
-    $("#signin-btn").textContent = nc.pubkey ? "Sign out" : "Sign in";
+      ? (nc.isOwner ? "vlastník · " + nc.npub.slice(0, 12) + "…" : "přihlášen, ale ne vlastník")
+      : "jen ke čtení";
+    $("#signin-btn").textContent = nc.pubkey ? "Odhlásit se" : "Přihlásit se";
   };
   nc.addEventListener("nsiteclay:login", setMode);
   nc.addEventListener("nsiteclay:logout", setMode);
@@ -426,7 +427,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
   });
   $("#nsec-form").onsubmit = async (e) => {
     e.preventDefault();
-    status.textContent = "checking…";
+    status.textContent = "ověřuji…";
     try {
       await nc.login("nsec", { key: inp.value, password: pass.value });
       inp.value = ""; pass.value = ""; pass.hidden = true; status.textContent = "";
@@ -437,15 +438,15 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
   $("#save").onclick = async () => {
     try {
       const r = await nc.save();
-      $("#who").textContent = r.skipped ? "nothing changed" : `saved ${r.bytes.toLocaleString()} B`;
-    } catch (e) { $("#who").textContent = "save failed: " + e.message; }
+      $("#who").textContent = r.skipped ? "nic se nezměnilo" : `uloženo ${r.bytes.toLocaleString()} B`;
+    } catch (e) { $("#who").textContent = "uložení selhalo: " + e.message; }
   };
 
   $("#copykey").onclick = async () => {
     const el = $("#demokey");
     try { await navigator.clipboard.writeText(el.value); }
     catch { el.select(); document.execCommand("copy"); }
-    const b = $("#copykey"); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1400);
+    const b = $("#copykey"); b.textContent = "Zkopírováno"; setTimeout(() => (b.textContent = "Kopírovat"), 1400);
   };
 
   // Nothing half-typed and no transient status text should ever reach the file.

@@ -234,6 +234,9 @@ export class Feed {
       body + (tags ? `<footer class="nc-tags">${tags}</footer>` : ""),
     );
     art.setAttribute("nc:by", ev.pubkey);
+    // When it was posted, so a page merging two feeds can interleave them
+    // without parsing the formatted date back out of the byline.
+    art.setAttribute("nc:at", String(ev.created_at));
     return art;
   }
 

@@ -403,6 +403,10 @@ Work in this order; it saves rewriting.
 - **A save must not reference a file the manifest does not list.** The runtime
   refuses to publish that and the error names the file. Deploy the whole
   directory with the CLI rather than hand-editing the path table.
+- **Every page needs its own `nc:path`.** A document defaults to `/index.html`,
+  so a site with more than one editable page, an about page, a translation,
+  anything, needs `nc:path="/about.html"` on each `<html>` or saving one of them
+  overwrites another. This is silent until someone loses a page.
 - **Assets are content-fingerprinted.** `/logo-9f2a1e.png` changes when the file
   changes. Never hardcode a fingerprint you saw once.
 - **Relays disagree.** Publish to several, and include `wss://relay.nsite.lol` so

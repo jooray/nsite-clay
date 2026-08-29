@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="sk"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/sk/docs.html"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: návod krok za krokom</title>
+<meta name="description" content="Dostaň stránku online a potom ju uprav v prehliadači: text, obrázky, video, tvoje Nostr posty aj písanie nových.">
+<link rel="alternate" hreflang="en" href="/docs.html">
+<link rel="alternate" hreflang="es" href="/es/docs.html">
+<link rel="alternate" hreflang="sk" href="/sk/docs.html">
+<link rel="alternate" hreflang="cs" href="/cs/docs.html">
+<link rel="alternate" hreflang="x-default" href="/docs.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+
+    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
+    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
+    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.7 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.16), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  header.top { padding: 3rem 0 1.4rem; }
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--ink-faint); }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--ink-dim); text-decoration: none; }
+  .crumb a:hover { color: var(--violet); }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--ink-dim); font-size: 1.12rem; max-width: 40rem; }
+
+  nav.toc { border: 1px solid var(--edge); border-radius: 12px; background: var(--panel);
+            padding: .9rem 1.2rem; margin: 2rem 0 0; font-size: .95rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
+  nav.toc li { margin: .12rem 0; }
+  nav.toc a { color: var(--ink-dim); text-decoration: none; }
+  nav.toc a:hover { color: var(--violet); }
+  @media (max-width: 40rem) { nav.toc ol { columns: 1; } }
+
+  section { padding: 2.8rem 0 .5rem; border-top: 1px solid var(--edge); margin-top: 2.4rem; }
+  .step { font: 600 .72rem/1 var(--mono); letter-spacing: .12em; color: var(--violet); }
+  section > h2 { font-size: 1.55rem; letter-spacing: -.02em; margin: .35rem 0 .8rem; }
+  h3 { font-size: 1.03rem; margin: 1.8rem 0 .4rem; }
+  p { margin: 0 0 1rem; }
+  ul, ol { padding-left: 1.35rem; }
+  li { margin: .35rem 0; }
+
+  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
+        padding: .95rem 1.15rem; overflow-x: auto; margin: 0 0 1.1rem;
+        font: .85rem/1.75 var(--mono); color: #D9CCF3; }
+  pre .c { color: var(--ink-faint); }
+
+  figure { margin: 1.3rem 0 1.6rem; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 12px;
+               border: 1px solid var(--edge); box-shadow: 0 26px 60px -34px rgba(0,0,0,.95); }
+  figcaption { font-size: .86rem; color: var(--ink-faint); margin-top: .55rem; }
+
+  .keys { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: .94rem; }
+  .keys td { padding: .42rem .6rem; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  .keys td:first-child { width: 11rem; color: var(--ink); }
+  kbd { font: .82em var(--mono); border: 1px solid var(--edge); border-bottom-width: 2px;
+        border-radius: 5px; padding: .08em .38em; background: var(--bg-2); }
+
+  .note { border-left: 3px solid var(--violet-3); background: rgba(86,60,170,.12);
+          padding: .8rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; font-size: .96rem; }
+  .note p:last-child { margin-bottom: 0; }
+  .note b { color: var(--ink); }
+
+  footer { border-top: 1px solid var(--edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+
+  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
+  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
+         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
+         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
+  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
+                background: var(--bg-2); color: var(--ink); cursor: pointer; }
+  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600;
+               display: none; }
+  html[nc\:owner-here="true"] .bar .save { display: inline-block; }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
+  html[nc\:status="saved"] .dot { background: #7FC08C; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+<nav class="nc-nav">
+      <a class="nc-brand" href="/sk/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+      <a href="/sk/">Domov</a>
+      <a href="/sk/docs.html" aria-current="page">Ako to funguje</a>
+      <a href="/sk/templates.html">Šablóny</a>
+      <a href="/llms.txt">Pre agentov</a>
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+      <div class="nc-lang"><a href="/docs.html" hreflang="en">EN</a><a href="/es/docs.html" hreflang="es">ES</a><a href="/sk/docs.html" hreflang="sk" aria-current="page">SK</a><a href="/cs/docs.html" hreflang="cs">CS</a></div>
+    </nav>
+    <h1 editable="single-line">Návod krok za krokom</h1>
+    <p class="lede" editable="single-line">Dva príkazy a stránka je online. Odvtedy sa všetko deje v prehliadači: písanie, obrázky, video, tvoje Nostr posty. Každý screenshot nižšie je zo skutočnej stránky.</p>
+
+    <nav class="toc">
+      <ol>
+        <li><a href="#online">Dostaň stránku online</a></li>
+        <li><a href="#signin">Otvor ju a prihlás sa</a></li>
+        <li><a href="#text">Zmeň text</a></li>
+        <li><a href="#picture">Pridaj obrázok</a></li>
+        <li><a href="#video">Pridaj video</a></li>
+        <li><a href="#posts">Ukáž svoje Nostr posty</a></li>
+        <li><a href="#write">Napíš post</a></li>
+        <li><a href="#save">Ulož zmeny</a></li>
+        <li><a href="#history">Vráť sa k staršej verzii</a></li>
+        <li><a href="#share">Adresa tvojej stránky</a></li>
+      </ol>
+    </nav>
+  </header>
+
+  <section id="online">
+    <p class="step">01</p>
+    <h2>Dostaň stránku online</h2>
+    <div editable>
+      <p>Toto je jediná časť, ktorá sa deje v termináli, a sú to dva príkazy. Potrebuješ
+        nainštalovaný <a href="https://nodejs.org">Node.js</a>.</p>
+    </div>
+<pre>npx nsite-clay init mysite
+npx nsite-clay deploy mysite --sec=nsec1…</pre>
+    <div editable>
+      <p>Prvý príkaz vytvorí priečinok so stránkou a vypíše kľúč. Ten kľúč je jediné, čím sa dá
+        stránka niekedy zmeniť, a nikde sa neukladá, takže si ho ešte pred zatvorením terminálu
+        skopíruj niekam do bezpečia. Druhý príkaz stránku vyloží online a vypíše jej adresu.</p>
+      <p>Už máš Nostr kľúč? Prvému príkazu podaj rovno svoj npub a stránka bude tvoja od
+        začiatku:</p>
+    </div>
+<pre>npx nsite-clay init mysite --npub=npub1…</pre>
+    <div class="note">
+      <p><b>Viac príkazov už netreba.</b> Odteraz sa stránka mení sama. Do terminálu sa vrátiš,
+        len ak chceš súbor upraviť ručne.</p>
+    </div>
+  </section>
+
+  <section id="signin">
+    <p class="step">02</p>
+    <h2>Otvor ju a prihlás sa</h2>
+    <div editable>
+      <p>Otvor adresu, ktorú deploy vypísal. Toto uvidí každý, kto príde: tvoju stránku a nič, na
+        čo by sa dalo kliknúť.</p>
+    </div>
+    <figure>
+      <img src="/shots/g1-your-page.png" alt="Zverejnená stránka tak, ako ju vidí návštevník">
+      <figcaption>Návštevník vidí stránku. Žiadne ovládanie úprav, žiadna výzva na prihlásenie.</figcaption>
+    </figure>
+    <div editable>
+      <p>V rohu stlač <b>Prihlásiť sa</b>. Dnu vedú tri cesty a použi tú prvú, ktorá sa na teba
+        vzťahuje.</p>
+    </div>
+    <figure>
+      <img src="/shots/g2-sign-in.png" alt="Prihlasovací panel s rozšírením prehliadača, vzdialeným signerom a vložením kľúča">
+      <figcaption>Prihlás sa rozšírením prehliadača, Amberom v telefóne alebo vložením kľúča.</figcaption>
+    </figure>
+    <div editable>
+      <ul>
+        <li><b>Rozšírenie prehliadača</b>, napríklad Alby alebo nos2x. Jedno kliknutie, nič sa
+          nepíše.</li>
+        <li><b>Amber alebo iná signer aplikácia.</b> Stlač tlačidlo, naskenuj kód telefónom
+          a každú zmenu potvrď tam. Kľúč sa prehliadača ani nedotkne, a preto je toto najbezpečnejšia
+          cesta.</li>
+        <li><b>Vlož kľúč.</b> Buď <code>nsec</code>, alebo zašifrovaný <code>ncryptsec</code> aj
+          s heslom. Zostane v karte, kým ju nezavrieš, a nikam sa neukladá.</li>
+      </ul>
+    </div>
+    <figure>
+      <img src="/shots/g3-signed-in.png" alt="Tá istá stránka po prihlásení, v rohu s ovládaním úprav">
+      <figcaption>Prihlásený ako vlastník. V rohu je teraz vidieť, kto si, a pribudlo Uložiť.</figcaption>
+    </figure>
+    <div class="note">
+      <p><b>Stránku zmení len tvoj kľúč.</b> Ktokoľvek iný sa prihlási, dostane tú istú stránku len
+        na čítanie, akú vidí návštevník.</p>
+    </div>
+  </section>
+
+  <section id="text">
+    <p class="step">03</p>
+    <h2>Zmeň text</h2>
+    <div editable>
+      <p>Klikni do ľubovoľného textu a píš. Enter urobí nový odsek. Keď text označíš, objaví sa nad
+        ním malý panel.</p>
+    </div>
+    <figure>
+      <img src="/shots/g4-toolbar.png" alt="Panel s formátovaním plávajúci nad označeným textom">
+      <figcaption>Prvý ovládač je ponuka štýlov. Z toho, v čom práve stojíš, spraví nadpis, zoznam,
+        citát alebo blok kódu.</figcaption>
+    </figure>
+    <div editable>
+      <p>Zvyšok panela je tučné, kurzíva, prečiarknuté, odrážkový a číslovaný zoznam, tlačidlo na
+        odkaz, tri vkladacie tlačidlá popísané nižšie a jedno na odstránenie formátovania.</p>
+    </div>
+    <table class="keys">
+      <tr><td><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd></td><td>tučné, kurzíva, podčiarknuté</td></tr>
+      <tr><td><kbd>⌘K</kbd></td><td>vytvorí odkaz alebo ho zruší</td></tr>
+      <tr><td><kbd>⌘⇧8</kbd></td><td>odrážkový zoznam (<kbd>⌘⇧7</kbd> číslovaný, <kbd>⌘⇧9</kbd> citát)</td></tr>
+      <tr><td><kbd>⌥1</kbd> <kbd>⌥2</kbd> <kbd>⌥3</kbd></td><td>tri veľkosti nadpisov, <kbd>⌥0</kbd> späť na normálny text</td></tr>
+      <tr><td><code># </code> <code>- </code> <code>&gt; </code></td><td>napíš ich na začiatok riadka a spravia to isté</td></tr>
+    </table>
+    <div editable>
+      <p>Vkladať text z textového editora je bezpečné. Formátovanie sa cestou dnu vyčistí, takže
+        v stránke neskončia cudzie fonty.</p>
+    </div>
+  </section>
+
+  <section id="picture">
+    <p class="step">04</p>
+    <h2>Pridaj obrázok</h2>
+    <div editable>
+      <p>Postav kurzor tam, kam obrázok chceš, a stlač na paneli tlačidlo obrázka.</p>
+    </div>
+    <figure>
+      <img src="/shots/g5-add-picture.png" alt="Panel na vloženie obrázka s plochou na pretiahnutie, mriežkou už nahratých obrázkov a poliami na URL, alt text a popisku">
+      <figcaption>Pretiahni súbor dnu, klikni na niektorý z už použitých alebo vlož webovú adresu.</figcaption>
+    </figure>
+    <div editable>
+      <p>Čokoľvek nahráš, uloží sa vedľa samotnej stránky, a všetko staršie sa objaví v tej mriežke,
+        takže ten istý obrázok už nikdy nemusíš hľadať druhýkrát.</p>
+      <p>Vyplň alt text. Prečíta ho čítačka obrazovky a ukáže sa aj vtedy, keď sa obrázok
+        nenačíta. Popiska je nepovinná a objaví sa pod obrázkom.</p>
+    </div>
+  </section>
+
+  <section id="video">
+    <p class="step">05</p>
+    <h2>Pridaj video</h2>
+    <div editable>
+      <p>Tlačidlo videa hneď vedľa zoberie odkaz na YouTube alebo Vimeo, prípadne videosúbor na
+        nahratie.</p>
+    </div>
+    <figure>
+      <img src="/shots/g6-add-video.png" alt="Panel na vloženie videa s vyplneným odkazom na YouTube">
+      <figcaption>Vlož ten odkaz, ktorý by si normálne poslal ďalej.</figcaption>
+    </figure>
+    <figure>
+      <img src="/shots/g7-video-in-page.png" alt="Video v stránke ako náhľad s tlačidlom na prehratie">
+      <figcaption>Pristane ako náhľad s tlačidlom na prehratie.</figcaption>
+    </figure>
+    <div class="note">
+      <p><b>Prehrávač sa načíta, až keď niekto stlačí play.</b> Dovtedy čitateľov YouTube nesleduje
+        a náhľad funguje ako odkaz aj tým, čo majú vypnutý JavaScript.</p>
+    </div>
+  </section>
+
+  <section id="posts">
+    <p class="step">06</p>
+    <h2>Ukáž svoje Nostr posty</h2>
+    <div editable>
+      <p>Tlačidlo s bleskom vloží do stránky feed Nostr postov. Vyber si, či chceš krátke poznámky,
+        dlhé články alebo obrázkové posty, a od koho.</p>
+    </div>
+    <figure>
+      <img src="/shots/g8-pick-posts.png" alt="Panel Nostr feedu so zoznamom skutočných postov, jeden je zaškrtnutý a pripnutý">
+      <figcaption>Ich naozajstné posty sú vypísané pod tým. Klikni na ktorýkoľvek a pripneš ho navrch.</figcaption>
+    </figure>
+    <div editable>
+      <p>Uviesť môžeš aj viac npubov, takže stránka zvládne ukázať celú partiu. Ostatné ovládače sú
+        počet postov, či majú byť v zozname alebo v mriežke, minimálna dĺžka na odfiltrovanie
+        jednoriadkoviek a tag na zúženie na jednu tému.</p>
+    </div>
+    <figure>
+      <img src="/shots/g9-posts-in-page.png" alt="Článok a dve poznámky vykreslené v stránke">
+      <figcaption>Feed na mieste. Sám sa obnoví vždy, keď sa stránka otvorí.</figcaption>
+    </figure>
+    <div editable>
+      <p>Keď neskôr niečo napíšeš, objaví sa tu samo. Stránky sa už nemusíš dotknúť.</p>
+    </div>
+  </section>
+
+  <section id="write">
+    <p class="step">07</p>
+    <h2>Napíš post</h2>
+    <div editable>
+      <p>Keď stránka vie tvoje posty ukázať, vie ich aj písať. Všetko zverejnené je vypísané
+        a hociktorý článok sa dá upraviť rovno odtiaľto.</p>
+    </div>
+    <figure>
+      <img src="/shots/g10-your-posts.png" alt="Zoznam zverejnených článkov s tlačidlami na úpravu a zobrazenie">
+      <figcaption>Tvoje články a poznámky, s tlačidlom Napísať na nový.</figcaption>
+    </figure>
+    <figure>
+      <img src="/shots/g11-write-article.png" alt="Editor článku s názvom, adresou, zhrnutím, obrázkom, témami a textom">
+      <figcaption>Dlhé posty majú názov, zhrnutie, nepovinný úvodný obrázok, témy a samotný
+        text.</figcaption>
+    </figure>
+    <div editable>
+      <p>Na čom naozaj záleží, je <b>adresa</b>. Cez ňu sa na článok odkazuje a opätovné zverejnenie
+        pod tou istou adresou je úprava. Oprav preklep, zverejni a každá Nostr aplikácia ukáže na
+        tom istom odkaze opravenú verziu. Pôvodný dátum zostane.</p>
+      <p>Krátke poznámky fungujú rovnako, len s jedným rozdielom: dodatočne sa upraviť nedajú. Panel
+        ťa na to upozorní ešte pred zverejnením.</p>
+      <p>Posty a stránky sú oddelené. Napísaním poznámky sa stránka nezmení a uložením stránky sa
+        postom nič nestane.</p>
+    </div>
+  </section>
+
+  <section id="save">
+    <p class="step">08</p>
+    <h2>Ulož zmeny</h2>
+    <div editable>
+      <p>Stlač <b>Uložiť</b> alebo <kbd>⌘S</kbd>. Keď je hotovo, bodka v rohu zozelenie a každý, kto
+        od tej chvíle stránku otvorí, uvidí novú verziu.</p>
+      <p>Uloženie trvá asi sekundu. Ak sa od posledného uloženia nič nezmenilo, napíše to a neurobí
+        nič, takže druhé stlačenie nič nepokazí.</p>
+      <p>Kto ešte číta starú verziu, dozvie sa, že existuje novšia, a stránka sa mu obnoví sama.
+        Nikto nemusí vedieť, čo je tvrdý refresh.</p>
+    </div>
+    <div class="note">
+      <p><b>Keď uloženie zlyhá</b>, napíše prečo, nezlyhá potichu. Najčastejšie za tým je uspatá
+        signer aplikácia: zobuď ju, potvrď a stlač Uložiť znova.</p>
+    </div>
+  </section>
+
+  <section id="history">
+    <p class="step">09</p>
+    <h2>Vráť sa k staršej verzii</h2>
+    <div editable>
+      <p>Každé uloženie sa uchová. <b>História</b> ich vypíše všetky.</p>
+    </div>
+    <figure>
+      <img src="/shots/g12-history.png" alt="História verzií so zoznamom uložení podľa dátumu, každé s tlačidlom na prečítanie">
+      <figcaption>Ktorúkoľvek staršiu verziu si prečítaj alebo ju vráť späť.</figcaption>
+    </figure>
+    <div editable>
+      <p>Obnovením starej verzie tú súčasnú nezahodíš. Stane sa z nej ďalší záznam v zozname, takže
+        si to môžeš znova rozmyslieť.</p>
+    </div>
+  </section>
+
+  <section id="share">
+    <p class="step">10</p>
+    <h2>Adresa tvojej stránky</h2>
+    <div editable>
+      <p>Stránka býva na tvojom npube:</p>
+    </div>
+<pre>https://&lt;tvoj npub&gt;.nsite.lol/</pre>
+    <div editable>
+      <p>Tá adresa je tvoja preto, že kľúč je tvoj. Nikto ti ju nepridelil a nikto ti ju nezoberie.
+        Tú istú stránku z tých istých eventov obsluhuje viacero gatewayov, takže keď jeden nejde,
+        zmeníš hostname a nič iné sa nehýbe:</p>
+      <ul>
+        <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a>
+          a <a href="https://nwb.tf">nwb.tf</a></li>
+        <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
+          a <a href="https://shakespeare.to">shakespeare.to</a>, na ktorých beží aj referenčná
+          implementácia. Ak chceš pozadie, najzrozumiteľnejšie vysvetlenie toho, čo nsite vlastne
+          je, nájdeš na <a href="https://nsite.run">nsite.run</a>.</li>
+      </ul>
+      <p>Ak chceš vlastnú doménu, nasmeruj CNAME záznam na gateway a stránka bude odvtedy
+        odpovedať aj na nej.</p>
+      <p>Stránok môžeš mať aj viac. Pri nasadení pridaj <code>--site=blog</code> a tá dostane
+        vlastnú adresu, za ktorou stojí ten istý kľúč.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><a href="/sk/">Domov</a> · <a href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHube</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">Pre vývojárov</a></p>
+    <p>Táto stránka je jednou z takých stránok. Vznikla úpravou seba samej.</p>
+    <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
+      Projekt píše ako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+      MIT-0.</p>
+  </footer>
+</div>
+
+<div class="bar">
+  <span class="dot"></span>
+  <span id="who">len na čítanie</span>
+  <button id="signin-btn">Prihlásiť sa</button>
+  <button class="save" id="save">Uložiť</button>
+</div>
+
+<script src="/nsite-clay.js"></script>
+<script>
+(async () => {
+  await nc.ready;
+  const $ = (s) => document.querySelector(s);
+  const setMode = () => {
+    $("#who").textContent = nc.pubkey
+      ? (nc.isOwner ? "vlastník · " + nc.npub.slice(0, 12) + "…" : "prihlásený, ale nie vlastník")
+      : "len na čítanie";
+    $("#signin-btn").textContent = nc.pubkey ? "Odhlásiť sa" : "Prihlásiť sa";
+  };
+  nc.addEventListener("nsiteclay:login", setMode);
+  nc.addEventListener("nsiteclay:logout", setMode);
+  setMode();
+
+  $("#signin-btn").onclick = async () => {
+    if (nc.pubkey) return nc.logout();
+    try { await nc.login("auto"); }
+    catch {
+      const key = prompt("Vlož svoj nsec alebo ncryptsec.");
+      if (!key) return;
+      try { await nc.login("nsec", { key }); } catch (e) { nc.toast(e.message); }
+    }
+  };
+  $("#save").onclick = async () => {
+    try {
+      const r = await nc.save();
+      $("#who").textContent = r.skipped ? "nič sa nezmenilo" : `uložených ${r.bytes.toLocaleString()} B`;
+    } catch (e) { $("#who").textContent = "uloženie zlyhalo: " + e.message; }
+  };
+})();
+</script>
+</body>
+</html>
