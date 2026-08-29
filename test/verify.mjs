@@ -212,6 +212,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     host.remove();
   }
 
+  // A document must never publish a manifest that omits a file it references.
+  // This is the failure that looks like the runtime is broken: the page loads,
+  // its script 404s, and nothing works.
+  {
+    const html = '<html><head></head><body><img src="/logo.png"><script src="/app-9f2a.js"><\/script></body></html>';
+    const refs = nc._referencedPaths(html);
+    t("§4.2 same-origin references are found", refs.includes("/logo.png") && refs.includes("/app-9f2a.js"), refs.join(","));
+    const off = nc._referencedPaths('<html><body><img src="https://example.com/x.png"><a href="#top">t</a></body></html>');
+    t("§4.2 external and fragment links are not paths", off.length === 0, off.join(","));
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

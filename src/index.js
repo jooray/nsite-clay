@@ -159,6 +159,18 @@ class NsiteClay extends EventTarget {
       const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
 
       const paths = { ...(await this._currentPaths()), ...extraPaths, [this.cfg.path]: hash };
+
+      // Refuse to publish a document that references a file the manifest does
+      // not name. This is the failure that looks like the runtime is broken:
+      // the page loads, its script 404s, and nothing on it works.
+      const missing = this._referencedPaths(html).filter((p) => p !== this.cfg.path && !paths[p]);
+      if (missing.length) {
+        throw new Error(
+          `This document references ${missing.join(", ")}, which the manifest does not list. ` +
+          `Publishing would break the page. Deploy the whole directory with the CLI to rebuild ` +
+          `the path table.`);
+      }
+
       const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
       await publishToAny(this.pool, this.cfg.relays, manifest);
 
@@ -178,12 +190,37 @@ class NsiteClay extends EventTarget {
   }
 
   // A manifest is the whole path table, so a save that cannot read the current
-  // one would silently unpublish every other file in the site. Fall back to what
-  // we read at boot rather than shipping a truncated table.
+  // one would silently unpublish every other file in the site.
+  //
+  // Reading it is not enough on its own. Relays disagree, and the one that
+  // answers may hand back an older manifest than the page was served under.
+  // Publishing that table with a new /index.html merged in produces a manifest
+  // whose document references an asset the table no longer lists, which is a
+  // broken site. So take the union of every table we have seen, newest value
+  // winning per path, and never drop a path.
   async _currentPaths() {
-    const ev = (await this.currentManifest()) || this._manifest;
-    if (ev) this._manifest = ev;
-    return ev ? manifestPaths(ev) : {};
+    const seen = [this._bootManifest, this._manifest, await this.currentManifest()].filter(Boolean);
+    if (!seen.length) return {};
+    const newest = seen.reduce((a, b) => (a.created_at >= b.created_at ? a : b));
+    this._manifest = newest;
+    const merged = {};
+    for (const ev of seen.sort((a, b) => a.created_at - b.created_at)) {
+      Object.assign(merged, manifestPaths(ev));
+    }
+    return merged;
+  }
+
+  // Every same-origin thing the document points at. A save that omits one of
+  // these publishes a page that cannot load itself.
+  _referencedPaths(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const out = new Set();
+    for (const el of doc.querySelectorAll("[src], [href]")) {
+      const v = el.getAttribute("src") || el.getAttribute("href");
+      if (!v || !v.startsWith("/") || v.startsWith("//")) continue;
+      out.add(v.split(/[?#]/)[0]);
+    }
+    return [...out];
   }
 
   async currentManifest() {
@@ -367,7 +404,9 @@ nc.ready = (async () => {
   nc.media.armEmbeds();
   nc.feed.start();
   nc._watchVersion();
-  if (nc.cfg.owner) nc.currentManifest().then((ev) => { if (ev) nc._manifest = ev; }).catch(() => {});
+  if (nc.cfg.owner) {
+    nc.currentManifest().then((ev) => { if (ev) { nc._manifest = ev; nc._bootManifest = ev; } }).catch(() => {});
+  }
   document.documentElement.setAttribute("nc:ready", "true");
   nc._emit("nsiteclay:ready", {});
   return nc;

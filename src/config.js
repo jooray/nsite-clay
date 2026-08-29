@@ -3,7 +3,10 @@
 // the runtime needs lives on <html> as nc:* attributes.
 import { nip19 } from "nostr-tools";
 
-const DEFAULT_RELAYS = ["wss://nos.lol", "wss://relay.damus.io", "wss://relay.primal.net"];
+// relay.nsite.lol last on purpose: a gateway keeps a live subscription to its
+// own relay, so a save that skips it is invisible there until the gateway's
+// next resync, and readers meanwhile get a stale page.
+const DEFAULT_RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom", "wss://relay.nsite.lol"];
 const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://blossom.primal.net"];
 
 function list(value, fallback) {
