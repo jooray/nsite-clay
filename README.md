@@ -5,8 +5,8 @@
 <h1 align="center">nsite-clay</h1>
 
 <p align="center">
-  A single HTML file that edits and republishes itself.<br>
-  No backend, no build step, no account. The host is Nostr.
+  A self-editable nsite.<br>
+  One HTML file that edits and republishes itself, hosted on Nostr.
 </p>
 
 <p align="center">

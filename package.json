@@ -2,7 +2,7 @@
   "name": "nsite-clay",
   "version": "0.1.0",
   "type": "module",
-  "description": "A single HTML file that edits and republishes itself, hosted on Nostr. No backend.",
+  "description": "A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.",
   "license": "MIT-0",
   "homepage": "https://github.com/jooray/nsite-clay",
   "repository": {

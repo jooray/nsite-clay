@@ -8,7 +8,8 @@
 //   1. every file becomes a Blossom blob, addressed by its own sha256
 //   2. a NIP-5A manifest maps paths to those hashes, signed by the site owner
 //   3. a kind-5128 snapshot pins that set of hashes as a permanent version
-import { readFileSync, readdirSync, statSync, mkdirSync, existsSync, writeFileSync, copyFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, mkdirSync, existsSync, writeFileSync, copyFileSync, chmodSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, relative, extname, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19, SimplePool } from "nostr-tools";
@@ -57,6 +58,27 @@ const die = (msg) => { console.error("nsite-clay: " + msg); process.exit(1); };
 
 // ------------------------------------------------------------------ signing
 
+// A NIP-46 connection belongs to a client keypair, and the bunker grants its
+// permissions to that key. Minting a throwaway key per run therefore works
+// exactly once: the URI's one-time secret is spent on the first connect, and
+// every later run turns up as an app the bunker has never authorised, which it
+// answers with "already connected" followed by "no permission". So the client
+// key is kept, one per bunker, and reused.
+const CONFIG_DIR = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "nsite-clay");
+const BUNKER_FILE = join(CONFIG_DIR, "bunkers.json");
+
+function readBunkers() {
+  try { return JSON.parse(readFileSync(BUNKER_FILE, "utf8")); } catch { return {}; }
+}
+
+function rememberClientKey(remotePubkey, secretHex, userPubkey) {
+  const all = readBunkers();
+  all[remotePubkey] = { clientSecret: secretHex, userPubkey, saved: new Date().toISOString() };
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(BUNKER_FILE, JSON.stringify(all, null, 2));
+  try { chmodSync(BUNKER_FILE, 0o600); } catch { /* best effort on odd filesystems */ }
+}
+
 // One interface over a raw key and a remote signer, so `deploy` does not care
 // which the person used.
 async function getSigner() {
@@ -65,7 +87,10 @@ async function getSigner() {
     const bp = await parseBunkerInput(String(bunker));
     if (!bp) die("could not parse that bunker:// URI");
     if (!bp.relays?.length) die("that bunker:// URI names no relays");
-    const clientKey = generateSecretKey();
+    const stored = flags.fresh ? null : readBunkers()[bp.pubkey];
+    const clientKey = stored
+      ? Uint8Array.from(Buffer.from(stored.clientSecret, "hex"))
+      : generateSecretKey();
     // fromBunker, not the constructor: the constructor's second argument is
     // options, so `new BunkerSigner(key, bp)` leaves the pointer unset and
     // connect() dies on it.
@@ -86,12 +111,18 @@ async function getSigner() {
           die(`the signer refused ${what} ("${msg}").\n` +
               `  Grant this connection: get_public_key, sign_event:24242 (Blossom uploads),\n` +
               `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions).\n` +
-              `  In most signers that means approving the prompt, or reconnecting with those perms.`);
+              `  In most signers that means approving the prompt in the app.\n` +
+              (stored
+                ? `  This run reused the client key saved in ${BUNKER_FILE}. If the connection was\n` +
+                  `  revoked, get a new bunker:// URI and pass --fresh to connect as a new app.`
+                : `  A bunker:// secret is single use, so a URI already spent on an earlier\n` +
+                  `  connection cannot authorise a new one. Get a fresh URI from the signer.`));
         }
         die(`${what} failed: ${msg}`);
       }
     };
     const pubkey = await ask("get_public_key", () => signer.getPublicKey());
+    rememberClientKey(bp.pubkey, Buffer.from(clientKey).toString("hex"), pubkey);
     return {
       pubkey,
       sign: (t) => ask(`sign_event kind ${t.kind}`, () => signer.signEvent(t)),
@@ -309,6 +340,8 @@ function cmdHelp() {
 Signing
   --sec=nsec1… | NOSTR_SECRET_KEY        a raw key
   --bunker=bunker://… | NOSTR_BUNKER_URI a remote signer (nsec.app, Amber over a bunker)
+  --fresh                                connect to the bunker as a new app, ignoring the
+                                         client key saved for it
 
 Deploy options
   --site=name         publish as a named site (kind 35128) instead of the root site
