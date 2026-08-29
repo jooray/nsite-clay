@@ -10,6 +10,16 @@
 </p>
 
 <p align="center">
+  <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/"><b>Homepage</b></a>
+  ·
+  <a href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Live demo</a>
+  ·
+  <a href="docs/RUNTIME-API.md">Runtime reference</a>
+</p>
+
+<p align="center"><sub>The homepage is itself an nsite-clay document, and it edits itself.</sub></p>
+
+<p align="center">
   <img src="media/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="880">
 </p>
 
