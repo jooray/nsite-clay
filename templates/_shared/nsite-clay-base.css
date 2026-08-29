@@ -162,6 +162,30 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; ga
 .nc-tags { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; font-size: .75rem; opacity: .6; }
 .nc-feed-status { color: var(--nc-ink-dim); font-size: .9rem; }
 
+/* ---- site navigation -----------------------------------------------------
+ * Used by the project's own pages rather than by templates, but it lives here
+ * so the twelve translated pages do not each carry a copy. */
+
+.nc-nav {
+  display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap;
+  padding: 1.2rem 0; font: .88rem var(--nc-chrome-font);
+}
+.nc-nav a { color: var(--nc-ink-dim); text-decoration: none; }
+.nc-nav a:hover, .nc-nav a[aria-current="page"] { color: var(--nc-accent); }
+.nc-nav a[aria-current="page"] { font-weight: 600; }
+.nc-nav .nc-brand { display: flex; align-items: center; gap: .5rem; margin-right: auto;
+  color: var(--nc-ink); font-weight: 600; }
+.nc-nav .nc-brand img { width: 26px; height: 26px; }
+.nc-lang { display: flex; gap: .4rem; align-items: center; }
+.nc-lang a { font: .78rem var(--nc-mono); text-transform: uppercase; letter-spacing: .04em;
+  padding: .2rem .4rem; border-radius: var(--nc-radius-sm); }
+.nc-lang a[aria-current="page"] { background: var(--nc-panel); color: var(--nc-ink); }
+.nc-credit { color: var(--nc-ink-dim); font-size: .88rem; margin: .4rem 0 0; }
+@media (max-width: 34rem) {
+  .nc-nav { gap: .8rem; font-size: .82rem; }
+  .nc-nav .nc-brand { margin-right: 0; width: 100%; }
+}
+
 /* ---- form controls a template puts in its own page -----------------------
  * A composer, a filter or a search box otherwise arrives with browser default
  * chrome inside a themed page, and every template writes the same reset. */

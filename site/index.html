@@ -12,8 +12,13 @@
 <meta property="og:title" content="nsite-clay">
 <meta property="og:description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
 <meta property="og:image" content="/nsite-clay.png">
+<link rel="stylesheet" href="/nsite-clay-base.css">
 <style>
   :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+
     --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
     --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
     --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
@@ -139,6 +144,16 @@
 <body>
 
 <div class="wrap">
+
+  <nav class="nc-nav">
+    <a class="nc-brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/" aria-current="page">Home</a>
+    <a href="/docs.html">How it works</a>
+    <a href="/templates.html">Templates</a>
+    <a href="/llms.txt">For agents</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+  </nav>
 
   <header>
     <img src="/nsite-clay-transparent.png" alt="nsite-clay">
@@ -278,7 +293,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
   </section>
 
   <section id="agents">
-    <h2 editable="single-line">Built by agents</h2>
+    <h2 editable="single-line">Built for agents, because the web is now built by agents</h2>
     <div editable>
       <p class="lede">Most pages made with this will be built by an agent rather than by hand, so
         the project ships instructions for one. Point your coding agent at that file and ask it
@@ -330,6 +345,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
+    <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
+      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+      MIT-0.</p>
   </footer>
 </div>
 

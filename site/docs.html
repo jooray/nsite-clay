@@ -10,8 +10,13 @@
 <title>nsite-clay: a walkthrough</title>
 <meta name="description" content="Get a page online, then edit it in the browser: text, pictures, video, your Nostr posts, and writing new ones.">
 <link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
 <style>
   :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+
     --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
     --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
     --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
@@ -97,7 +102,15 @@
 <div class="wrap">
 
   <header class="top">
-    <p class="crumb"><img src="/nsite-clay-transparent.png" alt=""> <a href="/">nsite-clay</a> / walkthrough</p>
+<nav class="nc-nav">
+      <a class="nc-brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+      <a href="/">Home</a>
+      <a href="/docs.html" aria-current="page">How it works</a>
+      <a href="/templates.html">Templates</a>
+      <a href="/llms.txt">For agents</a>
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+      <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+    </nav>
     <h1 editable="single-line">A walkthrough</h1>
     <p class="lede" editable="single-line">Two commands to get a page online. After that everything happens in the browser: writing, pictures, video, your Nostr posts. Every screenshot below is the real thing.</p>
 
@@ -343,8 +356,16 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
 <pre>https://&lt;your npub&gt;.nsite.lol/</pre>
     <div editable>
       <p>That address is yours because the key is yours. Nobody assigned it and nobody can take it
-        away. The same page is also served by other gateways, so if one is down, swap
-        <code>nsite.lol</code> for <code>nsite.run</code> and it is still there.</p>
+        away. Several gateways serve the same page from the same events, so if one is down you
+        change the hostname and nothing else moves:</p>
+      <ul>
+        <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> and
+          <a href="https://nwb.tf">nwb.tf</a></li>
+        <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
+          and <a href="https://shakespeare.to">shakespeare.to</a>, which also run the reference
+          implementation. <a href="https://nsite.run">nsite.run</a> has the clearest explanation of
+          what an nsite is if you want the background.</li>
+      </ul>
       <p>For a domain of your own, point a CNAME record at a gateway and your page answers there
         instead.</p>
       <p>You can also have more than one page. Add <code>--site=blog</code> when you deploy and that
@@ -355,6 +376,9 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
   <footer>
     <p><a href="/">Homepage</a> · <a href="https://github.com/jooray/nsite-clay">Source on GitHub</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">For developers</a></p>
     <p>This page is one of these pages. It was written in itself.</p>
+    <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
+      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
+      MIT-0.</p>
   </footer>
 </div>
 
