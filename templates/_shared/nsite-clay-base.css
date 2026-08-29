@@ -149,5 +149,13 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: flex; gap: .
 /* ---- respect the reader ------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    /* Without this an infinite animation restarts every frame instead of
+     * stopping, so a breathing glow flickers rather than settling, which is
+     * worse than the animation it was meant to remove. */
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  html { scroll-behavior: auto !important; }
 }

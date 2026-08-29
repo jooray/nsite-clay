@@ -102,7 +102,7 @@
     display: block; background: var(--matte); padding: 8px;
     box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 26px 50px -34px #000;
   }
-  .ph img { display: block; width: 100%; height: 100%; background: #0d0b10; }
+  .ph img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0d0b10; }
   .cap {
     display: block; font: .66rem/1.5 var(--nc-mono); letter-spacing: .05em;
     color: var(--nc-ink-dim); margin-top: .4rem; overflow-wrap: anywhere;
@@ -163,12 +163,14 @@
   .cl.centre .cl-row { justify-content: center; }
   .mode-minimal .ph { max-width: 100%; min-width: 0; }
   .mode-minimal .ph-in {
-    padding: 0; width: min(var(--mw), 100%); background: none;
+    padding: 0; width: var(--mw); max-width: 100%; background: none; box-shadow: none;
+  }
+  .mode-minimal .ph img {
+    height: auto;
     box-shadow: 0 0 0 1px rgba(255,255,255,.07), 0 30px 70px -46px #000;
     transition: box-shadow .35s;
   }
-  .mode-minimal .ph img { height: auto; }
-  .mode-minimal .ph:hover .ph-in, .mode-minimal .ph:focus-visible .ph-in {
+  .mode-minimal .ph:hover img, .mode-minimal .ph:focus-visible img {
     box-shadow: 0 0 0 1px var(--nc-accent), 0 30px 70px -40px #000;
   }
   .mode-minimal .cap { opacity: .5; }
@@ -205,7 +207,7 @@
   .mode-constellation .ph:focus img,
   .mode-constellation .ph.lit img { filter: none; }
   .mode-constellation .cap {
-    position: absolute; left: 50%; top: calc(50% + var(--nh) / 2 + 10px);
+    position: absolute; left: 50%; top: calc(50% + var(--rh) / 2 + 12px);
     transform: translateX(-50%); width: max-content; max-width: 18rem; text-align: center;
     opacity: 0; transition: opacity .3s; pointer-events: none;
   }
@@ -491,6 +493,16 @@
   // rather than on the element: attributes are serialised, this is not.
   let justLit = null;
 
+  // Nine of these pictures arrive without a dim tag, so the frame is cut when
+  // the file lands. Rebuilding once per arrival would thrash the layout.
+  let pending = 0;
+  function relayout() {
+    clearTimeout(pending);
+    pending = setTimeout(() => {
+      if (modes[mode] && modes[mode].resize) modes[mode].resize();
+    }, 160);
+  }
+
   function frame(p) {
     const a = T("a", "ph");
     a.href = p.href; a.rel = "noopener"; a.target = "_blank";
@@ -500,14 +512,13 @@
     img.src = p.url; img.alt = p.alt; img.loading = "lazy"; img.decoding = "async";
     img.draggable = false;
     if (p.w && p.h) { img.width = p.w; img.height = p.h; }
-    if (!p.w || !p.h) {
-      img.addEventListener("load", () => {
-        if (!img.naturalWidth) return;
-        p.w = img.naturalWidth; p.h = img.naturalHeight;
-        img.width = p.w; img.height = p.h;
-        if (modes[mode] && modes[mode].resize) modes[mode].resize();
-      }, { once: true });
-    }
+    img.addEventListener("load", () => {
+      if (!img.naturalWidth) return;
+      if (p.w === img.naturalWidth && p.h === img.naturalHeight) return;
+      p.w = img.naturalWidth; p.h = img.naturalHeight;
+      img.width = p.w; img.height = p.h;
+      relayout();
+    }, { once: true });
     inner.appendChild(img);
     inner.appendChild(T("span", "cap", p.cap || day(p.at)));
     a.appendChild(inner);
@@ -517,7 +528,10 @@
       e.preventDefault();
       openLightbox(p.i);
     });
-    a.addEventListener("focus", () => { if (modes[mode] && modes[mode].reveal) modes[mode].reveal(p); });
+    a.addEventListener("focus", () => {
+      if (!a.matches(":focus-visible")) return;
+      if (modes[mode] && modes[mode].reveal) modes[mode].reveal(p);
+    });
     p.el = a; p.inner = inner; p.img = img;
     return a;
   }
@@ -591,6 +605,7 @@
         zoomAt(pinch.z * (d / Math.max(10, pinch.d)), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
         return;
       }
+      tween = null;
       st.x += dx; st.y += dy; vx = dx; vy = dy;
       moved += Math.abs(dx) + Math.abs(dy);
       clamp(); paint();
@@ -768,12 +783,12 @@
     function build() {
       const isles = Math.max(3, Math.min(8, Math.round(photos.length / 6)));
       const per = Math.ceil(photos.length / isles);
-      const SPREAD = 950;
+      const SPREAD = 1080;
       const centres = [];
       for (let k = 0; k < isles; k++) {
         const a = (k / isles) * Math.PI * 2 + jit("isle" + k, "a") * .8;
         const r = SPREAD * (0.35 + jit("isle" + k, "r") * 0.75);
-        centres.push({ x: 1500 + Math.cos(a) * r * 1.5, y: 1000 + Math.sin(a) * r });
+        centres.push({ x: 1600 + Math.cos(a) * r * 1.85, y: 1100 + Math.sin(a) * r * 1.15 });
       }
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
@@ -783,7 +798,7 @@
         const n = i % per;
         const c = centres[k];
         const ang = n * 2.399963 + jit(p.url, "na") * .7;
-        const rad = 110 + 52 * Math.sqrt(n) + jit(p.url, "nr") * 70;
+        const rad = 125 + 62 * Math.sqrt(n) + jit(p.url, "nr") * 80;
         const x = c.x + Math.cos(ang) * rad * 1.25;
         const y = c.y + Math.sin(ang) * rad;
         const side = Math.round(96 + jit(p.url, "ns") * 46);
@@ -949,8 +964,8 @@
     buttons.constellation.disabled = small;
     if (small && mode !== "plain" && mode !== "minimal") setMode("plain");
   }
-  narrow.addEventListener("change", () => { applyWidth(); if (modes[mode].resize) modes[mode].resize(); });
-  window.addEventListener("resize", () => { if (modes[mode] && modes[mode].resize) modes[mode].resize(); });
+  narrow.addEventListener("change", () => { applyWidth(); relayout(); });
+  window.addEventListener("resize", relayout);
 
   const skip = document.getElementById("skip-plain");
   if (skip) skip.addEventListener("click", (e) => {
