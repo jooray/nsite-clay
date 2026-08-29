@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:edit-gate="hash"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>slab: a paste server in 900 lines (Lowband 2:17)</title>
+<meta name="description" content="slab is a single-binary paste server with an append-only file format. Written up for Lowband, volume two, issue seventeen.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f4f1e8'/%3E%3Ctext x='3' y='23' font-family='monospace' font-size='20' fill='%2317150f'%3E%5B%5D%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* Two values and their tints: ink and paper. No hue anywhere, no image, no
+     rounded corner that the shared stylesheet does not force. */
+  :root {
+    --nc-ink: #17150f;
+    --nc-ink-dim: #5b584f;
+    --nc-bg: #f4f1e8;
+    --nc-panel: #e8e4d8;
+    --nc-edge: #17150f;
+    --nc-accent: #17150f;
+    --nc-accent-ink: #f4f1e8;
+    --nc-ok: #17150f;
+    --nc-bad: #17150f;
+    --nc-radius: 0;
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --nc-chrome-font: var(--nc-mono);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --nc-ink: #e6e2d6;
+      --nc-ink-dim: #948f83;
+      --nc-bg: #131210;
+      --nc-panel: #1e1c18;
+      --nc-edge: #e6e2d6;
+      --nc-accent: #e6e2d6;
+      --nc-accent-ink: #131210;
+      --nc-ok: #e6e2d6;
+      --nc-bad: #e6e2d6;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 2rem 1rem 7rem;
+    background: var(--nc-bg);
+    color: var(--nc-ink);
+    font: 15px/1.5 var(--nc-mono);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* 79 columns, the width a text file has always been. Narrower screens get
+     the same file with a shorter line, which is what a pager would do too. */
+  .sheet { width: min(79ch, 100%); margin: 0 auto; }
+
+  p, li, dd { max-width: 79ch; }
+  p { margin: 0 0 1.5em; }
+
+  /* ---- ASCII furniture ---------------------------------------------------
+     A rule is a row of characters clipped at the measure, so it is exactly 79
+     columns on a wide screen and exactly the column count on a narrow one. */
+  .rule, .rule-thin {
+    overflow: hidden; white-space: nowrap; user-select: none;
+    color: var(--nc-ink); margin: 1.5em 0;
+  }
+  .rule::before {
+    content: "===============================================================================";
+  }
+  .rule-thin::before {
+    content: "-------------------------------------------------------------------------------";
+  }
+
+  .center { text-align: center; }
+
+  header .line { display: block; margin: 0; }
+  header .zine { letter-spacing: .35em; font-weight: 700; }
+  header .title { font-weight: 700; margin-top: 1.5em; }
+
+  /* ---- table of contents ---- */
+
+  nav ol { list-style: none; margin: 0; padding: 0; }
+  nav li { margin: 0; }
+  nav a {
+    display: flex; align-items: baseline; gap: 0;
+    color: inherit; text-decoration: none;
+  }
+  nav a:hover .t, nav a:focus .t { text-decoration: underline; }
+  nav .n { flex: 0 0 auto; white-space: pre; }
+  nav .t { flex: 0 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav a::after {
+    content: " ...............................................................................";
+    flex: 1 1 auto; overflow: hidden; white-space: pre; min-width: 0;
+  }
+
+  /* ---- sections ---- */
+
+  section { margin: 0; }
+  h2 {
+    font-size: 1em; font-weight: 700; margin: 1.5em 0;
+    scroll-margin-top: 1rem; text-transform: none;
+  }
+  h3 { font-size: 1em; font-weight: 700; margin: 1.5em 0 0; }
+  h2 + p, h3 + p { margin-top: 0; }
+
+  a { color: inherit; text-underline-offset: 2px; }
+  a:hover { text-decoration-thickness: 2px; }
+
+  pre {
+    margin: 0 0 1.5em; padding: 0;
+    font: inherit; overflow-x: auto;
+    border-left: 1px solid var(--nc-ink); padding-left: 1ch;
+  }
+
+  ul { list-style: none; margin: 0 0 1.5em; padding: 0; }
+  ul li { text-indent: -2ch; padding-left: 2ch; }
+  ul li::before { content: "* "; }
+  ol { margin: 0 0 1.5em; padding-left: 4ch; }
+
+  dl { margin: 0 0 1.5em; }
+  dt { font-weight: 700; }
+  dd { margin: 0 0 .75em 4ch; }
+
+  strong { font-weight: 700; }
+  code { font: inherit; }
+
+  .back { display: inline-block; margin-top: .75em; }
+
+  /* ---- the feed, dressed as forwarded mail ------------------------------- */
+
+  .nc-feed { gap: 1.5em; }
+  .nc-item {
+    background: transparent; border: 0; border-radius: 0;
+    padding: 0 0 0 2ch; border-left: 1px solid var(--nc-ink);
+  }
+  .nc-by {
+    display: block; opacity: 1; color: var(--nc-ink);
+    font-size: 1em; margin-bottom: .75em;
+  }
+  .nc-by .nc-name { font-weight: 400; }
+  .nc-by .nc-name::before { content: "From: "; }
+  .nc-by .nc-when { margin: 0; display: block; }
+  .nc-by .nc-when::before { content: "Date: "; }
+  .nc-avatar { display: none; }
+  .nc-title { font-size: 1em; font-weight: 700; margin: 0 0 .75em; }
+  .nc-text, .nc-summary { color: var(--nc-ink); font-size: 1em; }
+  .nc-tags { opacity: 1; font-size: 1em; }
+  .nc-feed-status { color: var(--nc-ink-dim); font-size: 1em; }
+
+  @media (max-width: 30rem) { body { font-size: 13px; padding-top: 1rem; } }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+<header class="center">
+  <p class="line zine" editable="single-line">==Lowband Inc.==</p>
+  <p class="line" editable="single-line">Volume Two, Issue Seventeen, Phile 04 of 11</p>
+  <div class="rule-thin" aria-hidden="true"></div>
+  <h1 class="line title" editable="single-line">slab: a paste server in 900 lines</h1>
+  <p class="line" editable="single-line">by mox</p>
+  <p class="line" editable="single-line">30 June 2026</p>
+</header>
+
+<div class="rule" aria-hidden="true"></div>
+
+<nav aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#s00"><span class="n">  0x00  </span><span class="t">Introduction</span></a></li>
+    <li><a href="#s01"><span class="n">  0x01  </span><span class="t">What it does</span></a></li>
+    <li><a href="#s02"><span class="n">  0x02  </span><span class="t">Building it</span></a></li>
+    <li><a href="#s03"><span class="n">  0x03  </span><span class="t">The on-disk format</span></a></li>
+    <li><a href="#s04"><span class="n">  0x04  </span><span class="t">Talking to it</span></a></li>
+    <li><a href="#s05"><span class="n">  0x05  </span><span class="t">Known bugs</span></a></li>
+    <li><a href="#s06"><span class="n">  0x06  </span><span class="t">Dispatches</span></a></li>
+    <li><a href="#s07"><span class="n">  0x07  </span><span class="t">Greets</span></a></li>
+  </ol>
+</nav>
+
+<div class="rule" aria-hidden="true"></div>
+
+<section id="s00">
+  <h2>0x00  Introduction</h2>
+  <div editable>
+    <p>I wanted somewhere to put a config file so a friend could read it five
+    minutes later. Every hosted pastebin I tried wanted an account, ran three
+    trackers, or quietly kept the text forever. The self-hosted ones wanted a
+    database and a PHP runtime.</p>
+    <p>slab is what I wrote instead. One binary, one file on disk, no database.
+    It has been running on a virtual machine with 256 MB of memory for eleven
+    months and the process has never gone above 9 MB resident.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s01">
+  <h2>0x01  What it does</h2>
+  <div editable>
+    <p>You POST some text and get back a URL. Anyone with the URL can read the
+    text until it expires. That is the whole product.</p>
+  </div>
+  <ul editable>
+    <li>Pastes expire. The default is seven days, the maximum is ninety.</li>
+    <li>A paste is at most 512 kB. Bigger uploads get a 413 and no partial
+    write.</li>
+    <li>Nothing is indexed and nothing is listed. A URL you have not been given
+    is a 404.</li>
+    <li>No accounts, no cookies, no JavaScript on the read page.</li>
+  </ul>
+  <div editable>
+    <p>Syntax highlighting is done at write time, not read time, so the read
+    path is a file offset and a copy. That decision is the reason a paste
+    server needs 900 lines rather than 9000.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s02">
+  <h2>0x02  Building it</h2>
+  <pre editable>    $ git clone https://example.org/slab.git
+    $ cd slab
+    $ make
+    cc -std=c11 -O2 -Wall -Wextra -o slab slab.c
+    $ ./slab -d ./data -l 127.0.0.1:7070</pre>
+  <div editable>
+    <p>The only dependency is libc. It builds with gcc and with clang, and it
+    builds on OpenBSD, which is where it runs. There is no configure step
+    because there is nothing to configure at build time.</p>
+    <p>Run it behind whatever terminates TLS for you. It speaks plain HTTP/1.1
+    and it will not pretend otherwise.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s03">
+  <h2>0x03  The on-disk format</h2>
+  <div editable>
+    <p>Everything lives in one append-only file called <code>slab.dat</code>.
+    A record is a fixed header followed by the bytes:</p>
+  </div>
+  <pre editable>    offset  size  field
+    ------  ----  -----------------------------------------------
+         0     4  magic, "SLAB"
+         4     1  version, currently 1
+         5     8  created, unix seconds, big endian
+        13     8  expires, unix seconds, big endian
+        21     4  length of the body in bytes
+        25     4  crc32 of the body
+        29     n  body</pre>
+  <div editable>
+    <p>The lookup key is the offset itself, base32 encoded with a four
+    character check tail. That means the URL is short, the read is one
+    <code>pread</code>, and there is no index to corrupt.</p>
+    <p>It also means the file only grows. A nightly job walks the records,
+    copies the ones that have not expired into a new file, and swaps it in with
+    <code>rename</code>. On the box I use, eleven months of pastes compacted
+    from 2.1 GB down to 340 MB in about four seconds.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s04">
+  <h2>0x04  Talking to it</h2>
+  <pre editable>    $ curl --data-binary @sshd_config https://paste.example.org/
+    https://paste.example.org/mq4h7t2xk9
+
+    $ curl -H 'X-Slab-Expire: 3600' --data-binary @note.txt \
+        https://paste.example.org/
+    https://paste.example.org/8vv2p0c1nd
+
+    $ curl https://paste.example.org/mq4h7t2xk9/raw</pre>
+  <div editable>
+    <p>Append <code>/raw</code> for the bytes as they went in, with no HTML
+    around them. Anything else renders the highlighted version that was built
+    at write time.</p>
+    <p>The server answers a HEAD with the expiry in a header, which is enough
+    for a shell script to decide whether to re-upload.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s05">
+  <h2>0x05  Known bugs</h2>
+  <dl editable>
+    <dt>Compaction blocks writes</dt>
+    <dd>The swap takes a write lock for the whole copy. On a big file that is a
+    few seconds where POSTs get a 503. Nobody has complained yet, which
+    probably says more about the traffic than the code.</dd>
+    <dt>The highlighter guesses badly on plain prose</dt>
+    <dd>It looks at the first 200 bytes and votes. An English paragraph that
+    happens to start with a hash character comes out as a shell script.</dd>
+    <dt>No IPv6 literal in the listen argument</dt>
+    <dd>The parser splits on the last colon, so <code>-l [::1]:7070</code>
+    does not work. Patch welcome.</dd>
+  </dl>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s06">
+  <h2>0x06  Dispatches</h2>
+  <div editable>
+    <p>Notes from the author, pulled from Nostr when you open the page.</p>
+  </div>
+  <div nc:feed="notes"
+       nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+       nc:limit="3"
+       nc:style="list"></div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule-thin" aria-hidden="true"></div>
+
+<section id="s07">
+  <h2>0x07  Greets</h2>
+  <div editable>
+    <p>To rk for the crc32 table and for telling me the first version of the
+    header was two bytes too clever. To the people who ran the Sunday build box
+    for six years without being asked. To whoever left a copy of the 1994 issues
+    on a gopher hole in Trondheim.</p>
+    <p>Mail to mox at lowband dot org. Plain text, please.</p>
+  </div>
+  <p><a class="back" href="#s00">[top]</a></p>
+</section>
+
+<div class="rule" aria-hidden="true"></div>
+
+<p class="center" editable="single-line">EOF</p>
+
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

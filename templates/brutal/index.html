@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:edit-gate="hash"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HARD REFRESH: one day, one room, your own website</title>
+<meta name="description" content="A one-day gathering about running a website you actually own. Saturday 17 October 2026, Nová Cvernovka, Bratislava.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ffe14d' stroke='%23000' stroke-width='4'/%3E%3Ctext x='7' y='24' font-family='Helvetica,Arial,sans-serif' font-weight='900' font-size='19' fill='%23000'%3EHR%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    /* The shared toolbar reads these, so it comes out as another black-edged
+       yellow block instead of a soft grey pill. */
+    --nc-ink: #000;
+    --nc-ink-dim: #000;
+    --nc-bg: #fffdf3;
+    --nc-panel: #ffe14d;
+    --nc-edge: #000;
+    --nc-accent: #1b1bff;
+    --nc-accent-ink: #fff;
+    --nc-ok: #007a3d;
+    --nc-bad: #d10f0f;
+    --nc-radius: 0;
+    --nc-chrome-font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+
+    --yellow: #ffe14d;
+    --pink: #ff6ba3;
+    --cyan: #63e2ef;
+    --blue: #1b1bff;
+    --orange: #ff5c39;
+    --edge: 4px;
+    --drop: 10px 10px 0 #000;
+    --drop-sm: 6px 6px 0 #000;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--nc-bg);
+    color: #000;
+    font: 500 17px/1.55 "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  .page { max-width: 68rem; margin: 0 auto; padding: 1.5rem 1.25rem 8rem; }
+
+  h1, h2, h3 { font-weight: 900; letter-spacing: -.035em; line-height: .93; margin: 0; }
+  p { margin: 0 0 1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  a { color: #000; text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  a:hover { background: var(--yellow); }
+
+  .block { border: var(--edge) solid #000; box-shadow: var(--drop); background: var(--nc-bg); }
+
+  /* ---- masthead ---- */
+
+  header { margin: 0 0 3.5rem; }
+  .kicker {
+    display: inline-block; background: #000; color: var(--yellow);
+    font-weight: 900; text-transform: uppercase; letter-spacing: .14em;
+    font-size: .8rem; padding: .4rem .7rem; transform: rotate(-1.5deg);
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: clamp(3.4rem, 15vw, 9.5rem);
+    text-transform: uppercase;
+    margin: 0 0 1.2rem;
+    word-break: break-word;
+  }
+  h1 .two { display: block; margin-left: clamp(0px, 6vw, 5.5rem); color: var(--blue); }
+
+  .facts { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.75rem; }
+  .fact {
+    border: var(--edge) solid #000; box-shadow: var(--drop-sm);
+    padding: .55rem .9rem; font-weight: 900; text-transform: uppercase;
+    font-size: clamp(.9rem, 2.6vw, 1.15rem); letter-spacing: -.01em;
+  }
+  .fact:nth-child(1) { background: var(--yellow); transform: rotate(-1deg); }
+  .fact:nth-child(2) { background: var(--cyan); transform: rotate(1.2deg); }
+  .fact:nth-child(3) { background: var(--pink); transform: rotate(-.6deg); }
+
+  .lede { font-size: clamp(1.15rem, 3vw, 1.5rem); font-weight: 700; max-width: 34ch; line-height: 1.3; }
+
+  /* ---- sections ---- */
+
+  section { margin: 0 0 3.5rem; }
+  h2 {
+    font-size: clamp(1.8rem, 6vw, 3.2rem); text-transform: uppercase;
+    margin: 0 0 1.4rem; display: inline-block;
+    background: #000; color: var(--nc-bg); padding: .18em .35em .26em;
+    transform: rotate(-1deg);
+  }
+
+  .cols { display: grid; gap: 1.6rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+  .card { padding: 1.25rem 1.35rem; }
+  .card h3 { font-size: 1.35rem; text-transform: uppercase; margin-bottom: .6rem; }
+  .card:nth-child(3n+1) { background: var(--yellow); transform: rotate(-.7deg); }
+  .card:nth-child(3n+2) { background: var(--cyan); transform: rotate(.5deg); }
+  .card:nth-child(3n+3) { background: var(--pink); transform: rotate(-.3deg); }
+
+  /* ---- schedule ---- */
+
+  .sched { border: var(--edge) solid #000; box-shadow: var(--drop); background: var(--nc-bg); }
+  .slot {
+    display: grid; grid-template-columns: 7.5rem 1fr;
+    border-bottom: var(--edge) solid #000;
+  }
+  .slot:last-child { border-bottom: 0; }
+  .slot .t {
+    background: #000; color: var(--yellow); font-weight: 900;
+    padding: 1rem .9rem; font-variant-numeric: tabular-nums; font-size: 1.05rem;
+  }
+  .slot .w { padding: 1rem 1.1rem; }
+  .slot .w b { display: block; font-size: 1.15rem; text-transform: uppercase; letter-spacing: -.02em; }
+  .slot .w span { display: block; font-size: .95rem; }
+  .slot:nth-child(even) .w { background: var(--yellow); }
+  @media (max-width: 32rem) {
+    .slot { grid-template-columns: 1fr; }
+    .slot .t { padding: .5rem .9rem; }
+  }
+
+  /* ---- rules ---- */
+
+  .rules { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem; }
+  .rules li {
+    border: var(--edge) solid #000; background: var(--nc-bg); box-shadow: var(--drop-sm);
+    padding: .85rem 1.1rem .85rem 3.6rem; position: relative; font-weight: 700;
+  }
+  .rules li::before {
+    content: counter(r); counter-increment: r;
+    position: absolute; left: 0; top: 0; bottom: 0; width: 2.6rem;
+    background: var(--blue); color: #fff; font-weight: 900;
+    display: grid; place-items: center; border-right: var(--edge) solid #000;
+  }
+  .rules { counter-reset: r; }
+
+  /* ---- the shout ---- */
+
+  .shout {
+    background: var(--orange); border: var(--edge) solid #000; box-shadow: var(--drop);
+    padding: 1.75rem 1.5rem; transform: rotate(.8deg);
+    font-weight: 900; text-transform: uppercase; line-height: 1;
+    font-size: clamp(1.6rem, 6vw, 3rem); letter-spacing: -.03em;
+  }
+  .shout small { display: block; text-transform: none; font-size: 1rem; font-weight: 500; line-height: 1.5; margin-top: 1rem; letter-spacing: 0; }
+
+  /* ---- the feed, as stickers ---- */
+
+  .nc-feed { gap: 1.4rem; }
+  .nc-feed-grid { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+  .nc-item {
+    border: var(--edge) solid #000; border-radius: 0; box-shadow: var(--drop-sm);
+    background: var(--nc-bg); padding: 1.1rem 1.2rem;
+  }
+  .nc-item:nth-child(3n+1) { background: var(--yellow); transform: rotate(-.8deg); }
+  .nc-item:nth-child(3n+2) { background: var(--cyan); transform: rotate(.6deg); }
+  .nc-item:nth-child(3n+3) { background: var(--nc-bg); transform: rotate(-.2deg); }
+  .nc-by { opacity: 1; font-weight: 900; text-transform: uppercase; font-size: .78rem; letter-spacing: .04em; border-bottom: 2px solid #000; padding-bottom: .45rem; }
+  .nc-avatar { border-radius: 0; border: 2px solid #000; }
+  .nc-title { font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; }
+  .nc-text, .nc-summary { color: #000; font-weight: 500; }
+  .nc-tags { opacity: 1; font-weight: 900; }
+  .nc-feed-status { color: #000; font-weight: 700; }
+
+  footer { border-top: var(--edge) solid #000; padding-top: 1.5rem; font-weight: 700; }
+
+  :focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+
+  @media (max-width: 40rem) {
+    .page { padding: 1rem 1rem 8rem; }
+    :root { --drop: 7px 7px 0 #000; --edge: 3px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<header>
+  <p class="kicker" editable="single-line">One day. One room. Bring a laptop.</p>
+  <h1><span editable="single-line">Hard</span><span class="two" editable="single-line">Refresh</span></h1>
+  <div class="facts">
+    <p class="fact" editable="single-line">Sat 17 Oct 2026</p>
+    <p class="fact" editable="single-line">Nová Cvernovka, Bratislava</p>
+    <p class="fact" editable="single-line">Free, 90 seats</p>
+  </div>
+  <div class="lede" editable>
+    <p>A day for people who want a website that stays where they put it. You
+    leave with yours online, on a domain or a key you control.</p>
+  </div>
+</header>
+
+<section>
+  <h2 editable="single-line">What happens</h2>
+  <div class="cols">
+    <div class="card block">
+      <h3 editable="single-line">Morning: get it up</h3>
+      <div editable>
+        <p>Four short talks, twenty minutes each, then everyone opens a laptop.
+        By lunch the room has a page each, published from a folder rather than
+        a dashboard.</p>
+      </div>
+    </div>
+    <div class="card block">
+      <h3 editable="single-line">Afternoon: keep it up</h3>
+      <div editable>
+        <p>Backups, domains, what happens when the host raises the price, and
+        how to move a site in an afternoon. The part nobody covers because it is
+        not exciting until it is urgent.</p>
+      </div>
+    </div>
+    <div class="card block">
+      <h3 editable="single-line">Evening: the fair</h3>
+      <div editable>
+        <p>Tables around the room. Show what you made, swap links, argue about
+        RSS. Pizza arrives at seven and the doors stay open until ten.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2 editable="single-line">The day</h2>
+  <div class="sched">
+    <div class="slot">
+      <p class="t" editable="single-line">09:30</p>
+      <p class="w"><b editable="single-line">Doors, coffee, name tags</b><span editable="single-line">Write your site on the tag, not your job.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">10:00</p>
+      <p class="w"><b editable="single-line">Four talks</b><span editable="single-line">Hosting on a key. Static files that outlive frameworks. Reading your own logs. What a domain actually is.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">11:30</p>
+      <p class="w"><b editable="single-line">Build hour</b><span editable="single-line">Templates on the table, three people walking the room.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">13:00</p>
+      <p class="w"><b editable="single-line">Lunch in the courtyard</b><span editable="single-line">Soup, bread, and the vegan pot on the left.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">14:30</p>
+      <p class="w"><b editable="single-line">Workshops, pick one</b><span editable="single-line">Backups that you have restored at least once. Moving a site off a platform. Writing for a page nobody ranks.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">17:00</p>
+      <p class="w"><b editable="single-line">Show and tell</b><span editable="single-line">Five minutes each, projector, no slides required.</span></p>
+    </div>
+    <div class="slot">
+      <p class="t" editable="single-line">19:00</p>
+      <p class="w"><b editable="single-line">The fair</b><span editable="single-line">Tables, pizza, and the good speakers.</span></p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2 editable="single-line">House rules</h2>
+  <ol class="rules" editable>
+    <li>Anyone can come. Beginners get the front row and the first questions.</li>
+    <li>No recruiting, no pitching, no scanning badges.</li>
+    <li>Photos only with a yes from everyone in the frame.</li>
+    <li>If you fix something for someone, show them how you did it.</li>
+    <li>The room is on the ground floor and the toilets are step free. Tell us
+    what else you need and we will sort it.</li>
+  </ol>
+</section>
+
+<section>
+  <div class="shout" editable>
+    Ninety seats, no tickets
+    <small>Mail hello at hardrefresh dot sk with the name you want on the tag.
+    We reply within two days. If the room fills we run a second date in
+    November, same building.</small>
+  </div>
+</section>
+
+<section>
+  <h2 editable="single-line">Dispatches</h2>
+  <div editable>
+    <p>Notes from the organisers, straight off Nostr.</p>
+  </div>
+  <div nc:feed="notes"
+       nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+       nc:limit="6"
+       nc:style="grid"></div>
+</section>
+
+<footer editable>
+  <p>Run by four people and a print shop that owes us a favour. Nová Cvernovka,
+  Račianska 78, Bratislava. Tram 3 to Riazanská, then five minutes on foot.</p>
+</footer>
+
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

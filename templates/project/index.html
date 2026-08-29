@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!--
+  Template: a homepage for a software project.
+
+  Written with nsite-clay itself as the worked example, so every word on the
+  page is about a real thing you can go and read. To make it yours: change
+  nc:owner to your npub, then sign in and type over the text. Nothing here
+  needs a text editor except the links, which are ordinary href attributes.
+-->
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay</title>
+<meta name="description" content="A web page that edits and republishes itself. Signed with your key, stored on Blossom, pointed at by Nostr.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23B4441C'/><rect x='8' y='12' width='16' height='3' rx='1.5' fill='%23FBF8F3'/><rect x='8' y='18' width='9' height='3' rx='1.5' fill='%23FBF8F3'/></svg>">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* Everything below is this template. The engine, the toolbar and the feed
+     cards come from the shared stylesheet and follow these variables. */
+  :root {
+    --nc-ink: #191512;
+    --nc-ink-dim: #6E6355;
+    --nc-bg: #FBF8F3;
+    --nc-panel: #F4EEE4;
+    --nc-edge: #E1D7C7;
+    --nc-accent: #B4441C;
+    --nc-accent-ink: #FFF6F1;
+    --nc-ok: #2C6A44;
+    --nc-bad: #A02D22;
+    --nc-radius: 8px;
+    --nc-chrome-font: var(--sans);
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --nc-ink: #EEE7DC; --nc-ink-dim: #A3968A; --nc-bg: #141210;
+      --nc-panel: #1E1A16; --nc-edge: #302A23; --nc-accent: #E8794B;
+      --nc-accent-ink: #1B0F09; --nc-ok: #7FBF95; --nc-bad: #E0907F;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 17px/1.65 var(--sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.5rem; }
+  a { color: var(--nc-accent); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 3px; border-radius: 3px; }
+  h1, h2, h3 { letter-spacing: -.02em; }
+  code { font: .89em var(--nc-mono); }
+
+  /* hero */
+  .hero { padding: 3.6rem 0 3rem; }
+  .kicker { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.7rem;
+            font: 600 .84rem/1 var(--nc-mono); letter-spacing: .04em; color: var(--nc-ink-dim); }
+  .kicker svg { flex: 0 0 auto; }
+  h1 { font-size: clamp(2.2rem, 6.2vw, 3.35rem); line-height: 1.08; margin: 0 0 1rem;
+       letter-spacing: -.033em; max-width: 20ch; }
+  .lede { font-size: clamp(1.05rem, 2.2vw, 1.19rem); color: var(--nc-ink-dim);
+          max-width: 46ch; margin: 0 0 2rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .btn { display: inline-flex; align-items: center; gap: .45rem; text-decoration: none;
+         font: 600 .93rem/1 var(--sans); padding: .72rem 1.1rem; border-radius: var(--nc-radius);
+         border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink); }
+  .btn:hover { border-color: var(--nc-accent); }
+  .btn.go { background: var(--nc-accent); border-color: var(--nc-accent); color: var(--nc-accent-ink); }
+  .btn.go:hover { filter: brightness(1.08); }
+
+  /* spec strip */
+  .spec { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+          margin: 2.8rem 0 0; border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+          overflow: hidden; background: var(--nc-panel); }
+  .spec > div { padding: .85rem 1rem; border-right: 1px solid var(--nc-edge); }
+  .spec > div:last-child { border-right: 0; }
+  .spec dt { font: .68rem/1 var(--nc-mono); letter-spacing: .13em; text-transform: uppercase;
+             color: var(--nc-ink-dim); margin-bottom: .38rem; }
+  .spec dd { margin: 0; font-weight: 600; font-size: .95rem; }
+
+  /* bands: a label in the left margin, the content beside it */
+  .band { border-top: 1px solid var(--nc-edge); padding: 3.2rem 0; }
+  .band-in { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2.2rem; }
+  .band-label { font: 600 .7rem/1.5 var(--nc-mono); letter-spacing: .14em; text-transform: uppercase;
+                color: var(--nc-ink-dim); }
+  .band-label b { display: block; color: var(--nc-accent); font-weight: 600; }
+  .band h2 { font-size: 1.5rem; margin: -.15rem 0 .7rem; }
+  .band > .band-in > div > p { max-width: 58ch; }
+  .band p { margin: 0 0 1rem; }
+  .dim { color: var(--nc-ink-dim); }
+  @media (max-width: 46rem) {
+    .band-in { grid-template-columns: 1fr; gap: .9rem; }
+    .band-label b { display: inline; }
+  }
+
+  /* reason cards */
+  .cards { list-style: none; margin: 1.4rem 0 0; padding: 0; display: grid; gap: 1rem;
+           grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr)); }
+  .cards li { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+              padding: 1.05rem 1.1rem; background: var(--nc-panel); }
+  .cards h3 { margin: 0 0 .4rem; font-size: 1rem; }
+  .cards p { margin: 0; color: var(--nc-ink-dim); font-size: .94rem; }
+
+  /* commands */
+  pre.term { margin: 0 0 1.1rem; padding: .95rem 1.15rem; overflow-x: auto;
+             background: var(--nc-panel); border: 1px solid var(--nc-edge);
+             border-radius: var(--nc-radius); font: .88rem/1.95 var(--nc-mono); }
+  pre.term .p { color: var(--nc-accent); user-select: none; }
+  pre.term [editable] { display: inline-block; }
+
+  /* limits */
+  .limits { list-style: none; margin: 1.2rem 0 0; padding: 0; display: grid; gap: 1.1rem; }
+  .limits li { padding-left: 1.1rem; border-left: 2px solid var(--nc-edge); }
+  .limits h3 { margin: 0 0 .25rem; font-size: .99rem; }
+  .limits p { margin: 0; color: var(--nc-ink-dim); font-size: .94rem; }
+
+  /* documentation links */
+  .links { list-style: none; margin: 1.3rem 0 0; padding: 0; border-top: 1px solid var(--nc-edge); }
+  .links li { border-bottom: 1px solid var(--nc-edge); }
+  .links a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .3rem 1rem;
+             align-items: baseline; padding: .9rem .1rem; text-decoration: none; color: inherit; }
+  .links .t { font-weight: 600; }
+  .links .d { grid-column: 1; color: var(--nc-ink-dim); font-size: .91rem; }
+  .links .go-to { grid-column: 2; grid-row: 1 / span 2; align-self: center;
+                  color: var(--nc-ink-dim); font: .8rem var(--nc-mono); }
+  .links a:hover .t, .links a:hover .go-to { color: var(--nc-accent); }
+
+  /* the feed, in this template's clothes */
+  .nc-feed { margin-top: 1.4rem; }
+  .nc-item { background: var(--nc-panel); }
+  .nc-by { font: .72rem var(--nc-mono); letter-spacing: .07em; text-transform: uppercase; opacity: .65; }
+  .nc-title { font-size: 1.03rem; }
+  .nc-title a:hover { color: var(--nc-accent); }
+  .nc-tags { color: var(--nc-accent); opacity: .8; }
+  .after-feed { margin-top: 1rem; font-size: .92rem; }
+
+  footer { border-top: 1px solid var(--nc-edge); padding: 2.4rem 0 4.5rem;
+           color: var(--nc-ink-dim); font-size: .9rem; }
+  footer p { margin: 0 0 .6rem; max-width: 58ch; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="var(--nc-edge)" stroke-width="2"/>
+        <rect x="8" y="11" width="16" height="3" rx="1.5" fill="var(--nc-ink-dim)"/>
+        <rect x="8" y="18" width="9" height="3" rx="1.5" fill="var(--nc-accent)"/>
+      </svg>
+      <span editable="single-line">nsite-clay</span>
+    </p>
+    <h1 editable="single-line">A web page that edits and republishes itself.</h1>
+    <p class="lede" editable="single-line">Sign in with your key and type into the page. It writes the new HTML to a Blossom server and republishes the Nostr event pointing at it, so the next reader gets a plain static file with your words already in it.</p>
+    <div class="row">
+      <a class="btn go" href="/docs.html" editable="single-line">Read the walkthrough</a>
+      <a class="btn" href="https://github.com/jooray/nsite-clay" editable="single-line">Source on GitHub</a>
+      <a class="btn" href="#start" editable="single-line">Two commands to start</a>
+    </div>
+
+    <dl class="spec">
+      <div><dt editable="single-line">Licence</dt><dd editable="single-line">MIT-0</dd></div>
+      <div><dt editable="single-line">Install</dt><dd editable="single-line">npx nsite-clay</dd></div>
+      <div><dt editable="single-line">Hosting</dt><dd editable="single-line">Relays and Blossom</dd></div>
+      <div><dt editable="single-line">Backend</dt><dd editable="single-line">None</dd></div>
+    </dl>
+  </header>
+
+  <section class="band" id="why">
+    <div class="band-in">
+      <p class="band-label"><b>01</b> Why</p>
+      <div>
+        <h2 editable="single-line">Why you would want it</h2>
+        <div editable>
+          <p class="dim">Most ways to put a page online end with somebody else holding the page.
+            This one ends with you holding a key.</p>
+        </div>
+        <ul class="cards">
+          <li>
+            <h3 editable="single-line">The file is the database</h3>
+            <p editable="single-line">Your words end up in the HTML. Open the saved file in a text editor and there they are, in markup a person could have typed.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">A key, not an account</h3>
+            <p editable="single-line">The manifest carries one signature. Who may change the page is a fact about a keypair rather than a row in somebody's user table.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">Nothing of yours to run</h3>
+            <p editable="single-line">Relays keep the pointer, Blossom servers keep the bytes, the browser does the rest. There is no process to restart at three in the morning.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">Every save is kept</h3>
+            <p editable="single-line">Each one files a permanent snapshot naming an immutable set of hashes. Blobs deduplicate, so the whole history costs almost nothing.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="start">
+    <div class="band-in">
+      <p class="band-label"><b>02</b> Start</p>
+      <div>
+        <h2 editable="single-line">Two commands</h2>
+        <div editable>
+          <p class="dim">You need Node. The first command makes a folder with the page in it and
+            prints a key, which is the only thing that can ever change the page, so copy it
+            somewhere before you close the terminal.</p>
+        </div>
+<pre class="term"><span class="p">$</span> <span editable="single-line">npx nsite-clay init mysite</span>
+<span class="p">$</span> <span editable="single-line">npx nsite-clay deploy mysite --sec=nsec1…</span></pre>
+        <div editable>
+          <p class="dim">The second one prints the address. Open it, press Sign in, and the page
+            saves itself from then on. You come back to the terminal only for changes you would
+            rather make in an editor.</p>
+          <p class="dim">Already have a Nostr key? Hand your npub to <code>init</code> and the
+            page belongs to you from the first deploy.</p>
+        </div>
+<pre class="term"><span class="p">$</span> <span editable="single-line">npx nsite-clay init mysite --npub=npub1…</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="limits">
+    <div class="band-in">
+      <p class="band-label"><b>03</b> Limits</p>
+      <div>
+        <h2 editable="single-line">What it will not do</h2>
+        <ul class="limits">
+          <li>
+            <h3 editable="single-line">One key writes the document</h3>
+            <p editable="single-line">The manifest carries one signature, so there is no shared editing and no per-visitor content.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">No conflict detection</h3>
+            <p editable="single-line">A replaceable event has no compare-and-swap. Two devices editing the same page will quietly lose one side's work.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">The gateway is trusted for the first byte</h3>
+            <p editable="single-line">Sub-resources are hash-checked and every event is signature-checked, but the entry document cannot verify itself. Read the same page through a second gateway, or run your own.</p>
+          </li>
+          <li>
+            <h3 editable="single-line">No server code</h3>
+            <p editable="single-line">If what you are building needs a backend, this is the wrong tool.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="docs">
+    <div class="band-in">
+      <p class="band-label"><b>04</b> Docs</p>
+      <div>
+        <h2 editable="single-line">Documentation</h2>
+        <div editable>
+          <p class="dim">The walkthrough is the one to read first. It goes from an empty folder to
+            a published page you can edit, with a screenshot of every step.</p>
+        </div>
+        <ul class="links">
+          <li><a href="/docs.html">
+            <span class="t" editable="single-line">The walkthrough</span>
+            <span class="d" editable="single-line">Get a page online, sign in, write, add pictures and posts, save, roll back.</span>
+            <span class="go-to" aria-hidden="true">→</span>
+          </a></li>
+          <li><a href="https://github.com/jooray/nsite-clay">
+            <span class="t" editable="single-line">Source and README</span>
+            <span class="d" editable="single-line">How a deploy works, which relays and Blossom servers to name, how versions are stored.</span>
+            <span class="go-to" aria-hidden="true">→</span>
+          </a></li>
+          <li><a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">
+            <span class="t" editable="single-line">Runtime reference</span>
+            <span class="d" editable="single-line">Every attribute and every method, for putting this into a page of your own.</span>
+            <span class="go-to" aria-hidden="true">→</span>
+          </a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="writing">
+    <div class="band-in">
+      <p class="band-label"><b>05</b> Writing</p>
+      <div>
+        <h2 editable="single-line">From the project</h2>
+        <div editable>
+          <p class="dim">Longer pieces about what this is for and how it behaves. They are Nostr
+            long-form posts rather than files on this page, so any Nostr client shows the same
+            text, and a new one turns up here without anybody touching the page.</p>
+        </div>
+        <div nc:feed="articles" nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2" nc:limit="4" nc:style="grid"></div>
+        <p class="after-feed"><a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2" editable="single-line">Everything the project has published →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div editable>
+      <p>MIT-0. The malleable-HTML idea and the editing model come from
+        <a href="https://hyperclay.com">HyperClay</a> and <a href="https://clayjs.com">ClayJS</a>.
+        Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
+        nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
+      <p>This page is one of the documents it describes. It edits itself.</p>
+    </div>
+  </footer>
+
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

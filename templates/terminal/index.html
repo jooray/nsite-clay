@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:edit-gate="hash"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hush: strip metadata before you post</title>
+<meta name="description" content="hush is a command-line tool that removes EXIF, XMP and ICC metadata from photos before they leave your machine.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0f0d'/%3E%3Ctext x='5' y='23' font-family='monospace' font-size='19' fill='%235fe08a'%3E%24_%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    /* The shared chrome reads these, so the toolbar comes out phosphor too. */
+    --nc-ink: #cfe3d3;
+    --nc-ink-dim: #7d9585;
+    --nc-bg: #0b0f0d;
+    --nc-panel: #121815;
+    --nc-edge: #2b3a31;
+    --nc-accent: #5fe08a;
+    --nc-accent-ink: #06110b;
+    --nc-ok: #5fe08a;
+    --nc-bad: #ff7b6b;
+    --nc-radius: 4px;
+    --nc-chrome-font: var(--nc-mono);
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+    --amber: #ffc76b;
+    --glow: 0 0 12px rgba(95, 224, 138, .25);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--nc-bg);
+    color: var(--nc-ink);
+    font: 15px/1.65 var(--nc-mono);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* A scan-line wash and a soft vignette. Both are decoration, both are cheap,
+     and neither is between the reader and a word of the page. */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, .22) 2px 4px);
+    opacity: .5;
+  }
+
+  .screen { position: relative; z-index: 2; max-width: 60rem; margin: 0 auto; padding: 1.5rem 1rem 7rem; }
+
+  /* ---- window ---- */
+
+  .win {
+    border: 1px solid var(--nc-edge);
+    border-radius: 6px;
+    background: linear-gradient(180deg, #0e1411, #0b0f0d 30%);
+    box-shadow: 0 30px 70px -40px #000;
+    overflow: hidden;
+  }
+  .titlebar {
+    display: flex; align-items: center; gap: .55rem;
+    padding: .5rem .75rem;
+    background: #131a16;
+    border-bottom: 1px solid var(--nc-edge);
+    font-size: .8rem; color: var(--nc-ink-dim);
+  }
+  .titlebar i { width: .62rem; height: .62rem; border-radius: 50%; background: #33443a; flex: 0 0 auto; }
+  .titlebar i:first-child { background: #e06a5a; }
+  .titlebar i:nth-child(2) { background: #e0b95a; }
+  .titlebar i:nth-child(3) { background: #5fe08a; }
+  .titlebar .path { margin-left: .5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .body { padding: 1.35rem 1.15rem 2rem; }
+
+  /* ---- the session ---- */
+
+  .cmd {
+    margin: 2.1rem 0 .7rem;
+    color: var(--nc-ink);
+    overflow-wrap: anywhere;
+  }
+  .cmd:first-child { margin-top: 0; }
+  .cmd::before {
+    content: attr(data-prompt) " ";
+    color: var(--nc-accent);
+    text-shadow: var(--glow);
+    white-space: pre;
+  }
+  .cmd b { font-weight: 400; color: var(--amber); }
+
+  .out { margin: 0 0 .2rem; color: var(--nc-ink); }
+  .out p { margin: 0 0 .85rem; max-width: 72ch; }
+  .out p:last-child { margin-bottom: 0; }
+  .out h2, .out h3 { font-size: 1rem; font-weight: 700; margin: 1.3rem 0 .5rem; color: var(--amber); }
+  .out h2::before { content: "## "; color: var(--nc-ink-dim); }
+  .out h3::before { content: "### "; color: var(--nc-ink-dim); }
+  .out ul { margin: 0 0 .85rem; padding: 0; list-style: none; max-width: 72ch; }
+  .out ul li::before { content: "- "; color: var(--nc-accent); }
+  .out ol { margin: 0 0 .85rem; padding-left: 1.6rem; max-width: 72ch; }
+  .out a { color: var(--amber); text-underline-offset: 3px; }
+  .out a:hover { color: var(--nc-accent); }
+  .out code { color: var(--amber); }
+  .out strong { color: #fff; }
+  .out blockquote { margin: 0 0 .85rem; padding-left: 1rem; border-left: 2px solid var(--nc-edge); color: var(--nc-ink-dim); }
+
+  .dim { color: var(--nc-ink-dim); }
+
+  /* ls output and the flags table both want columns that collapse on a phone */
+  .rows { display: grid; gap: .1rem 1.5rem; grid-template-columns: max-content max-content 1fr; margin: 0 0 .3rem; }
+  .rows > span { padding: .12rem 0; }
+  .rows .k { color: var(--amber); }
+  .rows .n { color: var(--nc-ink-dim); font-variant-numeric: tabular-nums; }
+  @media (max-width: 34rem) {
+    .rows { grid-template-columns: 1fr; gap: 0; }
+    .rows > span { padding: 0; }
+    .rows .d { padding-bottom: .55rem; }
+  }
+
+  pre.block {
+    margin: 0 0 .9rem;
+    padding: .75rem .85rem;
+    background: #0e1512;
+    border: 1px solid var(--nc-edge);
+    border-radius: 4px;
+    overflow-x: auto;
+    font: inherit;
+    color: var(--nc-ink);
+  }
+
+  .cursor {
+    display: inline-block; width: .58ch; height: 1.05em; vertical-align: text-bottom;
+    background: var(--nc-accent); box-shadow: var(--glow);
+    animation: blink 1.15s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---- the feed, dressed as command output ---- */
+
+  .nc-feed { gap: .35rem; margin-bottom: .3rem; }
+  .nc-item {
+    background: transparent;
+    border: 0;
+    border-left: 2px solid var(--nc-edge);
+    border-radius: 0;
+    padding: .1rem 0 .75rem .9rem;
+  }
+  .nc-by { font-size: .82rem; opacity: 1; color: var(--nc-ink-dim); margin-bottom: .25rem; }
+  .nc-by .nc-name { color: var(--amber); font-weight: 400; }
+  .nc-avatar { border-radius: 2px; width: 18px; height: 18px; }
+  .nc-title { font-size: 1rem; color: var(--amber); }
+  .nc-text, .nc-summary { color: var(--nc-ink); font-size: .95rem; }
+  .nc-text a, .nc-summary a { color: var(--amber); }
+  .nc-feed-status { color: var(--nc-ink-dim); }
+  .nc-tags { color: var(--nc-accent); opacity: .8; }
+
+  footer.sig { margin: 2.5rem 0 0; color: var(--nc-ink-dim); font-size: .85rem; }
+
+  /* Keep the shared edit outline from touching the scan lines. */
+  [editable]:focus { outline-offset: 3px; }
+
+  @media (max-width: 34rem) {
+    body { font-size: 14px; }
+    .screen { padding: .75rem .5rem 7rem; }
+    .body { padding: 1rem .8rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<main class="screen">
+<div class="win">
+  <div class="titlebar">
+    <i></i><i></i><i></i>
+    <span class="path" editable="single-line">hush@workshop: ~/src/hush</span>
+  </div>
+
+  <div class="body">
+
+    <p class="cmd" data-prompt="$"><b>hush</b> --version</p>
+    <div class="out" editable>
+      <p>hush 0.9.3 (build 2026-07-14, MIT-0)<br>
+      A command-line tool that strips metadata out of photos before they leave your machine.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>cat</b> README</p>
+    <div class="out" editable>
+      <p>Every phone camera writes more into a JPEG than the picture. The GPS
+      fix, the serial number of the body, the timestamp down to the second, and
+      on some phones the name you gave the device. Social sites strip most of it
+      on upload. Anything you send as a file attachment keeps all of it.</p>
+      <p>hush reads a photo, drops every EXIF, XMP, IPTC and ICC block it does
+      not need, and writes the pixels back out untouched. It never recompresses.
+      A file that goes in at quality 92 comes out at quality 92, a few kilobytes
+      lighter.</p>
+      <p>It runs on one file, a directory, or whatever your shell hands it on
+      stdin. It has no config file, no daemon and no update checker.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>hush</b> --help</p>
+    <div class="out">
+      <div class="rows" editable>
+        <span class="k">-o, --out DIR</span><span class="n">path</span><span class="d">write cleaned copies here instead of in place</span>
+        <span class="k">-r, --recursive</span><span class="n">flag</span><span class="d">walk subdirectories</span>
+        <span class="k">-k, --keep TAG</span><span class="n">list</span><span class="d">keep these tags, for example Orientation,ColorSpace</span>
+        <span class="k">-n, --dry-run</span><span class="n">flag</span><span class="d">print what would change and exit</span>
+        <span class="k">-j, --jobs N</span><span class="n">int</span><span class="d">how many files at once, default is one per core</span>
+        <span class="k">--json</span><span class="n">flag</span><span class="d">machine-readable report on stdout</span>
+        <span class="k">-q, --quiet</span><span class="n">flag</span><span class="d">say nothing unless something fails</span>
+      </div>
+      <p class="dim">Orientation is kept by default. Dropping it turns half the
+      photos on a phone sideways.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>hush</b> -n ~/Pictures/roll-14</p>
+    <div class="out">
+      <pre class="block" editable>roll-14/IMG_0091.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.4 kB
+roll-14/IMG_0092.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.1 kB
+roll-14/IMG_0093.jpg   no GPS             Apple iPhone 14    -9.6 kB
+roll-14/scan-A.tif     XMP history (7)    Epson V600        -41.2 kB
+
+4 files, 87.3 kB of metadata, nothing written (dry run)</pre>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>ls</b> releases/</p>
+    <div class="out">
+      <div class="rows" editable>
+        <span class="k">0.9.3</span><span class="n">2026-07-14</span><span class="d">TIFF support, and a fix for HEIC files written by iOS 18</span>
+        <span class="k">0.9.0</span><span class="n">2026-04-02</span><span class="d">--jobs, --json, and a rewrite of the JPEG segment walker</span>
+        <span class="k">0.8.1</span><span class="n">2025-11-20</span><span class="d">stopped clobbering the ICC profile on CMYK JPEGs</span>
+        <span class="k">0.8.0</span><span class="n">2025-10-05</span><span class="d">first release with PNG and WebP</span>
+      </div>
+      <p class="dim">Signed tarballs and the signing key live in the repository.
+      Every release is reproducible from a clean checkout.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>cat</b> INSTALL</p>
+    <div class="out">
+      <pre class="block" editable># macOS and Linux, from source
+git clone https://example.org/hush.git
+cd hush &amp;&amp; make &amp;&amp; sudo make install
+
+# or grab a static binary
+curl -LO https://example.org/hush/0.9.3/hush-x86_64-linux
+sha256sum -c hush-0.9.3.sums</pre>
+      <div editable>
+        <p>Building needs a C11 compiler and make. No package manager, no build
+        system to install first. On a cold machine the whole thing compiles in
+        about four seconds.</p>
+      </div>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>cat</b> docs/limits.md</p>
+    <div class="out" editable>
+      <p>hush does not touch the pixels, so it cannot help with anything the
+      pixels give away. A window in the background is still a window in the
+      background.</p>
+      <p>It does not know about video. MP4 and MOV carry their own creation
+      dates and location atoms, and handling them properly means a second parser
+      that has not been written yet.</p>
+      <p>Some cameras write maker notes with offsets that point into the rest of
+      the file. hush drops those blocks whole rather than editing them, which is
+      why a Nikon NEF comes out of it smaller than you expect.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>nostr</b> feed --kind note --limit 4</p>
+    <div class="out">
+      <div nc:feed="notes"
+           nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+           nc:limit="4"
+           nc:style="list"></div>
+    </div>
+
+    <p class="cmd" data-prompt="$"><b>cat</b> CONTRIBUTING</p>
+    <div class="out" editable>
+      <p>Patches by email, plain diff or git format-patch, either is fine. Bug
+      reports want the camera model and a file that shows the problem. If you
+      cannot share the photo, run with <code>--json</code> and send the report
+      instead, it has the segment layout and no image data.</p>
+    </div>
+
+    <p class="cmd" data-prompt="$"><span class="cursor"></span></p>
+
+    <footer class="sig" editable="single-line">hush is public domain where that is possible and MIT-0 everywhere else.</footer>
+  </div>
+</div>
+</main>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

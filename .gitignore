@@ -13,3 +13,6 @@ test/fixtures/nsite-clay.js
 site/editing.png
 .env.*
 site/shots/
+site/t/
+site/nsite-clay-base.css
+site/nsite-clay-chrome.js

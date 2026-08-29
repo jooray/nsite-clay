@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:owner="npub1g6j68mjzj0g52x8uav7yw9le86nwct2v22qhf2h49k6nc00pe5lqc0gths"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<!-- Set nc:owner on <html> to your own npub before publishing. The key in
+     there was generated and thrown away, so until you change it the page
+     belongs to nobody and no save will stick. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Index</title>
+<meta name="description" content="Everything I publish, on one page.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%87%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* A contents page, not a stack of buttons. Numbers down the left margin,
+     dotted leaders between rows, the destination printed under every label the
+     way a book prints a page number. Serif for the names, mono for anything a
+     machine reads. One red, used four times. */
+  :root {
+    --nc-ink: #191512;
+    --nc-ink-dim: #6e6353;
+    --nc-bg: #f2ede3;
+    --nc-panel: #e9e2d3;
+    --nc-edge: #d8cdb8;
+    --nc-accent: #b23a22;
+    --nc-accent-ink: #f7f3ea;
+    --nc-ok: #40663f;
+    --nc-bad: #a33223;
+    --nc-radius: 3px;
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    --nc-chrome-font: var(--nc-mono);
+    --leader: rgba(25, 21, 18, .22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --nc-ink: #ece4d6;
+      --nc-ink-dim: #948875;
+      --nc-bg: #14110d;
+      --nc-panel: #1d1913;
+      --nc-edge: #322c23;
+      --nc-accent: #e2653f;
+      --nc-accent-ink: #14110d;
+      --nc-ok: #7fc08c;
+      --nc-bad: #e08a8a;
+      --leader: rgba(236, 228, 214, .22);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 17px/1.6 var(--serif);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 34rem; margin: 0 auto; padding: clamp(2.5rem, 9vw, 5rem) 1.4rem 4rem; }
+
+  /* Every small label on this page is the same object: mono, tracked, upright. */
+  .label {
+    display: block; margin: 3.2rem 0 1rem;
+    font: .66rem/1 var(--nc-mono); letter-spacing: .34em; text-transform: uppercase;
+    color: var(--nc-ink-dim);
+  }
+  .label::after {
+    content: ""; display: block; margin-top: .8rem;
+    border-top: 1px solid var(--nc-edge);
+  }
+
+  /* ---- who this is -------------------------------------------------------- */
+
+  .me { display: flex; gap: 1.15rem; align-items: center; }
+  .avatar-wrap { position: relative; flex: 0 0 auto; }
+  .avatar {
+    display: block; width: 5.2rem; height: 5.2rem; object-fit: cover;
+    border: 1px solid var(--nc-edge);   /* square on purpose */
+    background: var(--nc-panel);
+  }
+  .avatar-btn {
+    position: absolute; inset: auto 0 0 0;
+    font: .6rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
+    padding: .4rem 0; border: 0; cursor: pointer;
+    background: var(--nc-accent); color: var(--nc-accent-ink);
+  }
+  h1 { margin: 0; font: 400 clamp(1.9rem, 7vw, 2.5rem)/1.05 var(--serif); letter-spacing: -.015em; }
+  .bio { margin: .45rem 0 0; color: var(--nc-ink-dim); font-size: 1rem; line-height: 1.45; }
+
+  /* ---- the contents ------------------------------------------------------- */
+
+  .links { counter-reset: row; list-style: none; margin: 0; padding: 0;
+           border-top: 1px solid var(--nc-edge); }
+  .links > li {
+    counter-increment: row; position: relative;
+    border-bottom: 1px dotted var(--leader);
+  }
+  .go {
+    display: grid; grid-template-columns: 2.9rem 1fr 1.4rem; align-items: baseline;
+    gap: 0 .3rem; padding: 1.05rem 0; color: inherit; text-decoration: none;
+  }
+  .num {
+    font: .78rem/1.6 var(--nc-mono); letter-spacing: .06em; color: var(--nc-ink-dim);
+    align-self: start; padding-top: .18rem;
+  }
+  .num::before { content: counter(row, decimal-leading-zero); }
+  .name, .desc, .url { display: block; }
+  .name { font-size: 1.22rem; line-height: 1.25; }
+  .desc { margin: .2rem 0 0; font-size: .92rem; line-height: 1.45; color: var(--nc-ink-dim); }
+  .desc:empty { display: none; }
+  html[nc\:editable="true"] .desc:empty { display: block; }
+  html[nc\:editable="true"] .desc:empty::before {
+    content: "description"; color: var(--nc-ink-dim); opacity: .45; font-style: italic;
+  }
+  .url {
+    margin: .35rem 0 0; font: .72rem/1.5 var(--nc-mono); letter-spacing: .01em;
+    color: var(--nc-ink-dim); word-break: break-all; opacity: .75;
+  }
+  .arrow { font: .95rem/1 var(--nc-mono); color: var(--nc-ink-dim); justify-self: end;
+           align-self: start; padding-top: .35rem; transition: transform .16s, color .16s; }
+  .links > li:hover .arrow, .go:focus-visible .arrow { color: var(--nc-accent); transform: translateX(.2rem); }
+  .links > li:hover .num, .go:focus-visible .num { color: var(--nc-accent); }
+  .go:focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 3px; }
+
+  /* The row is one link for a reader. For the owner it has to be four separate
+     pieces of text, so the anchor stops swallowing clicks while editing. */
+  html[nc\:editable="true"] .go { pointer-events: none; }
+  html[nc\:editable="true"] .go [editable] { pointer-events: auto; }
+
+  .kill {
+    position: absolute; top: .55rem; right: -.2rem; opacity: 0;
+    font: 1rem/1 var(--nc-mono); padding: .2rem .45rem; cursor: pointer;
+    border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink-dim);
+  }
+  .kill:hover { border-color: var(--nc-accent); color: var(--nc-accent); }
+  html[nc\:editable="true"] li:hover .kill, .kill:focus-visible { opacity: 1; }
+
+  .add {
+    display: none; width: 100%; margin: 0; padding: 1.05rem 0 1.05rem 2.9rem;
+    font: .72rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
+    text-align: left; cursor: pointer; color: var(--nc-ink-dim);
+    background: transparent; border: 0; border-bottom: 1px dotted var(--leader);
+  }
+  html[nc\:owner-here="true"] .add { display: block; }
+  .add:hover { color: var(--nc-accent); }
+  .tip { display: none; margin: .9rem 0 0; font: .72rem/1.6 var(--nc-mono); color: var(--nc-ink-dim); }
+  html[nc\:owner-here="true"] .tip { display: block; }
+
+  /* ---- zap ---------------------------------------------------------------- */
+
+  .zap { display: flex; flex-wrap: wrap; align-items: baseline; gap: .55rem;
+         margin: 0; font: .88rem/1.7 var(--nc-mono); }
+  .zap .addr { color: var(--nc-ink); word-break: break-all; }
+  .copy {
+    font: .62rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
+    padding: .38rem .6rem; cursor: pointer;
+    border: 1px solid var(--nc-edge); background: transparent; color: var(--nc-ink-dim);
+  }
+  .copy:hover { border-color: var(--nc-accent); color: var(--nc-accent); }
+
+  /* ---- the feed, wearing the same clothes --------------------------------- */
+
+  /* feed.js appends its own fallback sheet to <head> after this one, so these
+     are scoped through the feed's own attribute to stay ahead of it. */
+  [nc\:feed] { border-top: 1px solid var(--nc-edge); }
+  [nc\:feed].nc-feed { gap: 0; }
+  [nc\:feed] .nc-item { background: transparent; border: 0; border-radius: 0;
+                        border-bottom: 1px dotted var(--leader); padding: 1.05rem 0; }
+  [nc\:feed] .nc-by { font: .68rem/1 var(--nc-mono); letter-spacing: .16em; text-transform: uppercase;
+                      opacity: 1; color: var(--nc-ink-dim); margin-bottom: .6rem; }
+  [nc\:feed] .nc-avatar { border-radius: 0; }
+  [nc\:feed] .nc-text { color: var(--nc-ink); opacity: 1; font-family: var(--serif); font-size: .98rem; }
+  [nc\:feed] .nc-feed-status { font: .72rem/1.6 var(--nc-mono); letter-spacing: .16em;
+                               opacity: 1; color: var(--nc-ink-dim); padding: 1.05rem 0; }
+
+  footer { margin: 3.4rem 0 0; padding-top: 1.3rem; border-top: 1px solid var(--nc-edge);
+           font: .7rem/1.7 var(--nc-mono); letter-spacing: .08em; color: var(--nc-ink-dim); }
+
+  @media (max-width: 26rem) {
+    .me { gap: .9rem; }
+    .avatar { width: 4.2rem; height: 4.2rem; }
+    .go { grid-template-columns: 2.3rem 1fr 1.2rem; }
+    .add { padding-left: 2.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <header class="me">
+    <span class="avatar-wrap">
+      <img class="avatar" id="avatar" width="120" height="120" alt=""
+           src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%238a7f6c' stroke-width='2.5'%3E%3Ccircle cx='60' cy='47' r='18'/%3E%3Cpath d='M23 106c4-20 17-30 37-30s33 10 37 30'/%3E%3C/g%3E%3C/svg%3E">
+      <button type="button" class="avatar-btn nc-ui-chrome nc-owner-only" id="avatar-btn">edit</button>
+    </span>
+    <div>
+      <h1 editable="single-line no-toolbar">Your name</h1>
+      <p class="bio" editable="single-line">One line about what you make, in the words you would use out loud.</p>
+    </div>
+  </header>
+
+  <h2 class="label">Contents</h2>
+
+  <ul class="links" id="links">
+    <li>
+      <a class="go" href="https://example.com/writing">
+        <span class="num" aria-hidden="true"></span>
+        <span>
+          <span class="name" editable="single-line no-toolbar">Writing</span>
+          <span class="desc" editable="single-line no-toolbar">Long posts, once or twice a month.</span>
+          <span class="url" editable="single-line no-toolbar">https://example.com/writing</span>
+        </span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+      </a>
+      <button type="button" class="kill" title="Remove this row">&times;</button>
+    </li>
+    <li>
+      <a class="go" href="https://example.com/podcast">
+        <span class="num" aria-hidden="true"></span>
+        <span>
+          <span class="name" editable="single-line no-toolbar">Podcast</span>
+          <span class="desc" editable="single-line no-toolbar">Conversations, about an hour each.</span>
+          <span class="url" editable="single-line no-toolbar">https://example.com/podcast</span>
+        </span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+      </a>
+      <button type="button" class="kill" title="Remove this row">&times;</button>
+    </li>
+    <li>
+      <a class="go" href="https://github.com/example">
+        <span class="num" aria-hidden="true"></span>
+        <span>
+          <span class="name" editable="single-line no-toolbar">Code</span>
+          <span class="desc" editable="single-line no-toolbar"></span>
+          <span class="url" editable="single-line no-toolbar">https://github.com/example</span>
+        </span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+      </a>
+      <button type="button" class="kill" title="Remove this row">&times;</button>
+    </li>
+    <li>
+      <a class="go" href="https://example.com/mail">
+        <span class="num" aria-hidden="true"></span>
+        <span>
+          <span class="name" editable="single-line no-toolbar">Newsletter</span>
+          <span class="desc" editable="single-line no-toolbar">One email a month. No tracking pixels in it.</span>
+          <span class="url" editable="single-line no-toolbar">https://example.com/mail</span>
+        </span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+      </a>
+      <button type="button" class="kill" title="Remove this row">&times;</button>
+    </li>
+  </ul>
+
+  <button type="button" class="add nc-ui-chrome" id="add">+ Add a row</button>
+  <p class="tip nc-ui-chrome">Type over the address under a label to point the row somewhere else.</p>
+
+  <h2 class="label">Lately on Nostr</h2>
+  <div nc:feed="notes" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="3"></div>
+
+  <h2 class="label">Zap</h2>
+  <p class="zap">
+    <span class="addr" id="lud16" editable="single-line no-toolbar">you@your.wallet</span>
+    <button type="button" class="copy" id="copy-lud16" hidden>copy</button>
+  </p>
+
+  <footer>
+    <p>One HTML file. It lives on Nostr and Blossom, and it rewrites itself.</p>
+  </footer>
+
+</main>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+<script>
+(async () => {
+  await nc.ready;
+  const $ = (s) => document.querySelector(s);
+  const list = $("#links");
+
+  // A row is one anchor for a reader and four pieces of text for the owner, so
+  // the address printed under the label is also the thing that sets the href.
+  // Nothing to look up, nothing hidden in an attribute the owner cannot see.
+  const clean = (raw) => {
+    const v = raw.replace(/\s+/g, "").trim();
+    if (!v) return "";
+    if (/^(https?:|mailto:|lightning:|nostr:)/i.test(v)) return v;
+    return "https://" + v.replace(/^\/+/, "");
+  };
+  const sync = (li) => {
+    const a = li.querySelector(".go");
+    const url = clean(li.querySelector(".url")?.textContent || "");
+    if (a && url) a.setAttribute("href", url);
+  };
+  list.addEventListener("input", (e) => {
+    if (e.target.classList?.contains("url")) sync(e.target.closest("li"));
+  });
+
+  // Editing happens inside the anchor, so a stray click must not navigate.
+  list.addEventListener("click", (e) => {
+    if (document.documentElement.getAttribute("nc:editable") === "true") e.preventDefault();
+  });
+
+  const ROW =
+    '<a class="go" href="https://example.com">' +
+      '<span class="num" aria-hidden="true"></span>' +
+      '<span>' +
+        '<span class="name" editable="single-line no-toolbar">New row</span>' +
+        '<span class="desc" editable="single-line no-toolbar"></span>' +
+        '<span class="url" editable="single-line no-toolbar">https://example.com</span>' +
+      '</span>' +
+      '<span class="arrow" aria-hidden="true">→</span>' +
+    '</a>' +
+    '<button type="button" class="kill" title="Remove this row">×</button>';
+
+  $("#add").onclick = () => {
+    const li = document.createElement("li");
+    li.innerHTML = ROW;
+    list.appendChild(li);
+    nc.editable.refresh();          // arm the new nodes before anything focuses one
+    const name = li.querySelector(".name");
+    name.focus();
+    const r = document.createRange();
+    r.selectNodeContents(name);
+    const sel = getSelection();
+    sel.removeAllRanges(); sel.addRange(r);
+  };
+
+  list.addEventListener("click", (e) => {
+    if (e.target.classList?.contains("kill") && nc.isOwner) e.target.closest("li").remove();
+  });
+
+  // The avatar is the one thing on the page that is not text, so it gets the
+  // one dialog. Uploads go to the same Blossom servers the page itself is on.
+  $("#avatar-btn").onclick = async () => {
+    const img = $("#avatar");
+    let url;
+    const picked = await nc.modal({
+      title: "Avatar",
+      hint: "Paste a picture URL, or upload a file to the Blossom servers this page is stored on.",
+      submitLabel: "Use this picture",
+      build: (body, h) => {
+        const current = img.getAttribute("src") || "";
+        url = nc.field(body, {
+          label: "Picture URL",
+          value: /^https?:/i.test(current) ? current : "",
+          placeholder: "https://…",
+        });
+        const file = document.createElement("input");
+        file.type = "file"; file.accept = "image/*";
+        file.style.cssText = "margin-top:.6rem;font:inherit";
+        file.onchange = async () => {
+          const f = file.files?.[0];
+          if (!f) return;
+          h.status(`uploading ${(f.size / 1024).toFixed(0)} KB…`); h.busy(true);
+          try {
+            const r = await nc.media.upload(f);
+            url.value = r.url;
+            h.status("uploaded");
+          } catch (err) { h.status(err.message, true); }
+          finally { h.busy(false); }
+        };
+        body.appendChild(file);
+      },
+      onSubmit: () => {
+        const v = url.value.trim();
+        if (!/^https?:\/\//i.test(v)) throw new Error("That needs to be an http or https URL");
+        return v;
+      },
+    });
+    if (picked) { img.src = picked; nc.dirty = true; }
+  };
+
+  // Copying an address is the whole point of printing one, and it needs script,
+  // so the control ships hidden and a save puts it back that way.
+  const copy = $("#copy-lud16");
+  copy.hidden = false;
+  copy.onclick = async () => {
+    const addr = $("#lud16").textContent.trim();
+    try { await navigator.clipboard.writeText(addr); }
+    catch { /* a browser that refuses the clipboard leaves the text on the page */ }
+    copy.textContent = "copied";
+    setTimeout(() => (copy.textContent = "copy"), 1400);
+  };
+
+  nc.addDocumentTransform((clone) => {
+    const c = clone.querySelector("#copy-lud16");
+    if (c) { c.setAttribute("hidden", ""); c.textContent = "copy"; }
+  });
+})();
+</script>
+</body>
+</html>

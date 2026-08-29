@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:edit-gate="hash"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marram: a two-person studio for small websites</title>
+<meta name="description" content="Marram is a two-person studio in Ghent. We build websites with a page-weight budget, in plain HTML and CSS.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%233f6b4b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #23241f;
+    --nc-ink-dim: #64665c;
+    --nc-bg: #fbfaf6;
+    --nc-panel: #f2f0e9;
+    --nc-edge: #ddd9cd;
+    --nc-accent: #3f6b4b;
+    --nc-accent-ink: #fbfaf6;
+    --nc-ok: #3f6b4b;
+    --nc-bad: #8c3b32;
+    --nc-radius: 3px;
+    --nc-chrome-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --nc-ink: #e6e4dc; --nc-ink-dim: #9a9a8f; --nc-bg: #171815;
+      --nc-panel: #202220; --nc-edge: #32342e; --nc-accent: #8fc79c;
+      --nc-accent-ink: #171815; --nc-ok: #8fc79c; --nc-bad: #e0938a;
+    }
+  }
+
+  body {
+    margin: 0 auto; padding: 4rem 1.25rem 8rem; max-width: 38rem;
+    background: var(--nc-bg); color: var(--nc-ink);
+    font: 1.0625rem/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -.01em; margin: 0 0 .4rem; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 3.5rem 0 .9rem; }
+  p { margin: 0 0 1.1rem; }
+  a { color: var(--nc-accent); text-underline-offset: 3px; }
+
+  .sub { color: var(--nc-ink-dim); margin-bottom: 2.5rem; }
+
+  dl { margin: 0; }
+  dt { font-weight: 600; margin-top: 1.6rem; }
+  dt:first-child { margin-top: 0; }
+  dd { margin: .2rem 0 0; color: var(--nc-ink-dim); }
+  dd .w { color: var(--nc-accent); font-variant-numeric: tabular-nums; }
+
+  ul { margin: 0 0 1.1rem; padding-left: 1.1rem; }
+  li { margin-bottom: .35rem; }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--nc-edge);
+    color: var(--nc-ink-dim); font-size: .92rem;
+  }
+  #weight { color: var(--nc-ink); font-variant-numeric: tabular-nums; }
+
+  /* The feed inherits the page: a rule between notes, nothing else. */
+  .nc-feed { gap: 0; }
+  .nc-item {
+    background: transparent; border: 0; border-top: 1px solid var(--nc-edge);
+    border-radius: 0; padding: 1.1rem 0;
+  }
+  .nc-by { font-size: .85rem; margin-bottom: .35rem; }
+  .nc-avatar { display: none; }
+  .nc-text, .nc-summary { color: var(--nc-ink); font-size: 1rem; }
+  .nc-title { font-size: 1.05rem; font-weight: 600; }
+  .nc-feed-status { font-size: .92rem; }
+</style>
+</head>
+<body>
+
+<h1 editable="single-line">Marram</h1>
+<p class="sub" editable="single-line">A two-person studio in Ghent. We build small websites and keep them small.</p>
+
+<div editable>
+  <p>Katrien writes the code, Ivo does the words and the pictures. We take
+  three or four projects a year, mostly for museums, small publishers and people
+  who run something on their own.</p>
+  <p>Every site we make starts with a weight budget, usually 150 kB for the
+  first page a visitor sees. That number decides most of the arguments before
+  anyone has them. A hero video does not fit. Four typefaces do not fit. A photo
+  that carries the meaning of the page fits, once it has been resized properly.
+  What we get in return is a site that opens on a phone with two bars of signal
+  and costs almost nothing to host.</p>
+</div>
+
+<h2 editable="single-line">Recent work</h2>
+<dl editable>
+  <dt>Museum Dr. Guislain, collection guide</dt>
+  <dd>Nine hundred objects, searchable without a database.
+  <span class="w">64 kB</span> on the first page, 11 kB per object after that.</dd>
+
+  <dt>De Lage Landen, a small press</dt>
+  <dd>Catalogue, shop and twenty years of back issues.
+  <span class="w">102 kB</span>, one typeface, no tracking of any kind.</dd>
+
+  <dt>Bram Weyts, luthier</dt>
+  <dd>Twelve photographs that had to look right, which took most of the budget.
+  <span class="w">148 kB</span>, and he can add an instrument himself in about
+  four minutes.</dd>
+
+  <dt>Ghent Cycling Union</dt>
+  <dd>Route sheets and a repair calendar, built to work on an old phone in the
+  rain. <span class="w">38 kB</span>, and it caches so the second visit is
+  nothing.</dd>
+</dl>
+
+<h2 editable="single-line">How we work</h2>
+<div editable>
+  <ul>
+    <li>Plain HTML and CSS, and JavaScript only where the page cannot do the
+    job without it.</li>
+    <li>System fonts. The letters on your screen are already on your
+    computer.</li>
+    <li>Images sized for the space they sit in, in one modern format with one
+    fallback.</li>
+    <li>Hosting you can leave. Everything we hand over is a folder of files.</li>
+    <li>One round of edits after launch, then we teach you to make your
+    own.</li>
+  </ul>
+  <p>We charge by the project, not the hour, and we will tell you before we
+  start if we think you need a smaller studio than ours.</p>
+</div>
+
+<h2 editable="single-line">Notes</h2>
+<div nc:feed="notes"
+     nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+     nc:limit="3"
+     nc:style="list"></div>
+
+<h2 editable="single-line">Talk to us</h2>
+<div editable>
+  <p>Write to hallo at marram dot studio, or come by the workshop on
+  Baudelostraat on a Thursday afternoon. Tell us what the site is for and
+  roughly when you need it. We answer every mail, usually within a week.</p>
+</div>
+
+<footer>
+  <p editable>This page keeps to the same budget as the ones we sell. The
+  number below is measured in your browser with the Performance API, not typed
+  in by us.</p>
+  <p>Transferred on load: <span id="weight">not measured</span></p>
+</footer>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script>
+  // The only script this template ships. Sum what the browser actually pulled
+  // over the wire: the document, then every subresource. A reload from cache
+  // reports zero bytes transferred, so fall back to the compressed sizes and
+  // say which number is on screen.
+  addEventListener("load", function () {
+    var kb = function (n) { return (n / 1024).toFixed(1) + " kB"; };
+    var nav = performance.getEntriesByType("navigation")[0] || {};
+    var res = performance.getEntriesByType("resource");
+    var wire = nav.transferSize || 0, body = nav.encodedBodySize || 0, i;
+    for (i = 0; i < res.length; i++) {
+      wire += res[i].transferSize || 0;
+      body += res[i].encodedBodySize || 0;
+    }
+    var el = document.getElementById("weight");
+    if (!el) return;
+    el.textContent = wire
+      ? kb(wire) + ", of which this document is " + kb(nav.transferSize || 0)
+      : kb(body) + " compressed, served from your cache";
+  });
+</script>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

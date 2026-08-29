@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/templates.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: templates</title>
+<meta name="description" content="Ten starting points for a self-editable nsite. Pick one, change the words, change the colours, publish.">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F; --nc-radius: 12px;
+    --violet: #AB82F1; --ink-faint: #6F5D8E;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink); font: 16.5px/1.68 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 66rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+           color: var(--ink-faint); padding-top: 3rem; }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--nc-ink-dim); font-size: 1.1rem; max-width: 42rem; }
+
+  pre { background: #100722; border: 1px solid var(--nc-edge); border-radius: 12px;
+        padding: .9rem 1.1rem; overflow-x: auto; margin: 1.4rem 0 0; max-width: 42rem;
+        font: .85rem/1.7 var(--mono); color: #D9CCF3; }
+  pre .c { color: var(--ink-faint); }
+
+  .grid { display: grid; gap: 1.4rem; margin: 3rem 0 0;
+          grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); }
+  .card { border: 1px solid var(--nc-edge); border-radius: 14px; background: var(--nc-panel);
+          overflow: hidden; display: flex; flex-direction: column; }
+  .card > a.shot { display: block; aspect-ratio: 16 / 10; background: #100722; overflow: hidden; }
+  .card > a.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center;
+                       display: block; transition: transform .5s ease; }
+  .card:hover > a.shot img { transform: scale(1.03); }
+  .card .missing { display: grid; place-items: center; height: 100%; color: var(--ink-faint);
+                   font: .8rem var(--mono); }
+  .card .body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; flex: 1; }
+  .card h2 { font-size: 1.08rem; margin: 0 0 .1rem; }
+  .card h2 a { text-decoration: none; color: inherit; }
+  .card .name { font: .74rem var(--mono); color: var(--violet); letter-spacing: .04em; }
+  .card p { margin: .45rem 0 0; font-size: .92rem; color: var(--nc-ink-dim); flex: 1; }
+  .card .row { display: flex; gap: .5rem; margin-top: .9rem; flex-wrap: wrap; }
+  .card .row a { font: 600 .8rem var(--sans); text-decoration: none; padding: .38rem .75rem;
+                 border-radius: 8px; border: 1px solid var(--nc-edge); color: var(--nc-ink); }
+  .card .row a:hover { border-color: var(--nc-accent); }
+  .card .row a.primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); }
+
+  section.tail { border-top: 1px solid var(--nc-edge); margin-top: 3.5rem; padding: 2.6rem 0 0; }
+  section.tail h2 { font-size: 1.4rem; margin: 0 0 .5rem; }
+  footer { border-top: 1px solid var(--nc-edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="crumb"><img src="/nsite-clay-transparent.png" alt=""> <a href="/">nsite-clay</a> / templates</p>
+  <h1 editable="single-line">Templates</h1>
+  <p class="lede" editable="single-line">Ten starting points. Each is a working page with the editing controls already wired up, so you change the words and the colours rather than building from nothing.</p>
+
+  <pre><span class="c"># start from one</span>
+npx nsite-clay init mysite --template=blog --npub=npub1…
+npx nsite-clay deploy mysite --sec=nsec1…</pre>
+
+  <div class="grid" id="cards">
+
+    <article class="card">
+      <a class="shot" href="/t/event/"><img src="/shots/t-event.png" alt="The event template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">event</span>
+        <h2><a href="/t/event/">Event invitation</a></h2>
+        <p>A page for a meetup, in black and white with the details large enough to read across a room. Adds a calendar file the visitor can download, and shows the organiser's recent notes.</p>
+        <div class="row"><a class="primary" href="/t/event/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/event/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/blog/"><img src="/shots/t-blog.png" alt="The blog template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">blog</span>
+        <h2><a href="/t/blog/">Blog</a></h2>
+        <p>Long-form articles and short notes pulled from your own npub, on black, with a slow glow. Built for someone who already writes on Nostr and wants a home for it.</p>
+        <div class="row"><a class="primary" href="/t/blog/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/blog/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/project/"><img src="/shots/t-project.png" alt="The project template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">project</span>
+        <h2><a href="/t/project/">Project homepage</a></h2>
+        <p>What the thing is, why you would want it, two commands to try it, and what it will not do. With a feed for the project's own writing.</p>
+        <div class="row"><a class="primary" href="/t/project/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/project/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/personal/"><img src="/shots/t-personal.png" alt="The personal homepage template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">personal</span>
+        <h2><a href="/t/personal/">Personal homepage</a></h2>
+        <p>Who you are and what you have been writing, with both your notes and your articles fetched from relays. The one to reach for if you want a single address that is yours.</p>
+        <div class="row"><a class="primary" href="/t/personal/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/personal/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/links/"><img src="/shots/t-links.png" alt="The link list template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">links</span>
+        <h2><a href="/t/links/">Link list</a></h2>
+        <p>One page holding everything you publish. Add and remove links from the page itself, with a zap address and a short feed underneath.</p>
+        <div class="row"><a class="primary" href="/t/links/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/links/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="The gallery template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">gallery</span>
+        <h2><a href="/t/gallery/">Photo gallery</a></h2>
+        <p>Photographs from an npub, in three layouts you can switch between: a canvas you drag across, a sparse one with room to breathe, and a dark map of thumbnails that reveal themselves.</p>
+        <div class="row"><a class="primary" href="/t/gallery/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/gallery/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/terminal/"><img src="/shots/t-terminal.png" alt="The terminal template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">terminal</span>
+        <h2><a href="/t/terminal/">Terminal</a></h2>
+        <p>A project page as a shell session: a prompt, commands, and their output. Readable end to end without pressing anything.</p>
+        <div class="row"><a class="primary" href="/t/terminal/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/terminal/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="The text file template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">phrack</span>
+        <h2><a href="/t/phrack/">Text file</a></h2>
+        <p>Monospace, seventy-nine columns, ASCII rules and a numbered header, in the shape of the old zines. Restraint is the whole design.</p>
+        <div class="row"><a class="primary" href="/t/phrack/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/phrack/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/brutal/"><img src="/shots/t-brutal.png" alt="The neo-brutalist template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">brutal</span>
+        <h2><a href="/t/brutal/">Neo-brutalist</a></h2>
+        <p>Thick borders, hard shadows, flat colour and type that shouts. Loud on purpose, and still passes contrast.</p>
+        <div class="row"><a class="primary" href="/t/brutal/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/brutal/index.html">Source</a></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <a class="shot" href="/t/eco/"><img src="/shots/t-eco.png" alt="The low-weight template" loading="lazy"></a>
+      <div class="body">
+        <span class="name">eco</span>
+        <h2><a href="/t/eco/">Low weight</a></h2>
+        <p>System fonts, few images, as little CSS and JavaScript as the job allows. It measures and prints its own transferred size.</p>
+        <div class="row"><a class="primary" href="/t/eco/">Open</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/eco/index.html">Source</a></div>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="tail">
+    <h2 editable="single-line">They share one engine</h2>
+    <div editable>
+      <p class="lede">Every template links the same <code>/nsite-clay-base.css</code> and the same
+        <code>/nsite-clay.js</code> from the site root, and none of them carries a copy. Styling
+        happens through CSS variables, so the toolbar, the dialogs and the feeds follow whatever
+        palette a template sets. Changing the engine means editing one file, not ten.</p>
+      <p class="lede">The rules a template follows are in
+        <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
+        If you are handing this to an agent, point it at <a href="/llms.txt">llms.txt</a> instead
+        and let it pick.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><a href="/">Homepage</a> · <a href="/docs.html">Walkthrough</a> · <a href="/llms.txt">For agents</a> · <a href="https://github.com/jooray/nsite-clay">Source</a></p>
+  </footer>
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="sk"
+      nc:owner="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nostr meetup počas ChainCampu</title>
+<meta name="description" content="Nostriči bez reťazí, spojte sa. Sobota 12. 9. 2026, 13:30–15:00, amfiteáter ChainCamp CZ.">
+<meta property="og:title" content="Nostr meetup počas ChainCampu">
+<meta property="og:description" content="Sobota 12. 9. 2026, 13:30–15:00, amfiteáter ChainCamp CZ.">
+<meta property="og:image" content="https://blossom.primal.net/ab19a5e496066364eaf80dbb2813f575365343f170c9556a6d7e37b2f059a0c4.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%A6%A2%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* The poster sets the rules: black paper, white line, one red fringe on the
+     ostrich, and every detail set in a wide-tracked mono. Nothing else. */
+  :root {
+    --nc-ink: #f4f3f1;
+    --nc-ink-dim: #8b8985;
+    --nc-bg: #050505;
+    --nc-panel: #0f0f0f;
+    --nc-edge: #262523;
+    --nc-accent: #e0402c;
+    --nc-accent-ink: #050505;
+    --nc-ok: #6fbf7d;
+    --nc-bad: #e0715f;
+    --nc-radius: 2px;
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --nc-chrome-font: var(--nc-mono);
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --line: rgba(244, 243, 241, .14);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--nc-bg);
+    color: var(--nc-ink);
+    font: 16px/1.7 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 44rem; margin: 0 auto; padding: clamp(2.5rem, 8vw, 5.5rem) 1.35rem 5rem; }
+  a { color: inherit; text-underline-offset: .28em; text-decoration-thickness: 1px;
+      text-decoration-color: var(--nc-accent); }
+  a:hover { color: var(--nc-accent); }
+  p { margin: 0 0 1rem; }
+
+  /* Anything set in mono is a detail off the poster, so it is tracked wide. */
+  .mono { font-family: var(--nc-mono); letter-spacing: .22em; text-transform: lowercase; }
+
+  /* ---- the head of the invitation --------------------------------------- */
+
+  .kicker { font: .68rem/1 var(--nc-mono); letter-spacing: .42em; text-transform: uppercase;
+            color: var(--nc-ink-dim); margin: 0 0 1.8rem; }
+  h1 {
+    font: 400 clamp(2.6rem, 11vw, 5.2rem)/.95 var(--nc-mono);
+    letter-spacing: .04em;
+    margin: 0;
+    /* The poster's title is an outline with a red ghost behind it. */
+    text-shadow: .016em .013em 0 rgba(224, 64, 44, .8);
+  }
+  @supports (-webkit-text-stroke: 1px #fff) {
+    h1 { -webkit-text-stroke: 1px var(--nc-ink); color: transparent; }
+    html[nc\:editable="true"] h1:focus { -webkit-text-stroke: 0; color: var(--nc-ink); }
+  }
+  .during { margin: 1.1rem 0 0; font: .78rem/1.6 var(--nc-mono); letter-spacing: .2em;
+            color: var(--nc-ink-dim); }
+  .lead { margin: 2.6rem 0 0; font-size: clamp(1.15rem, 3.6vw, 1.45rem); line-height: 1.45;
+          max-width: 26ch; }
+
+  /* ---- the ostrich, given room ------------------------------------------ */
+
+  .poster { margin: 3.4rem 0 0; }
+  .poster img { display: block; width: 100%; height: auto; }
+  .poster figcaption { margin: .9rem 0 0; font: .68rem/1.6 var(--nc-mono); letter-spacing: .22em;
+                       text-transform: uppercase; color: var(--nc-ink-dim); }
+
+  /* ---- kedy, kde, počasie ------------------------------------------------ */
+
+  .facts { margin: 3.6rem 0 0; border-top: 1px solid var(--line); }
+  .fact { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0 1.5rem;
+          padding: 1.5rem 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .fact > dt { font: .68rem/2.4 var(--nc-mono); letter-spacing: .32em; text-transform: uppercase;
+               color: var(--nc-ink-dim); }
+  .fact > dd { margin: 0; }
+  .big { font: 400 clamp(1.6rem, 6vw, 2.6rem)/1.15 var(--nc-mono); letter-spacing: .01em; }
+  .big + .big { margin-top: .25rem; color: var(--nc-ink); }
+  /* The place is a longer string than the date, so it is set a size down and
+     stays on one line where the date can afford not to. */
+  .big.place { font-size: clamp(1.4rem, 4.6vw, 2rem); }
+  .fact .note { font-size: .95rem; color: var(--nc-ink-dim); line-height: 1.6; }
+
+  /* ---- what this is ------------------------------------------------------ */
+
+  .about { margin: 3rem 0 0; font-size: 1.05rem; max-width: 46ch; }
+  .about p:last-child { margin-bottom: 0; }
+
+  /* ---- the two things you can do ---------------------------------------- */
+
+  .actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 2.6rem 0 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font: .74rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
+    padding: .95rem 1.3rem; border: 1px solid var(--nc-ink); background: transparent;
+    color: var(--nc-ink); text-decoration: none; cursor: pointer;
+  }
+  .btn:hover, .btn:focus-visible { background: var(--nc-ink); color: var(--nc-bg); }
+  .btn.ghost { border-color: var(--line); color: var(--nc-ink-dim); }
+  .btn.ghost:hover, .btn.ghost:focus-visible { border-color: var(--nc-ink); background: transparent; color: var(--nc-ink); }
+  .ics-note { margin: .9rem 0 0; font: .72rem/1.6 var(--nc-mono); letter-spacing: .1em; color: var(--nc-ink-dim); }
+
+  /* ---- share it ---------------------------------------------------------- */
+
+  .share { margin: 4rem 0 0; padding: 1.8rem 0 0; border-top: 1px solid var(--line); }
+  .share p { max-width: 44ch; }
+  .tags { margin: 1.2rem 0 0; font: .84rem/1.9 var(--nc-mono); letter-spacing: .1em; color: var(--nc-accent); }
+
+  /* ---- the organiser's notes --------------------------------------------- */
+
+  .feed-head { margin: 4.4rem 0 1.4rem; font: .68rem/1 var(--nc-mono); letter-spacing: .32em;
+               text-transform: uppercase; color: var(--nc-ink-dim); }
+  /* feed.js appends its own fallback sheet to <head> after this one, so these
+     are scoped through the feed's own attribute to stay ahead of it. */
+  [nc\:feed] { border-top: 1px solid var(--line); }
+  [nc\:feed].nc-feed { gap: 0; }
+  [nc\:feed] .nc-item { background: transparent; border: 0; border-radius: 0;
+                        border-bottom: 1px solid var(--line); padding: 1.4rem 0; }
+  [nc\:feed] .nc-by { font: .68rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
+                      opacity: 1; color: var(--nc-ink-dim); margin-bottom: .8rem; }
+  [nc\:feed] .nc-avatar { border-radius: 0; }
+  [nc\:feed] .nc-text { color: var(--nc-ink); opacity: 1; font-size: .97rem; }
+  [nc\:feed] .nc-feed-status { font: .72rem/1.6 var(--nc-mono); letter-spacing: .18em;
+                               opacity: 1; color: var(--nc-ink-dim); padding: 1.4rem 0; }
+
+  .signoff { margin: 3.6rem 0 0; font: 400 clamp(1.1rem, 4vw, 1.5rem)/1.4 var(--nc-mono);
+             letter-spacing: .02em; color: var(--nc-ink); }
+
+  footer { margin: 4rem 0 0; padding-top: 1.6rem; border-top: 1px solid var(--line);
+           font: .7rem/1.8 var(--nc-mono); letter-spacing: .14em; color: var(--nc-ink-dim); }
+
+  /* The editing outline is white-on-black too; the base stylesheet's accent
+     ring would be the only red on the page that is not the ostrich. */
+  [editable]:focus { outline-color: var(--nc-accent); }
+
+  @media (max-width: 34rem) {
+    .fact { grid-template-columns: 1fr; gap: .5rem; }
+    .fact > dt { line-height: 1.6; }
+  }
+</style>
+</head>
+<body>
+
+<main class="sheet">
+
+  <p class="kicker" editable="single-line no-toolbar">pozvánka</p>
+  <h1 id="ev-title" editable="single-line no-toolbar">Nostr meetup</h1>
+  <p class="during" editable="single-line no-toolbar">počas <a href="https://njump.me/npub1fc6nyvwm8y3enmy26rekaer8p5q8xhy9ujx06sdngk7d7k2258qs52zyq0" rel="noopener">ChainCampu</a></p>
+
+  <p class="lead" editable="single-line">Nostriči bez reťazí, spojte sa!</p>
+
+  <figure class="poster">
+    <img src="https://blossom.primal.net/ab19a5e496066364eaf80dbb2813f575365343f170c9556a6d7e37b2f059a0c4.jpg"
+         width="1280" height="1280"
+         alt="Plagát: biely pštros na čiernom pozadí, nad ním nápis NOSTR meetup, pod ním dátum, čas a miesto">
+    <figcaption editable="single-line no-toolbar">plagát na zdieľanie</figcaption>
+  </figure>
+
+  <dl class="facts">
+    <div class="fact">
+      <dt>kedy</dt>
+      <dd>
+        <div class="big" id="ev-date" editable="single-line no-toolbar">sobota 12. 9. 2026</div>
+        <div class="big" id="ev-time" editable="single-line no-toolbar">13:30–15:00</div>
+      </dd>
+    </div>
+    <div class="fact">
+      <dt>kde</dt>
+      <dd>
+        <div class="big place" id="ev-place" editable="single-line no-toolbar">Amfiteáter ChainCamp CZ</div>
+      </dd>
+    </div>
+    <div class="fact">
+      <dt>počasie</dt>
+      <dd class="note" id="ev-weather" editable="single-line">Amfiteáter vonku v prípade priaznivého počasia, v blízkosti vchodu do budovy v prípade nepriaznivého počasia</dd>
+    </div>
+  </dl>
+
+  <div class="about" id="ev-desc" editable>
+    <p>Pokec, ukazovanie si npubov, appiek a zdieľanie zážitkov zo zapathonov.</p>
+    <p>Príď aj vtedy, ak si na Nostri týždeň. Kto onboardne Nostričov rovno na chaincampe a donesie ich, je najväčší vedúci.</p>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn" id="ics-btn" hidden>Pridať do kalendára</button>
+    <a class="btn ghost" href="https://njump.me/nevent1qgsd4dkxqewy8xum47ctpu0ltgxxsfemeewpjkdyzk9ddfcg286s0dsqypyjdjrfutm7607p65j5fxh9feva997k3afdpdux8cq62zhqnnth5tcf5zp" rel="noopener">Pôvodná note na njump</a>
+  </div>
+  <p class="ics-note" id="ics-note" hidden>stiahne sa súbor .ics, otvorí ho každý kalendár</p>
+
+  <section class="share">
+    <p editable="single-line">Pomôžte nám šírením tejto skvelej správy. Citujte, sharujte túto note, označte svojich nostr frens!</p>
+    <p class="tags" editable="single-line no-toolbar">#NostrFrens #ChainCamp2026</p>
+  </section>
+
+  <h2 class="feed-head">Čo píše organizátor</h2>
+  <div nc:feed="notes" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="3"></div>
+
+  <p class="signoff" editable="single-line no-toolbar">Vidíme sa v amfiteátri.</p>
+
+  <footer>
+    <p>Táto pozvánka je jeden HTML súbor. Býva na Nostri a na Blossome a prepisuje sa sama.</p>
+  </footer>
+
+</main>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+<script>
+// The calendar file is built out of the page, not out of a copy of the page.
+// Whatever the organiser types into the date, the time and the place is what
+// lands in the .ics, so the two can never drift apart. No service is involved:
+// the file is assembled here and handed straight to the browser.
+(async () => {
+  await nc.ready;
+
+  const text = (sel) => (document.querySelector(sel)?.textContent || "").replace(/\s+/g, " ").trim();
+  const pad = (n) => String(n).padStart(2, "0");
+
+  // "sobota 12. 9. 2026" and "13:30–15:00", written the way a Slovak person
+  // writes them. Both the en dash and a plain hyphen are accepted, because a
+  // keyboard offers one of them and typography wants the other.
+  function readWhen() {
+    const d = text("#ev-date").match(/(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})/);
+    const t = text("#ev-time").match(/(\d{1,2}):(\d{2})\s*[–—-]\s*(\d{1,2}):(\d{2})/);
+    if (!d) return null;
+    const day = `${d[3]}${pad(d[2])}${pad(d[1])}`;
+    if (!t) return { start: `${day}`, end: null, allDay: true };
+    return {
+      start: `${day}T${pad(t[1])}${pad(t[2])}00`,
+      end: `${day}T${pad(t[3])}${pad(t[4])}00`,
+      allDay: false,
+    };
+  }
+
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;")
+    .replace(/,/g, "\\,").replace(/\n/g, "\\n");
+
+  // RFC 5545 wants lines under 75 octets, continued with a leading space.
+  function fold(line) {
+    const out = [];
+    let buf = "";
+    for (const ch of line) {
+      const next = buf + ch;
+      if (new TextEncoder().encode(next).length > 73) { out.push(buf); buf = " " + ch; }
+      else buf = next;
+    }
+    out.push(buf);
+    return out.join("\r\n");
+  }
+
+  function ics() {
+    const when = readWhen();
+    if (!when) return null;
+    const title = text("#ev-title");
+    const place = text("#ev-place");
+    const body = [text("#ev-desc"), text("#ev-weather")].filter(Boolean).join("\n\n");
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+    const url = location.href.replace(/#.*$/, "");
+    const uid = `${when.start}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@${location.hostname || "nsite"}`;
+
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//nsite-clay//event template//SK",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      // Europe/Prague spelled out, so the time means the same thing in every
+      // calendar app rather than whatever zone the reader happens to sit in.
+      "BEGIN:VTIMEZONE",
+      "TZID:Europe/Prague",
+      "BEGIN:DAYLIGHT",
+      "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST",
+      "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+      "END:DAYLIGHT",
+      "BEGIN:STANDARD",
+      "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET",
+      "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+      "END:STANDARD",
+      "END:VTIMEZONE",
+      "BEGIN:VEVENT",
+      `UID:${esc(uid)}`,
+      `DTSTAMP:${stamp}`,
+      when.allDay
+        ? `DTSTART;VALUE=DATE:${when.start}`
+        : `DTSTART;TZID=Europe/Prague:${when.start}`,
+      when.allDay ? null : `DTEND;TZID=Europe/Prague:${when.end}`,
+      `SUMMARY:${esc(title)}`,
+      place ? `LOCATION:${esc(place)}` : null,
+      body ? `DESCRIPTION:${esc(body)}` : null,
+      `URL:${esc(url)}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].filter(Boolean);
+
+    return lines.map(fold).join("\r\n") + "\r\n";
+  }
+
+  const btn = document.querySelector("#ics-btn");
+  const note = document.querySelector("#ics-note");
+  btn.hidden = false;
+  note.hidden = false;
+
+  btn.onclick = () => {
+    const file = ics();
+    if (!file) return nc.toast("Dátum sa nedá prečítať. Napíš ho ako 12. 9. 2026.");
+    const name = (text("#ev-title").toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pozvanka") + ".ics";
+    const url = URL.createObjectURL(new Blob([file], { type: "text/calendar;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  // A button that only works with JavaScript ships hidden, so a reader with
+  // scripting off is not offered something inert. The saved file keeps it that
+  // way; the next visitor's browser reveals it again.
+  nc.addDocumentTransform((clone) => {
+    for (const id of ["#ics-btn", "#ics-note"]) clone.querySelector(id)?.setAttribute("hidden", "");
+  });
+})();
+</script>
+</body>
+</html>

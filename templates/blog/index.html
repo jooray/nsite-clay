@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:owner="npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lunarpunk Almanach</title>
+<meta name="description" content="Shinrin-yoku in the dark forest. Short pieces on parallel economies, pseudonymity and small firms.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%237cf3c0'/%3E%3Ccircle cx='21' cy='13' r='9' fill='%23050809'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* ---- the palette the shared chrome follows ---------------------------- */
+  :root {
+    --nc-ink: #d7e8de;
+    --nc-ink-dim: #7d968f;
+    --nc-bg: #04070a;
+    --nc-panel: #0a1114;
+    --nc-edge: #1c2b2c;
+    --nc-accent: #7cf3c0;
+    --nc-accent-ink: #04130d;
+    --nc-ok: #7cf3c0;
+    --nc-bad: #ff8f8f;
+    --nc-radius: 14px;
+    --nc-chrome-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    /* the rest is this template's own */
+    --spore: #9dfbd0;
+    --moth: #a98cff;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    --lit: 0 0 26px -6px color-mix(in srgb, var(--nc-accent) 55%, transparent);
+    --measure: 40rem;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { background: var(--nc-bg); }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #0b1a1c 0%, transparent 60%),
+      radial-gradient(80% 60% at 85% 110%, #120c22 0%, transparent 55%),
+      var(--nc-bg);
+    color: var(--nc-ink);
+    font: 16px/1.7 var(--serif);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: var(--nc-accent); }
+
+  /* ---- the forest floor -------------------------------------------------
+   * Two slow lamps and a drift of spores, all authored markup so the page
+   * still looks like something with scripting off. */
+
+  .sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .lamp {
+    position: absolute; border-radius: 50%; filter: blur(70px);
+    mix-blend-mode: screen; opacity: .5;
+    animation: breathe 21s ease-in-out infinite;
+  }
+  .lamp.one   { width: 46rem; height: 46rem; left: -12rem; top: -16rem;
+                background: radial-gradient(circle, #14584a 0%, transparent 68%); }
+  .lamp.two   { width: 38rem; height: 38rem; right: -10rem; top: 22vh;
+                background: radial-gradient(circle, #3a2a6b 0%, transparent 66%);
+                animation-duration: 29s; animation-delay: -7s; }
+  .lamp.three { width: 52rem; height: 30rem; left: 30%; bottom: -14rem;
+                background: radial-gradient(circle, #0f4a52 0%, transparent 70%);
+                animation-duration: 34s; animation-delay: -14s; }
+  @keyframes breathe {
+    0%, 100% { opacity: .34; transform: scale(1); }
+    50%      { opacity: .62; transform: scale(1.14); }
+  }
+
+  .spore {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: var(--spore); opacity: 0;
+    box-shadow: 0 0 8px 2px color-mix(in srgb, var(--spore) 45%, transparent);
+    animation: rise 46s linear infinite;
+  }
+  .spore.violet { background: var(--moth);
+                  box-shadow: 0 0 9px 3px color-mix(in srgb, var(--moth) 45%, transparent); }
+  @keyframes rise {
+    0%        { transform: translate3d(0, 0, 0) scale(.7); opacity: 0; }
+    12%       { opacity: .85; }
+    50%       { transform: translate3d(2.4rem, -26vh, 0) scale(1); }
+    88%       { opacity: .7; }
+    100%      { transform: translate3d(-1.6rem, -54vh, 0) scale(.6); opacity: 0; }
+  }
+
+  /* Motion off: the shared stylesheet flattens durations, which would leave an
+   * infinite loop resampling every frame. Take the animations off entirely and
+   * let the spores sit where they were authored. */
+  @media (prefers-reduced-motion: reduce) {
+    .lamp, .spore, .moon, .masthead h1 { animation-name: none !important; }
+    .lamp  { opacity: .45; }
+    .spore { opacity: .55; }
+  }
+
+  /* ---- the page ---------------------------------------------------------- */
+
+  .page { position: relative; z-index: 1; }
+
+  .masthead {
+    position: relative; padding: 0 1.25rem 3.5rem; text-align: center;
+    isolation: isolate;
+  }
+  .masthead::before {
+    content: ""; position: absolute; inset: -6rem 0 auto; height: 42rem; z-index: -1;
+    background-image:
+      linear-gradient(to bottom, rgba(4,7,10,.68) 0%, rgba(4,7,10,.88) 52%, rgba(4,7,10,.97) 100%),
+      url("https://profilepics.nostur.com/banner_v1/1f3b4c33d0d568e49e2ab3c1b228f67a60ba6f37828313848cf9305672104c7a/banner.jpg?1699110736");
+    background-size: cover; background-position: center 40%;
+    filter: saturate(.55) contrast(1.05);
+    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 97%);
+    mask-image: linear-gradient(to bottom, #000 58%, transparent 97%);
+  }
+
+  .moon {
+    width: 8.5rem; height: 8.5rem; margin: 4.5rem auto 1.6rem; border-radius: 50%;
+    padding: 3px; background: linear-gradient(150deg, var(--nc-accent), transparent 55%, var(--moth));
+    box-shadow: 0 0 0 1px rgba(124,243,192,.18), 0 0 60px -8px rgba(124,243,192,.5);
+    animation: halo 13s ease-in-out infinite;
+  }
+  .moon img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+              filter: saturate(.85) brightness(.95); }
+  @keyframes halo {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(124,243,192,.14), 0 0 46px -12px rgba(124,243,192,.42); }
+    50%      { box-shadow: 0 0 0 1px rgba(169,140,255,.3), 0 0 92px -6px rgba(124,243,192,.68); }
+  }
+
+  .masthead h1 {
+    font: 400 clamp(2.3rem, 7vw, 4rem)/1.05 var(--serif);
+    letter-spacing: -.015em; margin: 0 0 .4rem;
+    text-shadow: 0 0 34px rgba(124,243,192,.28);
+    animation: lumen 17s ease-in-out infinite;
+  }
+  @keyframes lumen {
+    0%, 100% { text-shadow: 0 0 26px rgba(124,243,192,.18); }
+    50%      { text-shadow: 0 0 46px rgba(124,243,192,.42), 0 0 90px rgba(169,140,255,.2); }
+  }
+  .tagline {
+    margin: 0 auto 1.6rem; max-width: 30rem; font-style: italic;
+    color: color-mix(in srgb, var(--nc-accent) 62%, var(--nc-ink));
+    font-size: 1.05rem; letter-spacing: .01em;
+  }
+  .intro { max-width: var(--measure); margin: 0 auto; color: var(--nc-ink-dim); font-size: 1rem; }
+  .intro p { margin: 0 0 .7rem; }
+  .whois {
+    margin: 1.8rem 0 0; font: .74rem/1.6 var(--nc-mono); letter-spacing: .06em;
+    text-transform: uppercase; color: var(--nc-ink-dim);
+  }
+  .whois a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--nc-edge); }
+  .whois a:hover { color: var(--nc-accent); border-bottom-color: currentColor; }
+
+  main {
+    display: grid; gap: 3.5rem 3rem; align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 74rem; margin: 0 auto; padding: 0 1.25rem 7rem;
+  }
+  @media (min-width: 61rem) {
+    main { grid-template-columns: minmax(0, 1fr) 19rem; }
+    .understory { position: sticky; top: 2rem; }
+  }
+
+  h2.band {
+    font: 400 .78rem/1 var(--nc-chrome-font); letter-spacing: .28em; text-transform: uppercase;
+    color: var(--nc-ink-dim); margin: 0 0 1.4rem;
+    display: flex; align-items: center; gap: .9rem;
+  }
+  h2.band::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--nc-edge), transparent);
+  }
+  .lede { margin: -.6rem 0 1.4rem; font-size: .88rem; color: var(--nc-ink-dim); }
+
+  /* ---- entries -----------------------------------------------------------
+   * Each card carries the article's own cover art behind the words, blurred
+   * back until it is only light. Any shape of image works, because nothing is
+   * cropped to a fixed frame. */
+
+  .page .nc-feed { gap: 1.5rem; }
+
+  .page .nc-feed-articles .nc-item {
+    position: relative; isolation: isolate; overflow: hidden;
+    padding: 1.6rem 1.7rem 1.5rem;
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+    background: linear-gradient(160deg, rgba(14,26,26,.9), rgba(6,10,13,.94));
+    transition: border-color .5s, transform .5s, box-shadow .5s;
+  }
+  .page .nc-feed-articles .nc-item::after {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(75% 130% at 10% -12%, rgba(124,243,192,.16), transparent 62%),
+      linear-gradient(158deg, rgba(4,8,10,.34), rgba(4,8,10,.86));
+  }
+  .page .nc-feed-articles .nc-cover {
+    position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%;
+    margin: 0; border-radius: 0; object-fit: cover;
+    filter: blur(20px) saturate(.85) brightness(.52);
+    opacity: .42; transform: scale(1.16);
+    transition: opacity .6s, filter .6s;
+  }
+  .page .nc-feed-articles .nc-item:hover,
+  .page .nc-feed-articles .nc-item:focus-within {
+    border-color: color-mix(in srgb, var(--nc-accent) 45%, var(--nc-edge));
+    box-shadow: var(--lit);
+    transform: translateY(-2px);
+  }
+  .page .nc-feed-articles .nc-item:hover .nc-cover,
+  .page .nc-feed-articles .nc-item:focus-within .nc-cover {
+    opacity: .6; filter: blur(13px) saturate(1) brightness(.62);
+  }
+
+  /* One author writes everything here, so the by-line is only a date. */
+  .page .nc-avatar,
+  .page .nc-name { display: none; }
+  .page .nc-by {
+    margin: 0 0 .5rem; opacity: 1;
+    font: .72rem/1 var(--nc-mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--nc-ink-dim);
+  }
+  .page .nc-by .nc-when { margin-left: 0; }
+  .page .nc-by a { text-decoration: none; color: var(--nc-ink-dim); }
+  .page .nc-by a:hover { color: var(--nc-accent); }
+
+  .page .nc-feed-articles .nc-title {
+    font: 400 clamp(1.35rem, 2.6vw, 1.85rem)/1.2 var(--serif);
+    margin: 0 0 .55rem; letter-spacing: -.01em; max-width: 26ch;
+  }
+  .page .nc-feed-articles .nc-title a { color: var(--nc-ink); }
+  .page .nc-feed-articles .nc-item:hover .nc-title a { color: #eafff5; }
+  .page .nc-feed-articles .nc-summary {
+    max-width: var(--measure); color: color-mix(in srgb, var(--nc-ink) 74%, transparent);
+    font-size: .97rem;
+  }
+  .page .nc-tags {
+    margin-top: 1rem; gap: .5rem; opacity: 1;
+    font: .68rem/1 var(--nc-mono); letter-spacing: .08em; color: var(--nc-ink-dim);
+  }
+  .page .nc-tag {
+    border: 1px solid var(--nc-edge); border-radius: 999px; padding: .3rem .6rem;
+    background: rgba(124,243,192,.04);
+  }
+
+  /* ---- understory --------------------------------------------------------
+   * The short notes. Most of them are earlier drafts of the essays, so they
+   * get less room and a cut-off rather than a full column of repetition. */
+
+  .page .understory .nc-feed { gap: .85rem; }
+  .page .understory .nc-item {
+    border: 0; border-left: 1px solid var(--nc-edge); border-radius: 0;
+    background: none; padding: .1rem 0 .1rem 1rem;
+    transition: border-color .4s;
+  }
+  .page .understory .nc-item:hover { border-left-color: var(--nc-accent); }
+  .page .understory .nc-by { margin-bottom: .3rem; font-size: .66rem; }
+  .page .understory .nc-text {
+    font-size: .87rem; line-height: 1.55; color: var(--nc-ink-dim);
+    display: -webkit-box; -webkit-line-clamp: 5; line-clamp: 5;
+    -webkit-box-orient: vertical; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  }
+  .page .understory .nc-item:hover .nc-text { color: var(--nc-ink); }
+  .page .understory .nc-text a { color: var(--nc-ink-dim); text-decoration: underline; }
+
+  .page .nc-feed-status {
+    font: .78rem var(--nc-mono); letter-spacing: .1em; color: var(--nc-ink-dim);
+  }
+
+  noscript p {
+    border: 1px dashed var(--nc-edge); border-radius: var(--nc-radius);
+    padding: 1rem 1.2rem; color: var(--nc-ink-dim); font-size: .92rem;
+  }
+
+  footer.floor {
+    max-width: 74rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem;
+    border-top: 1px solid var(--nc-edge);
+    color: var(--nc-ink-dim); font-size: .86rem;
+  }
+  footer.floor p { max-width: var(--measure); margin: 0 0 .5rem; }
+
+  /* The toolbar sits on glass so it reads against the dark. */
+  .nc-bar { backdrop-filter: blur(10px); background: rgba(10,17,20,.82); }
+  .nc-bar button { background: rgba(255,255,255,.03); }
+</style>
+</head>
+<body>
+
+<div class="sky" aria-hidden="true">
+  <span class="lamp one"></span>
+  <span class="lamp two"></span>
+  <span class="lamp three"></span>
+  <span class="spore" style="left:6%;  top:78%; animation-duration:52s; animation-delay:-3s"></span>
+  <span class="spore" style="left:13%; top:92%; animation-duration:61s; animation-delay:-19s"></span>
+  <span class="spore violet" style="left:19%; top:66%; animation-duration:44s; animation-delay:-31s"></span>
+  <span class="spore" style="left:24%; top:88%; animation-duration:57s; animation-delay:-9s"></span>
+  <span class="spore" style="left:31%; top:71%; animation-duration:49s; animation-delay:-24s"></span>
+  <span class="spore" style="left:37%; top:95%; animation-duration:66s; animation-delay:-40s"></span>
+  <span class="spore violet" style="left:43%; top:63%; animation-duration:41s; animation-delay:-12s"></span>
+  <span class="spore" style="left:49%; top:84%; animation-duration:55s; animation-delay:-33s"></span>
+  <span class="spore" style="left:55%; top:74%; animation-duration:47s; animation-delay:-5s"></span>
+  <span class="spore" style="left:61%; top:97%; animation-duration:63s; animation-delay:-27s"></span>
+  <span class="spore violet" style="left:67%; top:69%; animation-duration:43s; animation-delay:-16s"></span>
+  <span class="spore" style="left:73%; top:86%; animation-duration:58s; animation-delay:-38s"></span>
+  <span class="spore" style="left:79%; top:76%; animation-duration:51s; animation-delay:-7s"></span>
+  <span class="spore" style="left:85%; top:93%; animation-duration:60s; animation-delay:-22s"></span>
+  <span class="spore violet" style="left:91%; top:67%; animation-duration:45s; animation-delay:-35s"></span>
+  <span class="spore" style="left:96%; top:81%; animation-duration:54s; animation-delay:-11s"></span>
+  <span class="spore" style="left:9%;  top:46%; animation-duration:68s; animation-delay:-29s"></span>
+  <span class="spore" style="left:28%; top:39%; animation-duration:59s; animation-delay:-44s"></span>
+  <span class="spore violet" style="left:52%; top:44%; animation-duration:50s; animation-delay:-17s"></span>
+  <span class="spore" style="left:70%; top:36%; animation-duration:64s; animation-delay:-2s"></span>
+  <span class="spore" style="left:88%; top:49%; animation-duration:56s; animation-delay:-26s"></span>
+</div>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="moon">
+      <img src="https://profilepics.nostur.com/profilepic_v1/1f3b4c33d0d568e49e2ab3c1b228f67a60ba6f37828313848cf9305672104c7a/profilepic.jpg?1701244525"
+           alt="" width="136" height="136">
+    </div>
+    <h1 editable="single-line">Lunarpunk Almanach</h1>
+    <p class="tagline" editable="single-line">Shinrin-yoku in the dark forest</p>
+    <div class="intro" editable>
+      <p>Short pieces on the parallel economy: anonymity, firms small enough that nobody
+      bothers to bail them out, and trade that happens without asking permission.</p>
+      <p>Everything below is pulled from Nostr relays when the page opens and its signature
+      is checked in your browser. The file holds the frame. The relays hold the writing.</p>
+    </div>
+    <p class="whois">
+      <a href="https://njump.me/npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
+         rel="noopener" target="_blank">npub1dj6payl…qeht9y6</a>
+    </p>
+  </header>
+
+  <main>
+
+    <section>
+      <h2 class="band" editable="single-line">Entries</h2>
+      <div nc:feed="articles"
+           nc:authors="npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
+           nc:limit="12"
+           nc:style="list"></div>
+      <noscript>
+        <p>Scripting is off, so the posts are not on this page. They live on Nostr and you can
+        read them at
+        <a href="https://njump.me/npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
+           rel="noopener">njump.me</a>.</p>
+      </noscript>
+    </section>
+
+    <aside class="understory">
+      <h2 class="band" editable="single-line">Understory</h2>
+      <p class="lede" editable="single-line">Shorter notes. Most of the essays above started here first.</p>
+      <div nc:feed="notes"
+           nc:authors="npub1dj6payl7kn0jul08jpert7ejlqva2hthvgk8pmq0gcg8xevgmh0qeht9y6"
+           nc:limit="8"
+           nc:min-length="200"
+           nc:style="list"></div>
+    </aside>
+
+  </main>
+
+  <footer class="floor">
+    <div editable>
+      <p>This page is one HTML file. It edits itself, hashes itself, and republishes itself
+      to Blossom and Nostr, so what a crawler downloads is what you are reading now.</p>
+      <p>Nothing here is stored in the file: the entries come back from the relays every time
+      somebody opens it.</p>
+    </div>
+  </footer>
+
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

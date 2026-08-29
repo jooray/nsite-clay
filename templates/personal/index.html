@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+  Template: a personal homepage.
+
+  The banner and the avatar are the only two things that need a text editor:
+  swap the two image URLs below. Everything else is editable in the browser,
+  and the two feeds pull straight from Nostr, so posting somewhere else is
+  what updates this page.
+-->
+<html lang="en"
+      nc:owner="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juraj</title>
+<meta name="description" content="Vibe coding, reality bending, cypherpunk visions. Writing, notes and a novel, all of it on Nostr.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%23090D12'/><circle cx='19' cy='14' r='8' fill='%23F0C24A'/><circle cx='14' cy='12' r='8' fill='%23090D12'/></svg>">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* This template sets the shared variables and styles its own content. The
+     toolbar and the two feeds follow along without any markup of their own. */
+  :root {
+    --nc-ink: #E8EEF3;
+    --nc-ink-dim: #90A2B3;
+    --nc-bg: #090D12;
+    --nc-panel: #101822;
+    --nc-edge: #21313F;
+    --nc-accent: #F0C24A;
+    --nc-accent-ink: #171006;
+    --nc-ok: #6FCF97;
+    --nc-bad: #E88B7D;
+    --nc-radius: 12px;
+    --nc-chrome-font: var(--sans);
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--nc-ink); font: 17px/1.65 var(--sans);
+    background-color: var(--nc-bg);
+    background-image:
+      radial-gradient(36rem 26rem at 86% -10%, rgba(126,166,205,.18), transparent 66%),
+      radial-gradient(28rem 20rem at 2% 14%, rgba(240,194,74,.06), transparent 62%);
+    background-attachment: fixed;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 48rem; margin: 0 auto; padding: 0 1.4rem; }
+  a { color: var(--nc-accent); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 3px; border-radius: 4px; }
+
+  /* banner and identity */
+  .banner { position: relative; height: clamp(140px, 25vw, 270px); overflow: hidden; }
+  .banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .banner::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(9,13,18,.15) 30%, var(--nc-bg)); }
+  .id { margin-top: -3.4rem; position: relative; padding-bottom: 2.6rem; }
+  .avatar { width: 108px; height: 108px; border-radius: 50%; object-fit: cover; display: block;
+            border: 3px solid var(--nc-bg); box-shadow: 0 0 0 1px var(--nc-edge), 0 20px 44px -22px #000; }
+  h1 { font: 600 clamp(2rem, 5.4vw, 2.85rem)/1.1 var(--serif); letter-spacing: -.02em;
+       margin: 1.1rem 0 .4rem; }
+  .handle { font: .84rem/1.5 var(--nc-mono); color: var(--nc-ink-dim); margin: 0 0 1.2rem; }
+  .about { font: 1.17rem/1.55 var(--serif); max-width: 44ch; margin: 0 0 1.5rem; }
+  .pills { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: 0; }
+  .pills a { display: inline-flex; text-decoration: none; font: .87rem/1 var(--sans);
+             padding: .6rem .9rem; border-radius: 999px; border: 1px solid var(--nc-edge);
+             background: var(--nc-panel); color: var(--nc-ink); }
+  .pills a:hover { border-color: var(--nc-accent); color: var(--nc-accent); }
+
+  /* sections */
+  section { padding-bottom: 2.8rem; }
+  .sec-head { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+              border-top: 1px solid var(--nc-edge); padding-top: 1.5rem; margin-bottom: 1.2rem; }
+  .sec-head h2 { font: 600 1.4rem/1.2 var(--serif); margin: 0; letter-spacing: -.01em; }
+  .sec-head .side { margin-left: auto; font: .74rem/1 var(--nc-mono); letter-spacing: .13em;
+                    text-transform: uppercase; color: var(--nc-ink-dim); }
+
+  .now { border-left: 2px solid var(--nc-accent); padding-left: 1.25rem; }
+  .now p { margin: 0 0 .9rem; color: var(--nc-ink-dim); max-width: 58ch; }
+  .now p:last-child { margin-bottom: 0; }
+
+  .book { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+          background: var(--nc-panel); padding: 1.25rem 1.35rem; }
+  .book h3 { font: 600 1.25rem/1.2 var(--serif); margin: 0 0 .45rem; }
+  .book p { margin: 0 0 .9rem; color: var(--nc-ink-dim); max-width: 52ch; }
+  .book p:last-child { margin: 0; }
+
+  .after-feed { margin: 1.1rem 0 0; font-size: .92rem; }
+
+  /* both feeds: one author, so the avatar and the repeated name are noise */
+  .nc-avatar, .nc-name { display: none; }
+  .nc-by .nc-when { margin-left: 0; }
+  .nc-by { opacity: 1; }
+  .nc-when { font: .73rem/1 var(--nc-mono); letter-spacing: .1em; text-transform: uppercase;
+             color: var(--nc-ink-dim); text-decoration: none; }
+  .nc-when:hover { color: var(--nc-accent); }
+
+  /* long-form: cards with room for a cover */
+  .nc-feed-articles { grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr)); gap: 1.1rem; }
+  .nc-feed-articles .nc-item { background: var(--nc-panel); padding: 1.1rem 1.15rem 1.2rem; }
+  .nc-feed-articles .nc-cover { height: 8rem; }
+  .nc-feed-articles .nc-title { font: 600 1.14rem/1.3 var(--serif); margin: .45rem 0 .45rem; }
+  .nc-feed-articles .nc-title a:hover { color: var(--nc-accent); }
+  .nc-feed-articles .nc-summary { font-size: .92rem; }
+  .nc-feed-articles .nc-tags { color: var(--nc-accent); opacity: .75; }
+
+  /* short notes: a timeline down the left, no boxes */
+  .nc-feed-notes { gap: 0; }
+  .nc-feed-notes .nc-item { background: none; border: 0; border-left: 1px solid var(--nc-edge);
+    border-radius: 0; padding: 1.1rem 0 1.1rem 1.5rem; position: relative; }
+  .nc-feed-notes .nc-item::before { content: ""; position: absolute; left: -4px; top: 1.5rem;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--nc-accent); }
+  .nc-feed-notes .nc-by { margin-bottom: .4rem; }
+  .nc-feed-notes .nc-text { color: var(--nc-ink); font-size: 1rem; line-height: 1.6;
+    display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
+  .nc-feed-notes .nc-text a { color: var(--nc-accent); }
+
+  footer { border-top: 1px solid var(--nc-edge); padding: 1.8rem 0 4.5rem;
+           color: var(--nc-ink-dim); font-size: .9rem; }
+  footer p { margin: 0 0 .5rem; max-width: 54ch; }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <img src="https://blossom.primal.net/c79f6f4d5cc38d6ac774e2f251fcaec1339e2f91a6cd01548ce0a5c4438d373e.jpg" alt="">
+</div>
+
+<div class="wrap">
+
+  <header class="id">
+    <img class="avatar" src="https://juraj.bednar.io/assets/socials/profile.jpg?a" alt="Juraj" width="108" height="108">
+    <h1 editable="single-line">Juraj🏴💛🌘</h1>
+    <p class="handle" editable="single-line">juraj@tamersofentropy.net</p>
+    <p class="about" editable="single-line">I don't seek rigid structure. I seek resonance. Vibe coding, reality bending, cypherpunk visions.</p>
+    <ul class="pills">
+      <li><a href="https://hackyourself.io/" editable="single-line">hackyourself.io</a></li>
+      <li><a href="https://juraj.bednar.io/" editable="single-line">Blog</a></li>
+      <li><a href="https://tamersofentropy.net" editable="single-line">The book</a></li>
+      <li><a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" editable="single-line">Nostr</a></li>
+      <li><a href="lightning:juraj-bzzz@pay.cypherpunk.today" editable="single-line">Zap me</a></li>
+    </ul>
+  </header>
+
+  <section id="now">
+    <div class="sec-head">
+      <h2 editable="single-line">What I am on about</h2>
+      <span class="side" editable="single-line">now</span>
+    </div>
+    <div class="now" editable>
+      <p>Most of what ends up here I tried first and wrote down afterwards. Lately that has meant
+        GrapheneOS instead of an iPhone, Lightning used the way cash gets used, and AI models
+        pointed at real source code to see how much they actually find.</p>
+      <p>Posts come in English and Slovak, often the same thing twice.</p>
+    </div>
+  </section>
+
+  <section id="book">
+    <div class="sec-head">
+      <h2 editable="single-line">The novel</h2>
+      <span class="side" editable="single-line">tamers of entropy</span>
+    </div>
+    <div class="book">
+      <h3 editable="single-line">Tamers of Entropy</h3>
+      <div editable>
+        <p>Mesh networks, infrastructure, surveillance, and people who see a wall and start
+          digging. Underneath all of it, identity: none of the characters, authors or
+          collaborators use a surname, and a few of them have no name at all.</p>
+        <p>Several of the characters have their own keypairs and post as themselves. Read the
+          book and you find out what lens they were looking through.</p>
+      </div>
+      <p><a href="https://tamersofentropy.net" editable="single-line">tamersofentropy.net →</a></p>
+    </div>
+  </section>
+
+  <section id="writing">
+    <div class="sec-head">
+      <h2 editable="single-line">Writing</h2>
+      <span class="side" editable="single-line">long-form</span>
+    </div>
+    <div nc:feed="articles" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="6" nc:style="grid"></div>
+    <p class="after-feed" editable="single-line">Longer pieces, published to relays rather than to this file. Any Nostr client shows the same text at the same address, and fixing a typo later fixes it everywhere.</p>
+  </section>
+
+  <section id="notes">
+    <div class="sec-head">
+      <h2 editable="single-line">Notes</h2>
+      <span class="side" editable="single-line">short and unedited</span>
+    </div>
+    <div nc:feed="notes" nc:authors="npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" nc:limit="8" nc:style="list" nc:min-length="100"></div>
+    <p class="after-feed"><a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" editable="single-line">All of it, including the replies →</a></p>
+  </section>
+
+  <footer>
+    <div editable>
+      <p>Reach me at <a href="lightning:juraj-bzzz@pay.cypherpunk.today">juraj-bzzz@pay.cypherpunk.today</a>
+        or at the npub above. No form, no mailing list.</p>
+      <p>This page is a single HTML file that edits and republishes itself, built with
+        <a href="https://github.com/jooray/nsite-clay">nsite-clay</a>. Nothing here is stored on
+        a server anybody has to keep running.</p>
+    </div>
+  </footer>
+
+</div>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint nc-ui-chrome">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>
