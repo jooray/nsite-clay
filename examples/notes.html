@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en"
+      autosave
+      nc:owner="npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Notes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%97%92%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #16130f; --ink-dim: #6b6257; --rule: #ddd5c8; --paper: #f7f3ec;
+    --card: #fffdf8; --accent: #7b3f00; --accent-soft: #f0e4d2; --ok: #2f6b3a; --bad: #9b2c2c;
+    --shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 24px -18px rgba(0,0,0,.5);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #ece5da; --ink-dim: #9c9084; --rule: #33302b; --paper: #14120f;
+            --card: #1c1916; --accent: #e0a86a; --accent-soft: #2b2119; --ok: #7fc08c; --bad: #e08a8a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font: 16px/1.6 ui-serif, Georgia, "Iowan Old Style", serif; }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 3rem 1.25rem 6rem; }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); margin: 0 0 .3rem; letter-spacing: -.02em; }
+  .sub { color: var(--ink-dim); font-size: .95rem; margin: 0; }
+  .note { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+          padding: 1.1rem 1.25rem; margin: 0 0 .9rem; box-shadow: var(--shadow); position: relative; }
+  .note h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  .note p  { margin: 0; color: var(--ink-dim); }
+  .note .kill { position: absolute; top: .5rem; right: .5rem; opacity: 0; }
+  html[nc\:editmode="true"] .note:hover .kill { opacity: 1; }
+  .checks { list-style: none; padding: 0; margin: 0; }
+  .checks li { display: flex; gap: .6rem; align-items: baseline; padding: .35rem 0;
+               border-bottom: 1px dotted var(--rule); }
+  .checks input { accent-color: var(--accent); }
+  .checks span { flex: 1; }
+  .checks input:checked + span { text-decoration: line-through; color: var(--ink-dim); }
+  button { font: inherit; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .85rem;
+           background: var(--card); color: var(--ink); border: 1px solid var(--rule);
+           border-radius: 7px; padding: .4rem .8rem; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  button.primary:hover { filter: brightness(1.1); color: var(--paper); }
+  button[disabled] { opacity: .4; cursor: not-allowed; }
+  .bar { position: sticky; bottom: 0; margin: 2.5rem -1.25rem -6rem; padding: .75rem 1.25rem;
+         background: color-mix(in srgb, var(--paper) 88%, transparent);
+         backdrop-filter: blur(8px); border-top: 1px solid var(--rule);
+         display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+         font-family: ui-sans-serif, system-ui, sans-serif; font-size: .85rem; }
+  .bar .spacer { flex: 1; }
+  .who { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-dim); display: inline-block; }
+  html[nc\:status="saving"] .dot { background: var(--accent); animation: pulse 1s infinite; }
+  html[nc\:status="saved"]  .dot { background: var(--ok); }
+  html[nc\:status="error"]  .dot { background: var(--bad); }
+  @keyframes pulse { 50% { opacity: .25; } }
+  .only-owner { display: none; }
+  html[nc\:owner-here="true"] .only-owner { display: inline-flex; }
+  html[nc\:owner-here="true"] .not-owner  { display: none; }
+  dialog { border: 1px solid var(--rule); border-radius: 12px; background: var(--card); color: var(--ink);
+           max-width: 34rem; width: calc(100vw - 2rem); padding: 1.5rem; box-shadow: var(--shadow);
+           font-family: ui-sans-serif, system-ui, sans-serif; font-size: .9rem; }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  .vlist { list-style: none; padding: 0; margin: 1rem 0 0; max-height: 50vh; overflow: auto; }
+  .vlist li { display: flex; gap: .75rem; align-items: center; padding: .5rem 0; border-top: 1px solid var(--rule); }
+  .vlist time { font-variant-numeric: tabular-nums; color: var(--ink-dim); flex: 1; }
+  code { font: .82em ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink-dim); }
+  .hint { background: var(--accent-soft); border-radius: 8px; padding: .8rem 1rem; font-size: .85rem;
+          font-family: ui-sans-serif, system-ui, sans-serif; color: var(--ink); margin: 0 0 2rem; }
+  #qr { display: block; margin: 1rem auto; background: #fff; padding: .75rem; border-radius: 8px; }
+  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--rule);
+               display: grid; gap: .5rem; }
+  #nsec-form label { font-size: .8rem; color: var(--ink-dim); }
+  #nsec-form input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem;
+                     padding: .5rem .6rem; border: 1px solid var(--rule); border-radius: 7px;
+                     background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+  #nsec-form input:focus { outline: 2px solid var(--ink-dim); outline-offset: 1px; }
+  #nsec-form button { justify-self: start; }
+  #nsec-status { font-size: .8rem; color: var(--bad); min-height: 1.2em; }
+  .nsec-warn { font-size: .78rem; line-height: 1.5; margin: 0; }
+  /* Rich-text regions: only the owner sees an editing affordance. */
+  [editable]:focus { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { box-shadow: 0 0 0 1px var(--rule); border-radius: 3px; }
+  .prose { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+           padding: 1rem 1.25rem; box-shadow: var(--shadow); }
+  .prose > :first-child { margin-top: 0; }
+  .prose > :last-child { margin-bottom: 0; }
+  .prose h1 { font-size: 1.5rem; margin: 1.2rem 0 .4rem; }
+  .prose h2 { font-size: 1.25rem; margin: 1.1rem 0 .4rem; }
+  .prose h3 { font-size: 1.05rem; margin: 1rem 0 .35rem; }
+  .prose blockquote { margin: .8rem 0; padding-left: .9rem; border-left: 3px solid var(--accent);
+                      color: var(--ink-dim); font-style: italic; }
+  .prose pre { background: var(--accent-soft); padding: .7rem .9rem; border-radius: 7px;
+               overflow-x: auto; font: .85em ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .prose ul, .prose ol { padding-left: 1.4rem; }
+  .prose a { color: var(--accent); }
+  kbd { font: .82em ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--rule);
+        border-bottom-width: 2px; border-radius: 5px; padding: .05em .35em; background: var(--card); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 editable="single-line">Field Notes</h1>
+    <p class="sub" editable="single-line">A malleable HTML file whose host is Nostr. Everything below lives in this document&rsquo;s markup.</p>
+  </header>
+
+  <p class="hint">
+    <strong>This file edits and republishes itself.</strong> Sign in as the owner and type.
+    A save serialises the whole page, pushes it to Blossom as one content-addressed blob,
+    and republishes the nsite manifest pointing at it. The file on disk is always the
+    current state, so <code>curl</code> and crawlers see exactly what you see.
+  </p>
+
+  <section id="notes">
+    <article class="note">
+      <h3 editable="single-line">Why this works</h3>
+      <div editable><p>The DOM is the database. A save is one blob and one replaceable event — no backend anywhere in the loop.</p></div>
+      <button class="kill" title="Delete note">×</button>
+    </article>
+    <article class="note">
+      <h3 editable="single-line">Versions are free</h3>
+      <div editable><p>Blobs are immutable, so a kind-5128 snapshot event pins a version by naming a set of hashes. Nothing is ever overwritten.</p></div>
+      <button class="kill" title="Delete note">×</button>
+    </article>
+  </section>
+
+  <h2 style="font-size:1.1rem;margin:2rem 0 .5rem">Checklist</h2>
+  <ul class="checks" id="checks">
+    <li><input type="checkbox" checked><span editable="single-line no-toolbar">Prove a browser can push a blob to Blossom</span></li>
+    <li><input type="checkbox" checked><span editable="single-line no-toolbar">Prove a browser can republish an nsite manifest</span></li>
+    <li><input type="checkbox"><span editable="single-line no-toolbar">Add your own line and press Save</span></li>
+  </ul>
+
+  <h2 style="font-size:1.1rem;margin:2rem 0 .5rem">Log</h2>
+  <div class="prose" editable>
+    <p>This block is one <code>editable</code> container, so it behaves the way a document
+      should: <strong>Enter starts a new paragraph.</strong> Select any text and a toolbar
+      appears — its first control is the block menu, which turns the current paragraph into a
+      heading, a list, a quote or a code block.</p>
+    <p>Shortcuts work too: <kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘K</kbd>, <kbd>⌘⇧8</kbd> for a
+      bulleted list, <kbd>⌥1</kbd>–<kbd>⌥3</kbd> for headings. Or type
+      <code># </code>, <code>- </code> or <code>&gt; </code> at the start of a line.</p>
+    <p>Whatever you write here is markup in the file after a save — open the saved bytes and
+      the paragraphs are just paragraphs.</p>
+  </div>
+
+  <div class="bar">
+    <span class="dot"></span>
+    <span class="who" id="who">not signed in</span>
+    <span class="spacer"></span>
+    <button class="only-owner" id="add-note">+ Note</button>
+    <button class="only-owner" id="add-check">+ Task</button>
+    <button class="only-owner" id="versions">History</button>
+    <button class="not-owner" id="login">Sign in</button>
+    <button class="primary only-owner" id="save">Save</button>
+  </div>
+</div>
+
+<dialog id="signin">
+  <h3 style="margin-top:0">Sign in to edit</h3>
+  <p>This document is owned by one npub. Anyone can read it; only the owner's signature can rewrite it.</p>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button id="use-nip07">Browser extension (NIP-07)</button>
+    <button id="use-amber">Amber / remote signer</button>
+  </div>
+  <div id="amber-box" hidden>
+    <img id="qr" alt="nostrconnect QR code" width="256" height="256">
+    <p style="text-align:center"><a id="amber-link" href="#">Open in Amber</a></p>
+    <p id="amber-status" style="text-align:center;color:var(--ink-dim)">Waiting for the signer…</p>
+  </div>
+  <form id="nsec-form" autocomplete="off">
+    <label for="nsec-input">…or paste a key</label>
+    <input id="nsec-input" type="password" autocomplete="off" spellcheck="false"
+           placeholder="nsec1… · ncryptsec1… · 64 hex characters">
+    <input id="nsec-pass" type="password" autocomplete="off"
+           placeholder="password for that ncryptsec" hidden>
+    <button type="submit">Sign in with this key</button>
+    <span id="nsec-status" role="status"></span>
+    <p class="nsec-warn">The key stays in this tab’s memory and is written nowhere — but you are
+      typing it into a page served by a gateway you don’t control. Amber signs without ever
+      handing the key over; prefer it for anything you care about.</p>
+  </form>
+  <p style="margin-bottom:0;text-align:right"><button id="close-signin">Close</button></p>
+</dialog>
+
+<dialog id="history">
+  <h3 style="margin-top:0">Version history</h3>
+  <p style="color:var(--ink-dim)">Every save files a kind-5128 snapshot. Each one names an immutable set of Blossom hashes, so any version can be read back byte-exact.</p>
+  <ul class="vlist" id="vlist"></ul>
+  <p style="margin-bottom:0;text-align:right"><button id="close-history">Close</button></p>
+</dialog>
+
+<script src="/nsite-clay.js"></script>
+<script>
+(async () => {
+  await nc.ready;
+  const $ = (s) => document.querySelector(s);
+  const who = $("#who");
+
+  // Edit mode is a client-side decision; the signature on the manifest is what
+  // actually decides whether a save sticks.
+  function applyMode() {
+    const on = nc.isOwner;
+    // The runtime arms every [editable] container on login; the page only has to
+    // handle the parts that are not rich text.
+    for (const el of document.querySelectorAll("#checks input")) el.disabled = !on;
+    who.textContent = nc.pubkey
+      ? (nc.isOwner ? "owner · " + nc.npub.slice(0, 12) + "…" : "signed in as " + nc.npub.slice(0, 12) + "… (read-only)")
+      : "not signed in";
+  }
+  nc.addEventListener("nsiteclay:login", applyMode);
+  nc.addEventListener("nsiteclay:logout", applyMode);
+  applyMode();
+
+  $("#login").onclick = () => $("#signin").showModal();
+  $("#close-signin").onclick = () => $("#signin").close();
+  // Typing a key. type="password" on both fields matters twice: the browser
+  // keeps it out of autofill, and the snapshot algorithm never writes a password
+  // field's value into markup, so a save can't bake the key into the document.
+  const nsecInput = $("#nsec-input"), nsecPass = $("#nsec-pass"), nsecStatus = $("#nsec-status");
+  nsecInput.addEventListener("input", () => {
+    nsecPass.hidden = !nsecInput.value.trim().startsWith("ncryptsec");
+    nsecStatus.textContent = "";
+  });
+  $("#nsec-form").onsubmit = async (e) => {
+    e.preventDefault();
+    nsecStatus.textContent = "checking\u2026";
+    try {
+      await nc.login("nsec", { key: nsecInput.value, password: nsecPass.value });
+      nsecInput.value = ""; nsecPass.value = ""; nsecPass.hidden = true;
+      nsecStatus.textContent = "";
+      $("#signin").close();
+    } catch (err) { nsecStatus.textContent = err.message; }
+  };
+  // Belt and braces: never let a half-typed key or an error message reach a save.
+  nc.addDocumentTransform((clone) => {
+    for (const id of ["nsec-input", "nsec-pass"]) clone.querySelector("#" + id)?.removeAttribute("value");
+    const s = clone.querySelector("#nsec-status"); if (s) s.textContent = "";
+    const p = clone.querySelector("#nsec-pass"); if (p) p.setAttribute("hidden", "");
+  });
+
+  $("#use-nip07").onclick = async () => {
+    try { await nc.login("nip07"); $("#signin").close(); }
+    catch (e) { alert(e.message); }
+  };
+  $("#use-amber").onclick = () => {
+    const { uri, ready } = nc.connectRemote();
+    $("#amber-box").hidden = false;
+    $("#amber-link").href = uri;
+    $("#qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=" + encodeURIComponent(uri);
+    ready.then(() => { $("#signin").close(); })
+         .catch((e) => { $("#amber-status").textContent = "Failed: " + e.message; });
+  };
+
+  $("#add-note").onclick = () => {
+    const el = document.createElement("article");
+    el.className = "note";
+    el.innerHTML = '<h3 editable="single-line">New note</h3>' +
+                   '<div editable><p>…</p></div>' +
+                   '<button class="kill" title="Delete note">×</button>';
+    $("#notes").appendChild(el);
+    el.querySelector("h3").focus();
+    nc.editable.enable();          // pick up the newly inserted [editable] nodes
+  };
+  $("#add-check").onclick = () => {
+    const li = document.createElement("li");
+    li.innerHTML = '<input type="checkbox"><span editable="single-line no-toolbar">New task</span>';
+    $("#checks").appendChild(li);
+    li.querySelector("span").focus();
+    nc.editable.enable();
+  };
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("kill") && nc.isOwner) e.target.closest(".note").remove();
+  });
+
+  $("#save").onclick = async () => {
+    try {
+      const r = await nc.save();
+      who.textContent = `saved ${r.bytes.toLocaleString()} B · ${r.hash.slice(0, 12)}…`;
+    } catch (e) { who.textContent = "save failed: " + e.message; }
+  };
+  addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); $("#save").click(); }
+  });
+
+  $("#versions").onclick = async () => {
+    const dlg = $("#history"); dlg.showModal();
+    const list = $("#vlist"); list.innerHTML = "<li>loading…</li>";
+    const versions = await nc.versions();
+    list.innerHTML = "";
+    for (const v of versions) {
+      const li = document.createElement("li");
+      const when = new Date(v.created_at * 1000).toLocaleString();
+      li.innerHTML = `<time>${when}</time><code>${v.id.slice(0, 10)}</code>`;
+      const open = document.createElement("button");
+      open.textContent = "Read";
+      open.onclick = async () => {
+        const html = await nc.readVersion(v);
+        const w = window.open("", "_blank");
+        w.document.write(html); w.document.close();
+      };
+      const restore = document.createElement("button");
+      restore.textContent = "Restore";
+      restore.onclick = async () => {
+        restore.disabled = true; restore.textContent = "restoring…";
+        try { await nc.restore(v); restore.textContent = "restored"; nc.reloadToLatest(); }
+        catch (e) { restore.textContent = "failed"; alert(e.message); }
+      };
+      li.append(open, restore);
+      list.appendChild(li);
+    }
+    if (!versions.length) list.innerHTML = "<li>No snapshots on these relays yet.</li>";
+  };
+  $("#close-history").onclick = () => $("#history").close();
+})();
+</script>
+</body>
+</html>

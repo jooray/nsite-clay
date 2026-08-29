@@ -1,0 +1,63 @@
+{
+  "name": "nsite-clay",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A single HTML file that edits and republishes itself, hosted on Nostr. No backend.",
+  "license": "MIT-0",
+  "homepage": "https://github.com/jooray/nsite-clay",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jooray/nsite-clay.git"
+  },
+  "keywords": [
+    "nostr",
+    "nsite",
+    "blossom",
+    "nip-5a",
+    "malleable-html",
+    "self-saving",
+    "single-file",
+    "static-site",
+    "local-first",
+    "no-build",
+    "contenteditable"
+  ],
+  "bin": {
+    "nsite-clay": "./bin/nsite-clay.mjs"
+  },
+  "main": "./dist/nsite-clay.esm.js",
+  "exports": {
+    ".": "./dist/nsite-clay.esm.js",
+    "./dist/*": "./dist/*",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "bin/",
+    "examples/",
+    "icons/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/verify.mjs",
+    "prepublishOnly": "npm run build && npm test",
+    "site:build": "node build.mjs && cp dist/nsite-clay.js site/ && cp icons/nsite-clay-transparent.png icons/nsite-clay-mark.svg icons/nsite-clay.png site/"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.1",
+    "nostr-tools": "^2.10.4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "dompurify": "^3.2.3",
+    "esbuild": "^0.24.2",
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

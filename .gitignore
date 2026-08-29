@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.log
+
+# assembled into site/ by `npm run site:build`; the sources live in dist/ and icons/
+site/nsite-clay.js
+site/nsite-clay-transparent.png
+site/nsite-clay-mark.svg
+site/nsite-clay.png
+test/fixtures/nsite-clay.js

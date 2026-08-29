@@ -1,0 +1,369 @@
+// nsite-clay runtime.
+//
+// A single HTML file that edits and republishes itself. The document holds the
+// interface, the behaviour, the content and the state; a save serialises the
+// whole DOM, pushes those bytes to Blossom as one content-addressed blob, and
+// republishes the NIP-5A nsite manifest that points at it.
+//
+// There is no backend. The relays hold the manifest, the Blossom servers hold
+// the bytes, and the browser does everything in between.
+import { SimplePool, verifyEvent, nip19 } from "nostr-tools";
+import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
+import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
+import { fetchVerified, hashText, uploadAll } from "./blossom.js";
+import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
+import { snapshot } from "./snapshot.js";
+import { sanitize, sanitizeAs } from "./sanitize.js";
+import { Editable } from "./editable.js";
+
+const STORAGE = "nsite-clay.session";
+
+// A publish succeeds the moment one relay accepts it -- waiting for the whole
+// set would add every dead relay's full timeout to every save. Only when all of
+// them have refused is it an error, and then it names them, because
+// Promise.any's AggregateError says nothing useful.
+function publishToAny(pool, relays, event) {
+  const sent = pool.publish(relays, event);
+  if (!sent.length) return Promise.reject(new Error("No relays configured"));
+  return new Promise((resolve, reject) => {
+    const errors = [];
+    let pending = sent.length;
+    sent.forEach((p, i) => p.then(
+      () => resolve(event),
+      (err) => {
+        errors.push(`${relays[i]}: ${err?.message || err}`);
+        if (--pending === 0) reject(new Error(`No relay accepted kind ${event.kind}: ${errors.join("; ")}`));
+      },
+    ));
+  });
+}
+
+class NsiteClay extends EventTarget {
+  constructor(doc = document) {
+    super();
+    this.doc = doc;
+    this.cfg = readConfig(doc);
+    this.pool = new SimplePool();
+    this.signer = null;
+    this.editable = new Editable(this);
+    this.status = "idle";
+    this._subs = [];
+    this._transforms = [];
+  }
+
+  get pubkey() { return this.signer?.pubkey || null; }
+  get isOwner() { return !!this.pubkey && this.pubkey === this.cfg.owner; }
+  get npub() { return this.pubkey ? nip19.npubEncode(this.pubkey) : null; }
+
+  addDocumentTransform(fn) { this._transforms.push(fn); }
+
+  _emit(name, detail) {
+    this.dispatchEvent(new CustomEvent(name, { detail }));
+    this.doc.documentElement.setAttribute("nc:status", this.status);
+  }
+  _set(status, detail) { this.status = status; this._emit("nsiteclay:status", { status, ...detail }); }
+
+  // ---- identity -----------------------------------------------------------
+
+  async login(method = "auto", opts = {}) {
+    if (method === "auto") method = Nip07Signer.available() ? "nip07" : "nip46";
+    if (method === "nip07") this.signer = new Nip07Signer();
+    else if (method === "nsec" || method === "local") {
+      this.signer = await LocalSigner.fromInput(opts.key, opts.password);
+    }
+    else if (method === "bunker") this.signer = await Nip46Signer.fromBunkerUri(opts.uri);
+    else if (method === "nip46") return this.connectRemote(opts);
+    else throw new Error(`Unknown login method: ${method}`);
+    await this.signer.connect();
+    this._afterLogin();
+    return this.pubkey;
+  }
+
+  // Amber and friends: hand back a nostrconnect:// URI to show as a QR or a deep
+  // link, and a promise that settles when the signer answers.
+  connectRemote({ relays } = {}) {
+    const { uri, promise } = Nip46Signer.nostrconnect({
+      relays: relays || this.cfg.relays,
+      name: this.doc.title || "nsite-clay",
+    });
+    const ready = promise.then((signer) => { this.signer = signer; this._afterLogin(); return this.pubkey; });
+    this._emit("nsiteclay:connect-uri", { uri });
+    return { uri, ready };
+  }
+
+  _afterLogin() {
+    const html = this.doc.documentElement;
+    html.setAttribute("nc:pubkey", this.pubkey);
+    html.setAttribute("nc:owner-here", String(this.isOwner));
+    html.setAttribute("nc:editmode", String(this.isOwner));
+    try { localStorage.setItem(STORAGE, JSON.stringify({ kind: this.signer.kind, pubkey: this.pubkey })); } catch {}
+    if (this.isOwner) this.editable.enable();
+    this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner });
+  }
+
+  async logout() {
+    await this.signer?.close?.();
+    this.signer = null;
+    const html = this.doc.documentElement;
+    for (const a of ["nc:pubkey", "nc:owner-here"]) html.removeAttribute(a);
+    html.setAttribute("nc:editmode", "false");
+    this.editable.disable();
+    try { localStorage.removeItem(STORAGE); } catch {}
+    this._emit("nsiteclay:logout", {});
+  }
+
+  // ---- saving --------------------------------------------------------------
+
+  // Everything the runtime injected comes off the clone before serialisation,
+  // so the bytes on Blossom are the document as authored, not as running.
+  _cleanClone(clone) {
+    for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
+                     "nc:editable", "nc:outdated"]) clone.removeAttribute(a);
+    for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
+    for (const el of [...clone.querySelectorAll("dialog[open]")]) el.removeAttribute("open");
+    // `editable` survives as an inert marker; the contenteditable it implies is
+    // machinery and never reaches disk.
+    for (const el of [...clone.querySelectorAll("[contenteditable]")]) el.removeAttribute("contenteditable");
+    for (const el of [...clone.querySelectorAll("[nc\\:keep-editable]")]) el.removeAttribute("nc:keep-editable");
+  }
+
+  getHTML() {
+    return snapshot(this.doc, {
+      forSave: true,
+      transforms: [...this._transforms, (clone) => this._cleanClone(clone)],
+    });
+  }
+
+  // One save = one blob upload, one replaceable manifest, one version snapshot.
+  async save({ extraPaths = {}, snapshotVersion = true } = {}) {
+    if (!this.signer) throw new Error("Not signed in");
+    if (!this.isOwner) throw new Error("Only the site owner can save this document");
+    const html = this.getHTML();
+    // Identical bytes deduplicate to the same Blossom blob anyway; skipping
+    // spares the relays a version event that says nothing new.
+    if (hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
+    this._set("saving");
+    try {
+      const bytes = new TextEncoder().encode(html);
+      const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
+
+      const paths = { ...(await this._currentPaths()), ...extraPaths, [this.cfg.path]: hash };
+      const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
+      await publishToAny(this.pool, this.cfg.relays, manifest);
+
+      let version = null;
+      if (snapshotVersion) {
+        version = await this.signer.sign(buildSnapshot(this.cfg, manifest));
+        this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
+      }
+      this._ownHash = hash;
+      this._manifest = manifest;
+      this._set("saved", { hash, manifest, version });
+      return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths) };
+    } catch (err) {
+      this._set("error", { error: String(err) });
+      throw err;
+    }
+  }
+
+  // A manifest is the whole path table, so a save that cannot read the current
+  // one would silently unpublish every other file in the site. Fall back to what
+  // we read at boot rather than shipping a truncated table.
+  async _currentPaths() {
+    const ev = (await this.currentManifest()) || this._manifest;
+    if (ev) this._manifest = ev;
+    return ev ? manifestPaths(ev) : {};
+  }
+
+  async currentManifest() {
+    const f = this.cfg.site
+      ? { kinds: [35128], authors: [this.cfg.owner], "#d": [this.cfg.site], limit: 1 }
+      : { kinds: [15128], authors: [this.cfg.owner], limit: 1 };
+    return this.pool.get(this.cfg.relays, f);
+  }
+
+  // ---- version history -----------------------------------------------------
+
+  // Blobs are immutable and deduplicate by hash, so a version is just an event
+  // naming a set of them. Nothing is ever overwritten.
+  async versions(limit = 50) {
+    const evs = await this.pool.querySync(this.cfg.relays, {
+      kinds: [5128], authors: [this.cfg.owner], "#a": [siteAddress(this.cfg)], limit,
+    });
+    return evs.filter(verifyEvent).sort((a, b) => b.created_at - a.created_at);
+  }
+
+  // Read a past version straight from Blossom, refusing bytes that do not hash
+  // to what the snapshot claims. No gateway is trusted for this.
+  async readVersion(snapshotEvent, path = this.cfg.path) {
+    const paths = manifestPaths(snapshotEvent);
+    const servers = [...new Set([...manifestServers(snapshotEvent), ...this.cfg.servers])];
+    if (!paths[path]) throw new Error(`Version has no ${path}`);
+    return fetchVerified(servers, paths[path]);
+  }
+
+  // Publish an old version's path table as the current manifest. Nothing is
+  // destroyed: the restore is itself a new version.
+  async restore(snapshotEvent) {
+    if (!this.isOwner) throw new Error("Only the site owner can restore");
+    const paths = manifestPaths(snapshotEvent);
+    const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
+    await publishToAny(this.pool, this.cfg.relays, manifest);
+    const version = await this.signer.sign(buildSnapshot(this.cfg, manifest));
+    this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
+    this._manifest = manifest;
+    return { manifest, version };
+  }
+
+  // ---- staying current -----------------------------------------------------
+
+  // A published document hardcodes its own asset URLs and is served with a cache
+  // lifetime, so a reader who loaded it an hour ago keeps running the old bytes
+  // with no way to know. The manifest is a replaceable event, so the document
+  // watches its own: the moment the hash for its path stops matching the bytes
+  // this tab was served, a newer version exists. Push, not polling.
+  onCanonicalHost() {
+    const host = this.doc.location.hostname || "";
+    const label = host.split(".")[0].toLowerCase();
+    if (!label || !this.cfg.owner) return false;
+    const b36 = BigInt("0x" + this.cfg.owner).toString(36).padStart(50, "0");
+    return this.cfg.site
+      ? label === b36 + this.cfg.site
+      : label === nip19.npubEncode(this.cfg.owner).toLowerCase() || label === b36;
+  }
+
+  async _watchVersion() {
+    if (!this.cfg.owner || !this.cfg.autoreload) return;
+    // Only the published document at its canonical address has an update
+    // channel. A local copy, a fork on another host, or a file opened from disk
+    // is a different artifact, not an outdated version of this one.
+    if (!this.onCanonicalHost()) return;
+    try {
+      const res = await fetch(this.doc.location.href, { cache: "reload" });
+      this._servedHash = hashText(await res.text());
+    } catch { return; }
+    const f = this.cfg.site
+      ? { kinds: [35128], authors: [this.cfg.owner], "#d": [this.cfg.site] }
+      : { kinds: [15128], authors: [this.cfg.owner] };
+    this._subs.push(this.pool.subscribe(this.cfg.relays, f, {
+      onevent: (ev) => { if (verifyEvent(ev)) this._onManifest(ev); },
+    }));
+  }
+
+  _onManifest(ev) {
+    if (this._manifest && this._manifest.created_at > ev.created_at) return;
+    this._manifest = ev;
+    const latest = manifestPaths(ev)[this.cfg.path];
+    if (!latest || !this._servedHash) return;
+    if (latest === this._servedHash) return;   // we are the current version
+    if (latest === this._ownHash) return;      // our own save; this tab is ahead
+    this.doc.documentElement.setAttribute("nc:outdated", "true");
+    this._emit("nsiteclay:outdated", { served: this._servedHash, latest });
+    this._offerReload(latest);
+  }
+
+  // Reload through a fresh URL rather than location.reload(): the document and
+  // its assets are served with a cache lifetime, and a plain reload is entitled
+  // to hand back the very bytes we are trying to replace.
+  reloadToLatest(hash) {
+    const url = new URL(this.doc.location.href);
+    url.searchParams.set("v", String(hash || Date.now()).slice(0, 12));
+    this.doc.location.replace(url.toString());
+  }
+
+  // `autosave` on <html>: save once edits settle, never more often than the
+  // throttle, and always on ⌘S / Ctrl+S whether or not autosave is on.
+  _armSaving() {
+    this.doc.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (this.isOwner) this.save().catch(() => {});
+      }
+    });
+    if (!this.cfg.autosave) return;
+    const DEBOUNCE = 2500, THROTTLE = 15000;
+    let timer = null, last = 0;
+    const schedule = () => {
+      if (!this.isOwner) return;
+      clearTimeout(timer);
+      const wait = Math.max(DEBOUNCE, last + THROTTLE - Date.now());
+      timer = setTimeout(() => { last = Date.now(); this.save().catch(() => {}); }, wait);
+    };
+    this.doc.addEventListener("input", schedule, true);
+    this.addEventListener("nsiteclay:autosave-now", schedule);
+  }
+
+  get dirty() { return this._dirty === true; }
+  set dirty(v) { this._dirty = !!v; }
+
+  // Tracked for the document rather than by it. Any typing into editable markup
+  // or a form control counts; a successful save clears it. Password fields are
+  // excluded: a half-typed key is not work worth keeping.
+  _trackDirty() {
+    this.doc.addEventListener("input", (e) => {
+      const el = e.target;
+      if (!el || el.type === "password") return;
+      if (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) this._dirty = true;
+    }, true);
+    this.addEventListener("nsiteclay:status", (e) => {
+      if (e.detail?.status === "saved") this._dirty = false;
+    });
+  }
+
+  _offerReload(latest) {
+    if (this._reloadOffered) return;
+    this._reloadOffered = true;
+    const banner = this.doc.createElement("div");
+    banner.setAttribute("nc:chrome", "");       // never reaches a save
+    banner.setAttribute("role", "status");
+    banner.style.cssText = "position:fixed;z-index:2147483647;left:50%;bottom:1rem;" +
+      "transform:translateX(-50%);display:flex;gap:.75rem;align-items:center;" +
+      "font:14px/1.4 ui-sans-serif,system-ui,sans-serif;padding:.6rem .9rem;border-radius:10px;" +
+      "background:#101418;color:#f4f6f7;box-shadow:0 8px 30px -10px rgba(0,0,0,.6)";
+    const msg = this.doc.createElement("span");
+    const btn = this.doc.createElement("button");
+    btn.textContent = "Reload";
+    btn.style.cssText = "font:inherit;cursor:pointer;border:1px solid #4a5560;background:#1c2329;" +
+      "color:inherit;border-radius:7px;padding:.25rem .7rem";
+    btn.onclick = () => this.reloadToLatest(latest);
+    banner.append(msg, btn);
+    this.doc.body.appendChild(banner);
+
+    if (this.dirty) {
+      msg.textContent = "A newer version of this page was published — you have unsaved changes.";
+      return;
+    }
+    let n = 5;
+    msg.textContent = `A newer version was published. Reloading in ${n}…`;
+    const tick = setInterval(() => {
+      if (this.dirty) { clearInterval(tick); msg.textContent = "A newer version was published."; return; }
+      if (--n <= 0) { clearInterval(tick); this.reloadToLatest(latest); return; }
+      msg.textContent = `A newer version was published. Reloading in ${n}…`;
+    }, 1000);
+  }
+
+  destroy() { for (const s of this._subs) s.close?.(); this.pool.close(this.cfg.relays); }
+}
+
+const nc = new NsiteClay();
+nc.ready = (async () => {
+  if (document.readyState === "loading") {
+    await new Promise((r) => document.addEventListener("DOMContentLoaded", r, { once: true }));
+  }
+  nc.cfg = readConfig(document);
+  nc._trackDirty();
+  nc._armSaving();
+  nc._watchVersion();
+  if (nc.cfg.owner) nc.currentManifest().then((ev) => { if (ev) nc._manifest = ev; }).catch(() => {});
+  document.documentElement.setAttribute("nc:ready", "true");
+  nc._emit("nsiteclay:ready", {});
+  return nc;
+})();
+
+Object.assign(nc, {
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner,
+  siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
+});
+
+if (typeof window !== "undefined") window.nsiteclay = window.nc = nc;
+export default nc;

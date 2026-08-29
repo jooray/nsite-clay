@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay — an HTML file that edits and republishes itself</title>
+<meta name="description" content="A single HTML file that edits and republishes itself, hosted on Nostr. No backend, no build step, no account.">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<meta property="og:title" content="nsite-clay">
+<meta property="og:description" content="A single HTML file that edits and republishes itself. The host is Nostr.">
+<meta property="og:image" content="/nsite-clay.png">
+<style>
+  :root {
+    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
+    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
+    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16.5px/1.65 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 78% -12%, rgba(139,100,225,.20), transparent 62%),
+      radial-gradient(46rem 34rem at 6% 8%, rgba(86,60,170,.16), transparent 60%);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 54rem; margin: 0 auto; padding: 0 1.4rem; }
+  a { color: var(--violet); text-decoration-color: rgba(171,130,241,.35); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .88em var(--mono); color: #D6C4F5; }
+  h2 { font-size: 1.45rem; letter-spacing: -.015em; margin: 0 0 .6rem; }
+  h3 { font-size: 1.02rem; margin: 0 0 .35rem; }
+  p { margin: 0 0 1rem; }
+  section { padding: 3.4rem 0; border-top: 1px solid var(--edge); }
+  .lede { color: var(--ink-dim); }
+
+  /* hero */
+  header { padding: 4.5rem 0 3.6rem; text-align: center; }
+  header img { width: 132px; height: 132px; filter: drop-shadow(0 18px 40px rgba(86,60,170,.55)); }
+  h1 { font-size: clamp(2.5rem, 8vw, 4rem); margin: 1rem 0 .4rem; letter-spacing: -.035em;
+       background: linear-gradient(100deg, #FFFFFF, var(--violet)); -webkit-background-clip: text;
+       background-clip: text; color: transparent; }
+  .tag { font-size: clamp(1.02rem, 2.6vw, 1.2rem); color: var(--ink-dim); max-width: 34rem;
+         margin: 0 auto 1.8rem; }
+  .cta { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: .5rem; font: 600 .92rem/1 var(--sans);
+         padding: .78rem 1.25rem; border-radius: 10px; text-decoration: none;
+         border: 1px solid var(--edge); background: var(--panel); color: var(--ink); }
+  .btn:hover { border-color: var(--violet-3); color: var(--ink); }
+  .btn.primary { background: linear-gradient(160deg, var(--violet-2), var(--violet-3));
+                 border-color: transparent; color: #12081F; }
+  .btn.primary:hover { filter: brightness(1.09); color: #12081F; }
+
+  /* the loop */
+  .steps { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+           margin: 1.6rem 0 0; padding: 0; list-style: none; }
+  .steps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+              padding: 1.1rem 1.15rem; }
+  .steps .n { font: 600 .72rem/1 var(--mono); letter-spacing: .1em; color: var(--violet);
+              display: block; margin-bottom: .5rem; }
+  .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
+
+  /* code */
+  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
+        padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
+        font: .855rem/1.65 var(--mono); color: #D9CCF3; }
+  pre .c { color: var(--ink-faint); }
+  pre .k { color: var(--violet); }
+  pre .s { color: #9FD8B0; }
+
+  /* key box */
+  .keybox { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+            padding: 1.1rem 1.15rem; margin: 1.2rem 0; }
+  .keybox label { display: block; font: 600 .7rem/1 var(--mono); letter-spacing: .1em;
+                  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .55rem; }
+  .keyrow { display: flex; gap: .6rem; align-items: center; }
+  .keyrow input { flex: 1; min-width: 0; font: .82rem var(--mono); padding: .6rem .7rem;
+                  border-radius: 8px; border: 1px solid var(--edge); background: #0B0416;
+                  color: var(--ink); }
+  .keyrow button { font: 600 .82rem var(--sans); padding: .6rem .9rem; border-radius: 8px;
+                   border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink);
+                   cursor: pointer; white-space: nowrap; }
+  .keyrow button:hover { border-color: var(--violet-3); }
+
+  .cols { display: grid; gap: 1.6rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+  .limits { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .8rem; }
+  .limits li { padding-left: 1.4rem; position: relative; color: var(--ink-dim); font-size: .95rem; }
+  .limits li::before { content: "—"; position: absolute; left: 0; color: var(--violet-3); }
+  .limits strong { color: var(--ink); font-weight: 600; }
+
+  footer { border-top: 1px solid var(--edge); padding: 2.6rem 0 3.6rem; color: var(--ink-faint);
+           font-size: .88rem; }
+  footer a { color: var(--ink-dim); }
+
+  /* editing affordances, owner only */
+  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { box-shadow: 0 0 0 1px var(--edge); border-radius: 4px; }
+  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
+         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
+         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
+  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
+                background: var(--bg-2); color: var(--ink); cursor: pointer; }
+  .bar button:hover { border-color: var(--violet-3); }
+  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600; }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
+  html[nc\:status="saving"] .dot { background: var(--violet); }
+  html[nc\:status="saved"] .dot { background: #7FC08C; }
+  html[nc\:status="error"] .dot { background: #E08A8A; }
+  html[nc\:owner-here="true"] .save { display: inline-block; }
+  .save { display: none; }
+  dialog { border: 1px solid var(--edge); border-radius: 14px; background: var(--panel);
+           color: var(--ink); max-width: 32rem; width: calc(100vw - 2rem); padding: 1.4rem;
+           font: .92rem var(--sans); }
+  dialog::backdrop { background: rgba(6,2,12,.7); }
+  dialog h3 { margin-top: 0; }
+  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--edge);
+               display: grid; gap: .5rem; }
+  #nsec-form label { font-size: .8rem; color: var(--ink-dim); }
+  #nsec-form input { font: .8rem var(--mono); padding: .5rem .6rem; border: 1px solid var(--edge);
+                     border-radius: 7px; background: #0B0416; color: var(--ink); width: 100%; }
+  #nsec-form button { justify-self: start; font: inherit; padding: .45rem .85rem; border-radius: 7px;
+                      border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink); cursor: pointer; }
+  #nsec-status { font-size: .8rem; color: #E08A8A; min-height: 1.2em; }
+  .warn { font-size: .78rem; color: var(--ink-faint); margin: 0; }
+  #qr { display: block; margin: 1rem auto; background: #fff; padding: .7rem; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <img src="/nsite-clay-transparent.png" alt="nsite-clay">
+    <h1 editable="single-line">nsite-clay</h1>
+    <p class="tag" editable="single-line">A single HTML file that edits and republishes itself. No backend, no build step, no account.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
+      <a class="btn" href="#try">Try the live demo</a>
+      <a class="btn" href="#deploy">Deploy your own</a>
+    </div>
+  </header>
+
+  <section id="what">
+    <h2 editable="single-line">What it is</h2>
+    <div editable>
+      <p class="lede">Open the page, sign in with your key, and type into it. The document
+        serialises its own DOM, pushes those bytes to a Blossom server as one content-addressed
+        blob, and republishes the NIP-5A nsite manifest that points at it. Anyone else loading
+        the page gets a plain static document with your changes already in it.</p>
+      <p class="lede">Nothing in that loop is a server you have to run. Relays hold the manifest,
+        Blossom servers hold the bytes, and the browser does the rest. Ownership is a keypair, so
+        who may edit this page is not a row in somebody else's database.</p>
+    </div>
+
+    <ol class="steps">
+      <li><span class="n">01 SNAPSHOT</span>
+        <p>The page clones its own DOM, cleans it up, and serialises the whole document.</p></li>
+      <li><span class="n">02 BLOSSOM</span>
+        <p>Those bytes go to a Blossom server as a blob addressed by its own sha256.</p></li>
+      <li><span class="n">03 MANIFEST</span>
+        <p>A replaceable nsite event maps the path to that hash. Publishing it is the deploy.</p></li>
+    </ol>
+    <p style="margin-top:1.4rem" class="lede">This page you are reading is one of those documents.
+      It runs nsite-clay and saves itself the same way.</p>
+  </section>
+
+  <section id="document">
+    <h2 editable="single-line">The whole integration</h2>
+    <p class="lede" editable="single-line">One attribute says who owns the file, one marks what people can type into, one script tag does the rest.</p>
+<pre><span class="c">&lt;!DOCTYPE html&gt;</span>
+&lt;html lang="en" <span class="k">autosave</span> <span class="k">nc:owner</span>=<span class="s">"npub1…"</span>&gt;
+&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Notes&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1 <span class="k">editable</span>="single-line"&gt;My notes&lt;/h1&gt;
+  &lt;div <span class="k">editable</span>&gt;
+    &lt;p&gt;Type anything here.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;script src="/nsite-clay.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+    <div editable>
+      <p class="lede">Save it, then open the file in a text editor: your words are in the HTML.
+        The DOM is the database, so there is no other place for state to live.</p>
+    </div>
+  </section>
+
+  <section id="editing">
+    <h2 editable="single-line">Editing</h2>
+    <div class="cols">
+      <div editable>
+        <p class="lede">Mark a container <code>editable</code> and it becomes rich text for the
+          owner and ordinary markup for everybody else.</p>
+        <p class="lede">Enter starts a new paragraph. Selecting text raises a floating toolbar
+          whose first control is a block menu: Paragraph, Heading 1–3, Quote, Code block.</p>
+      </div>
+      <div editable>
+        <p class="lede">Keyboard shortcuts work as you would expect, and typing <code>#&nbsp;</code>,
+          <code>-&nbsp;</code> or <code>&gt;&nbsp;</code> at the start of a line does too.</p>
+        <p class="lede">What reaches the file is markup a person could have written by hand. The
+          toolbar and the debris browsers emit from editing commands never get saved.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="try">
+    <h2 editable="single-line">Try it, with a real key</h2>
+    <div editable>
+      <p class="lede">A live document is published under a throwaway key, and the key is public
+        on purpose. Open it, press Sign in, paste the nsec, and edit the page. Your save
+        rewrites the real document for everyone.</p>
+    </div>
+    <p><a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Open the demo</a></p>
+    <div class="keybox">
+      <label for="demokey">Demo key — public, shared, treat it as a sandbox</label>
+      <div class="keyrow">
+        <input id="demokey" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y">
+        <button type="button" id="copykey">Copy</button>
+      </div>
+    </div>
+    <p class="warn">Anyone can rewrite that page, so whatever you find there is other people's
+      leftovers. Never paste a key you care about into a page you did not publish yourself.</p>
+  </section>
+
+  <section id="deploy">
+    <h2 editable="single-line">Deploy your own</h2>
+    <div editable>
+      <p class="lede">The CLI publishes the first version. After that the page saves itself, and
+        you only come back for changes made outside the browser.</p>
+    </div>
+<pre><span class="c"># scaffold a site and generate a key for it</span>
+npx nsite-clay init mysite
+
+<span class="c"># publish it</span>
+npx nsite-clay deploy mysite --sec=nsec1…
+
+<span class="c"># or keep the key off this machine and sign through a bunker</span>
+npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
+    <div editable>
+      <p class="lede">Your site lands at <code>https://&lt;npub&gt;.nsite.lol/</code>. Named sites
+        get their own subdomain, every save files a permanent version with its own URL, and any
+        NIP-5A gateway serves the same site — point a CNAME at one for a custom domain.</p>
+      <p class="lede">Assets are published at paths carrying their content hash, and each
+        document watches its own manifest and reloads itself when a newer version appears. Nobody
+        needs to know what a hard refresh is.</p>
+    </div>
+    <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Full deployment guide</a></p>
+  </section>
+
+  <section id="limits">
+    <h2 editable="single-line">What it does not do</h2>
+    <ul class="limits">
+      <li><strong>One key writes the document.</strong> The manifest carries one signature. No
+        shared editing, no per-visitor content.</li>
+      <li><strong>No conflict detection.</strong> A replaceable event has no compare-and-swap, so
+        two devices editing at once will silently lose one side's work.</li>
+      <li><strong>The gateway is trusted for the first byte.</strong> The entry document cannot
+        verify itself. Everything it depends on is hash-checked, and the manifest, blobs and
+        history all live outside the gateway, so you can verify through another one or run your
+        own.</li>
+      <li><strong>No server code.</strong> If your project needs a backend, this is the wrong
+        tool.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>MIT-0. The malleable-HTML idea and the editing model come from
+      <a href="https://hyperclay.com">HyperClay</a> and <a href="https://clayjs.com">ClayJS</a>.
+      Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
+      nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
+    <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
+  </footer>
+</div>
+
+<div class="bar">
+  <span class="dot"></span>
+  <span id="who">read-only</span>
+  <button id="signin-btn">Sign in</button>
+  <button class="save" id="save">Save</button>
+</div>
+
+<dialog id="signin">
+  <h3>Sign in to edit this page</h3>
+  <p class="lede">Only the owner's signature can republish it. Everyone else gets the page you
+    are looking at now.</p>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button class="btn" id="use-nip07">Browser extension</button>
+    <button class="btn" id="use-amber">Amber / remote signer</button>
+  </div>
+  <div id="amber-box" hidden>
+    <img id="qr" alt="nostrconnect QR code" width="230" height="230">
+    <p style="text-align:center"><a id="amber-link" href="#">Open in Amber</a></p>
+  </div>
+  <form id="nsec-form" autocomplete="off">
+    <label for="nsec-input">…or paste a key</label>
+    <input id="nsec-input" type="password" autocomplete="off" spellcheck="false"
+           placeholder="nsec1… · ncryptsec1… · 64 hex characters">
+    <input id="nsec-pass" type="password" autocomplete="off" placeholder="password for that ncryptsec" hidden>
+    <button type="submit">Sign in with this key</button>
+    <span id="nsec-status" role="status"></span>
+    <p class="warn">The key stays in this tab's memory and is written nowhere, but you are typing
+      it into a page served by a gateway. A remote signer never hands the key over.</p>
+  </form>
+  <p style="text-align:right;margin:1rem 0 0"><button class="btn" id="close-signin">Close</button></p>
+</dialog>
+
+<script src="/nsite-clay.js"></script>
+<script>
+(async () => {
+  await nc.ready;
+  const $ = (s) => document.querySelector(s);
+
+  const setMode = () => {
+    $("#who").textContent = nc.pubkey
+      ? (nc.isOwner ? "owner · " + nc.npub.slice(0, 12) + "…" : "signed in, not the owner")
+      : "read-only";
+    $("#signin-btn").textContent = nc.pubkey ? "Sign out" : "Sign in";
+  };
+  nc.addEventListener("nsiteclay:login", setMode);
+  nc.addEventListener("nsiteclay:logout", setMode);
+  setMode();
+
+  $("#signin-btn").onclick = () => (nc.pubkey ? nc.logout() : $("#signin").showModal());
+  $("#close-signin").onclick = () => $("#signin").close();
+  $("#use-nip07").onclick = async () => {
+    try { await nc.login("nip07"); $("#signin").close(); } catch (e) { $("#nsec-status").textContent = e.message; }
+  };
+  $("#use-amber").onclick = () => {
+    const { uri, ready } = nc.connectRemote();
+    $("#amber-box").hidden = false;
+    $("#amber-link").href = uri;
+    $("#qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=" + encodeURIComponent(uri);
+    ready.then(() => $("#signin").close()).catch((e) => { $("#nsec-status").textContent = e.message; });
+  };
+
+  const inp = $("#nsec-input"), pass = $("#nsec-pass"), status = $("#nsec-status");
+  inp.addEventListener("input", () => {
+    pass.hidden = !inp.value.trim().startsWith("ncryptsec");
+    status.textContent = "";
+  });
+  $("#nsec-form").onsubmit = async (e) => {
+    e.preventDefault();
+    status.textContent = "checking…";
+    try {
+      await nc.login("nsec", { key: inp.value, password: pass.value });
+      inp.value = ""; pass.value = ""; pass.hidden = true; status.textContent = "";
+      $("#signin").close();
+    } catch (err) { status.textContent = err.message; }
+  };
+
+  $("#save").onclick = async () => {
+    try {
+      const r = await nc.save();
+      $("#who").textContent = r.skipped ? "nothing changed" : `saved ${r.bytes.toLocaleString()} B`;
+    } catch (e) { $("#who").textContent = "save failed: " + e.message; }
+  };
+
+  $("#copykey").onclick = async () => {
+    const el = $("#demokey");
+    try { await navigator.clipboard.writeText(el.value); }
+    catch { el.select(); document.execCommand("copy"); }
+    const b = $("#copykey"); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1400);
+  };
+
+  // Nothing half-typed and no transient status text should ever reach the file.
+  nc.addDocumentTransform((clone) => {
+    for (const id of ["nsec-input", "nsec-pass"]) clone.querySelector("#" + id)?.removeAttribute("value");
+    const s = clone.querySelector("#nsec-status"); if (s) s.textContent = "";
+    clone.querySelector("#nsec-pass")?.setAttribute("hidden", "");
+    const box = clone.querySelector("#amber-box"); if (box) box.setAttribute("hidden", "");
+    const qr = clone.querySelector("#qr"); if (qr) qr.removeAttribute("src");
+  });
+})();
+</script>
+</body>
+</html>
