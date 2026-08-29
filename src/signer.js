@@ -107,7 +107,7 @@ export class Nip46Signer {
 
   // Client-initiated flow, the one Amber wants. Returns { uri, promise }:
   // render `uri` as a QR / deep link, await `promise` for the connected signer.
-  static nostrconnect({ relays, name = "NostrClay", url = (typeof location !== "undefined" ? location.origin : ""), perms = DEFAULT_PERMS } = {}) {
+  static nostrconnect({ relays, name = "nsite-clay", url = (typeof location !== "undefined" ? location.origin : ""), perms = DEFAULT_PERMS } = {}) {
     const clientSecret = generateSecretKey();
     const clientPubkey = getPublicKey(clientSecret);
     const secret = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));

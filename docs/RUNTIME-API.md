@@ -90,7 +90,7 @@ Helpers re-exported for convenience: `nc.nip19`, `nc.verifyEvent`, `nc.sanitize`
 ```
 
 Tokens combine: `single-line`, `no-toolbar`, `toolbar-on-select`, `no-markdown`.
-Regions arm for the owner on login and disarm on logout; `<html nc:editable="true">` while armed.
+Editable containers arm for the owner on login and disarm on logout; `<html nc:editable="true">` while armed.
 
 Toolbar: block menu (Paragraph, Heading 1–3, Quote, Code block), bold, italic, strikethrough,
 bulleted list, numbered list, link, clear formatting.

@@ -35,7 +35,7 @@ function stripDebris(root) {
 }
 
 function stripMarked(root, tokens) {
-  for (const el of [...root.querySelectorAll("[clay], [nc\\:region], [no-save], [no-snapshot]")]) {
+  for (const el of [...root.querySelectorAll("[clay], [no-save], [no-snapshot]")]) {
     const set = new Set((el.getAttribute("clay") || "").split(/\s+/).filter(Boolean));
     if (el.hasAttribute("no-save")) set.add("no-save");
     if (el.hasAttribute("no-snapshot")) set.add("no-snapshot");
@@ -44,7 +44,7 @@ function stripMarked(root, tokens) {
 }
 
 // `transforms` run on the clone before stripping, so a document can reshape
-// what gets written — this is where compaction folds the live layer in.
+// what gets written before it is captured.
 export function snapshot(doc = document, { forSave = true, transforms = [] } = {}) {
   const clone = doc.documentElement.cloneNode(true);
   syncFormState(clone);
