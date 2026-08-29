@@ -39,7 +39,11 @@ export function readConfig(doc = document) {
     // nsite addressing: empty name => root site (kind 15128), else named (35128)
     site: (attr("nc:site") || "").trim(),
     path: (attr("nc:path") || "/index.html").trim(),
+    // Off unless asked for: every save stores the whole page again and files a
+    // version, so a timer turns one paragraph into a dozen published versions.
     autosave: html.hasAttribute("autosave") || html.hasAttribute("nc:autosave"),
+    // "hash" keeps the editing controls hidden until the URL ends in #edit.
+    editGate: (attr("nc:edit-gate") || "always").toLowerCase() === "hash" ? "hash" : "always",
     // A saved document hardcodes its own asset URLs and has no update channel,
     // so it watches its own manifest instead. Opt out with nc:autoreload="false".
     autoreload: (attr("nc:autoreload") || "").toLowerCase() !== "false",

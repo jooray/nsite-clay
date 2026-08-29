@@ -1,0 +1,123 @@
+/* nsite-clay base stylesheet.
+ *
+ * Everything the engine needs, in one file every template links. A template
+ * sets the variables below and styles its own content; nothing here should
+ * need editing to change how a page looks, and changing the engine should not
+ * mean touching ten template files.
+ *
+ * Templates override the variables, not the rules. */
+
+:root {
+  /* The only things a template is expected to set. */
+  --nc-ink: #16130f;            /* body text */
+  --nc-ink-dim: #6b6257;        /* secondary text */
+  --nc-bg: #ffffff;             /* page background */
+  --nc-panel: #f6f4f0;          /* chrome and cards */
+  --nc-edge: #ddd5c8;           /* borders */
+  --nc-accent: #7b3f00;         /* focus rings, primary actions */
+  --nc-accent-ink: #ffffff;     /* text on the accent */
+  --nc-ok: #2f6b3a;
+  --nc-bad: #9b2c2c;
+  --nc-radius: 10px;
+  --nc-chrome-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ---- editing affordances ------------------------------------------------ */
+
+[editable]:focus {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+html[nc\:editable="true"] [editable]:hover:not(:focus) {
+  box-shadow: 0 0 0 1px var(--nc-edge);
+  border-radius: 3px;
+}
+
+/* ---- the edit gate ------------------------------------------------------
+ * With nc:edit-gate="hash" on <html>, the runtime sets nc:editing to false
+ * until the URL ends in #edit. Anything marked nc-ui disappears with it, so a
+ * reader gets the page and nothing else. Templates put their toolbar, their
+ * sign-in panel and any other control inside an element carrying nc-ui. */
+
+html[nc\:editing="false"] .nc-ui-chrome { display: none !important; }
+
+/* ---- the standard toolbar ----------------------------------------------- */
+
+.nc-bar {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 60;
+  display: flex; gap: .5rem; align-items: center;
+  padding: .5rem .6rem; border-radius: 11px;
+  background: var(--nc-panel); border: 1px solid var(--nc-edge); color: var(--nc-ink);
+  font: .82rem/1.3 var(--nc-chrome-font);
+  box-shadow: 0 12px 34px -18px rgba(0, 0, 0, .55);
+}
+.nc-bar button {
+  font: inherit; cursor: pointer; white-space: nowrap;
+  padding: .38rem .75rem; border-radius: 7px;
+  border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink);
+}
+.nc-bar button:hover { border-color: var(--nc-accent); }
+.nc-bar button.nc-primary {
+  background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); font-weight: 600;
+}
+.nc-bar .nc-who { color: var(--nc-ink-dim); font: .78rem var(--nc-mono); }
+.nc-bar .nc-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--nc-ink-dim); flex: 0 0 auto; }
+html[nc\:status="saving"] .nc-bar .nc-dot { background: var(--nc-accent); animation: nc-pulse 1s infinite; }
+html[nc\:status="saved"]  .nc-bar .nc-dot { background: var(--nc-ok); }
+html[nc\:status="error"]  .nc-bar .nc-dot { background: var(--nc-bad); }
+@keyframes nc-pulse { 50% { opacity: .3; } }
+
+/* Owner-only controls. The runtime stamps nc:owner-here on <html>. */
+.nc-owner-only { display: none; }
+html[nc\:owner-here="true"] .nc-owner-only { display: inline-flex; }
+html[nc\:owner-here="true"] .nc-guest-only { display: none; }
+
+/* A hint for the owner who has not added #edit yet. Templates may show it. */
+.nc-edit-hint { position: fixed; right: 1rem; bottom: 1rem; z-index: 59;
+  font: .75rem var(--nc-mono); color: var(--nc-ink-dim); opacity: .5; }
+html[nc\:editing="true"] .nc-edit-hint { display: none; }
+
+/* ---- media inserted by the toolbar -------------------------------------- */
+
+.nc-figure { margin: 1.4rem 0; }
+.nc-figure img, .nc-figure video { width: 100%; height: auto; display: block; border-radius: var(--nc-radius); }
+.nc-figure figcaption { font-size: .85rem; color: var(--nc-ink-dim); margin-top: .45rem; }
+.nc-embed .nc-embed-link { position: relative; display: block; }
+.nc-embed-play {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 3rem; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .75);
+}
+
+/* ---- Nostr feeds --------------------------------------------------------
+ * feed.js injects a minimal fallback; these override it so a feed inherits the
+ * template rather than looking bolted on. */
+
+.nc-feed { display: grid; gap: 1rem; }
+.nc-feed-grid { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.nc-item {
+  border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+  padding: .9rem 1rem; overflow: hidden; background: var(--nc-panel);
+}
+.nc-by { display: flex; align-items: center; gap: .55rem; font-size: .82rem; margin-bottom: .5rem; opacity: .75; }
+.nc-by a { text-decoration: none; color: inherit; }
+.nc-by a:hover { text-decoration: underline; }
+.nc-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.nc-by .nc-when { margin-left: auto; }
+.nc-name { font-weight: 500; }
+.nc-title { font-size: 1.05rem; margin: .2rem 0 .35rem; }
+.nc-title a { text-decoration: none; color: inherit; }
+.nc-summary, .nc-text { margin: 0; font-size: .93rem; color: var(--nc-ink-dim); overflow-wrap: anywhere; }
+.nc-text p { margin: 0 0 .5rem; }
+.nc-cover { width: 100%; height: 9rem; object-fit: cover; border-radius: 8px; margin-bottom: .5rem; }
+.nc-pics { display: grid; gap: .35rem; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); margin-bottom: .5rem; }
+.nc-pics img { width: 100%; border-radius: 8px; object-fit: cover; }
+.nc-tags { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; font-size: .75rem; opacity: .6; }
+.nc-feed-status { color: var(--nc-ink-dim); font-size: .9rem; }
+
+/* ---- respect the reader ------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

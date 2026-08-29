@@ -264,15 +264,15 @@
                    '<div editable><p>…</p></div>' +
                    '<button class="kill" title="Delete note">×</button>';
     $("#notes").appendChild(el);
+    nc.editable.refresh();        // arm the newly inserted [editable] nodes first
     el.querySelector("h3").focus();
-    nc.editable.enable();          // pick up the newly inserted [editable] nodes
   };
   $("#add-check").onclick = () => {
     const li = document.createElement("li");
     li.innerHTML = '<input type="checkbox"><span editable="single-line no-toolbar">New task</span>';
     $("#checks").appendChild(li);
+    nc.editable.refresh();
     li.querySelector("span").focus();
-    nc.editable.enable();
   };
   document.addEventListener("click", (e) => {
     if (e.target.classList.contains("kill") && nc.isOwner) e.target.closest(".note").remove();

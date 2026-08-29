@@ -133,6 +133,24 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("nc:keep-editable does not", !edited.includes("nc:keep-editable"));
   t("the toolbar never reaches the file", !edited.includes('role="toolbar"'));
 
+  // A page that inserts content while editing must be able to arm it.
+  {
+    const fresh = document.createElement("div");
+    fresh.setAttribute("editable", "");
+    fresh.innerHTML = "<p>added while editing</p>";
+    document.body.appendChild(fresh);
+    t("a region added while editing is not armed on its own", !fresh.isContentEditable);
+    nc.editable.enable();
+    t("calling enable() again arms it", fresh.isContentEditable);
+    const line = document.createElement("h4");
+    line.setAttribute("editable", "single-line");
+    document.body.appendChild(line);
+    nc.editable.refresh();
+    t("refresh() does the same", line.isContentEditable);
+    t("the arming marker never reaches the file", !nc.getHTML().includes("nc:armed"));
+    fresh.remove(); line.remove();
+  }
+
   nc.editable.disable();
   t("disarmed when the owner signs out", !prose.isContentEditable);
 
@@ -222,6 +240,29 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     const off = nc._referencedPaths('<html><body><img src="https://example.com/x.png"><a href="#top">t</a></body></html>');
     t("§4.2 external and fragment links are not paths", off.length === 0, off.join(","));
   }
+
+  // --- settings live in the document ---------------------------------------
+  t("autosave is off unless the page asks for it", nc.settings.autosave === false);
+  nc.settings.autosave = true;
+  t("turning it on marks the page", document.documentElement.hasAttribute("nc:autosave"));
+  t("and survives a save", nc.getHTML().includes("nc:autosave"));
+  nc.settings.autosave = false;
+  t("turning it off clears both spellings",
+    !document.documentElement.hasAttribute("nc:autosave") && !document.documentElement.hasAttribute("autosave"));
+
+  t("the editing controls are open by default", nc.editRequested === true);
+  nc.settings.editGate = "hash";
+  t("gating on hash closes them without #edit", nc.editRequested === false);
+  t("and CSS can see it", document.documentElement.getAttribute("nc:editing") === "false");
+  location.hash = "#edit";
+  nc.applyEditGate();
+  t("#edit opens them", nc.editRequested === true &&
+    document.documentElement.getAttribute("nc:editing") === "true");
+  t("the gate is saved with the page", nc.getHTML().includes('nc:edit-gate="hash"'));
+  t("runtime state is not", !/nc:editing=/.test(nc.getHTML()));
+  location.hash = "";
+  nc.settings.editGate = "always";
+  nc._dirty = false;
 
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));

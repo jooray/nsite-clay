@@ -50,20 +50,33 @@ export class Editable {
 
   elements() { return [...this.doc.querySelectorAll("[editable]")]; }
 
+  // Arming is per element and repeatable on purpose. A page that inserts a new
+  // note, row or card calls this again to pick it up, and calling it when
+  // editing is already on must arm the new nodes rather than return early.
   enable() {
-    if (this.on) return;
+    const first = !this.on;
     this.on = true;
-    try { this.doc.execCommand("defaultParagraphSeparator", false, "p"); } catch {}
-    for (const el of this.elements()) {
-      const t = tokensOf(el);
-      el.contentEditable = "true";
-      el.setAttribute("nc:keep-editable", "");      // we manage it; the save strips it
-      el.spellcheck = true;
-      if (t.has("single-line")) el.addEventListener("keydown", blockEnter);
+    if (first) {
+      try { this.doc.execCommand("defaultParagraphSeparator", false, "p"); } catch {}
+      this._bind();
     }
-    this._bind();
+    for (const el of this.elements()) this.arm(el);
     this.doc.documentElement.setAttribute("nc:editable", "true");
   }
+
+  // Idempotent: the guard attribute stops a second call stacking another
+  // keydown listener on a single-line region.
+  arm(el) {
+    if (el.hasAttribute("nc:armed")) return el;
+    el.setAttribute("nc:armed", "");
+    el.contentEditable = "true";
+    el.setAttribute("nc:keep-editable", "");
+    el.spellcheck = true;
+    if (tokensOf(el).has("single-line")) el.addEventListener("keydown", blockEnter);
+    return el;
+  }
+
+  refresh() { if (this.on) this.enable(); }
 
   disable() {
     if (!this.on) return;
@@ -71,6 +84,7 @@ export class Editable {
     for (const el of this.elements()) {
       el.removeAttribute("contenteditable");
       el.removeAttribute("nc:keep-editable");
+      el.removeAttribute("nc:armed");
       el.removeEventListener("keydown", blockEnter);
     }
     this._unbind();

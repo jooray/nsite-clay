@@ -18,6 +18,7 @@ import { Editable } from "./editable.js";
 import { Media, parseVideoUrl } from "./media.js";
 import { Feed, readFeedConfig } from "./feed.js";
 import { Compose } from "./compose.js";
+import { Settings } from "./settings.js";
 import { toast, field, modal } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
@@ -53,6 +54,7 @@ class NsiteClay extends EventTarget {
     this.media = new Media(this);
     this.feed = new Feed(this);
     this.compose = new Compose(this);
+    this.settings = new Settings(this);
     this.status = "idle";
     this._subs = [];
     this._transforms = [];
@@ -104,7 +106,7 @@ class NsiteClay extends EventTarget {
     html.setAttribute("nc:owner-here", String(this.isOwner));
     html.setAttribute("nc:editmode", String(this.isOwner));
     try { localStorage.setItem(STORAGE, JSON.stringify({ kind: this.signer.kind, pubkey: this.pubkey })); } catch {}
-    if (this.isOwner) this.editable.enable();
+    if (this.isOwner && this.editRequested) this.editable.enable();
     this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner });
   }
 
@@ -124,8 +126,10 @@ class NsiteClay extends EventTarget {
   // Everything the runtime injected comes off the clone before serialisation,
   // so the bytes on Blossom are the document as authored, not as running.
   _cleanClone(clone) {
+    // nc:autosave and nc:edit-gate are settings and stay. The rest is runtime
+    // state that means nothing in a file.
     for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
-                     "nc:editable", "nc:outdated"]) clone.removeAttribute(a);
+                     "nc:editable", "nc:outdated", "nc:editing"]) clone.removeAttribute(a);
     for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
     // A feed's items and an opened video frame are fetched at view time. They
     // are not this document's content and must not be frozen into it.
@@ -136,6 +140,7 @@ class NsiteClay extends EventTarget {
     // machinery and never reaches disk.
     for (const el of [...clone.querySelectorAll("[contenteditable]")]) el.removeAttribute("contenteditable");
     for (const el of [...clone.querySelectorAll("[nc\\:keep-editable]")]) el.removeAttribute("nc:keep-editable");
+    for (const el of [...clone.querySelectorAll("[nc\\:armed]")]) el.removeAttribute("nc:armed");
   }
 
   getHTML() {
@@ -319,6 +324,35 @@ class NsiteClay extends EventTarget {
     this.doc.location.replace(url.toString());
   }
 
+  // Editing controls appear when the gate is open. With nc:edit-gate="hash"
+  // that means the URL ends in #edit, so a reader gets the page and nothing to
+  // click, and the owner gets the controls by asking for them.
+  get editRequested() {
+    if (this.cfg.editGate !== "hash") return true;
+    return /^#edit\b/i.test(this.doc.location.hash || "");
+  }
+
+  applyEditGate() {
+    const on = this.editRequested;
+    this.root.setAttribute("nc:editing", String(on));
+    this.root.setAttribute("nc:edit-gate", this.cfg.editGate);
+    if (!on) this.editable.disable();
+    else if (this.isOwner) this.editable.enable();
+    this._emit("nsiteclay:edit-gate", { open: on });
+  }
+
+  get root() { return this.doc.documentElement; }
+
+  // Leaving with unsaved work should cost a keystroke, not a page of writing.
+  _guardUnload() {
+    this.doc.defaultView.addEventListener("beforeunload", (e) => {
+      if (!this.dirty) return;
+      e.preventDefault();
+      e.returnValue = "";        // the wording is the browser's, not ours
+      return "";
+    });
+  }
+
   // `autosave` on <html>: save once edits settle, never more often than the
   // throttle, and always on ⌘S / Ctrl+S whether or not autosave is on.
   _armSaving() {
@@ -328,11 +362,12 @@ class NsiteClay extends EventTarget {
         if (this.isOwner) this.save().catch(() => {});
       }
     });
-    if (!this.cfg.autosave) return;
     const DEBOUNCE = 2500, THROTTLE = 15000;
     let timer = null, last = 0;
     const schedule = () => {
-      if (!this.isOwner) return;
+      // Checked per keystroke rather than at boot, so turning it on in the
+      // settings takes effect without a reload.
+      if (!this.settings.autosave || !this.isOwner) return;
       clearTimeout(timer);
       const wait = Math.max(DEBOUNCE, last + THROTTLE - Date.now());
       timer = setTimeout(() => { last = Date.now(); this.save().catch(() => {}); }, wait);
@@ -401,6 +436,9 @@ nc.ready = (async () => {
   nc.cfg = readConfig(document);
   nc._trackDirty();
   nc._armSaving();
+  nc._guardUnload();
+  nc.applyEditGate();
+  window.addEventListener("hashchange", () => nc.applyEditGate());
   nc.media.armEmbeds();
   nc.feed.start();
   nc._watchVersion();
