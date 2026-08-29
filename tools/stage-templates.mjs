@@ -37,3 +37,22 @@ for (const name of readdirSync("templates")) {
 }
 console.log(`staged ${staged} template${staged === 1 ? "" : "s"} into site/t/` +
             (thumbed ? `, ${thumbed} screenshot${thumbed === 1 ? "" : "s"} resized for the cards` : ""));
+
+// Resizing writes a fresh PNG with none of the packing the committed originals
+// have, so the cards would ship a third more bytes than they need. picopt is
+// lossless, and optional: without it the site is merely larger.
+try {
+  const before = readdirSync(join("site", "shots"))
+    .reduce((n, f) => n + stat(join("site", "shots", f)).size, 0);
+  execFileSync("picopt", ["-q", "-r", join("site", "shots")], { stdio: "ignore" });
+  const after = readdirSync(join("site", "shots"))
+    .reduce((n, f) => n + stat(join("site", "shots", f)).size, 0);
+  const saved = before - after;
+  if (saved > 0) {
+    console.log(`optimised site/shots, ${(saved / 1024).toFixed(0)} kB smaller ` +
+                `(${(after / 1048576).toFixed(2)} MB in all)`);
+  }
+} catch {
+  console.log("picopt not found, so the screenshots ship unoptimised. " +
+              "`uv tool install --python 3.14 picopt` if you want them smaller.");
+}
