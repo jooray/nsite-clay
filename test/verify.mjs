@@ -310,8 +310,11 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.state.get().evil === "</script><img src=x>");
   nc.state.set({});
 
-  // gears are controls, not content
-  t("a gear never reaches the file", !nc.getHTML().includes('class="nc-gear"'));
+  // A gear is part of the app and belongs in the published file. CSS keeps it
+  // away from readers; clay="no-save" would strip it and the pattern would work
+  // exactly once.
+  t("a gear survives a save", nc.getHTML().includes("nc-gear"));
+  t("but a composer marked no-save does not", !nc.getHTML().includes('id="composer"'));
 
   nc.editable.disable();
 

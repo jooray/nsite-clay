@@ -158,6 +158,7 @@ working page with the chrome wired up; the design is yours to change.
 | `phrack` | a long technical write-up | a text file: monospace, 79 columns, ASCII rules, two colours |
 | `brutal` | a manifesto, a zine, a loud event | thick borders, hard shadows, oversized type, flat colour |
 | `eco` | an essay or a small studio | system fonts, almost no images, measures and prints its own page weight |
+| `irc` | a log someone keeps adding to: notes, a journal, a changelog | a channel transcript, monospace, with a composer that appends a line and saves it |
 
 Each is a complete page you can read for the pattern. Their rules are in
 [CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md),
@@ -174,19 +175,29 @@ poster for a thing happening" is `event`. If they want to show pictures, `galler
 If they are a writer who cares about typography and hates decoration, `phrack` or
 `eco`.
 
-When someone asks for a personal homepage, these are worth asking before you
-build:
+### Always ask
 
-- Which npub, and should the page pull their notes, their long-form posts, or
-  both. Fetch a sample first and design for what is actually there, not what you
-  assumed: someone who posts twice a day in two languages needs a different
-  layout from someone who publishes an essay a month.
+- **Their npub.** Required: it goes in `nc:owner` and it is the only key that can
+  ever change the page. Without a Nostr key nothing works.
+- **What the page is for.** This picks the template.
+- **What should come from Nostr**, if anything: their notes, their articles,
+  their photos, somebody else's.
+- **What a stranger should do after thirty seconds.** Read something, come to a
+  thing, hire them, follow them, zap them.
+- **What they do not want.** Most people have a strong opinion about at least one
+  thing they hate on websites, and it is cheaper to hear it now.
+
+Also tell them, without being asked, that one key writes the document: there is
+no shared editing and no second account.
+
+### Ask as well, for a personal homepage
+
+- Whether the page pulls their notes, their long-form posts, or both. Fetch a
+  sample first and design for what is actually there rather than what you
+  assumed: someone posting twice a day in two languages needs a different layout
+  from someone publishing an essay a month.
 - What is at the top: a photo, a sentence, a list of what they are doing now.
-- What they want a stranger to do after thirty seconds. Read something, hire
-  them, follow them, zap them.
 - Which links matter, and whether they want a Lightning address on the page.
-- What they do *not* want: most people have a strong opinion about at least one
-  thing they hate on personal sites.
 
 Take the picture, banner, name, about line, website and Lightning address from
 their kind-0 profile rather than asking again. Everything above is judgement they
@@ -288,19 +299,26 @@ published file would be wrong.
 ## 9. When the page is an app, not a document
 
 A board, a checklist or a directory needs more than typing. Put the controls on
-the thing they act on, mark them `nc-gear` so they appear only for a signed-in
-owner who is editing, and `clay="no-save"` so they never reach the file:
+the thing they act on and mark them `nc-gear`, so they appear only for a
+signed-in owner who is editing:
 
 ```html
 <article class="card" data-status="active">
   <h3 editable="single-line">Fix Blossom sync</h3>
-  <menu class="nc-gear" clay="no-save">
+  <menu class="nc-gear nc-gear-row">
     <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
     <button type="button" onclick="nc.dom.moveClosest(this, -1, '.card')">Up</button>
     <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
   </menu>
 </article>
 ```
+
+**Do not put `clay="no-save"` on a gear.** That strips it from the save, so the
+pattern works exactly once and the published page has no controls. A gear is part
+of the app and belongs in the file; the rules above keep it away from readers.
+`clay="no-save"` is for markup that must never be written at all, such as a
+composer holding a half-typed line. To have a control that both persists and is
+never itself written, draw it from a script that persists.
 
 `nc.dom` gives you `clone`, `remove`, `move`, `insert`, `addFrom` a `<template>`,
 `toggle` and `set`, plus `cloneClosest` and friends so a control addresses the
@@ -315,8 +333,9 @@ State with no visual form goes in a JSON block through `nc.state.get()`,
 `.set()` and `.update()`, which escapes the closing tag that would otherwise end
 the block and the rest of your page.
 
-If you insert markup while the page is being edited, call `nc.editable.refresh()`
-before focusing it, or the new region will not be typeable.
+`nc.dom` calls `nc.editable.refresh()` for you. You need it yourself only for
+markup you inserted some other way, before focusing it, or the new region will
+not be typeable.
 
 ---
 
@@ -337,8 +356,17 @@ one-liners, `nc:topic` for a single tag, and `nc:feed-relays` to override.
 Pinning an article uses its slug, not its event id: kind 30023 is replaceable, so
 the id changes every time the author fixes a typo and an id-pin breaks.
 
-Style feeds by overriding `.nc-item`, `.nc-title`, `.nc-by`, `.nc-summary`,
-`.nc-text` and `.nc-tags`. Do not change what a feed emits; change how it looks.
+Style feeds by overriding what they emit rather than rebuilding it. Each item is
+an `<article class="nc-item">` containing a `<header class="nc-by">` with
+`.nc-avatar`, `.nc-name` and `.nc-when` inside it, then the body as a sibling:
+`.nc-title` and `.nc-summary` for an article, `.nc-text` for a note, `.nc-pics`
+for pictures, and an optional `<footer class="nc-tags">`. Add `nc-feed-cards` to
+the widget for boxed items and `nc-feed-spread` to push the date to the right;
+without them an item is a plain line, which is what a log or a list wants.
+
+A display name comes from a kind-0 profile and is free text: some are a whole
+sentence. The base stylesheet clips `.nc-name`, so do not undo that unless you
+have somewhere for a long one to go.
 
 A feed is fetched, not stored, so a save keeps the widget's configuration and
 none of the posts. A reader with scripting off sees an empty block. Design for
@@ -355,8 +383,11 @@ page as it publishes.
 Work in this order; it saves rewriting.
 
 1. **The variables.** `--nc-ink`, `--nc-ink-dim`, `--nc-bg`, `--nc-panel`,
-   `--nc-edge`, `--nc-accent`, `--nc-accent-ink`, `--nc-radius`, `--nc-radius-sm`,
-   `--nc-shadow`, `--nc-chrome-font`, `--nc-mono`. These reach every surface the
+   `--nc-edge`, `--nc-accent`, `--nc-accent-ink`, `--nc-ok`, `--nc-bad`,
+   `--nc-radius`, `--nc-radius-sm`, `--nc-shadow`, `--nc-chrome-font`,
+   `--nc-mono`. `--nc-ok` and `--nc-bad` drive the toolbar's status dot, so a
+   template that leaves them gets a green and red that may clash with its
+   palette. These reach every surface the
    runtime draws: the toolbar, the dialogs, the version list, the pickers, the
    floating text toolbar, the toasts and the feeds. A square, shadowless design
    sets `--nc-radius: 0` and `--nc-shadow: none` and the chrome squares off with

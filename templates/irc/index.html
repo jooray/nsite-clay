@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:edit-gate="hash"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>a page that creates itself (#nsite-clay)</title>
+<meta name="description" content="A channel log. Read it and you find out that the log is the conversation that built the page you are reading.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23101215'/%3E%3Ctext x='7' y='24' font-family='monospace' font-size='22' fill='%23d08b5c'%3E%23%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* Two colours, ink on a dark ground, plus one colour per nick. Everything
+     else is a tint of the ink: timestamps, joins, parts, the topic furniture.
+     A client someone configured once and then stopped noticing. */
+  :root {
+    --nc-ink: #cdc8bb;
+    --nc-ink-dim: #6d6960;
+    --nc-bg: #101215;
+    --nc-panel: #171a1e;
+    --nc-edge: #272b30;
+    --nc-accent: #d08b5c;
+    --nc-accent-ink: #14100c;
+    --nc-ok: #85a98d;
+    --nc-bad: #c56f63;
+    --nc-radius: 0;
+    --nc-radius-sm: 0;
+    --nc-shadow: none;
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --nc-chrome-font: var(--nc-mono);
+
+    --nick-a: #d08b5c;   /* Pranah, who owns the key */
+    --nick-b: #7aa8b6;   /* kiln */
+  }
+
+  /* Some people run a light terminal. Same two colours, swapped over. */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --nc-ink: #1d1b17;
+      --nc-ink-dim: #7b7669;
+      --nc-bg: #fbfaf6;
+      --nc-panel: #f0eee7;
+      --nc-edge: #ddd8ca;
+      --nc-accent: #9c5320;
+      --nc-accent-ink: #fbfaf6;
+      --nc-ok: #3f6b48;
+      --nc-bad: #9b3226;
+      --nick-a: #9c5320;
+      --nick-b: #2b5f70;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--nc-bg);
+    color: var(--nc-ink);
+    font: 15px/1.6 var(--nc-mono);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .client { width: min(52rem, 100%); margin: 0 auto; padding: 1.6rem 1rem 8rem; }
+
+  /* ---- the topic bar -----------------------------------------------------
+     What a client puts above the buffer: the channel, the topic, the modes.
+     No title bar, no traffic lights, nothing pretending to be a window. */
+
+  .chan { border-bottom: 1px solid var(--nc-edge); padding-bottom: .75rem; margin-bottom: 1.4rem; }
+  .chan h1 { font-size: 1em; font-weight: 700; margin: 0; color: var(--nc-accent); }
+  .chan .topic { margin: .3rem 0 0; overflow-wrap: anywhere; }
+  .chan .modes { margin: .3rem 0 0; color: var(--nc-ink-dim); font-size: .87em; overflow-wrap: anywhere; }
+
+  /* ---- the buffer --------------------------------------------------------
+     One grid for the whole log, so the nick column is as wide as the longest
+     nick and every timestamp lines up, the way a client aligns them. Each line
+     is display:contents, which puts its three parts straight into the grid. */
+
+  .log {
+    display: grid;
+    grid-template-columns: max-content max-content minmax(0, 1fr);
+    column-gap: 1.1ch;
+    row-gap: .2rem;
+    align-items: baseline;
+  }
+  .line { display: contents; }
+  .t { color: var(--nc-ink-dim); font-variant-numeric: tabular-nums; }
+  .nick { font-weight: 400; text-align: right; white-space: nowrap; }
+  .msg { overflow-wrap: anywhere; min-width: 0; }
+  .msg a { color: inherit; text-underline-offset: 2px; }
+  .msg a:hover { text-decoration-thickness: 2px; }
+
+  .n-a { color: var(--nick-a); }
+  .n-b { color: var(--nick-b); }
+
+  /* joins, parts, topic changes: present, quiet */
+  .sys .nick, .sys .msg { color: var(--nc-ink-dim); }
+  .act .nick { color: var(--nc-accent); }
+
+  /* ---- the input line ----------------------------------------------------
+     Drawn by the script at the bottom of the page for a signed-in owner with
+     the gate open, and never written to the file. .nc-gear is the shared
+     visibility rule; the layout is ours. */
+
+  html[nc\:owner-here="true"][nc\:editing="true"] .say.nc-gear { display: flex; }
+  .say {
+    align-items: baseline; gap: 1.1ch;
+    margin-top: 1.5rem; padding-top: .8rem;
+    border-top: 1px solid var(--nc-edge);
+  }
+  .say .prompt { color: var(--nc-ink-dim); flex: 0 0 auto; white-space: nowrap; }
+  .say input {
+    flex: 1 1 auto; min-width: 0;
+    font: inherit; color: var(--nc-ink);
+    background: transparent; border: 0; padding: 0;
+    caret-color: var(--nc-accent);
+  }
+  .say input:focus { outline: none; }
+  .say input::placeholder { color: var(--nc-ink-dim); opacity: 1; }
+
+  /* ---- the feed, dressed as channel activity -----------------------------
+     Notes off the relays get the shape of a line in the buffer: time, nick in
+     angle brackets, text. feed.js can append its own fallback stylesheet after
+     this block, so every rule carries the container selector to win. */
+
+  .also { margin-top: 2.4rem; padding-top: .9rem; border-top: 1px solid var(--nc-edge); }
+  .also .sep { color: var(--nc-ink-dim); margin: 0 0 .7rem; overflow-wrap: anywhere; }
+
+  [nc\:feed].nc-feed { display: block; }
+  [nc\:feed] .nc-item {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    column-gap: 1.1ch; row-gap: .1rem;
+    background: none; border: 0; border-radius: 0; padding: 0;
+    overflow: visible; margin-bottom: .2rem;
+  }
+  [nc\:feed] .nc-by {
+    display: flex; align-items: baseline; gap: 0;
+    margin: 0; opacity: 1; font-size: 1em; flex: 0 0 auto;
+  }
+  [nc\:feed] .nc-avatar { display: none; }
+  [nc\:feed] .nc-by .nc-when { order: -1; margin: 0 1.1ch 0 0; color: var(--nc-ink-dim); }
+  /* A display name off a profile can be a whole sentence. Clip it to what a
+     nick column can hold, or one note pushes its own text into a gutter. */
+  [nc\:feed] .nc-by .nc-name {
+    color: var(--nick-a); font-weight: 400;
+    display: inline-block; max-width: 14ch; vertical-align: bottom;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Brackets on the header, not on the name, so clipping a long one never
+     eats the closing angle. Flex order puts them either side of it. */
+  [nc\:feed] .nc-by::before { content: "<"; }
+  [nc\:feed] .nc-by::after { content: ">"; }
+  [nc\:feed] .nc-text, [nc\:feed] .nc-summary {
+    flex: 1 1 24ch; min-width: 0; margin: 0;
+    font-size: 1em; color: var(--nc-ink); opacity: 1;
+  }
+  [nc\:feed] .nc-text p { margin: 0 0 .2rem; }
+  [nc\:feed] .nc-text p:last-child { margin-bottom: 0; }
+  [nc\:feed] .nc-title { flex: 1 1 24ch; font-size: 1em; margin: 0; }
+  [nc\:feed] .nc-pics, [nc\:feed] .nc-tags, [nc\:feed] .nc-cover { flex: 1 1 100%; }
+  [nc\:feed] .nc-tags { opacity: 1; color: var(--nc-ink-dim); font-size: 1em; margin-top: .2rem; }
+  [nc\:feed] .nc-feed-status { color: var(--nc-ink-dim); font-size: 1em; opacity: 1; margin: 0; }
+  [nc\:feed] a { color: inherit; text-underline-offset: 2px; }
+
+  /* ---- narrow ------------------------------------------------------------
+     A phone gets the same buffer with the nick inline and the message hanging
+     under it, which is what a client on a phone does. No sideways scroll. */
+
+  @media (max-width: 34rem) {
+    body { font-size: 13.5px; }
+    .client { padding: 1rem .7rem 8rem; }
+    .log { display: block; }
+    .line { display: block; padding-left: 2.6ch; text-indent: -2.6ch; margin: 0 0 .3rem; }
+    .t, .nick { margin-right: .6ch; }
+    .nick { text-align: left; }
+    [nc\:feed] .nc-item { display: block; padding-left: 2.6ch; text-indent: -2.6ch; margin-bottom: .5rem; }
+    [nc\:feed] .nc-by { display: inline; }
+    [nc\:feed] .nc-by .nc-when { margin-right: .6ch; }
+    [nc\:feed] .nc-text, [nc\:feed] .nc-summary, [nc\:feed] .nc-title { display: inline; text-indent: 0; }
+  }
+</style>
+</head>
+<body>
+
+<main class="client">
+
+<header class="chan">
+  <h1 editable="single-line">#nsite-clay</h1>
+  <p class="topic" editable="single-line">a page that creates itself | the log below is how it got made | quiet now, on purpose</p>
+  <p class="modes" editable="single-line">+nt &middot; log opened Thu Jul&nbsp; 2 21:02:11 2026 &middot; nobody in the channel</p>
+</header>
+
+<div class="log" id="log">
+
+<p class="line sys"><time class="t">21:02</time><b class="nick">*</b><span class="msg" editable="single-line">Pranah (~pranah@ferry-4.dyn.example.net) has joined #nsite-clay</span></p>
+<p class="line"><time class="t">21:03</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">is anyone awake. I have an npub, a domain I never pointed anywhere, and two years of putting this off</span></p>
+<p class="line"><time class="t">21:04</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">awake. give me five minutes before I ask you anything, there is a brief for this and I would rather read it than guess</span></p>
+<p class="line"><time class="t">21:04</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line"><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt">https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt</a></span></p>
+<p class="line"><time class="t">21:05</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">your urls are a bit much</span></p>
+<p class="line"><time class="t">21:06</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">it is a public key with a hostname round it. point that domain of yours at any gateway and you get a short one instead. six of them serve the same events, so when one goes down you change the hostname and nothing else moves</span></p>
+<p class="line"><time class="t">21:09</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">read. it wants five things off you before I open an editor: the npub, what the page is for, what should come off Nostr, what a stranger should do after thirty seconds, and what you hate on other people's sites</span></p>
+<p class="line"><time class="t">21:10</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">npub1x7q...m4vle, I will put the whole thing in a query</span></p>
+<p class="line"><time class="t">21:10</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">last one next, because it is the easy one. cards. rounded boxes with a photo, a heading and three words under it. also anything that slides in when I scroll past it</span></p>
+<p class="line"><time class="t">21:11</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">noted. so what is the page for</span></p>
+<p class="line"><time class="t">21:12</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">repair night. first Thursday, the hall behind the library. people bring lamps and radios and kettles and we fix them or we admit we cannot</span></p>
+<p class="line"><time class="t">21:13</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">I keep a log of what came in and what happened to it. it is a text file on my laptop and nobody has ever read it</span></p>
+<p class="line"><time class="t">21:13</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">and Nostr</span></p>
+<p class="line"><time class="t">21:14</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">short notes when something good turns up. maybe one a week</span></p>
+<p class="line"><time class="t">21:15</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">I read your last twenty. two lines each, no titles, no pictures, so nothing on this page should be shaped like a headline</span></p>
+<p class="line"><time class="t">21:16</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">the brief has a table of starting points. yours reads like personal, or links</span></p>
+<p class="line"><time class="t">21:17</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">personal is the one with my face at the top</span></p>
+<p class="line"><time class="t">21:17</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">big name, an about line, articles as cards underneath</span></p>
+<p class="line"><time class="t">21:18</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">no</span></p>
+<p class="line"><time class="t">21:19</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">there is one that is a text file. monospace, 79 columns, ascii rules, two colours and nothing else</span></p>
+<p class="line"><time class="t">21:20</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">closer. but a text file is a finished thing and mine is not. it gets a line a month and I want it to look like it is still going</span></p>
+<p class="line"><time class="t">21:21</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">how is the file laid out</span></p>
+<p class="line"><time class="t">21:21</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">date, what came in, what we did. oldest at the top. I append and I never go back</span></p>
+<p class="line"><time class="t">21:22</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">you have described a channel log</span></p>
+<p class="line"><time class="t">21:23</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">ha. yes, do that</span></p>
+<p class="line"><time class="t">21:24</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">newest at the top or oldest</span></p>
+<p class="line"><time class="t">21:24</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">newest, like a blog</span></p>
+<p class="line"><time class="t">21:25</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">it will read wrong. a log that starts at the end is a feed with dates on it</span></p>
+<p class="line"><time class="t">21:26</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">ugh. fine, oldest at the top. I read my own file backwards every month and I hate every minute of it</span></p>
+<p class="line"><time class="t">21:28</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">one key writes the document. no second account, no shared editing. two people on two machines means one of them loses their lines and nothing warns either of you</span></p>
+<p class="line"><time class="t">21:29</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">it is my log</span></p>
+<p class="line"><time class="t">21:29</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">good. I say it early because people ask for shared editing later and the answer is still no</span></p>
+<p class="line"><time class="t">21:30</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">Ada does the tea rota and she likes a list</span></p>
+<p class="line"><time class="t">21:31</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">she can have her own page under her own key. same software, different file, nothing to argue about</span></p>
+<p class="line"><time class="t">21:32</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">how do I add a line next month. do I have to come and find you</span></p>
+<p class="line"><time class="t">21:33</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">no, that is the point of it. the page saves itself. you open it, put #edit on the end of the address, and the controls appear. without #edit there is nothing to click, so a stranger gets the log and no buttons</span></p>
+<p class="line"><time class="t">21:34</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">write that out so I can paste it in my notes</span></p>
+<p class="line"><time class="t">21:34</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">https://&lt;your npub&gt;.nsite.lol/#edit</span></p>
+<p class="line"><time class="t">21:36</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">signing in: use a signer app. Amber on the phone, or nsec.app in another tab. the key stays there and every save asks you to approve it</span></p>
+<p class="line"><time class="t">21:37</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">why. it is my laptop and my key, I would rather paste it once and install nothing</span></p>
+<p class="line"><time class="t">21:38</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">you can. it stays in the tab, it is written nowhere, and it is still the weakest of the three ways in. the page reaches you through a gateway you do not run, so it is one bad file away from asking for your key and keeping it</span></p>
+<p class="line"><time class="t">21:39</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">that is fair and I still resent it. Amber then, but not tonight</span></p>
+<p class="line"><time class="t">21:40</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">paste it into the page tonight and change how you sign in later. that part is not baked into anything</span></p>
+<p class="line"><time class="t">21:42</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">last question. when you type a line into this page, where does the line go</span></p>
+<p class="line"><time class="t">21:42</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">into the page. that is what I have been saying for an hour</span></p>
+<p class="line"><time class="t">21:43</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">I was about to publish every one of them as a note as well. they would have gone to your feed and into everyone's client</span></p>
+<p class="line"><time class="t">21:44</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">the brief has a rule for it. relays hold what you published, the document holds what the page is. the log is the page, so a line in it is not a post</span></p>
+<p class="line"><time class="t">21:45</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">right. nobody needs the tea rota in their timeline</span></p>
+<p class="line"><time class="t">21:46</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">does it save while I type</span></p>
+<p class="line"><time class="t">21:47</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">no, on purpose. every save writes the whole page again and files a version, so a timer would give you forty versions of one sentence. you press save</span></p>
+<p class="line"><time class="t">21:48</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">building. dark, monospace, timestamps down the left, nicks in a column with a colour each, topic across the top, joins and parts in grey</span></p>
+<p class="line"><time class="t">21:49</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">what goes in it. I have not written up a single repair night yet</span></p>
+<p class="line"><time class="t">21:50</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">this</span></p>
+<p class="line"><time class="t">21:50</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">this what</span></p>
+<p class="line"><time class="t">21:51</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">this channel. the last forty minutes. it is already a log, it is already the right shape, and anyone who lands on it works out what the page is by reading it</span></p>
+<p class="line act"><time class="t">21:52</time><b class="nick">*</b><span class="msg" editable="single-line">Pranah scrolls up</span></p>
+<p class="line"><time class="t">21:53</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">leave my typing as it is. I am not sounding clever in my own log</span></p>
+<p class="line"><time class="t">21:53</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">I have not touched a word</span></p>
+<p class="line"><time class="t">21:55</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">the box at the bottom. signed in with the gate open you get an input line, the way a client has one. type, press enter, it appends as &lt;Pranah&gt; with the time on it, and from then on it is markup like everything above it</span></p>
+<p class="line"><time class="t">21:56</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">and if I start a line and close the tab</span></p>
+<p class="line"><time class="t">21:56</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">the half line goes nowhere. the box is not in the file either, it is drawn for you and taken out again before anything is stored</span></p>
+<p class="line"><time class="t">21:58</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">your notes go under the log behind a line saying where they came from, as channel lines rather than cards. they are fetched when the page opens, so with scripting off that part is empty and the log is still there</span></p>
+<p class="line"><time class="t">21:59</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">can people reply in it</span></p>
+<p class="line"><time class="t">21:59</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">no. it looks like a channel, it is not one. one key writes here and it is yours</span></p>
+<p class="line"><time class="t">22:00</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">good. I have had enough of channels where people reply</span></p>
+<p class="line sys"><time class="t">22:01</time><b class="nick">*</b><span class="msg" editable="single-line">kiln has changed the topic to: a page that creates itself | the log below is how it got made | quiet now, on purpose</span></p>
+<p class="line"><time class="t">22:03</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">it is at https://&lt;your npub&gt;.nsite.lol/ and the same address with #edit gives you the controls. the key you signed in with is the only one that can change it, and if you lose that key the page stays up and nobody can touch it, you included</span></p>
+<p class="line"><time class="t">22:04</time><b class="nick n-b">&lt;kiln&gt;</b><span class="msg" editable="single-line">after tonight you will not need a terminal for this again</span></p>
+<p class="line"><time class="t">22:05</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">ok. I will put the first line in myself</span></p>
+<p class="line sys"><time class="t">22:05</time><b class="nick">*</b><span class="msg" editable="single-line">Pranah has quit (Quit: kettle)</span></p>
+<p class="line sys"><time class="t">22:06</time><b class="nick">*</b><span class="msg" editable="single-line">kiln has left #nsite-clay (the page is yours)</span></p>
+<p class="line sys"><time class="t">23:58</time><b class="nick">*</b><span class="msg" editable="single-line">Pranah (~pranah@ferry-4.dyn.example.net) has joined #nsite-clay</span></p>
+<p class="line"><time class="t">23:58</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">first Thursday. two lamps, a Roberts with a snapped dial cord, and a food mixer nobody could open</span></p>
+<p class="line"><time class="t">23:59</time><b class="nick n-a">&lt;Pranah&gt;</b><span class="msg" editable="single-line">typed that into the box at the bottom. it is in the page now</span></p>
+<p class="line sys"><time class="t">23:59</time><b class="nick">*</b><span class="msg" editable="single-line">Pranah has quit (Quit: )</span></p>
+
+</div>
+
+<section class="also">
+  <p class="sep" editable="single-line">* notes from the key that writes this page, off the relays, fetched when you opened it</p>
+  <div nc:feed="notes"
+       nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+       nc:limit="3"
+       nc:style="list"></div>
+</section>
+
+</main>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+<script>
+/* The input line.
+ *
+ * It is built here rather than written into the markup because a control
+ * carrying clay="no-save" is stripped out of the file when the page saves, so
+ * an authored one would work once and be missing from the next version of the
+ * page. The script is authored markup and stays, and it draws the box again on
+ * every load. The box is hidden until the owner signs in and opens the gate,
+ * which the shared .nc-gear rule already does.
+ *
+ * A line typed here is markup and nothing else. It is not published as a note:
+ * relays hold what you published, this document holds what the page is. */
+(async () => {
+  await nc.ready;
+  const log = document.getElementById("log");
+  if (!log) return;
+
+  const NICK = "Pranah";
+  const esc = (s) => s.replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const clock = () => {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  };
+
+  const form = document.createElement("form");
+  form.className = "say nc-gear";
+  form.setAttribute("clay", "no-save");
+  form.innerHTML =
+    '<span class="prompt">[#nsite-clay]</span>' +
+    '<input type="text" autocomplete="off" spellcheck="false" nc:no-persist' +
+    ' aria-label="say a line in #nsite-clay" placeholder="type a line and press enter">';
+  log.after(form);
+  const input = form.querySelector("input");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const said = input.value.trim();
+    if (!said) return;
+    const time = '<time class="t">' + clock() + "</time>";
+    const action = /^\/me\s+/.test(said);
+    const html = action
+      ? '<p class="line act">' + time + '<b class="nick">*</b>' +
+        '<span class="msg" editable="single-line">' + esc(NICK + " " + said.replace(/^\/me\s+/, "")) + "</span></p>"
+      : '<p class="line">' + time + '<b class="nick n-a">&lt;' + NICK + '&gt;</b>' +
+        '<span class="msg" editable="single-line">' + esc(said) + "</span></p>";
+    // nc.dom does the bookkeeping: it arms the new line for editing through
+    // nc.editable.refresh() and marks the page unsaved. Press Save and the line
+    // is in the file, the same as every line above it.
+    const line = nc.dom.insert(log, html, "beforeend");
+    input.value = "";
+    if (line) line.scrollIntoView({ block: "nearest" });
+    input.focus();
+  });
+})();
+</script>
+</body>
+</html>

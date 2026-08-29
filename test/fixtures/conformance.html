@@ -9,7 +9,7 @@
   <h1 id="line" editable="single-line">a title</h1>
   <div id="board">
     <article class="card" data-status="active"><span editable="single-line">one</span>
-      <menu class="nc-gear" clay="no-save"><button type="button">x</button></menu></article>
+      <menu class="nc-gear nc-gear-row"><button type="button">x</button></menu></article>
     <article class="card" data-status="done"><span editable="single-line">two</span></article>
   </div>
   <template id="card-tpl"><article class="card" data-status="active"><span editable="single-line">new</span></article></template>
@@ -21,6 +21,7 @@
        nc:limit="2"><article class="nc-item" nc:transient="">fetched at view time</article></div>
   <div nc:chrome>runtime UI, never saved</div>
   <div clay="no-save">never saved</div>
+  <form id="composer" clay="no-save"><input class="nc-input" nc:no-persist></form>
   <script src="/nsite-clay.js"></script>
 </body>
 </html>

@@ -65,13 +65,13 @@ edit without opening a text editor has missed the point.
 ## Contextual controls
 
 A page that is a board or a list needs more than typing. Put the controls on the
-thing they act on, mark them `nc-gear` so they appear only for a signed-in owner
-who is editing, and `clay="no-save"` so they never reach the file:
+thing they act on and mark them `nc-gear`, so they appear only for a signed-in
+owner who is editing:
 
 ```html
 <article class="card" data-status="active">
   <h3 editable="single-line">Fix Blossom sync</h3>
-  <menu class="nc-gear" clay="no-save">
+  <menu class="nc-gear nc-gear-row">
     <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
     <button type="button" onclick="nc.dom.moveClosest(this, -1, '.card')">Up</button>
     <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
@@ -79,8 +79,19 @@ who is editing, and `clay="no-save"` so they never reach the file:
 </article>
 ```
 
+**Do not put `clay="no-save"` on a gear.** That strips it from the save, so the
+pattern works exactly once and the published page has no controls. A gear is part
+of the app and belongs in the file; the rules above are what keep it away from
+readers. `clay="no-save"` is for markup that must never be written at all, such as
+a composer holding a half-typed line, and a control drawn by a script that itself
+persists is the way to have both.
+
+`nc-gear` sets visibility only; `nc-gear-row` adds the usual row layout, so a
+control shaped differently can lay itself out without out-specifying anything.
+
 `nc.dom` arms new markup for editing and marks the page unsaved, so a control is
-one attribute rather than a closure. State with no visual form goes in a JSON
+one attribute rather than a closure. It calls `nc.editable.refresh()` for you;
+you only need it yourself for markup you inserted some other way. State with no visual form goes in a JSON
 block through `nc.state`. What belongs in the document and what belongs on relays
 is [docs/state.md](../../docs/state.md).
 

@@ -92,13 +92,22 @@ html[nc\:owner-here="true"] .nc-guest-only { display: none; }
 html[nc\:owner-here="true"][nc\:editing="false"] .nc-edit-hint { display: block; }
 
 /* ---- contextual controls -------------------------------------------------
- * The gear pattern: controls that live on the object they act on, visible only
- * to the owner while editing, and stripped from every save. Put clay="no-save"
- * on them so they never reach the file, and nc-gear so they appear at the right
- * moment without each template writing the same three rules. */
+ * The gear pattern: controls that live on the object they act on and appear
+ * only for an owner who is editing.
+ *
+ * A gear is part of the app, so it stays in the saved file and these rules keep
+ * it away from readers. Do not put clay="no-save" on one: that strips it from
+ * the save, so the pattern would work exactly once and the published page would
+ * have no controls. clay="no-save" is for markup that must never be written at
+ * all, such as a composer holding a half-typed line.
+ *
+ * nc-gear is visibility only. nc-gear-row adds the usual layout, so a control
+ * that is not a row of small buttons can lay itself out without having to
+ * out-specify the visibility rule. */
 
 .nc-gear { display: none; }
-html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: flex; gap: .25rem; }
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: revert; }
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; gap: .25rem; }
 .nc-gear button {
   font: inherit; font-size: .78rem; line-height: 1; cursor: pointer;
   padding: .3rem .5rem; border-radius: var(--nc-radius-sm);
@@ -125,14 +134,21 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: flex; gap: .
 .nc-feed-grid { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 .nc-item {
   border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
-  padding: .9rem 1rem; overflow: hidden; background: var(--nc-panel);
+  padding: .9rem 1rem; background: var(--nc-panel);
 }
+/* Clipping belongs to designs where the item is a box, not to every one. */
+.nc-feed-cards .nc-item { overflow: hidden; }
 .nc-by { display: flex; align-items: center; gap: .55rem; font-size: .82rem; margin-bottom: .5rem; opacity: .75; }
 .nc-by a { text-decoration: none; color: inherit; }
 .nc-by a:hover { text-decoration: underline; }
 .nc-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-.nc-by .nc-when { margin-left: auto; }
-.nc-name { font-weight: 500; }
+/* Opt in: a card wants the date pushed right, a plain log line wants it to
+ * follow the name. */
+.nc-feed-spread .nc-by .nc-when { margin-left: auto; }
+/* A kind-0 display name is free text and is sometimes a whole sentence, which
+ * shoves everything after it out of the line. Every template that renders a
+ * byline compactly would otherwise solve this again. */
+.nc-name { font-weight: 500; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nc-title { font-size: 1.05rem; margin: .2rem 0 .35rem; }
 .nc-title a { text-decoration: none; color: inherit; }
 .nc-summary { margin: 0; font-size: .93rem; color: var(--nc-ink-dim); overflow-wrap: anywhere; }
@@ -145,6 +161,18 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: flex; gap: .
 .nc-pics img { width: 100%; border-radius: 8px; object-fit: cover; }
 .nc-tags { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; font-size: .75rem; opacity: .6; }
 .nc-feed-status { color: var(--nc-ink-dim); font-size: .9rem; }
+
+/* ---- form controls a template puts in its own page -----------------------
+ * A composer, a filter or a search box otherwise arrives with browser default
+ * chrome inside a themed page, and every template writes the same reset. */
+
+.nc-input {
+  font: inherit; color: inherit; width: 100%;
+  padding: .5rem .65rem; border-radius: var(--nc-radius-sm);
+  border: 1px solid var(--nc-edge); background: var(--nc-bg);
+}
+.nc-input:focus { outline: 2px solid var(--nc-accent); outline-offset: 1px; }
+.nc-input::placeholder { color: var(--nc-ink-dim); opacity: .8; }
 
 /* ---- respect the reader ------------------------------------------------- */
 

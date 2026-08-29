@@ -207,11 +207,15 @@ same file works as `AGENTS.md` in a project built on top of nsite-clay.
 
 ## Templates
 
-Ten starting points, all sharing one stylesheet and one runtime so an engine
-change does not mean editing ten files:
+Eleven starting points, all sharing one stylesheet and one runtime so an engine
+change does not mean editing eleven files:
 
 `event` `blog` `project` `personal` `links` `gallery` `terminal` `phrack`
-`brutal` `eco`
+`brutal` `eco` `irc`
+
+The last of those is worth opening: its content is the transcript of the
+conversation that produced it, held with an agent that was handed nothing but
+[llms.txt](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt).
 
 ```bash
 npx nsite-clay init mysite --template=blog --npub=npub1…
