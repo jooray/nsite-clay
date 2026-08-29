@@ -5,12 +5,14 @@ import DOMPurify from "dompurify";
 
 const SANITIZE = {
   ALLOWED_TAGS: [
-    "a", "abbr", "b", "blockquote", "br", "code", "del", "div", "em", "h1", "h2",
-    "h3", "h4", "h5", "h6", "hr", "i", "img", "ins", "li", "mark", "ol", "p",
-    "pre", "s", "small", "span", "strong", "sub", "sup", "table", "tbody", "td",
-    "tfoot", "th", "thead", "tr", "u", "ul",
+    "a", "abbr", "article", "b", "blockquote", "br", "code", "del", "div", "em",
+    "figcaption", "figure", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "header",
+    "hr", "i", "img", "ins", "li", "mark", "ol", "p", "pre", "s", "section",
+    "small", "span", "strong", "sub", "sup", "table", "tbody", "td", "tfoot",
+    "th", "thead", "time", "tr", "u", "ul",
   ],
-  ALLOWED_ATTR: ["href", "title", "alt", "src", "colspan", "rowspan", "class", "lang", "dir"],
+  ALLOWED_ATTR: ["href", "title", "alt", "src", "colspan", "rowspan", "class", "lang", "dir",
+                 "datetime", "loading", "rel", "width", "height"],
   ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#|\/)/i,
   FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "link", "meta", "base", "svg", "math"],
   FORBID_ATTR: ["style", "srcset", "formaction", "ping", "target"],

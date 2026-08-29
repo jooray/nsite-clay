@@ -44,7 +44,7 @@ export class LocalSigner {
     const raw = String(input || "").trim();
     if (!raw) throw new Error("Enter a key");
     if (raw.startsWith("ncryptsec")) {
-      if (!password) throw new Error("That is an encrypted key — enter its password too");
+      if (!password) throw new Error("That is an encrypted key. Enter its password too");
       let sec;
       try { sec = nip49.decrypt(raw, password); }
       catch { throw new Error("Wrong password, or the ncryptsec is malformed"); }
@@ -59,12 +59,12 @@ export class LocalSigner {
     // The two mistakes people actually make, named rather than left as
     // "invalid checksum": a public key, and a key with a stray space in it.
     if (raw.startsWith("npub")) throw new Error("That is a public key. Signing needs the nsec.");
-    if (raw.startsWith("ncryptsec")) throw new Error("That key is encrypted — it needs a password");
+    if (raw.startsWith("ncryptsec")) throw new Error("That key is encrypted and needs a password");
     if (/^[0-9a-fA-F]{64}$/.test(raw)) return hexToBytes(raw.toLowerCase());
     if (raw.startsWith("nsec")) {
       let decoded;
       try { decoded = nip19.decode(raw); }
-      catch { throw new Error("That nsec is not valid — check for a missing or mistyped character"); }
+      catch { throw new Error("That nsec is not valid. Check for a missing or mistyped character"); }
       if (decoded.type !== "nsec") throw new Error(`That is a ${decoded.type}, not an nsec`);
       return decoded.data;
     }

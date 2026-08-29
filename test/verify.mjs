@@ -166,6 +166,39 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   document.getElementById("secret").dispatchEvent(new Event("input", { bubbles: true }));
   t("typing a key does not count as unsaved work", nc.dirty === false);
 
+  // --- media --------------------------------------------------------------
+  t("a YouTube watch URL is recognised",
+    JSON.stringify(nc.media.constructor && nc.parseVideoUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+      === JSON.stringify({ provider: "youtube", id: "dQw4w9WgXcQ" }));
+  t("a youtu.be short link is recognised",
+    nc.parseVideoUrl("https://youtu.be/dQw4w9WgXcQ")?.id === "dQw4w9WgXcQ");
+  t("a Vimeo URL is recognised", nc.parseVideoUrl("https://vimeo.com/123456789")?.provider === "vimeo");
+  t("an unrelated URL is not a video", nc.parseVideoUrl("https://example.com/a.mp4") === null);
+
+  nc.media.image({ url: "https://example.com/a.png", alt: "a" });
+  nc.media.videoEmbed({ provider: "youtube", id: "dQw4w9WgXcQ", title: "demo" });
+  t("an embed is a link before anyone clicks it",
+    !!document.querySelector("[nc\\:video] a[href*='youtube.com/watch']") &&
+    document.querySelectorAll("iframe").length === 0);
+  document.querySelector("[nc\\:video] .nc-embed-link").click();
+  await new Promise((r) => setTimeout(r, 80));
+  t("clicking it loads the player", document.querySelectorAll("iframe").length === 1);
+
+  const withMedia = nc.getHTML();
+  t("an inserted image is saved", withMedia.includes("example.com/a.png"));
+  t("the facade is saved", withMedia.includes("nc:video="));
+  t("the loaded player is not", !/<iframe/.test(withMedia));
+
+  // --- the feed widget ------------------------------------------------------
+  const w = nc.feed.readFeedConfig
+    ? nc.feed.readFeedConfig(document.getElementById("widget"))
+    : null;
+  t("a feed widget's configuration is read from its attributes",
+    !!w && w.type === "notes" && w.limit === 2 && w.authors.length === 1 &&
+    /^[0-9a-f]{64}$/.test(w.authors[0]));
+  t("a feed's own markup is saved", withMedia.includes('nc:feed="notes"'));
+  t("what a feed fetched is not", !withMedia.includes("fetched at view time"));
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

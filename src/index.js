@@ -15,6 +15,10 @@ import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestSer
 import { snapshot } from "./snapshot.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
 import { Editable } from "./editable.js";
+import { Media, parseVideoUrl } from "./media.js";
+import { Feed, readFeedConfig } from "./feed.js";
+import { Compose } from "./compose.js";
+import { toast } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
 
@@ -46,6 +50,9 @@ class NsiteClay extends EventTarget {
     this.pool = new SimplePool();
     this.signer = null;
     this.editable = new Editable(this);
+    this.media = new Media(this);
+    this.feed = new Feed(this);
+    this.compose = new Compose(this);
     this.status = "idle";
     this._subs = [];
     this._transforms = [];
@@ -120,6 +127,10 @@ class NsiteClay extends EventTarget {
     for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
                      "nc:editable", "nc:outdated"]) clone.removeAttribute(a);
     for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
+    // A feed's items and an opened video frame are fetched at view time. They
+    // are not this document's content and must not be frozen into it.
+    for (const el of [...clone.querySelectorAll("[nc\\:transient]")]) el.remove();
+    for (const el of [...clone.querySelectorAll("[nc\\:feed]")]) el.removeAttribute("nc:feed-count");
     for (const el of [...clone.querySelectorAll("dialog[open]")]) el.removeAttribute("open");
     // `editable` survives as an inert marker; the contenteditable it implies is
     // machinery and never reaches disk.
@@ -330,7 +341,7 @@ class NsiteClay extends EventTarget {
     this.doc.body.appendChild(banner);
 
     if (this.dirty) {
-      msg.textContent = "A newer version of this page was published — you have unsaved changes.";
+      msg.textContent = "A newer version of this page was published. You have unsaved changes.";
       return;
     }
     let n = 5;
@@ -353,6 +364,8 @@ nc.ready = (async () => {
   nc.cfg = readConfig(document);
   nc._trackDirty();
   nc._armSaving();
+  nc.media.armEmbeds();
+  nc.feed.start();
   nc._watchVersion();
   if (nc.cfg.owner) nc.currentManifest().then((ev) => { if (ev) nc._manifest = ev; }).catch(() => {});
   document.documentElement.setAttribute("nc:ready", "true");
@@ -361,7 +374,7 @@ nc.ready = (async () => {
 })();
 
 Object.assign(nc, {
-  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner,
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
 });
 

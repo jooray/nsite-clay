@@ -279,7 +279,7 @@ export class Editable {
     sep();
 
     const listBtns = [
-      ["insertUnorderedList", "Bulleted list", "• —"],
+      ["insertUnorderedList", "Bulleted list", "\u2022 \u2013"],
       ["insertOrderedList", "Numbered list", "1."],
     ];
     for (const [cmd, title, glyph] of listBtns) {
@@ -293,6 +293,22 @@ export class Editable {
     linkBtn.onmousedown = (e) => e.preventDefault();
     linkBtn.onclick = () => { this.link(); this.nc.dirty = true; this.syncBar(); };
     bar.appendChild(linkBtn);
+
+    sep();
+
+    // Block-level inserts. They act at the caret, which is why they live on the
+    // same toolbar as the text controls rather than in a separate menu.
+    for (const [title, glyph, run] of [
+      ["Insert an image", "🖼", () => this.nc.media.promptImage()],
+      ["Insert a video", "🎬", () => this.nc.media.promptVideo()],
+      ["Insert a Nostr feed", "⚡", () => this.nc.feed.promptInsert()],
+    ]) {
+      const b = mk("button", btnCss, { type: "button", title, textContent: glyph });
+      b.onmousedown = (e) => e.preventDefault();
+      b.onclick = () => { this.hideBar(); run(); };
+      bar.appendChild(b);
+    }
+    sep();
 
     const clear = mk("button", btnCss, { type: "button", title: "Clear formatting", textContent: "⌫" });
     clear.onmousedown = (e) => e.preventDefault();

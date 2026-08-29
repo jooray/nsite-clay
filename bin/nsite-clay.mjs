@@ -82,8 +82,14 @@ function rememberClientKey(remotePubkey, secretHex, userPubkey) {
 // One interface over a raw key and a remote signer, so `deploy` does not care
 // which the person used.
 async function getSigner() {
-  const bunker = flags.bunker || process.env.NOSTR_BUNKER_URI;
+  // Prefer the environment: a bunker:// URI carries a secret, and anything on
+  // argv is visible to every other process on the machine through `ps`.
+  const bunker = process.env.NOSTR_BUNKER_URI || flags.bunker;
   if (bunker) {
+    if (!process.env.NOSTR_BUNKER_URI && flags.bunker) {
+      console.error("nsite-clay: warning, --bunker puts the connection secret in your process list.\n" +
+                    "  Prefer NOSTR_BUNKER_URI=… in the environment.");
+    }
     const bp = await parseBunkerInput(String(bunker));
     if (!bp) die("could not parse that bunker:// URI");
     if (!bp.relays?.length) die("that bunker:// URI names no relays");
@@ -95,16 +101,30 @@ async function getSigner() {
     // options, so `new BunkerSigner(key, bp)` leaves the pointer unset and
     // connect() dies on it.
     const signer = BunkerSigner.fromBunker(clientKey, bp);
+    // A signer that never answers is the commonest failure, and without a
+    // deadline it looks identical to a slow one. Say which relays were tried.
+    const deadline = Number(flags.timeout || 60) * 1000;
+    const withTimeout = (p) => Promise.race([p, new Promise((_, rej) =>
+      setTimeout(() => rej(new Error(
+        `no answer within ${deadline / 1000}s. Relays tried: ${bp.relays.join(", ")}. ` +
+        `Is the signer running and connected to at least one of them, and is there a ` +
+        `prompt waiting for approval?`)), deadline))]);
+
     // A bunker that already holds a session for this secret answers `connect`
     // with "already connected", which is a success in every sense that matters.
-    try { await signer.connect(); }
-    catch (e) { if (!/already connected/i.test(String(e?.message ?? e))) throw e; }
+    process.stderr.write("connecting to the signer…\n");
+    try { await withTimeout(signer.connect()); }
+    catch (e) {
+      const msg = String(e?.message ?? e);
+      if (/no answer within/.test(msg)) die(msg);
+      if (!/already connected/i.test(msg)) throw e;
+    }
     // NIP-46: the pubkey on the transport is a per-connection routing key, not
     // the user. The identity only comes from an explicit get_public_key.
     // A refusal here is almost always the connection lacking a permission, so
     // say which request was refused rather than passing on a bare "no permission".
     const ask = async (what, fn) => {
-      try { return await fn(); }
+      try { return await withTimeout(fn()); }
       catch (e) {
         const msg = String(e?.message ?? e);
         if (/no permission|denied|unauthorized/i.test(msg)) {
@@ -339,7 +359,10 @@ function cmdHelp() {
 
 Signing
   --sec=nsec1… | NOSTR_SECRET_KEY        a raw key
-  --bunker=bunker://… | NOSTR_BUNKER_URI a remote signer (nsec.app, Amber over a bunker)
+  NOSTR_BUNKER_URI=bunker://…            a remote signer (nsec.app, Amber over a bunker).
+                                         Prefer the env var: --bunker=… also works but puts
+                                         the connection secret in your process list.
+  --timeout=60                           seconds to wait for the signer to answer
   --fresh                                connect to the bunker as a new app, ignoring the
                                          client key saved for it
 

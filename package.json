@@ -45,7 +45,8 @@
     "build": "node build.mjs",
     "test": "node test/verify.mjs",
     "prepublishOnly": "npm run build && npm test",
-    "site:build": "node build.mjs && cp dist/nsite-clay.js site/ && cp icons/nsite-clay-transparent.png icons/nsite-clay-mark.svg icons/nsite-clay.png site/ && cp media/editing.png site/"
+    "site:build": "node build.mjs && cp dist/nsite-clay.js site/ && cp icons/nsite-clay-transparent.png icons/nsite-clay-mark.svg icons/nsite-clay.png site/ && cp media/editing.png site/ && mkdir -p site/shots && cp media/docs/*.png site/shots/",
+    "devnet": "node tools/devnet.mjs"
   },
   "dependencies": {
     "@noble/hashes": "^1.7.1",
