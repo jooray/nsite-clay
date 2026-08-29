@@ -16,3 +16,6 @@ site/shots/
 site/t/
 site/nsite-clay-base.css
 site/nsite-clay-chrome.js
+
+# assembled by `npm run demo:build`
+demo-dist/
