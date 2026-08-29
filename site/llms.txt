@@ -320,10 +320,22 @@ of the app and belongs in the file; the rules above keep it away from readers.
 composer holding a half-typed line. To have a control that both persists and is
 never itself written, draw it from a script that persists.
 
-`nc.dom` gives you `clone`, `remove`, `move`, `insert`, `addFrom` a `<template>`,
-`toggle` and `set`, plus `cloneClosest` and friends so a control addresses the
-block it sits in. Every one arms the new markup for editing and marks the page
-unsaved, which is the bookkeeping you would otherwise forget.
+`nc.dom` gives you `clone`, `remove`, `move`, `moveTo`, `insert`, `addFrom` a
+`<template>`, `toggle` and `set`, plus `cloneClosest` and friends so a control
+addresses the block it sits in. Every one arms the new markup for editing and
+marks the page unsaved, which is the bookkeeping you would otherwise forget.
+
+`move` reorders within one parent. A card going from one column to the next
+crosses parents, so that is `moveTo(el, container)` or, from a gear,
+`moveToClosest(this, '.card', '.col', 1)`, which steps through the containers in
+document order. The node itself travels, so anything typed into it comes along.
+
+```html
+<menu class="nc-gear nc-gear-row">
+  <button type="button" onclick="nc.dom.moveToClosest(this, '.card', '.col', -1)">&larr;</button>
+  <button type="button" onclick="nc.dom.moveToClosest(this, '.card', '.col', 1)">&rarr;</button>
+</menu>
+```
 
 Read the document back as data with `nc.dom.all(".card")` and
 `nc.dom.by(".card", "data-status")`. The DOM is the query engine; there is no
@@ -336,6 +348,50 @@ the block and the rest of your page.
 `nc.dom` calls `nc.editable.refresh()` for you. You need it yourself only for
 markup you inserted some other way, before focusing it, or the new region will
 not be typeable.
+
+### What an app here can and cannot do
+
+This layer exists because of HyperClay, which makes a single HTML file editable
+by its owner and lets that file be a real application. It is worth knowing
+exactly where the two part company, because the wrong assumption in either
+direction wastes an afternoon.
+
+**Your own JavaScript survives the save.** A save is a serialisation of the live
+DOM with a short list of removals, not a pass through a sanitiser. Inline
+`onclick` handlers, `<script>` blocks, `<template>` elements, custom attributes
+and data attributes are all authored markup and come back byte for byte. The
+sanitiser guards two doors only: HTML pasted into an editable region, and
+content fetched from a relay. Neither one touches what you wrote.
+
+**What the save does remove**, and therefore what you can rely on being absent
+from the published file: anything marked `clay="no-save"`, anything the runtime
+injected (`nc:chrome`), anything fetched at view time (`nc:transient`), and the
+runtime's own state attributes on `<html>`. Everything else stays.
+
+**Form state is persisted for you.** HyperClay asks for a `persist` attribute on
+an input. Here it is the default: a checkbox the owner ticks, a value typed into
+a text field and a selected option are all written into the outgoing file. Opt a
+control out with `nc:no-persist`, which is what a search box wants so a
+half-typed filter is not published. Password and file inputs are never written.
+
+**One writer, and the writer is a key.** HyperClay logs an owner in against a
+server; here the page checks a signature, so there is no account and no server
+to run. The consequence is that only the key holder can save. A visitor can
+change the page in front of them, and nothing they do reaches anyone else.
+Anything that needs a stranger's input to be recorded belongs on relays, as a
+Nostr event they sign themselves, not in the document.
+
+**No conflict detection.** Two devices editing under one key will lose one
+side's work. Version history means it can be recovered, not that it cannot
+happen.
+
+**Every save republishes the whole document.** This is the real budget. A page
+that saves on every keystroke, or one that grows without bound because a script
+appends to it, becomes expensive to load and slow to publish. Keep the document
+the size of a document.
+
+**No server-side anything.** No request handling, no scheduled work, no secrets.
+A key in the file is a key you have published.
 
 ---
 

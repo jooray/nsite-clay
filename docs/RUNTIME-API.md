@@ -73,12 +73,14 @@ nc.editable.block("H2")            // what the block menu calls
 nc.reloadToLatest()                // reload through a URL no cache can satisfy
 
 // structure: the DOM is the database, these are the operations on it
-nc.dom.clone(el) / .remove(el) / .move(el, +1|-1, selector)
+nc.dom.clone(el) / .remove(el) / .move(el, +1|-1, selector)   // move reorders in one parent
+nc.dom.moveTo(el, container, "beforeend")                    // and this crosses parents
 nc.dom.insert(target, html, "beforeend") / .addFrom("template-id", container)
 nc.dom.toggle(el, "hidden") / .set(el, "data-status", "done")
 nc.dom.cloneClosest(btn, ".card")        // from a control inside the block
 nc.dom.removeClosest(btn, ".card") / .removeClosestAsk(btn, ".card", "this card")
 nc.dom.moveClosest(btn, -1, ".card") / .toggleClosest(btn, ".card", "hidden")
+nc.dom.moveToClosest(btn, ".card", ".col", +1|-1)   // walk a card along the columns
 nc.dom.all(".card") / .by(".card", "data-status")   // reading it back
 
 // state with no visual form, kept in a JSON script block in the page

@@ -293,6 +293,24 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.dom.cloneClosest(gear, ".card")?.classList.contains("card") === true);
   nc.dom.removeClosest(board.querySelector(".card"), ".card");
 
+  // A board's whole point is a card crossing from one column to the next, which
+  // move() cannot do because it only reorders inside one parent.
+  const colA = document.getElementById("col-a"), colB = document.getElementById("col-b");
+  const travelling = colA.querySelector(".card");
+  nc.dom.moveTo(travelling, colB);
+  t("a card can cross into another container",
+    colB.contains(travelling) && !colA.contains(travelling));
+  t("and it is the same node, so what was typed into it came along",
+    travelling.querySelector("[editable]").textContent === "travels");
+  nc.dom.moveToClosest(travelling.querySelector(".nc-gear button"), ".card", ".col", -1);
+  t("a gear can walk it back one container",
+    colA.contains(travelling));
+  t("walking past the last container leaves it where it is",
+    (nc.dom.moveToClosest(travelling.querySelector(".nc-gear button"), ".card", ".col", -1),
+     colA.contains(travelling)));
+  t("a container cannot be moved into its own descendant",
+    nc.dom.moveTo(colA, travelling) === null);
+
   const grouped = nc.dom.by(".card", "data-status", board);
   t("elements group by attribute, which is the query a board wants",
     grouped.size >= 1 && [...grouped.values()].every((v) => Array.isArray(v)));

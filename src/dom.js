@@ -84,6 +84,18 @@ export class Dom {
     return this._changed(node);
   }
 
+  // Move a node into a different container. `move` only reorders within one
+  // parent, which is not enough for a board: a card going from one column to
+  // the next crosses parents, and that is the operation the whole pattern rests
+  // on. The node itself travels, so whatever was typed into it comes along.
+  moveTo(el, container, where = "beforeend") {
+    if (!el) return null;
+    const host = typeof container === "string" ? this.doc.querySelector(container) : container;
+    if (!host || host === el || el.contains(host)) return null;   // never into its own descendant
+    where === "afterbegin" ? host.prepend(el) : host.append(el);
+    return this._changed(el);
+  }
+
   toggle(el, className = "hidden") {
     if (!el) return null;
     el.classList.toggle(className);
@@ -104,6 +116,18 @@ export class Dom {
   removeClosest(from, selector) { return this.remove(closestOf(from, selector)); }
   moveClosest(from, direction, selector) { return this.move(closestOf(from, selector), direction, selector); }
   toggleClosest(from, selector, className) { return this.toggle(closestOf(from, selector), className); }
+
+  // Send the block this control sits in to another container, stepping through
+  // the containers in document order so one button can walk a card along.
+  moveToClosest(from, selector, containerSelector, step = 1) {
+    const el = closestOf(from, selector);
+    if (!el) return null;
+    const hosts = this.all(containerSelector);
+    const here = hosts.findIndex((h) => h.contains(el));
+    const next = here + (step < 0 ? -1 : 1);
+    if (here < 0 || next < 0 || next >= hosts.length) return el;
+    return this.moveTo(el, hosts[next]);
+  }
 
   // Delete is the one worth a question, because a save is a publish.
   async removeClosestAsk(from, selector, what = "this") {
