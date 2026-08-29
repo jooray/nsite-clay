@@ -349,6 +349,50 @@ the block and the rest of your page.
 markup you inserted some other way, before focusing it, or the new region will
 not be typeable.
 
+### A form for the page, when clicking into it is not enough
+
+Editing in place suits the person who wrote the page. It does not suit the
+person who inherits it and only wants to change the price, the date and the
+third paragraph without hunting for them. For that, describe the page's fields
+in a rules block and let the runtime generate a form:
+
+```html
+<script type="application/json" nc:cms>
+{
+  "title":  ".site-title",
+  "hero":   "img.hero@src",
+  "open":   ".status@data-open",
+  "tags":   ".tag[]",
+  "posts":  [".post", { "heading": ".post-title", "body": ".post-body" }]
+}
+</script>
+
+<button class="nc-owner-only" onclick="nc.cms.toggle()">Edit content</button>
+```
+
+`nc.cms.open()` draws a panel down the right-hand side with one control per
+field. Typing writes straight through to the element and marks the page unsaved;
+the panel itself is `nc:chrome`, so it is never part of the file. The rules are,
+because they are part of the page.
+
+The grammar is four things:
+
+| Written as | Means |
+|---|---|
+| `".title"` | the element's text |
+| `"img.hero@src"`, `".x@data-y"` | an attribute |
+| `".agree@checked"` | a checkbox, which persists like any other input |
+| `".tag[]"` | one field per matching element |
+| `[".post", { … }]` | a card per match, with Add, Duplicate, Remove and reorder |
+| `{ "author": { … } }` | a labelled group, purely for tidiness |
+
+For a list that can be emptied, keep one item as the shape to copy and mark it
+`nc:cms-template`. It is hidden, never offered as content, and "Add" clones it.
+Without one, "Add" copies the last item.
+
+This is worth reaching for when the page will outlive your involvement with it.
+A page you maintain yourself does not need it.
+
 ### What an app here can and cannot do
 
 This layer exists because of HyperClay, which makes a single HTML file editable

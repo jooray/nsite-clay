@@ -86,6 +86,9 @@ nc.dom.all(".card") / .by(".card", "data-status")   // reading it back
 // state with no visual form, kept in a JSON script block in the page
 nc.state.get() / .set({…}) / .update({…})           // optional id, default "app-state"
 
+// a generated form for the page, from a <script type="application/json" nc:cms> block
+nc.cms.open() / .close() / .toggle() / .isOpen / .rules()
+
 // a published post, rendered into the page and stamped with its address
 nc.compose.bake(event, container) / .refreshBaked() / .addressOf(event)
 

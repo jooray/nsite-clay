@@ -211,3 +211,53 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; ga
   }
   html { scroll-behavior: auto !important; }
 }
+
+/* ---- the CMS panel -------------------------------------------------------
+ * nc.cms.open() draws a form for the page from the nc:cms rules block. It is
+ * runtime chrome, so it is removed from the save and never reaches a reader.
+ * Every one of these class names can be restyled by a document.
+ */
+.nc-cms {
+  position: fixed; inset: 0 0 0 auto; width: min(23rem, 100%);
+  background: var(--nc-panel, #14121b); color: var(--nc-ink, #eee);
+  border-left: 1px solid var(--nc-edge, #332f3f);
+  z-index: 2147483000; overflow-y: auto; padding: 1rem;
+  font: 14px/1.5 var(--nc-sans, system-ui, sans-serif);
+  box-shadow: -20px 0 60px -30px rgba(0, 0, 0, .8);
+}
+.nc-cms header { display: flex; justify-content: space-between; align-items: center;
+  gap: .5rem; margin-bottom: .5rem; }
+.nc-cms button {
+  font: inherit; padding: .3rem .6rem; border-radius: var(--nc-radius-sm, 8px);
+  border: 1px solid var(--nc-edge, #423c52); background: var(--nc-panel-2, #1e1a28);
+  color: inherit; cursor: pointer;
+}
+.nc-cms button:hover { border-color: var(--nc-accent, #8b7ce8); }
+.nc-cms input[type="text"], .nc-cms textarea {
+  width: 100%; box-sizing: border-box; font: inherit; padding: .4rem .55rem;
+  border-radius: var(--nc-radius-sm, 8px); border: 1px solid var(--nc-edge, #423c52);
+  background: var(--nc-bg, #0f0d15); color: inherit;
+}
+.nc-cms input:focus-visible, .nc-cms textarea:focus-visible {
+  outline: 2px solid var(--nc-accent, #8b7ce8); outline-offset: 1px;
+}
+.nc-cms-field { margin: 0 0 .75rem; }
+.nc-cms-label { display: block; font-size: .78rem; text-transform: uppercase;
+  letter-spacing: .06em; opacity: .65; margin-bottom: .25rem; }
+.nc-cms-check { display: flex; align-items: center; gap: .5rem; }
+.nc-cms-check .nc-cms-label { margin: 0; text-transform: none; letter-spacing: 0; }
+.nc-cms-group { border: 1px solid var(--nc-edge, #332f3f); border-radius: var(--nc-radius, 10px);
+  padding: .7rem; margin: 0 0 .9rem; }
+.nc-cms-group legend { padding: 0 .35rem; font-size: .78rem; text-transform: uppercase;
+  letter-spacing: .06em; opacity: .65; }
+.nc-cms-card { border: 1px solid var(--nc-edge, #2b2735); border-radius: var(--nc-radius-sm, 8px);
+  padding: .6rem; margin-bottom: .6rem; }
+.nc-cms-cardbar, .nc-cms-row { display: flex; gap: .3rem; margin-bottom: .5rem; }
+.nc-cms-row input { flex: 1; }
+.nc-cms-note { font-size: .82rem; opacity: .6; margin: 0 0 .8rem; }
+.nc-cms-pick { margin-top: .35rem; }
+
+/* An item kept only as the shape for "Add" is not content and is not shown. */
+[nc\:cms-template] { display: none !important; }
+
+@media (max-width: 620px) { .nc-cms { width: 100%; } }

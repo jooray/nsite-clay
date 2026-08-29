@@ -20,6 +20,7 @@ import { Feed, readFeedConfig } from "./feed.js";
 import { Compose } from "./compose.js";
 import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
+import { Cms } from "./cms.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { toast, field, modal, checkbox } from "./ui.js";
 
@@ -59,6 +60,7 @@ class NsiteClay extends EventTarget {
     this.settings = new Settings(this);
     this.dom = new Dom(this);
     this.state = new State(this);
+    this.cms = new Cms(this);
     this.status = "idle";
     this._subs = [];
     this._transforms = [];

@@ -15,6 +15,24 @@
   <div class="col" id="col-a"><article class="card" data-status="active"><span editable="single-line">travels</span>
       <menu class="nc-gear nc-gear-row"><button type="button">&gt;</button></menu></article></div>
   <div class="col" id="col-b"></div>
+  <div id="cmsroot">
+    <h1 class="site-title">Old title</h1>
+    <img class="hero" src="/a.png" alt="hero">
+    <span class="status" data-open="no">status</span>
+    <span class="tag">one</span><span class="tag">two</span>
+    <article class="post"><h3 class="post-title">First</h3><p class="post-body">Body one.</p></article>
+    <article class="post"><h3 class="post-title">Second</h3><p class="post-body">Body two.</p></article>
+    <article class="post" nc:cms-template><h3 class="post-title">New</h3><p class="post-body">Say something.</p></article>
+  </div>
+  <script type="application/json" nc:cms>
+  {
+    "title": ".site-title",
+    "hero": "img.hero@src",
+    "open": ".status@data-open",
+    "tags": ".tag[]",
+    "posts": [".post", { "heading": ".post-title", "body": ".post-body" }]
+  }
+  </script>
   <template id="card-tpl"><article class="card" data-status="active"><span editable="single-line">new</span></article></template>
   <input id="filter" nc:no-persist value="typed-filter">
   <input id="f" value="typed">

@@ -311,6 +311,54 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("a container cannot be moved into its own descendant",
     nc.dom.moveTo(colA, travelling) === null);
 
+  // --- the CMS: a form for the page, generated from the page ----------------
+  const rules = nc.cms.rules();
+  t("the rules block is read from the document", rules && rules.title === ".site-title");
+
+  // The panel is owner-only, and the fixture's owner is the demo key.
+  await nc.login("nsec", { key: "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" });
+  t("signed in as the fixture's owner", nc.isOwner === true);
+  const panel = nc.cms.open();
+  t("the panel opens", !!panel && nc.cms.isOpen);
+  t("and is runtime chrome, so it never reaches the file", panel.hasAttribute("nc:chrome"));
+
+  const fieldFor = (label) => [...panel.querySelectorAll(".nc-cms-label")]
+    .find((l) => l.textContent === label)?.closest(".nc-cms-field, .nc-cms-check");
+
+  const title = fieldFor("title").querySelector("input, textarea");
+  t("a scalar field shows what the element says", title.value === "Old title");
+  title.value = "New title";
+  title.dispatchEvent(new window.Event("input", { bubbles: true }));
+  t("typing writes straight through to the DOM",
+    document.querySelector(".site-title").textContent === "New title");
+  t("and marks the page unsaved", nc.dirty === true);
+
+  const open = fieldFor("open").querySelector("input");
+  open.value = "yes";
+  open.dispatchEvent(new window.Event("input", { bubbles: true }));
+  t("an @attribute field writes the attribute",
+    document.querySelector(".status").getAttribute("data-open") === "yes");
+
+  const cmsCards = () => [...panel.querySelectorAll(".nc-cms-card")].filter((c) => c.querySelector("input, textarea"));
+  t("an object array draws one card per match, template excluded", cmsCards().length === 2);
+  t("a template item is not offered as content",
+    !panel.textContent.includes("Say something."));
+
+  panel.querySelector(".nc-cms-list .nc-cms-add").click();
+  t("Add copies the template rather than the last item",
+    nc.dom.all("#cmsroot .post:not([nc\\:cms-template])").length === 3);
+  t("and the copy is content, leaving exactly one template behind",
+    nc.dom.all("#cmsroot .post[nc\\:cms-template]").length === 1);
+
+  const html = nc.getHTML();
+  t("the panel is absent from the saved file", !html.includes("nc-cms-body"));
+  t("but the rules stay, because they are part of the page", html.includes("nc:cms"));
+  t("and the typed title is in the file", html.includes("New title"));
+
+  nc.cms.close();
+  t("the panel closes", !nc.cms.isOpen && !document.querySelector(".nc-cms"));
+  await nc.logout();             // later checks want nobody signed in
+
   const grouped = nc.dom.by(".card", "data-status", board);
   t("elements group by attribute, which is the query a board wants",
     grouped.size >= 1 && [...grouped.values()].every((v) => Array.isArray(v)));
