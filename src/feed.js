@@ -147,7 +147,7 @@ export class Feed {
       await this.loadProfiles(items.map((e) => e.pubkey), relays);
       this.render(el, cfg, items);
     } catch (err) {
-      this.paint(el, cfg, `Could not reach the relays: ${err.message}`);
+      this.render(el, cfg, [], `Could not reach the relays: ${err.message}`);
     }
   }
 
@@ -186,11 +186,14 @@ export class Feed {
   render(el, cfg, items, empty = "Nothing to show yet") {
     this.clear(el);
     el.classList.add("nc-feed", `nc-feed-${cfg.type}`, `nc-feed-${cfg.style}`);
+    // Set even for none, and even after a failure, because the attribute is how
+    // a document tells "this feed has finished" from "this feed is still
+    // loading". Without that a page combining two feeds has to guess.
+    el.setAttribute("nc:feed-count", String(items.length));
     if (!items.length) return this.paint(el, cfg, empty);
     const frag = this.doc.createDocumentFragment();
     for (const ev of items) frag.appendChild(this.card(ev, cfg));
     el.appendChild(frag);
-    el.setAttribute("nc:feed-count", String(items.length));
   }
 
   card(ev, cfg) {

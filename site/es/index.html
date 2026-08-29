@@ -82,6 +82,19 @@
               display: block; margin-bottom: .5rem; }
   .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
 
+  /* templates as apps */
+  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+          margin: 1.8rem 0 1.4rem; padding: 0; list-style: none; }
+  .apps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+             overflow: hidden; display: flex; flex-direction: column; }
+  .apps .thumb { display: block; line-height: 0; }
+  .apps img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center;
+              display: block; border-bottom: 1px solid var(--edge); }
+  .apps .t { display: block; padding: .9rem 1rem .35rem; font: 600 .95rem/1.2 var(--sans); }
+  .apps .t a { text-decoration: none; color: var(--ink); }
+  .apps .t a:hover { color: var(--violet); }
+  .apps p { margin: 0; padding: 0 1rem 1.05rem; color: var(--ink-dim); font-size: .9rem; }
+
   /* code */
   pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
         padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
@@ -256,6 +269,46 @@
           comandos de edición acaban guardadas.</p>
       </div>
     </div>
+  </section>
+
+  <section id="apps">
+    <h2 editable="single-line">Plantillas como aplicaciones</h2>
+    <div editable>
+      <p class="lede">Una plantilla no es una combinación de colores. Cada una es una pequeña aplicación que resulta ser un solo archivo: lee de los relays, tiene controles y en varias quien la visita puede hacer algo. La página puede tener el aspecto que quieras, porque debajo no hay nada que decida cómo tiene que ser una página.</p>
+    </div>
+    <ul class="apps">
+      <li>
+        <a class="thumb" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="La plantilla gallery" loading="lazy"></a>
+        <span class="t"><a href="/t/gallery/">Muro de fotos</a></span>
+        <p>Cientos de imágenes de un npub, sobre un lienzo que arrastras y acercas. Tres disposiciones intercambiables.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/links/"><img src="/shots/t-links.png" alt="La plantilla links" loading="lazy"></a>
+        <span class="t"><a href="/t/links/">Lista de enlaces</a></span>
+        <p>Un linktree que editas en la propia página. Añade un enlace, quita otro, pon una dirección de zaps.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/irc/"><img src="/shots/t-irc.png" alt="La plantilla irc" loading="lazy"></a>
+        <span class="t"><a href="/t/irc/">Registro de canal</a></span>
+        <p>Una página a la que sigues añadiendo líneas. Inicia sesión y abajo aparece el editor.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/event/"><img src="/shots/t-event.png" alt="La plantilla event" loading="lazy"></a>
+        <span class="t"><a href="/t/event/">Invitación a un evento</a></span>
+        <p>Los datos en grande, legibles desde el otro lado de la sala, y un archivo de calendario que el visitante descarga.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="La plantilla phrack" loading="lazy"></a>
+        <span class="t"><a href="/t/phrack/">Archivo de texto</a></span>
+        <p>Setenta y nueve columnas monoespaciadas y reglas ASCII, con la forma de los viejos zines.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/eco/"><img src="/shots/t-eco.png" alt="La plantilla eco" loading="lazy"></a>
+        <span class="t"><a href="/t/eco/">Bajo peso</a></span>
+        <p>Tipografías del sistema y lo mínimo de todo lo demás. Mide e imprime su propio peso de transferencia.</p>
+      </li>
+    </ul>
+    <p><a class="btn" href="/es/templates.html">Las once plantillas</a></p>
   </section>
 
   <section id="try">

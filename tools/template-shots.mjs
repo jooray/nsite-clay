@@ -35,6 +35,16 @@ for (const name of names) {
   try {
     await page.goto(`http://127.0.0.1:${port}/t/${name}/`, { waitUntil: "networkidle", timeout: 25000 });
     await new Promise((r) => setTimeout(r, 3500));          // let feeds settle
+    // A wall of a couple of hundred pictures is still decoding when networkidle
+    // fires, and the shot comes out full of empty frames. Wait for the images
+    // themselves, with a ceiling so a dead host cannot hang the run.
+    await page.waitForFunction(() => {
+      const imgs = [...document.images].filter((i) => i.getAttribute("src"));
+      if (imgs.length < 24) return true;
+      const done = imgs.filter((i) => i.complete).length;
+      return done / imgs.length > 0.95;
+    }, null, { timeout: 30000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 1200));          // and let them paint
     // A reader sees no chrome until #edit, so this is the honest shot.
     const gated = await page.evaluate(`(() => {
       const bar = document.querySelector('.nc-bar');

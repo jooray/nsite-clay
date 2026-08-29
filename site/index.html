@@ -82,6 +82,19 @@
               display: block; margin-bottom: .5rem; }
   .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
 
+  /* templates as apps */
+  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+          margin: 1.8rem 0 1.4rem; padding: 0; list-style: none; }
+  .apps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+             overflow: hidden; display: flex; flex-direction: column; }
+  .apps .thumb { display: block; line-height: 0; }
+  .apps img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center;
+              display: block; border-bottom: 1px solid var(--edge); }
+  .apps .t { display: block; padding: .9rem 1rem .35rem; font: 600 .95rem/1.2 var(--sans); }
+  .apps .t a { text-decoration: none; color: var(--ink); }
+  .apps .t a:hover { color: var(--violet); }
+  .apps p { margin: 0; padding: 0 1rem 1.05rem; color: var(--ink-dim); font-size: .9rem; }
+
   /* code */
   pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
         padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
@@ -252,6 +265,46 @@
           toolbar and the debris browsers emit from editing commands never get saved.</p>
       </div>
     </div>
+  </section>
+
+  <section id="apps">
+    <h2 editable="single-line">Templates as apps</h2>
+    <div editable>
+      <p class="lede">A template is not a colour scheme. Each one is a small application that happens to be a single file: it reads from relays, it has controls, and in several of them a visitor can do something. The page can look like anything, because nothing underneath is deciding what a page has to be.</p>
+    </div>
+    <ul class="apps">
+      <li>
+        <a class="thumb" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="The gallery template" loading="lazy"></a>
+        <span class="t"><a href="/t/gallery/">Photo wall</a></span>
+        <p>Hundreds of pictures from one npub, on a canvas you drag and zoom. Three layouts, switchable.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/links/"><img src="/shots/t-links.png" alt="The links template" loading="lazy"></a>
+        <span class="t"><a href="/t/links/">Link list</a></span>
+        <p>A linktree you edit on the page itself. Add a link, drop one, set a zap address.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/irc/"><img src="/shots/t-irc.png" alt="The irc template" loading="lazy"></a>
+        <span class="t"><a href="/t/irc/">Channel log</a></span>
+        <p>A page you keep adding lines to. Sign in and a composer appears at the bottom.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/event/"><img src="/shots/t-event.png" alt="The event template" loading="lazy"></a>
+        <span class="t"><a href="/t/event/">Event invitation</a></span>
+        <p>Details large enough to read across a room, and a calendar file the visitor downloads.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="The phrack template" loading="lazy"></a>
+        <span class="t"><a href="/t/phrack/">Text file</a></span>
+        <p>Seventy-nine columns of monospace and ASCII rules, in the shape of the old zines.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/eco/"><img src="/shots/t-eco.png" alt="The eco template" loading="lazy"></a>
+        <span class="t"><a href="/t/eco/">Low weight</a></span>
+        <p>System fonts and as little of everything else as the job allows. It measures and prints its own transfer weight.</p>
+      </li>
+    </ul>
+    <p><a class="btn" href="/templates.html">All eleven templates</a></p>
   </section>
 
   <section id="try">

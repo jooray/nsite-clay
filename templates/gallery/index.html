@@ -299,7 +299,7 @@
 
   <div id="gallery"
        nc:photos="npub132c2qg7akd2lfz9n597ve4txcus3fgtu06xk35an0q79nnjfk0gqwrm92q"
-       nc:limit="48">
+       nc:limit="240">
     <noscript>
       <p>Scripting is off, so the pictures are not on this page. They live on Nostr and you can
       see them at
@@ -348,7 +348,10 @@
   if (!root) return;
 
   const npub = root.getAttribute("nc:photos") || "";
-  const MAX = Math.min(parseInt(root.getAttribute("nc:limit") || "48", 10) || 48, 90);
+  // The wall was showing 48 of the 331 pictures this account has posted, which
+  // is what made it look thin. Images lazy-load, so the cost of a bigger wall
+  // is the layout pass rather than the network.
+  const MAX = Math.min(parseInt(root.getAttribute("nc:limit") || "240", 10) || 240, 400);
   let author;
   try { author = nc.nip19.decode(npub).data; }
   catch { author = /^[0-9a-f]{64}$/i.test(npub) ? npub.toLowerCase() : null; }
@@ -373,6 +376,10 @@
   // ---- what counts as a picture post -------------------------------------
 
   const IMG_EXT = /\.(jpe?g|png|gif|webp|avif|bmp)(\?.*)?$/i;
+  // Blossom addresses a file by its hash and stops there, so half the pictures
+  // on Nostr have no extension to test. A 64-character hex filename is a blob.
+  const IMG_HASH = /\/[0-9a-f]{64}(\.\w+)?(\?.*)?$/i;
+  const looksImage = (u) => IMG_EXT.test(u) || IMG_HASH.test(u);
   const https = (u) => { try { return new URL(u).protocol === "https:"; } catch { return false; } };
 
   // imeta carries the url, the pixel size, sometimes an alt. The size is worth
@@ -399,7 +406,7 @@
     for (const p of fromImeta(ev)) if (!seen.has(p.url)) seen.set(p.url, p);
     for (const m of (ev.content || "").matchAll(/https?:\/\/[^\s<>"']+/gi)) {
       const url = m[0].replace(/[.,;:)\]]+$/, "");
-      if (seen.has(url) || !https(url) || !IMG_EXT.test(url)) continue;
+      if (seen.has(url) || !https(url) || !looksImage(url)) continue;
       seen.set(url, { url, w: 0, h: 0, alt: "" });
     }
     return [...seen.values()];
@@ -426,17 +433,18 @@
 
   let photos = [];
   try {
-    const events = await nc.pool.querySync(nc.cfg.relays, { kinds: [1], authors: [author], limit: 300 });
+    const events = await nc.pool.querySync(nc.cfg.relays,
+      { kinds: [1, 20], authors: [author], limit: 600 });
     const keep = new Map();
     for (const ev of events) {
       if (keep.has(ev.id)) continue;
-      if (ev.kind !== 1 || ev.pubkey !== author) continue;
+      if ((ev.kind !== 1 && ev.kind !== 20) || ev.pubkey !== author) continue;
       // A relay is a transport, not a witness. Nothing unsigned is hung.
       if (!nc.verifyEvent(ev)) continue;
       const pics = pictures(ev);
       if (!pics.length) continue;
       const text = residue(ev.content);
-      if (text.length > 140) continue;
+      if (text.length > 280) continue;
       keep.set(ev.id, { ev, pics, text });
     }
     const items = [...keep.values()].sort((a, b) => b.ev.created_at - a.ev.created_at);

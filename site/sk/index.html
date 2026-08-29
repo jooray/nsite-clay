@@ -82,6 +82,19 @@
               display: block; margin-bottom: .5rem; }
   .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
 
+  /* templates as apps */
+  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+          margin: 1.8rem 0 1.4rem; padding: 0; list-style: none; }
+  .apps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+             overflow: hidden; display: flex; flex-direction: column; }
+  .apps .thumb { display: block; line-height: 0; }
+  .apps img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center;
+              display: block; border-bottom: 1px solid var(--edge); }
+  .apps .t { display: block; padding: .9rem 1rem .35rem; font: 600 .95rem/1.2 var(--sans); }
+  .apps .t a { text-decoration: none; color: var(--ink); }
+  .apps .t a:hover { color: var(--violet); }
+  .apps p { margin: 0; padding: 0 1rem 1.05rem; color: var(--ink-dim); font-size: .9rem; }
+
   /* code */
   pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
         padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
@@ -252,6 +265,46 @@
           s nástrojmi ani smetie, ktoré prehliadače pri úpravách vyrábajú, sa neukladá.</p>
       </div>
     </div>
+  </section>
+
+  <section id="apps">
+    <h2 editable="single-line">Šablóny ako appky</h2>
+    <div editable>
+      <p class="lede">Šablóna nie je farebná schéma. Každá je malá aplikácia, ktorá je zhodou okolností jediný súbor: číta z relayov, má ovládanie a vo viacerých môže návštevník aj niečo urobiť. Stránka môže vyzerať hocijako, lebo pod ňou nie je nič, čo by určovalo, ako má stránka vyzerať.</p>
+    </div>
+    <ul class="apps">
+      <li>
+        <a class="thumb" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="Šablóna gallery" loading="lazy"></a>
+        <span class="t"><a href="/t/gallery/">Stena fotiek</a></span>
+        <p>Stovky obrázkov z jedného npubu na plátne, ktoré ťaháš a približuješ. Tri rozloženia, prepínateľné.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/links/"><img src="/shots/t-links.png" alt="Šablóna links" loading="lazy"></a>
+        <span class="t"><a href="/t/links/">Zoznam odkazov</a></span>
+        <p>Linktree, ktorý upravuješ priamo na stránke. Pridaj odkaz, zmaž iný, nastav zap adresu.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/irc/"><img src="/shots/t-irc.png" alt="Šablóna irc" loading="lazy"></a>
+        <span class="t"><a href="/t/irc/">Log kanála</a></span>
+        <p>Stránka, do ktorej stále pridávaš riadky. Prihlás sa a dole sa objaví okno na písanie.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/event/"><img src="/shots/t-event.png" alt="Šablóna event" loading="lazy"></a>
+        <span class="t"><a href="/t/event/">Pozvánka na podujatie</a></span>
+        <p>Detaily dosť veľké, aby sa dali prečítať cez celú miestnosť, a kalendárový súbor na stiahnutie.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="Šablóna phrack" loading="lazy"></a>
+        <span class="t"><a href="/t/phrack/">Textový súbor</a></span>
+        <p>Sedemdesiatdeväť znakov na riadok, monospace a ASCII čiary, v tvare starých zinov.</p>
+      </li>
+      <li>
+        <a class="thumb" href="/t/eco/"><img src="/shots/t-eco.png" alt="Šablóna eco" loading="lazy"></a>
+        <span class="t"><a href="/t/eco/">Nízka váha</a></span>
+        <p>Systémové fonty a zo všetkého ostatného čo najmenej. Zmeria a vypíše vlastnú prenosovú váhu.</p>
+      </li>
+    </ul>
+    <p><a class="btn" href="/sk/templates.html">Všetkých jedenásť šablón</a></p>
   </section>
 
   <section id="try">
