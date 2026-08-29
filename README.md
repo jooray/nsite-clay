@@ -9,6 +9,10 @@
   No backend, no build step, no account. The host is Nostr.
 </p>
 
+<p align="center">
+  <img src="media/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="880">
+</p>
+
 ---
 
 Open the page, sign in with your key, and type into it. The document serialises its own DOM,

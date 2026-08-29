@@ -95,8 +95,11 @@ export class Nip46Signer {
   static async fromBunkerUri(uri, { clientSecret } = {}) {
     const parsed = await parseBunkerInput(uri);
     if (!parsed) throw new Error("Not a bunker:// URI");
+    if (!parsed.relays?.length) throw new Error("That bunker URI names no relays");
     const sec = clientSecret || generateSecretKey();
-    const bunker = new BunkerSigner(sec, parsed);
+    // fromBunker, not the constructor: the constructor's second argument is
+    // options, so the bunker pointer would never be set.
+    const bunker = BunkerSigner.fromBunker(sec, parsed);
     await bunker.connect();
     const signer = new Nip46Signer(bunker, sec);
     // NIP-46: event.pubkey on the transport is the remote-signer key, never the

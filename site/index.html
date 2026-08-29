@@ -57,6 +57,11 @@
                  border-color: transparent; color: #12081F; }
   .btn.primary:hover { filter: brightness(1.09); color: #12081F; }
 
+  .shot { margin: 3rem 0 0; }
+  .shot img { width: 100%; height: auto; display: block; border-radius: 14px;
+              border: 1px solid var(--edge); box-shadow: 0 30px 80px -40px rgba(0,0,0,.9); }
+  .shot figcaption { margin-top: .7rem; font-size: .85rem; color: var(--ink-faint); text-align: center; }
+
   /* the loop */
   .steps { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
            margin: 1.6rem 0 0; padding: 0; list-style: none; }
@@ -144,6 +149,10 @@
       <a class="btn" href="#try">Try the live demo</a>
       <a class="btn" href="#deploy">Deploy your own</a>
     </div>
+    <figure class="shot">
+      <img src="/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="1600" height="860">
+      <figcaption editable="single-line">Editing a published page. The heading is live text; the toolbar is the runtime's.</figcaption>
+    </figure>
   </header>
 
   <section id="what">

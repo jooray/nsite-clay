@@ -64,8 +64,12 @@ async function getSigner() {
   if (bunker) {
     const bp = await parseBunkerInput(String(bunker));
     if (!bp) die("could not parse that bunker:// URI");
+    if (!bp.relays?.length) die("that bunker:// URI names no relays");
     const clientKey = generateSecretKey();
-    const signer = new BunkerSigner(clientKey, bp);
+    // fromBunker, not the constructor: the constructor's second argument is
+    // options, so `new BunkerSigner(key, bp)` leaves the pointer unset and
+    // connect() dies on it.
+    const signer = BunkerSigner.fromBunker(clientKey, bp);
     await signer.connect();
     // NIP-46: the pubkey on the transport is a per-connection routing key, not
     // the user. The identity only comes from an explicit get_public_key.
