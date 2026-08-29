@@ -13,7 +13,7 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 </script>
 ```
 
-## Configuration — attributes on `<html>`
+## Configuration: attributes on `<html>`
 
 ```html
 <html lang="en" autosave
@@ -27,7 +27,7 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 | `nc:owner` | yes | npub or 64-hex of the key allowed to save this document |
 | `nc:relays` | no | comma list. Default `wss://nos.lol,wss://relay.damus.io,wss://relay.primal.net` |
 | `nc:servers` | no | comma list of Blossom servers. Default `https://cdn.hzrd149.com,https://blossom.primal.net` |
-| `nc:site` | no | nsite `d` tag. Absent means the root site (kind 15128); set means a named site (kind 35128), 1–13 characters of `[a-z0-9-]` |
+| `nc:site` | no | nsite `d` tag. Absent means the root site (kind 15128); set means a named site (kind 35128), 1 to 13 characters of `[a-z0-9-]` |
 | `nc:path` | no | this document's path inside the manifest. Default `/index.html` |
 | `autosave` | no | save once edits settle (2.5 s debounce, 15 s throttle). `⌘S` / `Ctrl+S` works either way |
 | `nc:autoreload` | no | `"false"` stops the document watching its manifest for newer versions |
@@ -92,11 +92,11 @@ Helpers re-exported for convenience: `nc.nip19`, `nc.verifyEvent`, `nc.sanitize`
 Tokens combine: `single-line`, `no-toolbar`, `toolbar-on-select`, `no-markdown`.
 Editable containers arm for the owner on login and disarm on logout; `<html nc:editable="true">` while armed.
 
-Toolbar: block menu (Paragraph, Heading 1–3, Quote, Code block), bold, italic, strikethrough,
+Toolbar: block menu (Paragraph, Heading 1 to 3, Quote, Code block), bold, italic, strikethrough,
 bulleted list, numbered list, link, clear formatting.
 
 Keys: `⌘B` `⌘I` `⌘U` `⌘K`, `⌘⇧7` / `⌘⇧8` / `⌘⇧9` for numbered list, bulleted list and quote,
-`⌥0`–`⌥3` for the block types.
+`⌥0` to `⌥3` for the block types.
 
 Input rules at the start of a block: `# `, `## `, `### `, `- `, `1. `, `> `, ` ``` `.
 

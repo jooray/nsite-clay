@@ -70,11 +70,33 @@ async function getSigner() {
     // options, so `new BunkerSigner(key, bp)` leaves the pointer unset and
     // connect() dies on it.
     const signer = BunkerSigner.fromBunker(clientKey, bp);
-    await signer.connect();
+    // A bunker that already holds a session for this secret answers `connect`
+    // with "already connected", which is a success in every sense that matters.
+    try { await signer.connect(); }
+    catch (e) { if (!/already connected/i.test(String(e?.message ?? e))) throw e; }
     // NIP-46: the pubkey on the transport is a per-connection routing key, not
     // the user. The identity only comes from an explicit get_public_key.
-    const pubkey = await signer.getPublicKey();
-    return { pubkey, sign: (t) => signer.signEvent(t), close: () => signer.close().catch(() => {}) };
+    // A refusal here is almost always the connection lacking a permission, so
+    // say which request was refused rather than passing on a bare "no permission".
+    const ask = async (what, fn) => {
+      try { return await fn(); }
+      catch (e) {
+        const msg = String(e?.message ?? e);
+        if (/no permission|denied|unauthorized/i.test(msg)) {
+          die(`the signer refused ${what} ("${msg}").\n` +
+              `  Grant this connection: get_public_key, sign_event:24242 (Blossom uploads),\n` +
+              `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions).\n` +
+              `  In most signers that means approving the prompt, or reconnecting with those perms.`);
+        }
+        die(`${what} failed: ${msg}`);
+      }
+    };
+    const pubkey = await ask("get_public_key", () => signer.getPublicKey());
+    return {
+      pubkey,
+      sign: (t) => ask(`sign_event kind ${t.kind}`, () => signer.signEvent(t)),
+      close: () => signer.close().catch(() => {}),
+    };
   }
   const raw = flags.sec || process.env.NOSTR_SECRET_KEY;
   if (!raw) die("no key: pass --sec=nsec1… or --bunker=bunker://… (or set NOSTR_SECRET_KEY / NOSTR_BUNKER_URI)");

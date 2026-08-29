@@ -96,10 +96,10 @@ Mark a container `editable` and it becomes rich text for the owner and ordinary 
 everybody else.
 
 **Enter starts a new paragraph.** Selecting text raises a floating toolbar whose first control
-is a block menu: Paragraph, Heading 1–3, Quote, Code block. Alongside it are bold, italic,
+is a block menu: Paragraph, Heading 1 to 3, Quote, Code block. Alongside it are bold, italic,
 strikethrough, bulleted and numbered lists, link, and clear formatting.
 
-Keyboard: `⌘B` `⌘I` `⌘U` `⌘K`, `⌘⇧8` for a bulleted list, `⌥1`–`⌥3` for headings. Typing `# `,
+Keyboard: `⌘B` `⌘I` `⌘U` `⌘K`, `⌘⇧8` for a bulleted list, `⌥1` to `⌥3` for headings. Typing `# `,
 `- ` or `> ` at the start of a line works too.
 
 Use `editable="single-line"` for a title or a list row, where Enter should do nothing and the
@@ -112,7 +112,7 @@ copying out of a word processor does not smuggle a stylesheet into your document
 
 ## Signing in
 
-Three ways, in descending order of how much you should trust the page you are on:
+Ranked by how much you have to trust the page in front of you:
 
 - **NIP-07 browser extension.** The key never enters the page.
 - **Amber or another NIP-46 remote signer.** The key never enters the browser at all. The page
@@ -125,15 +125,15 @@ Three ways, in descending order of how much you should trust the page you are on
 
 ## Deploying
 
-### What actually happens
+### What a deploy does
 
 A deploy is three steps, and they are the same three the browser performs when you press save:
 
 1. **Every file becomes a Blossom blob**, addressed by its own sha256. Uploads are authorised
    with a signed kind-24242 token ([BUD-11](https://github.com/hzrd149/blossom/blob/master/buds/11.md)).
-2. **A manifest event maps paths to hashes** — kind 15128 for a root site, kind 35128 for a
-   named one — signed by the site owner and published to your relays. This event is replaceable,
-   so publishing a new one is the deploy.
+2. **A manifest event maps paths to hashes**, signed by the site owner and published to your
+   relays. Kind 15128 for a root site, kind 35128 for a named one. The event is replaceable, so
+   publishing a new one is the deploy.
 3. **A kind-5128 snapshot pins that set of hashes** as a permanent version.
 
 A gateway resolves your manifest, fetches the blobs, and serves them over HTTP.
@@ -148,7 +148,7 @@ nsite-clay keygen
 
 Signing takes either a raw key (`--sec`, or `NOSTR_SECRET_KEY`) or a remote signer
 (`--bunker="bunker://…"`, or `NOSTR_BUNKER_URI`). A bunker keeps the key off the machine running
-the deploy, which matters in CI.
+the deploy, so a CI runner never holds it.
 
 ### Where your site ends up
 
@@ -164,12 +164,12 @@ Any NIP-5A gateway serves the same site: [nsite.lol](https://nsite.lol),
 [nsite.run](https://nsite.run), or one you run yourself. Point a `CNAME` at a gateway for a
 custom domain.
 
-Named sites need a `d` tag of 1–13 characters from `[a-z0-9-]`, because a DNS label is 63
+Named sites need a `d` tag of 1 to 13 characters from `[a-z0-9-]`, because a DNS label is 63
 characters and the base36 pubkey uses 50 of them.
 
 ### Relays and Blossom servers
 
-Defaults are set so a first deploy works, but three things are worth knowing.
+The defaults work for a first deploy.
 
 **Publish to the gateway's own relay.** A gateway keeps a live subscription to its relays and
 re-syncs everything else on a timer. With `wss://relay.nsite.lol` in the list a change appears in

@@ -100,7 +100,10 @@ export class Nip46Signer {
     // fromBunker, not the constructor: the constructor's second argument is
     // options, so the bunker pointer would never be set.
     const bunker = BunkerSigner.fromBunker(sec, parsed);
-    await bunker.connect();
+    // "already connected" means the bunker still holds a session for this
+    // secret, which is the outcome we wanted anyway.
+    try { await bunker.connect(); }
+    catch (e) { if (!/already connected/i.test(String(e?.message ?? e))) throw e; }
     const signer = new Nip46Signer(bunker, sec);
     // NIP-46: event.pubkey on the transport is the remote-signer key, never the
     // user's identity. The user pubkey only comes from get_public_key.
