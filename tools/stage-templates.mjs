@@ -2,12 +2,14 @@
 // Copy each template into site/t/<name>/ for the published gallery, and its
 // screenshot into site/shots/. Templates link the shared files from the site
 // root, so they need no copies of their own here.
-import { readdirSync, statSync, mkdirSync, copyFileSync, existsSync, rmSync } from "node:fs";
+import { readdirSync, statSync, mkdirSync, copyFileSync, existsSync, rmSync, statSync as stat } from "node:fs";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const out = join("site", "t");
 rmSync(out, { recursive: true, force: true });
 let staged = 0;
+let thumbed = 0;
 
 for (const name of readdirSync("templates")) {
   if (name.startsWith("_")) continue;
@@ -18,8 +20,20 @@ for (const name of readdirSync("templates")) {
     const from = join(dir, f);
     if (statSync(from).isFile()) copyFileSync(from, join(out, name, f));
   }
+  // The cards show these at a few hundred pixels wide, so publishing the raw
+  // 2560px capture meant the homepage pulled several megabytes of PNG to draw
+  // six thumbnails. Downscale on the way in; the card links to the live
+  // template, so nothing here needs the full-size file.
   const shot = join("media", "templates", `${name}.png`);
-  if (existsSync(shot)) copyFileSync(shot, join("site", "shots", `t-${name}.png`));
+  const dest = join("site", "shots", `t-${name}.png`);
+  if (existsSync(shot)) {
+    copyFileSync(shot, dest);
+    try {
+      execFileSync("sips", ["--resampleWidth", "1000", dest], { stdio: "ignore" });
+      thumbed++;
+    } catch { /* sips is macOS only; the full-size copy still works */ }
+  }
   staged++;
 }
-console.log(`staged ${staged} template${staged === 1 ? "" : "s"} into site/t/`);
+console.log(`staged ${staged} template${staged === 1 ? "" : "s"} into site/t/` +
+            (thumbed ? `, ${thumbed} screenshot${thumbed === 1 ? "" : "s"} resized for the cards` : ""));
