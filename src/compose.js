@@ -194,6 +194,81 @@ export class Compose {
     return el;
   }
 
+  // Pick one of your published posts and put a copy of it in the page.
+  //
+  // The composer writes new posts; this is for one that already exists, which is
+  // the other half of the same idea. A block that says "show my article about X"
+  // needs the article chosen, not written.
+  async pickIntoPage(container = null) {
+    if (!this.nc.pubkey && !this.nc.cfg.owner) throw new Error("Sign in first");
+    let chosen = null;
+    const picked = await modal({
+      doc: this.doc,
+      wide: true,
+      title: "Put one of your posts in the page",
+      hint: "A copy is written into the document, so it reads without JavaScript and without a relay. " +
+            "It remembers where it came from, so editing the post on Nostr updates the copy.",
+      submitLabel: "Close",
+      noCancel: true,
+      build: (body, h) => {
+        const kind = field(body, { label: "What to look for", options: [
+          { value: "30023", label: "Long-form articles" },
+          { value: "1", label: "Short notes" },
+        ] });
+        const list = this.doc.createElement("ul");
+        list.className = "nc-pick";
+        body.appendChild(list);
+
+        const load = async () => {
+          list.innerHTML = "<li style='color:#7e768f;font-size:.82rem'>looking…</li>";
+          let evs = [];
+          try { evs = await this.mine(Number(kind.value), 40); }
+          catch (e) {
+            list.innerHTML = `<li style='color:#e79191;font-size:.82rem'>${esc(e.message)}</li>`;
+            return;
+          }
+          list.innerHTML = "";
+          if (!evs.length) {
+            list.innerHTML = "<li style='color:#7e768f;font-size:.82rem'>nothing published under this key yet</li>";
+            return;
+          }
+          for (const ev of evs) {
+            const li = this.doc.createElement("li");
+            const btn = this.doc.createElement("button");
+            btn.type = "button";
+            const text = this.doc.createElement("span");
+            text.className = "nc-body-text";
+            const b = this.doc.createElement("b");
+            b.textContent = ev.kind === 30023
+              ? (tag(ev, "title") || tag(ev, "d") || "Untitled")
+              : ev.content.slice(0, 110) + (ev.content.length > 110 ? "…" : "");
+            const small = this.doc.createElement("small");
+            small.textContent = new Date(ev.created_at * 1000).toLocaleDateString();
+            text.append(b, small);
+            btn.appendChild(text);
+            btn.onclick = () => { chosen = ev; h.close("picked"); };
+            li.appendChild(btn);
+            list.appendChild(li);
+          }
+        };
+        kind.addEventListener("change", load);
+        load();
+      },
+      onSubmit: () => null,
+    });
+
+    if (picked !== "picked" || !chosen) return null;
+    // bake() replaces a copy of the same post wherever it already sits, which is
+    // right for refreshing one and wrong for a block that would then stay empty.
+    const address = this.addressOf(chosen);
+    const already = this.doc.querySelector(`[nc\\:from="${CSS.escape(address)}"]`);
+    if (already && container && !container.contains(already)) {
+      toast("That post is already in this page further up.", { doc: this.doc });
+      return null;
+    }
+    return this.bake(chosen, container);
+  }
+
   // Bring every baked copy back in line with what the relays now hold. An
   // author who fixed a typo in a Nostr client gets the fix here too.
   async refreshBaked() {

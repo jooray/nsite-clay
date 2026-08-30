@@ -84,7 +84,20 @@ export class Media {
     return node;
   }
 
-  image({ url, alt = "", caption = "" }) {
+  // `target` is the difference between "add a picture here" and "change this
+  // picture". A form field bound to an <img>, or a slot inside a block, already
+  // has its element: picking replaces what it points at. Without this the CMS
+  // panel's picture button dropped a second figure at the caret and reported the
+  // field unchanged, which is not what anyone pressing it meant.
+  image({ url, alt = "", caption = "", target = null }) {
+    if (target?.tagName === "IMG") {
+      target.setAttribute("src", url);
+      if (alt) target.setAttribute("alt", alt);
+      const cap = target.closest("figure")?.querySelector("figcaption");
+      if (cap && caption) cap.textContent = caption;
+      this.nc.dirty = true;
+      return target;
+    }
     const fig = this.doc.createElement("figure");
     fig.className = "nc-figure";
     const img = this.doc.createElement("img");
@@ -95,10 +108,20 @@ export class Media {
       cap.textContent = caption;
       fig.appendChild(cap);
     }
-    return this.insert(fig);
+    return this.place(fig, target);
   }
 
-  videoFile({ url, type }) {
+  // Put a freshly built node where it belongs: over the thing it replaces when
+  // there is one, at the caret otherwise.
+  place(node, target) {
+    if (!target) return this.insert(node);
+    target.replaceWith(node);
+    this.nc.dirty = true;
+    this.nc.editable?.refresh?.();
+    return node;
+  }
+
+  videoFile({ url, type, target = null }) {
     const v = this.doc.createElement("video");
     v.setAttribute("controls", "");
     v.setAttribute("preload", "metadata");
@@ -109,12 +132,12 @@ export class Media {
     const fig = this.doc.createElement("figure");
     fig.className = "nc-figure";
     fig.appendChild(v);
-    return this.insert(fig);
+    return this.place(fig, target);
   }
 
   // The facade. Everything a reader needs without JavaScript is right here: a
   // link to the video and a poster image.
-  videoEmbed({ provider, id, title = "" }) {
+  videoEmbed({ provider, id, title = "", target = null }) {
     const fig = this.doc.createElement("figure");
     fig.className = "nc-figure nc-embed";
     fig.setAttribute("nc:video", `${provider}:${id}`);
@@ -142,7 +165,7 @@ export class Media {
       cap.textContent = title;
       fig.appendChild(cap);
     }
-    return this.insert(fig);
+    return this.place(fig, target);
   }
 
   // ---- reader side --------------------------------------------------------
@@ -172,11 +195,12 @@ export class Media {
 
   // ---- the dialogs --------------------------------------------------------
 
-  async promptImage() {
+  async promptImage({ target = null } = {}) {
     let url, alt, cap;
+    const has = target?.tagName === "IMG";
     const out = await modal({
       doc: this.doc,
-      title: "Insert an image",
+      title: has ? "Change the image" : "Insert an image",
       hint: "Drop a file, pick one you have already uploaded, or paste a URL.",
       submitLabel: "Insert",
       build: (body, h) => {
@@ -243,9 +267,18 @@ export class Media {
           })
           .catch(() => { galleryLabel.remove(); gallery.remove(); });
 
-        url = field(body, { label: "…or an image URL", placeholder: "https://…" });
-        alt = field(body, { label: "Alt text: what the image shows, for anyone who cannot see it" });
-        cap = field(body, { label: "Caption (optional)" });
+        url = field(body, {
+          label: "…or an image URL", placeholder: "https://…",
+          value: has ? (target.getAttribute("src") || "") : "",
+        });
+        alt = field(body, {
+          label: "Alt text: what the image shows, for anyone who cannot see it",
+          value: has ? (target.getAttribute("alt") || "") : "",
+        });
+        cap = field(body, {
+          label: "Caption (optional)",
+          value: has ? (target.closest("figure")?.querySelector("figcaption")?.textContent || "") : "",
+        });
 
         // A live look at what will be inserted.
         const shown = doc.createElement("img");
@@ -256,6 +289,7 @@ export class Media {
           shown.style.display = src ? "block" : "none";
         };
         url.addEventListener("input", () => preview(url.value.trim()));
+        if (has) preview(url.value.trim());
       },
       onSubmit: () => {
         const src = url.value.trim();
@@ -264,10 +298,10 @@ export class Media {
         return { url: src, alt: alt.value.trim(), caption: cap.value.trim() };
       },
     });
-    return out ? this.image(out) : null;
+    return out ? this.image({ ...out, target }) : null;
   }
 
-  async promptVideo() {
+  async promptVideo({ target = null } = {}) {
     let url, title, uploaded = null;
     const out = await modal({
       doc: this.doc,
@@ -305,6 +339,8 @@ export class Media {
       },
     });
     if (!out) return null;
-    return out.kind === "embed" ? this.videoEmbed(out) : this.videoFile(out);
+    return out.kind === "embed"
+      ? this.videoEmbed({ ...out, target })
+      : this.videoFile({ ...out, target });
   }
 }

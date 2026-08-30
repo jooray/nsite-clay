@@ -304,14 +304,19 @@ export class Feed {
 
   // ---- the insert dialog --------------------------------------------------
 
-  async promptInsert() {
+  // With a `target`, this configures a feed widget that already sits in the
+  // page rather than inserting another one: the block that holds it keeps its
+  // place, its classes and whatever the template styled it with. The form
+  // starts from what that widget already says.
+  async promptInsert({ target = null } = {}) {
     let type, authors, limit, style, minLength, topic;
-    const picked = new Set();          // slugs for articles, ids for notes
+    const now = target ? readFeedConfig(target) : null;
+    const picked = new Set(now?.pinned || []);   // slugs for articles, ids for notes
 
     const out = await modal({
       doc: this.doc,
       wide: true,
-      title: "Insert a Nostr feed",
+      title: target ? "This Nostr feed" : "Insert a Nostr feed",
       hint: "Pick who to show, then click any post to pin it to the top. Signatures are checked in " +
             "the browser; the posts are fetched when the page loads rather than stored in it.",
       submitLabel: "Insert",
@@ -322,16 +327,22 @@ export class Feed {
           { value: "articles", label: "Long-form articles (kind 30023)" },
           { value: "images", label: "Picture posts (kind 20)" },
         ] });
+        if (now) type.value = now.type;
         authors = field(body, {
           label: "Authors: one or more npubs, comma separated",
-          value: this.nc.npub || "",
+          // An existing widget holds hex pubkeys; show them as npubs, which is
+          // what anyone editing the field is going to paste back in.
+          value: now?.authors.length
+            ? now.authors.map((h) => { try { return nip19.npubEncode(h); } catch { return h; } }).join(", ")
+            : (this.nc.npub || ""),
           placeholder: "npub1…, npub1…",
         });
         const row = doc.createElement("div"); row.className = "nc-row"; body.appendChild(row);
-        limit = field(row, { label: "How many", type: "number", value: "5" });
+        limit = field(row, { label: "How many", type: "number", value: String(now?.limit ?? 5) });
         style = field(row, { label: "Style", options: ["list", "grid"] });
-        minLength = field(row, { label: "Minimum length", type: "number", value: "0" });
-        topic = field(body, { label: "Only events tagged (optional)", placeholder: "nostr" });
+        if (now) style.value = now.style;
+        minLength = field(row, { label: "Minimum length", type: "number", value: String(now?.minLength ?? 0) });
+        topic = field(body, { label: "Only events tagged (optional)", value: now?.topic || "", placeholder: "nostr" });
 
         const pickLabel = doc.createElement("label");
         pickLabel.textContent = "Their posts. Click to pin one to the top.";
@@ -409,7 +420,8 @@ export class Feed {
     });
     if (!out) return null;
 
-    const el = this.doc.createElement("div");
+    const el = target || this.doc.createElement("div");
+    for (const a of ["nc:min-length", "nc:topic", "nc:pinned"]) el.removeAttribute(a);
     el.setAttribute("nc:feed", out.type);
     el.setAttribute("nc:authors", out.authors.join(","));
     el.setAttribute("nc:limit", String(out.limit));
@@ -418,7 +430,8 @@ export class Feed {
     if (out.topic) el.setAttribute("nc:topic", out.topic);
     if (out.pinned.length) el.setAttribute("nc:pinned", out.pinned.join(","));
 
-    this.nc.media.insert(el);
+    if (!target) this.nc.media.insert(el);
+    else { this.clear(el); this.nc.dirty = true; }
     this.injectStyles();
     await this.load(el);
     return el;

@@ -29,6 +29,11 @@ export class Dom {
 
   // ---- the operations a page actually needs -------------------------------
 
+  // Bookkeeping for markup that arrived some other way. Anything built by hand
+  // and put into the page still has to be armed for editing and still has to
+  // mark the page unsaved, and this is that step without a second copy of it.
+  armed(node) { return this._changed(node); }
+
   clone(el, { after = true } = {}) {
     if (!el) return null;
     const copy = el.cloneNode(true);

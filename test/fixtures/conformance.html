@@ -44,6 +44,19 @@
   <div nc:chrome>runtime UI, never saved</div>
   <div clay="no-save">never saved</div>
   <form id="composer" clay="no-save"><input class="nc-input" nc:no-persist></form>
+  <main id="blockarea" nc:blocks>
+    <section nc:block-type="heading"><h2 editable="single-line">First</h2></section>
+    <section nc:block-type="rule"><hr></section>
+  </main>
+  <template nc:block="heading" nc:label="Heading" nc:icon="H" nc:group="Text">
+    <section class="b-heading"><h2 editable="single-line">A heading</h2></section>
+  </template>
+  <template nc:block="rule" nc:label="Divider" nc:icon="—" nc:group="Text">
+    <section class="b-rule"><hr></section>
+  </template>
+  <template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media" nc:on-add="image">
+    <section class="b-picture"><figure><img nc:slot src="about:blank" alt=""></figure></section>
+  </template>
   <script src="/nsite-clay.js"></script>
 </body>
 </html>

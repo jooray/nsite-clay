@@ -9,6 +9,15 @@ import { nip19 } from "nostr-tools";
 const DEFAULT_RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom", "wss://relay.nsite.lol"];
 const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://blossom.primal.net"];
 
+// Signing in with a phone is NIP-46, and NIP-46 frames are kind 24133, which is
+// ephemeral. A relay that gladly stores a manifest may refuse to carry one:
+// relay.nsite.lol answers a 24133 with "blocked: only relay lists, blossom
+// server lists, and NIP-5A manifests", so a connect URI that advertises it
+// sends the signer somewhere its reply cannot go. The handshake therefore gets
+// its own relay set, every member checked to round-trip an ephemeral frame,
+// rather than borrowing the set the site publishes to.
+const DEFAULT_SIGNER_RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom"];
+
 function list(value, fallback) {
   if (!value) return fallback.slice();
   return value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
@@ -36,6 +45,8 @@ export function readConfig(doc = document) {
     // transport
     relays: list(attr("nc:relays"), DEFAULT_RELAYS),
     servers: list(attr("nc:servers"), DEFAULT_SERVERS),
+    // Where the NIP-46 handshake happens, which is not where the site lives.
+    signerRelays: list(attr("nc:signer-relays"), DEFAULT_SIGNER_RELAYS),
     // nsite addressing: empty name => root site (kind 15128), else named (35128)
     site: (attr("nc:site") || "").trim(),
     path: (attr("nc:path") || "/index.html").trim(),

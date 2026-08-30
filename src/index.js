@@ -21,6 +21,7 @@ import { Compose } from "./compose.js";
 import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
 import { Cms } from "./cms.js";
+import { Blocks } from "./blocks.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { toast, field, modal, checkbox } from "./ui.js";
 
@@ -61,6 +62,7 @@ class NsiteClay extends EventTarget {
     this.dom = new Dom(this);
     this.state = new State(this);
     this.cms = new Cms(this);
+    this.blocks = new Blocks(this);
     this.status = "idle";
     this._subs = [];
     this._transforms = [];
@@ -96,14 +98,22 @@ class NsiteClay extends EventTarget {
 
   // Amber and friends: hand back a nostrconnect:// URI to show as a QR or a deep
   // link, and a promise that settles when the signer answers.
+  //
+  // The handshake goes to cfg.signerRelays, not cfg.relays. The site's own relay
+  // set is chosen to carry manifests, and at least one of its members refuses
+  // kind 24133 outright, which is a sign-in that hangs with nothing to see.
+  //
+  // The title goes in as the app name and is cut short, because every character
+  // of it is another character of URI and the URI is a QR code somebody has to
+  // photograph. A long <title> is not worth an unscannable code.
   connectRemote({ relays } = {}) {
-    const { uri, promise } = Nip46Signer.nostrconnect({
-      relays: relays || this.cfg.relays,
-      name: this.doc.title || "nsite-clay",
+    const { uri, promise, cancel } = Nip46Signer.nostrconnect({
+      relays: relays || this.cfg.signerRelays,
+      name: (this.doc.title || "nsite-clay").slice(0, 40),
     });
     const ready = promise.then((signer) => { this.signer = signer; this._afterLogin(); return this.pubkey; });
     this._emit("nsiteclay:connect-uri", { uri });
-    return { uri, ready };
+    return { uri, ready, cancel };
   }
 
   _afterLogin() {
@@ -239,6 +249,63 @@ class NsiteClay extends EventTarget {
       ? { kinds: [35128], authors: [this.cfg.owner], "#d": [this.cfg.site], limit: 1 }
       : { kinds: [15128], authors: [this.cfg.owner], limit: 1 };
     return this.pool.get(this.cfg.relays, f);
+  }
+
+  // ---- publishing a whole site from the browser ----------------------------
+
+  // What the CLI's `deploy` does, without the CLI: upload every file to Blossom,
+  // then publish one NIP-5A manifest naming the lot. `files` is a list of
+  // { path, bytes, type } and the signed-in key becomes the owner, which is the
+  // difference from save(): this page publishes on behalf of whoever is holding
+  // the keyboard, not on behalf of the key that owns this page.
+  //
+  // The table is merged with what that key has already published, because a
+  // manifest is the whole path table and one that forgets a path unpublishes it.
+  // Someone adding a page at /notes/ must not lose the page at /.
+  async publishFiles(files, { site = "", title = "", servers, relays, merge = true, onProgress } = {}) {
+    if (!this.signer) throw new Error("Sign in first");
+    const pubkey = this.signer.pubkey;
+    const to = servers?.length ? servers : this.cfg.servers;
+    const on = relays?.length ? relays : this.cfg.relays;
+    const step = onProgress || (() => {});
+    const cfg = { owner: pubkey, site, servers: to, relays: on };
+
+    const existing = merge ? await this.manifestOf(pubkey, site).catch(() => null) : null;
+    const paths = existing ? manifestPaths(existing) : {};
+
+    let done = 0, sent = 0, reused = 0;
+    for (const f of files) {
+      step({ stage: "upload", path: f.path, done, total: files.length });
+      const r = await uploadAll(to, f.bytes, { signer: this.signer, type: f.type });
+      paths[f.path] = r.hash;
+      // Blobs are content addressed, so the runtime and the stylesheet are
+      // already on the servers from whoever published before. Only what is
+      // genuinely new goes over the wire.
+      r.uploaded ? sent++ : reused++;
+      done++;
+    }
+
+    step({ stage: "manifest", done, total: files.length, uploaded: sent, reused });
+    const manifest = await this.signer.sign(buildManifest(cfg, paths, { title }));
+    await publishToAny(this.pool, on, manifest);
+
+    // The version snapshot is filed after the manifest and never awaited: the
+    // site is live either way, and a slow relay should not hold up the news.
+    const version = await this.signer.sign(buildSnapshot(cfg, manifest));
+    this.pool.publish(on, version).forEach((p) => p.catch(() => {}));
+
+    step({ stage: "done", done, total: files.length, uploaded: sent, reused });
+    return { pubkey, manifest, version, paths, uploaded: sent, reused, aggregate: aggregateHash(paths) };
+  }
+
+  // Anyone's current manifest, not just this page's owner. The wizard needs it
+  // to answer "is there already a site here" before it overwrites one.
+  async manifestOf(pubkey, site = "") {
+    const f = site
+      ? { kinds: [35128], authors: [pubkey], "#d": [site], limit: 1 }
+      : { kinds: [15128], authors: [pubkey], limit: 1 };
+    const ev = await this.pool.get(this.cfg.relays, f);
+    return ev && verifyEvent(ev) ? ev : null;
   }
 
   // ---- version history -----------------------------------------------------
@@ -447,6 +514,7 @@ nc.ready = (async () => {
   window.addEventListener("hashchange", () => nc.applyEditGate());
   nc.media.armEmbeds();
   nc.feed.start();
+  nc.blocks.start();
   nc._watchVersion();
   if (nc.cfg.owner) {
     nc.currentManifest().then((ev) => { if (ev) { nc._manifest = ev; nc._bootManifest = ev; } }).catch(() => {});
@@ -459,6 +527,7 @@ nc.ready = (async () => {
 Object.assign(nc, {
   nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
+  manifestPaths, manifestServers, aggregateHash,
 });
 
 if (typeof window !== "undefined") window.nsiteclay = window.nc = nc;

@@ -7,6 +7,8 @@
  *   data-nc-signin    sign in, or sign out when already in
  *   data-nc-save      save the page
  *   data-nc-write     the Nostr post composer
+ *   data-nc-blocks    the "add a block" palette
+ *   data-nc-cms       the form generated from the page's nc:cms rules
  *   data-nc-settings  autosave and the edit gate
  *   data-nc-history   versions, with restore
  *   data-nc-who       filled in with who you are
@@ -34,6 +36,9 @@
       scan: "Escanea con Amber u otra app de firma",
       openSigner: "Abrir en tu app de firma",
       waiting: "esperando a la app de firma…",
+      keepOpen: "Deja esta página abierta mientras lo apruebas.",
+      stillWaiting: "No llegó respuesta. Muestra un código nuevo e inténtalo otra vez.",
+      retry: "Mostrar un código nuevo",
       pasteKey: "…o pega una clave",
       keyPlaceholder: "nsec1…, ncryptsec1… o 64 caracteres hex",
       ncryptsecPass: "Contraseña de ese ncryptsec",
@@ -57,6 +62,9 @@
       scan: "Naskenuj v Amberi alebo inej podpisovej aplikácii",
       openSigner: "Otvoriť v podpisovej aplikácii",
       waiting: "čaká sa na podpisovú aplikáciu…",
+      keepOpen: "Túto stránku nechaj otvorenú, kým to schváliš.",
+      stillWaiting: "Odpoveď neprišla. Zobraz nový kód a skús to znova.",
+      retry: "Zobraziť nový kód",
       pasteKey: "…alebo vlož kľúč",
       keyPlaceholder: "nsec1…, ncryptsec1… alebo 64 hex znakov",
       ncryptsecPass: "Heslo k tomu ncryptsecu",
@@ -80,6 +88,9 @@
       scan: "Naskenuj v Amberu nebo jiné podpisové aplikaci",
       openSigner: "Otevřít v podpisové aplikaci",
       waiting: "čeká se na podpisovou aplikaci…",
+      keepOpen: "Tuhle stránku nech otevřenou, dokud to neschválíš.",
+      stillWaiting: "Odpověď nedorazila. Zobraz nový kód a zkus to znovu.",
+      retry: "Zobrazit nový kód",
       pasteKey: "…nebo vlož klíč",
       keyPlaceholder: "nsec1…, ncryptsec1… nebo 64 hex znaků",
       ncryptsecPass: "Heslo k tomu ncryptsecu",
@@ -103,6 +114,9 @@
     scan: "Scan with Amber or another signer app",
     openSigner: "Open in your signer app",
     waiting: "waiting for the signer…",
+    keepOpen: "Keep this page open while you approve it.",
+    stillWaiting: "No answer came through. Show a new code and try again.",
+    retry: "Show a new code",
     pasteKey: "…or paste a key",
     keyPlaceholder: "nsec1…, ncryptsec1…, or 64 hex characters",
     ncryptsecPass: "Password for that ncryptsec",
@@ -140,6 +154,11 @@
     if (window.nostr) {
       try { return await nc.login("nip07"); } catch { /* fall through to the rest */ }
     }
+    // Held out here so that however the dialog closes, including Escape and a
+    // click on the backdrop, the relay subscription behind the code is dropped.
+    let attempt = null;
+    let onVisible = null;
+
     const how = await nc.modal({
       title: T.signInTitle,
       hint: T.signInHint,
@@ -149,20 +168,62 @@
         b.type = "button";
         b.textContent = T.scan;
         b.style.cssText = "width:100%;margin-bottom:.4rem";
-        b.onclick = () => {
-          const { uri, ready } = nc.connectRemote();
+
+        const box = document.createElement("div");
+        const link = document.createElement("p");
+        link.style.cssText = "text-align:center;margin:.2rem 0 0";
+        const a = document.createElement("a");
+        link.appendChild(a);
+        const note = document.createElement("p");
+        note.style.cssText = "text-align:center;margin:.5rem 0 0;font-size:.8rem;opacity:.7";
+        const again = document.createElement("button");
+        again.type = "button";
+        again.textContent = T.retry;
+        again.style.cssText = "display:block;margin:.5rem auto 0";
+        again.hidden = true;
+
+        // Each press mints a fresh client key and a fresh one-time secret. The
+        // old one cannot be reused: the secret is spent whether or not we saw
+        // the answer, so "try again" has to mean a new code, not the same one.
+        const start = () => {
+          attempt?.cancel?.();
+          const { uri, ready, cancel } = nc.connectRemote();
+          attempt = { cancel, done: false };
+          const mine = attempt;
           // Drawn in the page. A QR service would be handed the connection
           // secret, and whoever rendered the image could answer the connection.
-          const img = nc.qrElement(uri, { size: 220 });
-          const link = document.createElement("p");
-          link.style.textAlign = "center";
-          const a = document.createElement("a");
+          box.replaceChildren(nc.qrElement(uri, { size: 300 }));
           a.href = uri; a.textContent = T.openSigner;
-          link.appendChild(a);
-          b.replaceWith(img, link);
+          note.textContent = T.keepOpen;
+          again.hidden = true;
           h.status(T.waiting);
-          ready.then(() => h.close("done")).catch((e) => h.status(e.message, true));
+          ready.then(
+            () => { mine.done = true; h.close("done"); },
+            (e) => {
+              if (mine !== attempt) return;      // superseded by a later press
+              mine.done = true;
+              h.status(e?.message || String(e), true);
+              again.hidden = false;
+            },
+          );
         };
+
+        b.onclick = () => { b.replaceWith(box, link, note, again); start(); };
+        again.onclick = start;
+
+        // Tapping the link opens the signer app, which puts this page in the
+        // background, and a backgrounded tab may have its WebSocket suspended.
+        // Kind 24133 is ephemeral, so a frame that arrived while we were not
+        // listening is gone and cannot be fetched back. All that is left is to
+        // say so plainly and offer a fresh code.
+        onVisible = () => {
+          if (document.visibilityState !== "visible") return;
+          if (!attempt || attempt.done) return;
+          h.status(T.stillWaiting, true);
+          again.hidden = false;
+        };
+        document.addEventListener("visibilitychange", onVisible);
+
         body.appendChild(b);
         const key = nc.field(body, {
           label: T.pasteKey,
@@ -185,6 +246,9 @@
         return "done";
       },
     });
+
+    if (onVisible) document.removeEventListener("visibilitychange", onVisible);
+    if (!attempt?.done) attempt?.cancel?.();
     if (how) who();
   });
 
@@ -196,6 +260,8 @@
   });
 
   on("[data-nc-write]", () => nc.compose.open().catch((e) => nc.toast(e.message)));
+  on("[data-nc-blocks]", () => nc.blocks.open().catch((e) => nc.toast(e.message)));
+  on("[data-nc-cms]", () => nc.cms.toggle());
   on("[data-nc-settings]", () => nc.settings.open());
 
   on("[data-nc-history]", async () => {

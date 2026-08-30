@@ -269,3 +269,58 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row {
 [nc\:cms-template] { display: none !important; }
 
 @media (max-width: 620px) { .nc-cms { width: 100%; } }
+
+/* ---- the block composer ---------------------------------------------------
+ * A page marked [nc:blocks] is built out of blocks, and in edit mode the
+ * runtime draws a rail on each one and an insert point between them. All of it
+ * is nc:chrome, so none of it reaches the saved file. These rules only apply
+ * while an owner is editing; a reader's copy has no trace of them. */
+
+html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add) {
+  position: relative;
+  outline: 1px dashed var(--nc-edge);
+  outline-offset: 3px;
+}
+html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add):hover { outline-color: var(--nc-accent); }
+
+.nc-blk-rail {
+  position: absolute; top: .3rem; right: .3rem; z-index: 20;
+  display: flex; gap: 2px; margin: 0; padding: 3px; list-style: none;
+  background: var(--nc-panel); border: 1px solid var(--nc-edge);
+  border-radius: var(--nc-radius-sm);
+  box-shadow: var(--nc-shadow);
+  opacity: .35; transition: opacity .15s ease;
+}
+/* Out of the way until wanted: a rail at full strength on every block turns a
+ * page being edited into a page covered in buttons. */
+[nc\:blocks] > *:hover > .nc-blk-rail, .nc-blk-rail:focus-within { opacity: 1; }
+
+.nc-blk-rail button, .nc-blk-add button {
+  font: inherit; font-size: .8rem; line-height: 1; cursor: pointer;
+  padding: .3rem .45rem; border: 0; border-radius: var(--nc-radius-sm);
+  background: transparent; color: var(--nc-ink);
+}
+.nc-blk-rail button:hover, .nc-blk-add button:hover { background: var(--nc-bg); }
+
+.nc-blk-add { display: flex; justify-content: center; padding: .15rem 0; }
+.nc-blk-add button {
+  width: 100%; border: 1px dashed var(--nc-edge); color: var(--nc-ink-dim);
+  opacity: .5; transition: opacity .15s ease;
+}
+.nc-blk-add:hover button { opacity: 1; border-color: var(--nc-accent); color: var(--nc-ink); }
+
+/* The palette. Icons are text, so nothing is fetched to draw it. */
+.nc-blk-palette {
+  display: grid; gap: .5rem; margin: .3rem 0 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+}
+.nc-blk-choice {
+  display: grid; gap: .15rem; justify-items: start; align-content: start; text-align: left;
+  padding: .6rem .7rem; font: inherit; cursor: pointer;
+  color: var(--nc-ink); background: var(--nc-bg);
+  border: 1px solid var(--nc-edge); border-radius: var(--nc-radius-sm);
+}
+.nc-blk-choice:hover { border-color: var(--nc-accent); }
+.nc-blk-choice b { font-weight: 600; }
+.nc-blk-choice small { color: var(--nc-ink-dim); font-size: .76rem; }
+.nc-blk-icon { font-size: 1.3rem; line-height: 1; }

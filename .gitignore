@@ -19,3 +19,14 @@ site/nsite-clay-chrome.js
 
 # assembled by `npm run demo:build`
 demo-dist/
+
+# The encrypted key file the publisher walkthrough downloads to prove it works.
+.walkthrough-backup.txt
+
+# generated from site/deploy.html by tools/stage-deploy.mjs; edit that one
+site/es/deploy.html
+site/sk/deploy.html
+site/cs/deploy.html
+
+# machine-specific notes, true only for this checkout
+CLAUDE.md.local

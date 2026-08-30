@@ -95,6 +95,65 @@ you only need it yourself for markup you inserted some other way. State with no 
 block through `nc.state`. What belongs in the document and what belongs on relays
 is [docs/state.md](../../docs/state.md).
 
+## Blocks
+
+A template whose page is *assembled* rather than typed over declares a block
+area and a library of shapes. Mark the container:
+
+```html
+<main nc:blocks>
+  <section nc:block-type="heading"><h2 editable="single-line">A heading</h2></section>
+</main>
+```
+
+Every direct element child of that container is a block. In edit mode the
+runtime draws a rail on each one (move, duplicate, configure, delete) and an
+insert point between them, and the palette is built from the library:
+
+```html
+<template nc:block="picture" nc:label="Picture" nc:icon="▥"
+          nc:group="Media" nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section class="b-picture">
+    <figure>
+      <img nc:slot src="…" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+```
+
+A `<template>` renders nothing and is saved with the page, so the library
+travels with the document: whoever inherits the file can keep adding blocks
+without fetching anything. `nc:block` is the name, stamped onto each copy as
+`nc:block-type`. `nc:on-add` names a picker to run once the block lands, and
+`nc:slot` marks the element that picker acts on:
+
+| `nc:on-add` | what opens | what `nc:slot` should be |
+|---|---|---|
+| `image` | the picture picker | the `<img>` to fill |
+| `video` | the video picker | the element to replace |
+| `feed`  | the Nostr feed picker | anything; it looks for `[nc:feed]` first |
+| `post`  | your published posts | the block itself, which receives the copy |
+
+Backing out of that picker removes the block again, so a cancelled "add a
+picture" does not leave an empty frame behind.
+
+The rail is drawn by the runtime and marked `nc:chrome`, so it never reaches a
+save. That is the opposite of the gear rule above, and deliberately: a gear is
+particular to the thing it sits on and belongs in the file, whereas a rail
+identical above every block would be the same buttons copied into the document a
+dozen times, growing with the page and going stale the moment the runtime
+changes. Use a gear for a control that is about *this* card; the rail already
+covers move, duplicate and delete.
+
+The two mix freely. `templates/cms/index.html` ships both: rails on the blocks,
+and authored gears inside the gallery and the card grid for "add another one of
+these".
+
+Style blocks through their own classes. The rails and the palette follow the
+variables like everything else, so a template that sets them gets controls that
+match without touching them.
+
 ## Nostr content
 
 Feeds are markup, so a template can ship one already configured:

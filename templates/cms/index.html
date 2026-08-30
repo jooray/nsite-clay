@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<!--
+  A page you build out of blocks.
+
+  Every other template in this folder is a finished page you type over. This one
+  is a page you assemble: sign in, add #edit to the URL, and a rail appears on
+  each block with an insert point between them. Press + and pick a heading, a
+  picture, a video, one of your Nostr posts.
+
+  The library at the bottom of this file is where the block shapes live. They are
+  <template> elements, so they render nothing, they are saved with the page, and
+  whoever inherits this file can keep adding blocks without fetching anything.
+  Add a shape there and it appears in the palette; nothing else needs changing.
+
+  Set nc:owner to your own npub before publishing.
+-->
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kettle &amp; Pine</title>
+<meta name="description" content="A page built out of blocks. Add a heading, a picture, a video or a Nostr post, and publish it to your own key.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23b3542a'/%3E%3Crect x='3.5' y='4' width='9' height='1.8' rx='.9' fill='%23fdf9f4'/%3E%3Crect x='3.5' y='7.1' width='6' height='1.8' rx='.9' fill='%23fdf9f4'/%3E%3Crect x='3.5' y='10.2' width='7.5' height='1.8' rx='.9' fill='%23fdf9f4' opacity='.55'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #241c16;
+    --nc-ink-dim: #7a6a5d;
+    --nc-bg: #fdf9f4;
+    --nc-panel: #f5eee4;
+    --nc-edge: #e3d7c8;
+    --nc-accent: #b3542a;
+    --nc-accent-ink: #fdf9f4;
+    --nc-ok: #4a6b45;
+    --nc-bad: #a33a2c;
+    --nc-radius: 10px;
+    --nc-radius-sm: 7px;
+    --nc-shadow: 0 18px 40px -28px rgba(60, 35, 15, .55);
+    --nc-chrome-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --measure: 34rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --nc-ink: #f0e7dc; --nc-ink-dim: #a0917f; --nc-bg: #16120f;
+      --nc-panel: #211b16; --nc-edge: #362c24; --nc-accent: #e08b56;
+      --nc-accent-ink: #16120f; --nc-ok: #8fc79c; --nc-bad: #e0938a;
+      --nc-shadow: 0 18px 44px -26px rgba(0, 0, 0, .8);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 1.25rem 7rem;
+    background: var(--nc-bg); color: var(--nc-ink);
+    font: 1.0625rem/1.72 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: var(--measure); margin: 0 auto; }
+  a { color: var(--nc-accent); text-underline-offset: 3px; }
+  img { max-width: 100%; height: auto; }
+
+  /* ---- the masthead, which is not a block ------------------------------- */
+
+  .masthead { padding: 4.5rem 0 2.5rem; }
+  .masthead h1 {
+    font-size: clamp(2.1rem, 7vw, 3rem); line-height: 1.1; letter-spacing: -.03em;
+    font-weight: 650; margin: 0 0 .6rem;
+  }
+  .masthead .tagline { color: var(--nc-ink-dim); font-size: 1.15rem; margin: 0; }
+
+  /* ---- blocks ------------------------------------------------------------
+   * Every block is one <section>. The spacing lives here rather than on each
+   * shape, so a block added tomorrow sits correctly without knowing about the
+   * ones around it. */
+
+  [nc\:blocks] > section { margin: 0 0 3rem; }
+  [nc\:blocks] > section:last-of-type { margin-bottom: 0; }
+
+  .b-heading h2 {
+    font-size: 1.6rem; line-height: 1.25; letter-spacing: -.02em; font-weight: 650;
+    margin: 0;
+  }
+  .b-text p { margin: 0 0 1.15rem; }
+  .b-text p:last-child { margin-bottom: 0; }
+  .b-text ul, .b-text ol { margin: 0 0 1.15rem; padding-left: 1.2rem; }
+
+  .b-lead p { font-size: 1.2rem; line-height: 1.6; color: var(--nc-ink-dim); margin: 0; }
+
+  .b-quote blockquote {
+    margin: 0; padding: 0 0 0 1.2rem; border-left: 3px solid var(--nc-accent);
+    font-size: 1.15rem; line-height: 1.6;
+  }
+  .b-quote cite { display: block; margin-top: .7rem; font-size: .9rem; font-style: normal; color: var(--nc-ink-dim); }
+
+  .b-rule hr { border: 0; border-top: 1px solid var(--nc-edge); margin: 0; }
+
+  .b-picture figure, .b-video figure { margin: 0; }
+  .b-picture img { display: block; width: 100%; border-radius: var(--nc-radius); }
+  .b-picture figcaption, .b-video figcaption {
+    font-size: .88rem; color: var(--nc-ink-dim); margin-top: .55rem;
+  }
+
+  .b-gallery .grid { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+  .b-gallery figure { margin: 0; }
+  .b-gallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--nc-radius-sm); }
+  .b-gallery figcaption { font-size: .82rem; color: var(--nc-ink-dim); margin-top: .35rem; }
+
+  .b-button { text-align: center; }
+  .b-button a {
+    display: inline-block; padding: .75rem 1.6rem; font-weight: 600; text-decoration: none;
+    background: var(--nc-accent); color: var(--nc-accent-ink); border-radius: var(--nc-radius);
+  }
+  .b-button a:hover { filter: brightness(1.07); }
+
+  .b-cards .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+  .b-cards .card {
+    padding: 1.1rem 1.2rem; background: var(--nc-panel);
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+  }
+  .b-cards .card h3 { margin: 0 0 .35rem; font-size: 1.02rem; font-weight: 650; }
+  .b-cards .card p { margin: 0; font-size: .94rem; color: var(--nc-ink-dim); }
+
+  .b-post .nc-baked h2 { font-size: 1.35rem; letter-spacing: -.02em; margin: 0 0 .3rem; }
+  .b-post .nc-baked-when { font-size: .85rem; color: var(--nc-ink-dim); margin: 0 0 .9rem; }
+  .b-post .nc-baked-link { font-size: .9rem; }
+
+  /* A block heading that names the section under it, shared by feed and post. */
+  .b-label {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--nc-ink-dim); margin: 0 0 .9rem;
+  }
+
+  /* The feed takes the page's own look. feed.js appends its fallback sheet
+     after this one, so these rules carry the container selector to win. */
+  [nc\:feed].nc-feed { gap: 0; }
+  [nc\:feed] .nc-item {
+    background: transparent; border: 0; border-top: 1px solid var(--nc-edge);
+    border-radius: 0; padding: 1rem 0;
+  }
+  [nc\:feed] .nc-item:first-child { border-top: 0; padding-top: 0; }
+  [nc\:feed] .nc-title { font-weight: 650; }
+  [nc\:feed] .nc-by { color: var(--nc-ink-dim); }
+
+  footer {
+    max-width: var(--measure); margin: 5rem auto 0; padding-top: 1.5rem;
+    border-top: 1px solid var(--nc-edge); color: var(--nc-ink-dim); font-size: .9rem;
+  }
+  footer p { margin: 0 0 .4rem; }
+
+  /* ---- the toolbar ------------------------------------------------------- */
+
+  .nc-bar {
+    position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 900;
+    display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; justify-content: center;
+    max-width: calc(100vw - 2rem);
+    padding: .5rem .7rem; background: var(--nc-panel);
+    border: 1px solid var(--nc-edge); border-radius: 999px; box-shadow: var(--nc-shadow);
+    font: .85rem var(--nc-chrome-font);
+  }
+  .nc-bar button {
+    font: inherit; cursor: pointer; padding: .35rem .8rem; border-radius: 999px;
+    border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink);
+  }
+  .nc-bar button:hover { border-color: var(--nc-accent); }
+  .nc-bar button.nc-primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); font-weight: 600; }
+  .nc-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--nc-ink-dim); }
+  html[nc\:owner-here="true"] .nc-dot { background: var(--nc-ok); }
+  .nc-who { color: var(--nc-ink-dim); }
+  .nc-owner-only { display: none; }
+  html[nc\:owner-here="true"] .nc-owner-only { display: revert; }
+  .nc-edit-hint {
+    position: fixed; left: 50%; bottom: .35rem; transform: translateX(-50%);
+    margin: 0; font: .72rem var(--nc-chrome-font); color: var(--nc-ink-dim); opacity: .6;
+  }
+  html[nc\:editing="true"] .nc-edit-hint { display: none; }
+
+  @media (max-width: 34rem) {
+    .masthead { padding-top: 3rem; }
+    [nc\:blocks] > section { margin-bottom: 2.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead wrap">
+  <h1 class="site-title" editable="single-line">Kettle &amp; Pine</h1>
+  <p class="tagline" editable="single-line">A small bakery on the north side, open Thursday to Sunday.</p>
+</header>
+
+<!-- Everything between here and </main> is blocks. In edit mode the runtime
+     draws a rail on each one and a + between them. -->
+<main class="wrap" nc:blocks>
+
+  <section class="b-lead" nc:block-type="lead">
+    <p editable>We bake four things properly rather than twenty things adequately. Bread on
+    Thursday, pastry from Friday, and whatever the fruit market had on Saturday.</p>
+  </section>
+
+  <section class="b-picture" nc:block-type="picture">
+    <figure>
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23e3d7c8'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Press the gear on this block to choose a picture.</figcaption>
+    </figure>
+  </section>
+
+  <section class="b-heading" nc:block-type="heading">
+    <h2 editable="single-line">What we do</h2>
+  </section>
+
+  <section class="b-text" nc:block-type="text">
+    <div editable>
+      <p>The starter is twelve years old and came from a baker in Ghent who was closing up.
+      We feed it twice a day and it has opinions about the weather.</p>
+      <p>Everything is sold the day it is baked. What is left at four goes to the shelter
+      on Cobalt Street.</p>
+    </div>
+  </section>
+
+  <section class="b-cards" nc:block-type="cards">
+    <div class="grid">
+      <article class="card">
+        <h3 editable="single-line">Thursday</h3>
+        <p editable>Sourdough, seeded rye, and the long-ferment baguette.</p>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+        </menu>
+      </article>
+      <article class="card">
+        <h3 editable="single-line">Friday</h3>
+        <p editable>Croissants from seven. They go quickly and we are not sorry about it.</p>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+        </menu>
+      </article>
+      <article class="card">
+        <h3 editable="single-line">Saturday</h3>
+        <p editable>Whatever the fruit market had, folded into something.</p>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+        </menu>
+      </article>
+    </div>
+    <menu class="nc-gear nc-gear-row">
+      <button type="button" onclick="nc.dom.cloneClosest(this.closest('.b-cards').querySelector('.card:last-of-type'), '.card')">Add a card</button>
+    </menu>
+  </section>
+
+  <section class="b-quote" nc:block-type="quote">
+    <blockquote editable>The rye is the best in the city and I have eaten a great deal of rye.</blockquote>
+    <cite editable="single-line">A regular, on a Thursday</cite>
+  </section>
+
+  <section class="b-button" nc:block-type="button">
+    <a href="#" editable="single-line">Order for Saturday</a>
+  </section>
+
+  <section class="b-feed" nc:block-type="feed">
+    <p class="b-label" editable="single-line">Lately</p>
+    <div nc:feed="notes"
+         nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+         nc:limit="3" nc:style="list"></div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p editable="single-line">Kettle &amp; Pine, 14 Cobalt Street. Thursday to Sunday, seven until sold out.</p>
+  <p editable="single-line">This page is an nsite. It belongs to a key, not to a company.</p>
+</footer>
+
+
+<!-- ==========================================================================
+     The block library.
+
+     A <template> renders nothing, so none of this is on the page. It is saved
+     with the file, so the palette works for whoever opens the document next.
+
+       nc:block     the name, stamped onto each block as nc:block-type
+       nc:label     what the palette calls it
+       nc:icon      one character, drawn as text so nothing is fetched
+       nc:group     which heading it sits under in the palette
+       nc:on-add    a picker to run once the block lands: image, video, feed, post
+       nc:slot      inside the shape, the element that picker acts on
+     ========================================================================== -->
+
+<template nc:block="heading" nc:label="Heading" nc:icon="H" nc:group="Text">
+  <section class="b-heading">
+    <h2 editable="single-line">A heading</h2>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Type into it. Enter starts a new paragraph.">
+  <section class="b-text">
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="lead" nc:label="Opening line" nc:icon="❞" nc:group="Text"
+          nc:hint="Larger, for the sentence under a title.">
+  <section class="b-lead">
+    <p editable>The one sentence that says what this page is.</p>
+  </section>
+</template>
+
+<template nc:block="quote" nc:label="Quote" nc:icon="❝" nc:group="Text">
+  <section class="b-quote">
+    <blockquote editable>Something somebody said.</blockquote>
+    <cite editable="single-line">Who said it</cite>
+  </section>
+</template>
+
+<template nc:block="rule" nc:label="Divider" nc:icon="—" nc:group="Text">
+  <section class="b-rule"><hr></section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section class="b-picture">
+    <figure>
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23e3d7c8'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="gallery" nc:label="Gallery" nc:icon="▦" nc:group="Media"
+          nc:hint="A grid. Each picture has its own gear.">
+  <section class="b-gallery">
+    <div class="grid">
+      <figure>
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23e3d7c8'/%3E%3C/svg%3E" alt="">
+        <figcaption editable="single-line">Caption</figcaption>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.media.promptImage({ target: this.closest('figure').querySelector('img') })">Picture</button>
+          <button type="button" onclick="nc.dom.cloneClosest(this, 'figure')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, 'figure', 'this picture')">Delete</button>
+        </menu>
+      </figure>
+    </div>
+    <menu class="nc-gear nc-gear-row">
+      <button type="button" onclick="nc.dom.cloneClosest(this.closest('.b-gallery').querySelector('figure:last-of-type'), 'figure')">Add a picture</button>
+    </menu>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section class="b-video">
+    <figure nc:slot class="nc-figure"></figure>
+  </section>
+</template>
+
+<template nc:block="button" nc:label="Button" nc:icon="◉" nc:group="Layout">
+  <section class="b-button">
+    <a href="#" editable="single-line">Do the thing</a>
+  </section>
+</template>
+
+<template nc:block="cards" nc:label="Cards" nc:icon="▤" nc:group="Layout"
+          nc:hint="A row of boxes that wraps on a phone.">
+  <section class="b-cards">
+    <div class="grid">
+      <article class="card">
+        <h3 editable="single-line">A card</h3>
+        <p editable>What it says.</p>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+        </menu>
+      </article>
+    </div>
+    <menu class="nc-gear nc-gear-row">
+      <button type="button" onclick="nc.dom.cloneClosest(this.closest('.b-cards').querySelector('.card:last-of-type'), '.card')">Add a card</button>
+    </menu>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section class="b-feed">
+    <p class="b-label" editable="single-line">Lately</p>
+    <div nc:feed="notes" nc:limit="3" nc:style="list"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section class="b-post">
+    <p class="b-label" editable="single-line">From my notes</p>
+  </section>
+</template>
+
+
+<!-- The form behind "Edit content": the masthead by field name, for anyone who
+     would rather fill in boxes than click into the page. The blocks are edited
+     on the page itself, which is what the rails are for. -->
+<script type="application/json" nc:cms>
+{
+  "site title": ".site-title",
+  "tagline":    ".tagline"
+}
+</script>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
+  <button class="nc-owner-only" data-nc-cms>Edit content</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<p class="nc-edit-hint">add #edit to the URL to edit this page</p>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

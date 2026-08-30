@@ -164,6 +164,22 @@ function b64url(bytes) {
   return Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// Blossom is content addressed, so a blob whose bytes have not changed is
+// already there under the same name. Asking first turns a weekly republish of an
+// unchanged site into a handful of HEAD requests instead of a full re-upload,
+// and it saves a signature per blob, which for a remote signer is a prompt.
+async function served(server, hash) {
+  const url = `${server.replace(/\/+$/, "")}/${hash}`;
+  try {
+    let res = await fetch(url, { method: "HEAD" });
+    // Not every server implements HEAD. Fall back to asking for one byte.
+    if (res.status === 405 || res.status === 501) {
+      res = await fetch(url, { headers: { Range: "bytes=0-0" } });
+    }
+    return res.ok || res.status === 206;
+  } catch { return false; }
+}
+
 async function upload(server, bytes, type, signer) {
   const hash = bytesToHex(sha256(bytes));
   let last;
@@ -312,21 +328,39 @@ async function cmdDeploy() {
   }
 
   const paths = {};
+  let uploads = 0;
   for (const f of files) {
     const bytes = contents.get(f);
     const path = rename.get(pathOf(f)) || pathOf(f);
     const type = TYPES[extname(f).toLowerCase()] || "application/octet-stream";
-    const results = await Promise.allSettled(SERVERS.map((s) => upload(s, bytes, type, signer)));
-    const ok = results.filter((r) => r.status === "fulfilled");
-    if (!ok.length) die(`${path} was refused by every server:\n  ` +
-      results.map((r) => r.reason?.message).join("\n  "));
-    paths[path] = ok[0].value;
+    const hash = bytesToHex(sha256(bytes));
+
+    // Who has it already, and who needs a copy. A server that dropped a blob
+    // gets it back, which is what makes a repeat deploy a repair rather than a
+    // no-op, but a server that still has it is left alone.
+    const already = await Promise.all(SERVERS.map((s) => served(s, hash)));
+    const missing = SERVERS.filter((_, i) => !already[i]);
+    const held = already.filter(Boolean).length;
+
+    let sent = 0;
+    if (missing.length) {
+      const results = await Promise.allSettled(missing.map((s) => upload(s, bytes, type, signer)));
+      sent = results.filter((r) => r.status === "fulfilled").length;
+      if (!held && !sent) {
+        die(`${path} is on no server and was refused by every one of them:\n  ` +
+          results.map((r) => r.reason?.message).join("\n  "));
+      }
+      uploads += sent;
+    }
+
+    paths[path] = hash;
     // The unfingerprinted path stays in the manifest pointing at the same blob.
     // Nothing new links to it, but a reader still holding a cached copy of the
     // previous document does, and it costs one tag.
     const original = pathOf(f);
-    if (path !== original) paths[original] = ok[0].value;
-    console.log(`  ${path.padEnd(34)} ${paths[path].slice(0, 12)}…  ${String(bytes.length).padStart(8)} B  ${ok.length}/${SERVERS.length}`);
+    if (path !== original) paths[original] = hash;
+    const note = missing.length ? `${held + sent}/${SERVERS.length}  ${sent} uploaded` : `${held}/${SERVERS.length}  already there`;
+    console.log(`  ${path.padEnd(34)} ${hash.slice(0, 12)}…  ${String(bytes.length).padStart(8)} B  ${note}`);
   }
 
   const agg = aggregate(paths);
@@ -340,6 +374,28 @@ async function cmdDeploy() {
     ...(flags.source ? [["source", String(flags.source)]] : []),
   ];
   const kind = site ? 35128 : 15128;
+
+  // A weekly job that restores an unchanged site should cost nothing. The blobs
+  // are content addressed and were checked above, so if the path table still
+  // hashes to what the live manifest says, there is nothing to tell anybody: a
+  // fresh manifest would carry the same table under a newer timestamp, and the
+  // snapshot beside it would file a version identical to the last one.
+  const pool = new SimplePool();
+  if (!flags.force) {
+    const current = await pool.get(RELAYS, site
+      ? { kinds: [35128], authors: [pub], "#d": [site], limit: 1 }
+      : { kinds: [15128], authors: [pub], limit: 1 }).catch(() => null);
+    const live = current?.tags.find((t) => t[0] === "x" && t[2] === "aggregate")?.[1];
+    if (live === agg) {
+      console.log(`\n  unchanged: the published manifest already points at these ${Object.keys(paths).length} paths`);
+      if (uploads) console.log(`  ${uploads} blob${uploads === 1 ? "" : "s"} were put back on a server that had dropped them`);
+      console.log(`  nothing published. --force republishes anyway.\n`);
+      pool.close(RELAYS);
+      await signer.close();
+      return;
+    }
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const manifest = await signer.sign({ kind, created_at: now, tags, content: "" });
   const snap = await signer.sign({
@@ -347,7 +403,6 @@ async function cmdDeploy() {
     tags: [["a", `${kind}:${pub}:${site}`], ...tags.filter((t) => t[0] !== "d")],
   });
 
-  const pool = new SimplePool();
   const sent = await Promise.allSettled(pool.publish(RELAYS, manifest));
   const accepted = sent.filter((r) => r.status === "fulfilled").length;
   if (!accepted) die("no relay accepted the manifest:\n  " +
@@ -387,7 +442,10 @@ function cmdHelp() {
   nsite-clay init [dir]        scaffold a site (generates a key unless --npub is given)
                                --template=<name> to start from one of:
                                ${templates().join(", ") || "(none built yet)"}
-  nsite-clay deploy <dir>      publish a directory as an nsite
+  nsite-clay deploy <dir>      publish a directory as an nsite. Blobs already on a
+                               server are not uploaded again, and a site whose
+                               path table has not changed is not republished.
+                               --force publishes regardless.
   nsite-clay keygen            print a fresh keypair and the URL it would live at
 
 Signing

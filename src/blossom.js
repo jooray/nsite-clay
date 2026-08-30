@@ -62,15 +62,56 @@ export async function upload(server, bytes, { signer, type = "text/html" }) {
   throw lastError;
 }
 
-// Push to every configured server; succeed if at least one takes it. Blossom is
-// deliberately redundant: the blob is content-addressed, so more copies is
-// strictly better and any one of them can serve it.
-export async function uploadAll(servers, bytes, opts) {
-  const results = await Promise.allSettled(servers.map((s) => upload(s, bytes, opts)));
-  const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+// Does this server already serve these exact bytes?
+//
+// Blobs are addressed by their own hash, so the same file uploaded by a hundred
+// people is one blob. Asking first is what stops the hundred and first from
+// pushing another copy of a 300 kB runtime that is already there.
+//
+// A 200 alone is not quite enough. A server that answers everything with an
+// empty 200 would have us skip an upload the site then depends on, so where a
+// length is given it has to match. Anything uncertain is treated as absent,
+// because a needless upload is a wasted request and a wrongly skipped one is a
+// broken page.
+export async function has(server, hash, size) {
+  const url = `${server.replace(/\/+$/, "")}/${hash}`;
+  try {
+    let res = await fetch(url, { method: "HEAD" });
+    if (res.status === 405 || res.status === 501) {
+      res = await fetch(url, { headers: { Range: "bytes=0-0" } });
+      if (res.status === 206) return true;
+    }
+    if (!res.ok) return false;
+    const len = res.headers.get("content-length");
+    return len == null || Number(len) === size;
+  } catch { return false; }
+}
+
+// Push to every configured server; succeed if at least one has it afterwards.
+// Blossom is deliberately redundant: the blob is content-addressed, so more
+// copies is strictly better and any one of them can serve it.
+//
+// A server that already holds the blob is left alone, and one that has dropped
+// it gets it back, so publishing the same file twice repairs rather than
+// duplicates. Pass `check: false` for bytes that cannot already be there.
+export async function uploadAll(servers, bytes, opts = {}) {
+  const hash = hashBytes(bytes);
+  const { check = true } = opts;
+
+  const present = check
+    ? await Promise.all(servers.map((s) => has(s, hash, bytes.length)))
+    : servers.map(() => false);
+  const held = servers.filter((_, i) => present[i])
+    .map((s) => ({ sha256: hash, server: s.replace(/\/+$/, ""), url: `${s.replace(/\/+$/, "")}/${hash}`, reused: true }));
+  const missing = servers.filter((_, i) => !present[i]);
+  if (!missing.length) return { hash, ok: held, failed: [], uploaded: 0 };
+
+  const results = await Promise.allSettled(missing.map((s) => upload(s, bytes, opts)));
+  const sent = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
   const failed = results.filter((r) => r.status === "rejected").map((r) => String(r.reason));
+  const ok = [...held, ...sent];
   if (!ok.length) throw new Error("No Blossom server accepted the blob:\n" + failed.join("\n"));
-  return { hash: hashBytes(bytes), ok, failed };
+  return { hash, ok, failed, uploaded: sent.length };
 }
 
 // What this key has already uploaded (BUD-12). Servers that do not implement it

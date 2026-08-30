@@ -428,6 +428,56 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("§8.2 and comes back as a real element", el.tagName.toLowerCase() === "svg");
   }
 
+  // --- blocks -------------------------------------------------------------
+  {
+    const area = document.getElementById("blockarea");
+    const before = nc.blocks.blocksIn(area).length;
+    t("a block area is found", nc.blocks.containers().length === 1);
+    t("blocks are its element children", before === 2);
+    const lib = nc.blocks.library();
+    t("the library comes from the page's <template> elements", lib.size === 3);
+    t("a library entry carries its palette label", lib.get("heading").label === "Heading");
+    t("and its picker, where it has one", lib.get("picture").onAdd === "image");
+    t("a <template> is not itself a block", !nc.blocks.blocksIn(area).some((b) => b.tagName === "TEMPLATE"));
+
+    await nc.blocks.add("heading", { container: area });
+    t("adding appends a block", nc.blocks.blocksIn(area).length === before + 1);
+    const added = nc.blocks.blocksIn(area).at(-1);
+    t("the copy is stamped with its type", added.getAttribute("nc:block-type") === "heading");
+    t("adding an unknown block is refused rather than throwing",
+      (await nc.blocks.add("nosuchblock", { container: area })) === null);
+
+    // The rails and insert points must not be mistaken for content, and must
+    // never be written to disk.
+    nc.blocks.arm();
+    t("arming draws a rail on every block",
+      document.querySelectorAll(".nc-blk-rail").length === before + 1);
+    t("and an insert point between and after each",
+      document.querySelectorAll(".nc-blk-add").length === before + 2);
+    t("a rail is not counted as a block", nc.blocks.blocksIn(area).length === before + 1);
+
+    // Moving has to skip the insert points sitting between the blocks.
+    nc.blocks.moveBlock(added, -1);
+    t("moving up swaps with the block above, not with an insert point",
+      nc.blocks.blocksIn(area).at(-2) === added);
+    nc.blocks.moveBlock(added, 1);
+    t("and back down again", nc.blocks.blocksIn(area).at(-1) === added);
+    t("moving past the end does nothing",
+      nc.blocks.moveBlock(added, 1) === added && nc.blocks.blocksIn(area).at(-1) === added);
+
+    const withBlocks = nc.getHTML();
+    t("no rail reaches the saved file", !withBlocks.includes("nc-blk-rail"));
+    t("no insert point reaches the saved file", !withBlocks.includes("nc-blk-add"));
+    t("the library does reach the saved file, so the next editor has it",
+      withBlocks.includes('nc:block="heading"'));
+    t("and so does the added block",
+      (withBlocks.match(/nc:block-type="heading"/g) || []).length === 2);
+
+    nc.blocks.disarm();
+    t("disarming takes every rail away", document.querySelectorAll(".nc-blk-rail").length === 0);
+    nc.dom.remove(added);
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

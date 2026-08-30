@@ -322,7 +322,7 @@
     </a>
     <nav>
       <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/">Home</a>
-      <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html">Walkthrough</a>
+      <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html">Guide</a>
       <a href="https://github.com/jooray/nsite-clay">Source</a>
     </nav>
   </header>
@@ -392,8 +392,10 @@
     </aside>
   </div>
 
+  <main nc:blocks>
+
   <!-- ================= the board ================= -->
-  <section class="band" id="board-section">
+  <section class="band" id="board-section" nc:block-type="board">
     <div class="band-head">
       <span class="idx">01</span>
       <h2 editable="single-line">The board</h2>
@@ -599,7 +601,7 @@
   </section>
 
   <!-- ================= the checklist ================= -->
-  <section class="band">
+  <section class="band" nc:block-type="checklist">
     <div class="band-head">
       <span class="idx">02</span>
       <h2 editable="single-line">Ticks that outlive you</h2>
@@ -676,7 +678,7 @@
   </section>
 
   <!-- ================= state with no shape ================= -->
-  <section class="band">
+  <section class="band" nc:block-type="state">
     <div class="band-head">
       <span class="idx">03</span>
       <h2 editable="single-line">The part with no shape</h2>
@@ -708,7 +710,7 @@
   </section>
 
   <!-- ================= media ================= -->
-  <section class="band">
+  <section class="band" nc:block-type="media">
     <div class="band-head">
       <span class="idx">04</span>
       <h2 editable="single-line">A picture and a video</h2>
@@ -738,7 +740,7 @@
   </section>
 
   <!-- ================= Nostr ================= -->
-  <section class="band">
+  <section class="band" nc:block-type="posts">
     <div class="band-head">
       <span class="idx">05</span>
       <h2 editable="single-line">Posts, which do not live here</h2>
@@ -761,7 +763,7 @@
   </section>
 
   <!-- ================= house rules ================= -->
-  <section class="band">
+  <section class="band" nc:block-type="rules">
     <div class="band-head">
       <span class="idx">06</span>
       <h2 editable="single-line">What you are walking into</h2>
@@ -793,10 +795,12 @@
     </ul>
   </section>
 
+  </main>
+
   <footer>
     <ul class="links">
       <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/">nsite-clay</a></li>
-      <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html">Walkthrough</a></li>
+      <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html">Guide</a></li>
       <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html">Templates</a></li>
       <li><a href="https://github.com/jooray/nsite-clay">Source</a></li>
     </ul>
@@ -810,6 +814,69 @@
   </footer>
 
 </div>
+
+<!-- ==========================================================================
+     The block library.
+
+     Everything above lives inside <main nc:blocks>, so in edit mode each band
+     carries a rail and the gaps between them carry a + that opens this palette.
+     The showcase bands stay exactly what they were: gears on the objects they
+     act on, a board whose cards cross columns, state with no visual form. The
+     blocks are the other half of the same idea, for the sections nobody thought
+     of when the page was written.
+     ========================================================================== -->
+
+<template nc:block="heading" nc:label="Heading" nc:icon="H" nc:group="Text">
+  <section class="band">
+    <div class="band-head"><span class="idx">··</span><h2 editable="single-line">A heading</h2></div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Type into it. Enter starts a new paragraph.">
+  <section class="band">
+    <div class="prose" editable><p>Write here. Press Save and it is the file everyone loads.</p></div>
+  </section>
+</template>
+
+<template nc:block="quote" nc:label="Quote" nc:icon="❝" nc:group="Text">
+  <section class="band">
+    <blockquote class="prose" editable>Something somebody said.</blockquote>
+    <p class="prose" editable="single-line">Who said it</p>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section class="band">
+    <figure class="nc-figure">
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23ddd0ba'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section class="band">
+    <figure nc:slot class="nc-figure"></figure>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section class="band">
+    <div class="band-head"><span class="idx">··</span><h2 editable="single-line">Lately</h2></div>
+    <div class="feed" nc:feed="notes" nc:limit="3" nc:style="list"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section class="band">
+    <div class="band-head"><span class="idx">··</span><h2 editable="single-line">From my notes</h2></div>
+  </section>
+</template>
 
 <!-- The shapes the Add buttons clone. A template's contents are inert until
      nc.dom.addFrom copies one out, and both survive a save. -->
@@ -884,6 +951,8 @@
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
+  <button class="nc-owner-only" data-nc-cms>Edit content</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

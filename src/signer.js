@@ -5,12 +5,17 @@ import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from "nostr-too
 import * as nip49 from "nostr-tools/nip49";
 import { BunkerSigner, createAccount, createNostrConnectURI, parseBunkerInput } from "nostr-tools/nip46";
 
-// Ask only for what the runtime actually signs.
+// Ask only for what the runtime actually signs. Every entry costs characters in
+// the connect URI and therefore modules in the QR code, so this is the list of
+// kinds the runtime really does sign, and nothing kept "just in case":
+// the nsite manifest and its versions, Blossom uploads, the two relay lists the
+// settings dialog writes, and the notes and articles the composer publishes.
 const DEFAULT_PERMS = [
   "get_public_key",
   "sign_event:15128", "sign_event:35128", "sign_event:5128",
   "sign_event:24242",
   "sign_event:10002", "sign_event:10063",
+  "sign_event:1", "sign_event:30023",
 ];
 
 export class Nip07Signer {
@@ -111,25 +116,38 @@ export class Nip46Signer {
     return signer;
   }
 
-  // Client-initiated flow, the one Amber wants. Returns { uri, promise }:
-  // render `uri` as a QR / deep link, await `promise` for the connected signer.
-  static nostrconnect({ relays, name = "nsite-clay", url = (typeof location !== "undefined" ? location.origin : ""), perms = DEFAULT_PERMS } = {}) {
+  // Client-initiated flow, the one Amber wants. Returns { uri, promise, cancel }:
+  // render `uri` as a QR and a deep link, await `promise` for the connected
+  // signer, and call `cancel()` if the person closes the dialog, because the
+  // subscription otherwise sits on the relays until the five minute deadline.
+  //
+  // `url` is left out by default. A signer shows it as "who is asking", which is
+  // worth something, but an nsite origin is a 76 character npub hostname and it
+  // pushed the QR from 73 modules to 81. The page title in `name` says who is
+  // asking in fewer bytes, and a code nobody can scan says nothing at all.
+  static nostrconnect({ relays, name = "nsite-clay", url = "", perms = DEFAULT_PERMS } = {}) {
     const clientSecret = generateSecretKey();
     const clientPubkey = getPublicKey(clientSecret);
     const secret = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
     const uri = createNostrConnectURI({ clientPubkey, relays, secret, perms, name, url });
 
+    const abort = new AbortController();
     const promise = (async () => {
       // nostr-tools resolves once a kind-24133 frame decrypts to exactly this
       // one-time secret; it then pins that event.pubkey as the remote signer.
-      const bunker = await BunkerSigner.fromURI(clientSecret, uri, { pool: undefined });
+      // The abort signal is the fourth argument, in place of the default five
+      // minute deadline.
+      const bunker = await BunkerSigner.fromURI(clientSecret, uri, {}, abort.signal);
       const signer = new Nip46Signer(bunker, clientSecret);
       // Mandatory second phase: event.pubkey is a routing key, not an identity.
       signer.pubkey = await bunker.getPublicKey();
       return signer;
     })();
+    // Nothing may await this promise if the dialog was dismissed first, and an
+    // unhandled rejection is not the way to report a cancelled sign-in.
+    promise.catch(() => {});
 
-    return { uri, clientPubkey, secret, promise };
+    return { uri, clientPubkey, secret, promise, cancel: () => abort.abort() };
   }
 
   async connect() { return this.pubkey; }

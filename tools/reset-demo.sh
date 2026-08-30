@@ -5,6 +5,10 @@
 # is the point of it, and it means the page is whatever the last visitor left
 # behind. This runs weekly and restores the version in git.
 #
+# A week where nobody edited the demo costs nothing. The blobs are content
+# addressed and already on the servers, so deploy uploads none of them and
+# publishes no event at all. See the note further down.
+#
 # Install:
 #
 #   git clone https://github.com/jooray/nsite-clay.git ~/projects/nsite-clay
@@ -71,6 +75,12 @@ fi
 # The key goes through the environment. On argv it would be visible to every
 # other process on the box through ps, which is a habit worth keeping even for a
 # key that does not matter.
+# deploy asks each Blossom server whether it already serves a blob before
+# uploading it, and stops before publishing when the path table still hashes to
+# what the live manifest says. So the usual run, where nobody edited the demo and
+# every blob is still served, writes nothing to the relays. It publishes only
+# when the page actually changed, or when a server dropped a blob and it had to
+# be put back.
 say "publishing $(find demo-dist -type f | wc -l | tr -d ' ') files"
 NOSTR_SECRET_KEY="$DEMO_NSEC" node bin/nsite-clay.mjs deploy demo-dist
 say "done"
