@@ -10,14 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/"><b>Homepage</b></a>
+  <a href="https://nsite-clay.cypherpunk.today/"><b>Homepage</b></a>
   ·
   <a href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Live demo</a>
   ·
   <a href="docs/RUNTIME-API.md">Runtime reference</a>
 </p>
 
-<p align="center"><sub>The homepage is itself an nsite-clay document, and it edits itself.</sub></p>
+<p align="center"><sub>The homepage is itself an nsite-clay document, and it edits itself.<br>
+It is served at <code>nsite-clay.cypherpunk.today</code> for readability, which redirects to the
+address that actually owns it:<br>
+<code>npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol</code>. That one
+needs no domain, no server and no renewal.</sub></p>
 
 <p align="center">
   <img src="media/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="880">
@@ -69,13 +73,13 @@ people's leftovers.
 
 ## Quick start, without a terminal
 
-Open **[the publisher](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/deploy.html)**,
+Open **[the publisher](https://nsite-clay.cypherpunk.today/deploy.html)**,
 pick a template, sign in with your key or make one on the spot, and it is online.
 It runs entirely in the browser: it fetches the template and the runtime from the
 site it is published on, uploads them to your Blossom servers, and signs the
 manifest with your key. There is no server in the loop and nothing to install.
 
-The [guide](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html)
+The [guide](https://nsite-clay.cypherpunk.today/guide.html)
 walks the whole path with screenshots, from having no key at all to a published
 page with a picture and a Nostr feed in it.
 
@@ -243,7 +247,7 @@ Ranked by how much you have to trust the page in front of you:
 Most pages made with this will be built by an agent rather than by hand, so the
 project ships instructions for one:
 
-**<https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt>**
+**<https://nsite-clay.cypherpunk.today/llms.txt>**
 
 Point your coding agent at that file and ask it for the page you want. It covers
 what to ask you for, how to pick and rework a template, how to get the page
@@ -276,13 +280,13 @@ append-only by design and already has its own way of growing.
 
 The last of those is worth opening: its content is the transcript of the
 conversation that produced it, held with an agent that was handed nothing but
-[llms.txt](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt).
+[llms.txt](https://nsite-clay.cypherpunk.today/llms.txt).
 
 ```bash
 npx nsite-clay init mysite --template=blog --npub=npub1…
 ```
 
-Browse them at [/templates.html](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html),
+Browse them at [/templates.html](https://nsite-clay.cypherpunk.today/templates.html),
 or read the source in [`templates/`](templates/). The rules a template follows
 are in [`templates/_shared/CONTRACT.md`](templates/_shared/CONTRACT.md).
 
@@ -487,7 +491,7 @@ curl -sLo /tmp/lunarpunk.jpg https://image.nostr.build/b9bf63cdfad604ce65598797a
 npm run walkthrough
 ```
 
-The pictures in the [guide](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html)
+The pictures in the [guide](https://nsite-clay.cypherpunk.today/guide.html)
 come from that run, so they show working software rather than a mock-up.
 
 ## Building from source

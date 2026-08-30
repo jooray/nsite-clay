@@ -11,8 +11,8 @@ nsite-clay, read all of it before you start. It is long on purpose: it tells you
 what the thing is, what to ask for, which template to begin from, and what will
 go wrong. It links the documentation rather than restating it.
 
-- Human walkthrough with screenshots: https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html
-- Templates, browsable: https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html
+- Human walkthrough with screenshots: https://nsite-clay.cypherpunk.today/docs.html
+- Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
 - Runtime reference: https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md
 - Where state lives: https://github.com/jooray/nsite-clay/blob/main/docs/state.md
 - Source: https://github.com/jooray/nsite-clay

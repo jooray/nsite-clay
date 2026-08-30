@@ -4,7 +4,7 @@ Suggested slug: getting-a-page-online
 
 ---
 
-The [walkthrough](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html)
+The [walkthrough](https://nsite-clay.cypherpunk.today/docs.html)
 on the project site has a screenshot of every step. This is the same ground, faster.
 
 ## Two commands, and one of them prints a key

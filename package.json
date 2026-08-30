@@ -4,7 +4,7 @@
   "type": "module",
   "description": "A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.",
   "license": "MIT-0",
-  "homepage": "https://github.com/jooray/nsite-clay",
+  "homepage": "https://nsite-clay.cypherpunk.today/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jooray/nsite-clay.git"
