@@ -9,7 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: šablony</title>
-<meta name="description" content="Jedenáct výchozích bodů pro nsite, který se edituje sám. Vyber si, změň text, změň barvy, publikuj.">
+<meta name="description" content="Dvanáct výchozích bodů pro nsite, který se edituje sám. Vyber si, změň text, změň barvy, publikuj.">
 <link rel="alternate" hreflang="en" href="/templates.html">
 <link rel="alternate" hreflang="es" href="/es/templates.html">
 <link rel="alternate" hreflang="sk" href="/sk/templates.html">
@@ -91,7 +91,7 @@
     <div class="nc-lang"><a href="/templates.html" hreflang="en">EN</a><a href="/es/templates.html" hreflang="es">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs" aria-current="page">CS</a></div>
   </nav>
   <h1 editable="single-line">Šablony</h1>
-  <p class="lede" editable="single-line">Jedenáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
+  <p class="lede" editable="single-line">Dvanáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
 
   <pre><span class="c"># začni od jedné z nich</span>
 npx nsite-clay init mysite --template=blog --npub=npub1…
@@ -99,6 +99,15 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
 
   <div class="grid" id="cards">
 
+    <article class="card">
+      <a class="shot" href="/t/cms/"><img src="/shots/t-cms.png" alt="Šablona pro skládání z bloků" loading="lazy"></a>
+      <div class="body">
+        <span class="name">cms</span>
+        <h2><a href="/t/cms/">Editor bloků</a></h2>
+        <p>Stránka, kterou skládáš, místo abys přepisoval hotovou. Mezi dvěma bloky stiskneš + a přidáš nadpis, obrázek, video, řadu karet nebo nostr feed. Nejjednodušší začátek.</p>
+        <div class="row"><a class="primary" href="/t/cms/">Otevřít</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/cms/index.html">Zdroj</a></div>
+      </div>
+    </article>
     <article class="card">
       <a class="shot" href="/t/event/"><img src="/shots/t-event.png" alt="Šablona pozvánky na akci" loading="lazy"></a>
       <div class="body">

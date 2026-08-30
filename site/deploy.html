@@ -80,6 +80,11 @@
   ol.steps li[aria-current="step"] { color: var(--nc-ink); border-color: var(--nc-accent); }
   ol.steps li[aria-current="step"] .n { background: var(--nc-accent); color: var(--nc-accent-ink); }
   ol.steps li[data-done="true"] { color: var(--nc-ink-dim); }
+  ol.steps li[data-go] { cursor: pointer; }
+  ol.steps li[data-go]:hover, ol.steps li[data-go]:focus-visible {
+    color: var(--nc-ink); border-color: var(--nc-accent); outline: none;
+  }
+  ol.steps li[data-go]:focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 2px; }
   ol.steps li[data-done="true"] .n { background: var(--nc-ok); color: #0b2418; }
 
   section.step { display: none; }
@@ -272,7 +277,6 @@
       <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
       <div class="row end">
         <button id="tpl-back" data-t="back">Back</button>
-        <button class="primary" id="tpl-go" disabled data-t="next">Next</button>
       </div>
     </div>
   </section>
@@ -465,10 +469,14 @@
   const say = (key, fallback) => T[key] || fallback;
 
   const $ = (s) => document.querySelector(s);
-  const state = { template: null, catalogue: [], path: "/", confirmed: false };
+  const state = { template: null, catalogue: [], path: "/", confirmed: false, reached: 1, published: false };
 
   // ---- the stepper -------------------------------------------------------
+  // A step you have already been through is a way back to it. Nothing is lost by
+  // returning to the template list, and a wizard that only goes forwards makes
+  // people start over in a new tab to change one choice.
   function step(n) {
+    state.reached = Math.max(state.reached, n);
     for (const s of document.querySelectorAll("section.step")) {
       s.toggleAttribute("data-on", Number(s.dataset.step) === n);
     }
@@ -476,8 +484,31 @@
       const i = Number(li.dataset.step);
       li.setAttribute("data-done", String(i < n));
       i === n ? li.setAttribute("aria-current", "step") : li.removeAttribute("aria-current");
+      // Once it is published there is nothing to go back and change.
+      const canGo = i < n && i <= state.reached && !state.published;
+      li.toggleAttribute("data-go", canGo);
+      li.tabIndex = canGo ? 0 : -1;
+      // A step you can click really is a button. One you cannot stays an
+      // ordinary list item: role="presentation" would take it out of the list
+      // for a screen reader and give nothing back.
+      canGo ? li.setAttribute("role", "button") : li.removeAttribute("role");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function goTo(n) {
+    if (state.published || n > state.reached) return;
+    step(n);
+    if (n === 2) loadTemplates();
+    if (n === 3) checkPath();
+  }
+  for (const li of document.querySelectorAll("#steps li")) {
+    li.addEventListener("click", () => { if (li.hasAttribute("data-go")) goTo(Number(li.dataset.step)); });
+    li.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && li.hasAttribute("data-go")) {
+        e.preventDefault(); goTo(Number(li.dataset.step));
+      }
+    });
   }
 
   const fail = (sel, message) => {
@@ -669,23 +700,28 @@
       const name = document.createElement("span");
       name.className = "name";
       name.textContent = t.name;
+      // What this language calls it. The gallery pages are where those words
+      // live, and the build reads them into the catalogue.
+      const words = t.l10n?.[LANG] || t.l10n?.en || {};
       const title = document.createElement("b");
-      title.textContent = t.title || t.name;
+      title.textContent = words.label || t.title || t.name;
       const desc = document.createElement("p");
-      desc.textContent = t.description || "";
+      desc.textContent = words.description || t.description || "";
       body.append(name, title, desc);
       card.append(shot, body);
+      // Picking one is the decision. Asking for a second click on Next to
+      // confirm a choice already made is a step that does nothing.
       card.onclick = () => {
         state.template = t;
         for (const c of host.querySelectorAll(".tpl")) c.setAttribute("aria-pressed", String(c === card));
-        $("#tpl-go").disabled = false;
+        step(3);
+        checkPath();
       };
       host.appendChild(card);
     }
   }
 
   $("#tpl-back").onclick = () => step(1);
-  $("#tpl-go").onclick = () => { step(3); checkPath(); };
 
   // ---- 3. where ----------------------------------------------------------
 
@@ -910,6 +946,8 @@
       $("#done-url").textContent = url;
       $("#done-open").href = url + "#edit";
       $("#done-plain").href = url;
+      state.published = true;
+      step(4);
       $("#progress-card").hidden = true;
       $("#done-card").hidden = false;
       window.scrollTo({ top: 0, behavior: "smooth" });

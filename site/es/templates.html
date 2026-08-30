@@ -9,7 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: plantillas</title>
-<meta name="description" content="Once puntos de partida para un nsite que se edita a sí mismo. Elige uno, cambia el texto, cambia los colores y publica.">
+<meta name="description" content="Doce puntos de partida para un nsite que se edita a sí mismo. Elige uno, cambia el texto, cambia los colores y publica.">
 <link rel="alternate" hreflang="en" href="/templates.html">
 <link rel="alternate" hreflang="es" href="/es/templates.html">
 <link rel="alternate" hreflang="sk" href="/sk/templates.html">
@@ -91,7 +91,7 @@
     <div class="nc-lang"><a href="/templates.html" hreflang="en">EN</a><a href="/es/templates.html" hreflang="es" aria-current="page">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs">CS</a></div>
   </nav>
   <h1 editable="single-line">Plantillas</h1>
-  <p class="lede" editable="single-line">Once puntos de partida. Cada una es una página que ya funciona —con los controles de edición conectados—, así que cambias el texto y los colores en lugar de construir desde cero.</p>
+  <p class="lede" editable="single-line">Doce puntos de partida. Cada una es una página que ya funciona, con los controles de edición conectados, así que cambias el texto y los colores en lugar de construir desde cero.</p>
 
   <pre><span class="c"># empieza a partir de una</span>
 npx nsite-clay init mysite --template=blog --npub=npub1…
@@ -99,6 +99,15 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
 
   <div class="grid" id="cards">
 
+    <article class="card">
+      <a class="shot" href="/t/cms/"><img src="/shots/t-cms.png" alt="La plantilla del compositor de bloques" loading="lazy"></a>
+      <div class="body">
+        <span class="name">cms</span>
+        <h2><a href="/t/cms/">Compositor de bloques</a></h2>
+        <p>Una página que montas en vez de reescribirla. Pulsa el + entre dos bloques y añade un encabezado, una imagen, un vídeo, una fila de tarjetas o un feed de Nostr. El punto de partida más fácil.</p>
+        <div class="row"><a class="primary" href="/t/cms/">Abrir</a><a href="https://github.com/jooray/nsite-clay/blob/main/templates/cms/index.html">Código</a></div>
+      </div>
+    </article>
     <article class="card">
       <a class="shot" href="/t/event/"><img src="/shots/t-event.png" alt="La plantilla event" loading="lazy"></a>
       <div class="body">

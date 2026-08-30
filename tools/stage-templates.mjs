@@ -23,6 +23,31 @@ let warnings = 0;
 const catalogue = [];
 const between = (html, re) => (html.match(re) || [])[1] || "";
 
+// The gallery already names and describes every template, in every language the
+// site speaks. The publisher needs the same words, so rather than keeping a
+// second list in step with the first, read them back out of the gallery pages.
+// One place to write a description, four languages that get it.
+const LANGS = ["en", "es", "sk", "cs"];
+const entities = (t) => t
+  .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+
+function galleryText(lang) {
+  const file = lang === "en" ? join("site", "templates.html") : join("site", lang, "templates.html");
+  const out = {};
+  let html;
+  try { html = readFileSync(file, "utf8"); } catch { return out; }
+  const card = /<span class="name">([a-z0-9-]+)<\/span>\s*<h2><a[^>]*>([\s\S]*?)<\/a><\/h2>\s*<p>([\s\S]*?)<\/p>/g;
+  for (const m of html.matchAll(card)) {
+    out[m[1]] = {
+      label: entities(m[2].replace(/<[^>]+>/g, "").trim()),
+      description: entities(m[3].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()),
+    };
+  }
+  return out;
+}
+const gallery = Object.fromEntries(LANGS.map((l) => [l, galleryText(l)]));
+
 for (const name of readdirSync("templates")) {
   if (name.startsWith("_")) continue;
   const dir = join("templates", name);
@@ -52,8 +77,22 @@ for (const name of readdirSync("templates")) {
     }
   }
 
+  // What each language calls it, and what it says about it. A template the
+  // gallery has not described yet falls back to its own <title> and meta.
+  const l10n = {};
+  for (const lang of LANGS) {
+    const g = gallery[lang]?.[name];
+    if (g) l10n[lang] = g;
+  }
+  if (!l10n.en) {
+    console.warn(`stage-templates: ${name} is not in the gallery, so the publisher ` +
+                 `will show its <title> and meta description instead of a translated one.`);
+    warnings++;
+  }
+
   catalogue.push({
     name,
+    l10n,
     title: between(html, /<title>([^<]*)<\/title>/i).replace(/&amp;/g, "&").trim(),
     description: between(html, /<meta\s+name="description"\s+content="([^"]*)"/i)
       .replace(/&amp;/g, "&").trim(),

@@ -148,8 +148,19 @@ check("the block composer is offered first",
   (await page.locator(".tpl .name").first().textContent()).trim() === "cms");
 await shot("p4-templates");
 
+// Clicking the card is the choice; there is no second button to confirm it.
 await page.locator(".tpl").first().click();
-await page.click("#tpl-go");
+await page.waitForSelector('section.step[data-step="3"][data-on]');
+await sleep(700);
+check("clicking a template goes straight on", true);
+
+// A step already passed is a way back to it.
+check("the template step is offered as a way back",
+  await page.locator('#steps li[data-step="2"][data-go]').count() === 1);
+await page.locator('#steps li[data-step="2"]').click();
+await page.waitForSelector('section.step[data-step="2"][data-on]');
+check("clicking it returns to the template list", true);
+await page.locator(".tpl").first().click();
 await page.waitForSelector('section.step[data-step="3"][data-on]');
 await sleep(700);
 
@@ -329,7 +340,6 @@ await page.click("#key-go");
 await page.waitForSelector('section.step[data-step="2"][data-on]');
 await page.waitForSelector(".tpl");
 await page.locator(".tpl").first().click();
-await page.click("#tpl-go");
 await page.waitForSelector('section.step[data-step="3"][data-on]');
 await page.fill("#path", "/notes");
 await sleep(1800);
@@ -360,6 +370,9 @@ check("the second page publishes alongside the first", second.endsWith("/notes/"
 // publish, so a second site under the same key should send only its document.
 const reuse = await page.textContent("#log");
 check("the shared blobs were not uploaded twice", /already there/.test(reuse));
+
+check("after publishing there is nothing to go back to",
+  await page.locator("#steps li[data-go]").count() === 0);
 
 const stillThere = await fetch(`${GATEWAY}/?npub=${npub}`).then((r) => r.text());
 check("and the first page is still there", stillThere.includes("Nostr meetup Košice"));
