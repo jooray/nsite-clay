@@ -135,3 +135,21 @@ the next sentence will do. Write like a person who has used the thing.
 - No `autosave`.
 - Nothing that only works while JavaScript runs, other than the Nostr feeds. A
   template read with scripting off should still be a readable page.
+
+## Gears
+
+`.nc-gear` hides with `!important`, and the rule that reveals it for a
+signed-in owner restores it the same way. A page's own stylesheet loads after
+the shared one, so without that a gear carrying a page class with its own
+`display` would show its controls to every reader: the failure was silent and
+it failed open, which is the wrong direction.
+
+The consequence is that `class="nc-gear my-toolbar"` will not pick up
+`.my-toolbar { display: flex }`. Use `nc-gear-row`, which is a wrapping flex
+row, or write the layout against the armed selector yourself:
+
+```css
+html[nc\:owner-here="true"][nc\:editing="true"] .my-toolbar { display: grid; }
+```
+
+Do not put `clay="no-save"` on a gear. It belongs in the file.

@@ -64,6 +64,12 @@ html:not([nc\:editing]) .nc-ui-chrome { display: none !important; }
   font: .82rem/1.3 var(--nc-chrome-font);
   box-shadow: var(--nc-shadow);
 }
+@media (max-width: 30rem) {
+  /* Pinned to one corner, a bar wider than the screen runs off the other edge
+     instead of scrolling, and the control at that end cannot be reached. Let it
+     span the width and wrap. */
+  .nc-bar { left: .5rem; right: .5rem; bottom: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+}
 .nc-bar button {
   font: inherit; cursor: pointer; white-space: nowrap;
   padding: .38rem .75rem; border-radius: var(--nc-radius-sm);
@@ -105,9 +111,11 @@ html[nc\:owner-here="true"][nc\:editing="false"] .nc-edit-hint { display: block;
  * that is not a row of small buttons can lay itself out without having to
  * out-specify the visibility rule. */
 
-.nc-gear { display: none; }
-html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: revert; }
-html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; gap: .25rem; }
+.nc-gear { display: none !important; }
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear { display: revert !important; }
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row {
+  display: flex !important; flex-wrap: wrap; gap: .25rem;
+}
 .nc-gear button {
   font: inherit; font-size: .78rem; line-height: 1; cursor: pointer;
   padding: .3rem .5rem; border-radius: var(--nc-radius-sm);
@@ -131,7 +139,7 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; ga
  * template rather than looking bolted on. */
 
 .nc-feed { display: grid; gap: 1rem; }
-.nc-feed-grid { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.nc-feed-grid { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); align-items: start; }
 .nc-item {
   border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
   padding: .9rem 1rem; background: var(--nc-panel);
@@ -219,38 +227,38 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row { display: flex; ga
  */
 .nc-cms {
   position: fixed; inset: 0 0 0 auto; width: min(23rem, 100%);
-  background: var(--nc-panel, #14121b); color: var(--nc-ink, #eee);
-  border-left: 1px solid var(--nc-edge, #332f3f);
+  background: var(--nc-panel); color: var(--nc-ink);
+  border-left: 1px solid var(--nc-edge);
   z-index: 2147483000; overflow-y: auto; padding: 1rem;
-  font: 14px/1.5 var(--nc-sans, system-ui, sans-serif);
+  font: 14px/1.5 var(--nc-chrome-font);
   box-shadow: -20px 0 60px -30px rgba(0, 0, 0, .8);
 }
 .nc-cms header { display: flex; justify-content: space-between; align-items: center;
   gap: .5rem; margin-bottom: .5rem; }
 .nc-cms button {
   font: inherit; padding: .3rem .6rem; border-radius: var(--nc-radius-sm, 8px);
-  border: 1px solid var(--nc-edge, #423c52); background: var(--nc-panel-2, #1e1a28);
+  border: 1px solid var(--nc-edge); background: var(--nc-bg);
   color: inherit; cursor: pointer;
 }
-.nc-cms button:hover { border-color: var(--nc-accent, #8b7ce8); }
+.nc-cms button:hover { border-color: var(--nc-accent); }
 .nc-cms input[type="text"], .nc-cms textarea {
   width: 100%; box-sizing: border-box; font: inherit; padding: .4rem .55rem;
-  border-radius: var(--nc-radius-sm, 8px); border: 1px solid var(--nc-edge, #423c52);
-  background: var(--nc-bg, #0f0d15); color: inherit;
+  border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
+  background: var(--nc-bg); color: inherit;
 }
 .nc-cms input:focus-visible, .nc-cms textarea:focus-visible {
-  outline: 2px solid var(--nc-accent, #8b7ce8); outline-offset: 1px;
+  outline: 2px solid var(--nc-accent); outline-offset: 1px;
 }
 .nc-cms-field { margin: 0 0 .75rem; }
 .nc-cms-label { display: block; font-size: .78rem; text-transform: uppercase;
   letter-spacing: .06em; opacity: .65; margin-bottom: .25rem; }
 .nc-cms-check { display: flex; align-items: center; gap: .5rem; }
 .nc-cms-check .nc-cms-label { margin: 0; text-transform: none; letter-spacing: 0; }
-.nc-cms-group { border: 1px solid var(--nc-edge, #332f3f); border-radius: var(--nc-radius, 10px);
+.nc-cms-group { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
   padding: .7rem; margin: 0 0 .9rem; }
 .nc-cms-group legend { padding: 0 .35rem; font-size: .78rem; text-transform: uppercase;
   letter-spacing: .06em; opacity: .65; }
-.nc-cms-card { border: 1px solid var(--nc-edge, #2b2735); border-radius: var(--nc-radius-sm, 8px);
+.nc-cms-card { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius-sm);
   padding: .6rem; margin-bottom: .6rem; }
 .nc-cms-cardbar, .nc-cms-row { display: flex; gap: .3rem; margin-bottom: .5rem; }
 .nc-cms-row input { flex: 1; }

@@ -274,6 +274,8 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("a card can be duplicated", (nc.dom.clone(cards()[0]), cards().length === 3));
   t("the copy carries no id from the original",
     !nc.dom.all(".card[id]", board).length);
+  t("nor a reference to one, which would point at the original's input",
+    nc.dom.all("[for]", board).length === 1);   // the original keeps its own
   t("a duplicate is armed for editing straight away",
     cards()[1].querySelector("[editable]").isContentEditable);
 

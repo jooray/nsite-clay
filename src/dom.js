@@ -33,8 +33,14 @@ export class Dom {
     if (!el) return null;
     const copy = el.cloneNode(true);
     // A copy is a new thing. Anything that identified the original would make
-    // two elements claim to be the same one.
+    // two elements claim to be the same one, and anything pointing at one of
+    // those ids now points somewhere the copy cannot see: a duplicated
+    // <label for="x"> would focus the original's input. Drop both ends rather
+    // than leave a reference that quietly does the wrong thing.
     for (const n of [copy, ...copy.querySelectorAll("[id]")]) n.removeAttribute?.("id");
+    for (const n of [copy, ...copy.querySelectorAll("[for], [aria-labelledby], [aria-describedby], [aria-controls]")]) {
+      for (const a of ["for", "aria-labelledby", "aria-describedby", "aria-controls"]) n.removeAttribute?.(a);
+    }
     el[after ? "after" : "before"](copy);
     return this._changed(copy);
   }

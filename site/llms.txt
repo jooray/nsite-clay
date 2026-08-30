@@ -327,8 +327,13 @@ marks the page unsaved, which is the bookkeeping you would otherwise forget.
 
 `move` reorders within one parent. A card going from one column to the next
 crosses parents, so that is `moveTo(el, container)` or, from a gear,
-`moveToClosest(this, '.card', '.col', 1)`, which steps through the containers in
-document order. The node itself travels, so anything typed into it comes along.
+`moveToClosest(this, '.card', '.col-cards', 1)`, which steps through the
+containers in document order. The node itself travels, so anything typed into it
+comes along.
+
+Point those at a container that holds **only** the items. `moveTo` appends, so a
+column whose element also contains a heading and an "Add" button would take the
+card after the button. Give the column an inner `.col-cards` and target that.
 
 ```html
 <menu class="nc-gear nc-gear-row">
@@ -411,6 +416,21 @@ content fetched from a relay. Neither one touches what you wrote.
 from the published file: anything marked `clay="no-save"`, anything the runtime
 injected (`nc:chrome`), anything fetched at view time (`nc:transient`), and the
 runtime's own state attributes on `<html>`. Everything else stays.
+
+**A gear must not carry the page's own layout class.** `.nc-gear` hides with
+`!important` and the reveal rule restores it the same way, because a page
+stylesheet loads after the shared one and a gear that lost that fight would show
+its controls to every reader. So `class="nc-gear chips"` will not get your
+`display: flex`. Use `nc-gear-row` for a row of buttons, or write your own rule
+against `html[nc\:owner-here="true"][nc\:editing="true"]`.
+
+**Anything a script does for the current view alone must be undone before the
+save**, because the save serialises the DOM as it stands. `nc:no-persist` covers
+an input's value and nothing else: a class your filter hangs on hidden cards, or
+a `data-theme` you applied from `nc.state`, will be written into the file as
+though someone had authored it. Strip those in `nc.addDocumentTransform(clone =>
+…)`, which runs on the copy being saved and cannot affect what the reader is
+looking at.
 
 **Form state is persisted for you.** HyperClay asks for a `persist` attribute on
 an input. Here it is the default: a checkbox the owner ticks, a value typed into

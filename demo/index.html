@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<!--
+  The public demo for nsite-clay.
+
+  The owner key of this document is printed on the page and is public on
+  purpose. Anyone who opens it can sign in and rewrite it, and a cron job puts
+  this exact file back about once a week.
+
+  It is here to show the application layer in one place: contextual gears, form
+  state written into the file, the structural DOM API including the cross
+  container move, and non-visual state kept as JSON. Plus the rest of the
+  runtime: pictures, video, a Nostr feed and the composer.
+
+  Edited entirely through the page. If you are reading it in a text editor, the
+  markup below is what a save produced.
+
+  The nc:cms block near the end maps field names to those class names, so an
+  owner who would rather fill in a form than click into the page can press
+  "Edit content" and get one down the right-hand side.
+-->
+<html lang="en"
+      nc:owner="npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u"
+      nc:path="/index.html"
+      nc:edit-gate="always"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everyone has the key</title>
+<meta name="description" content="A public nsite-clay page. The key that can rewrite it is printed on it. Sign in, change anything, press Save, and everyone gets your version.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23B4441C'/><rect x='7' y='8' width='18' height='4' rx='2' fill='%23FBF8F3'/><rect x='7' y='15' width='11' height='4' rx='2' fill='%23FBF8F3'/><rect x='7' y='22' width='15' height='4' rx='2' fill='%23FBF8F3' opacity='.55'/></svg>">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  /* ------------------------------------------------------------------ *
+   * Themes. The one in use is written into the JSON block at the bottom
+   * of this file and applied on load, so the look is a fact about the
+   * document rather than a fact about your browser. With scripting off
+   * you get clay, because nothing has read the block.
+   * ------------------------------------------------------------------ */
+  :root, html[data-theme="clay"] {
+    --nc-ink: #1b1510; --nc-ink-dim: #6f6254; --nc-bg: #faf6ef; --nc-panel: #f2ebde;
+    --nc-edge: #ddd0ba; --nc-accent: #b4441c; --nc-accent-ink: #fff6f1;
+    --nc-ok: #2c6a44; --nc-bad: #a02d22;
+    --nc-radius: 10px; --nc-radius-sm: 7px;
+    --nc-shadow: 0 16px 38px -26px rgba(70, 40, 18, .6);
+    --grid: rgba(120, 90, 55, .085);
+    --tag-idea: #2f6f8f; --tag-fact: #6a5a2c; --tag-dare: #a63a2a;
+    --edge-w: 1px;
+  }
+  html[data-theme="night"] {
+    --nc-ink: #ece3d6; --nc-ink-dim: #9c8f80; --nc-bg: #100e0c; --nc-panel: #1b1714;
+    --nc-edge: #2f2822; --nc-accent: #ec7d4b; --nc-accent-ink: #1a0e07;
+    --nc-ok: #7fbf95; --nc-bad: #e0907f;
+    --nc-radius: 10px; --nc-radius-sm: 7px;
+    --nc-shadow: 0 18px 44px -24px rgba(0, 0, 0, .9);
+    --grid: rgba(236, 125, 75, .07);
+    --tag-idea: #7fb2cd; --tag-fact: #c9b47a; --tag-dare: #ef8f7c;
+    --edge-w: 1px;
+  }
+  html[data-theme="lunarpunk"] {
+    --nc-ink: #e8e4ff; --nc-ink-dim: #9d94c9; --nc-bg: #0b0917; --nc-panel: #15122a;
+    --nc-edge: #2a2349; --nc-accent: #6df2c1; --nc-accent-ink: #04120d;
+    --nc-ok: #6df2c1; --nc-bad: #ff8fa3;
+    --nc-radius: 14px; --nc-radius-sm: 9px;
+    --nc-shadow: 0 22px 60px -28px rgba(109, 242, 193, .35);
+    --grid: rgba(109, 242, 193, .07);
+    --tag-idea: #8ab6ff; --tag-fact: #6df2c1; --tag-dare: #ff8fa3;
+    --edge-w: 1px;
+  }
+  html[data-theme="signal"] {
+    --nc-ink: #000000; --nc-ink-dim: #3f3f3f; --nc-bg: #ffffff; --nc-panel: #f0f0f0;
+    --nc-edge: #000000; --nc-accent: #ff2d55; --nc-accent-ink: #ffffff;
+    --nc-ok: #007a3d; --nc-bad: #d40000;
+    --nc-radius: 0px; --nc-radius-sm: 0px; --nc-shadow: none;
+    --grid: rgba(0, 0, 0, .07);
+    --tag-idea: #0026ff; --tag-fact: #000000; --tag-dare: #ff2d55;
+    --edge-w: 2px;
+  }
+
+  /* Density is the other thing in the JSON block. */
+  :root, html[data-density="roomy"] { --pad: 1.05rem; --gap: 1.1rem; --stack: .8rem; }
+  html[data-density="tight"] { --pad: .65rem; --gap: .6rem; --stack: .45rem; }
+
+  :root {
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --nc-chrome-font: var(--sans);
+    --nc-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 17px/1.62 var(--sans); -webkit-text-size-adjust: 100%;
+  }
+  /* Before the runtime boots, and with scripting off, nothing has set
+     nc:editing, so the shared rule hides every .nc-ui-chrome control. */
+  a { color: var(--nc-accent); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 3px; border-radius: 3px; }
+  h1, h2, h3, h4 { letter-spacing: -.02em; }
+  code, kbd { font: .88em var(--nc-mono); background: var(--nc-panel); padding: .1em .35em;
+              border-radius: 4px; overflow-wrap: anywhere; }
+  .wrap { max-width: 76rem; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.4rem); }
+  .prose { max-width: 46ch; }
+  .prose p { margin: 0 0 .8rem; }
+  .dim { color: var(--nc-ink-dim); }
+
+  /* ---- masthead ---- */
+  .top { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+         padding: 1.1rem 0; border-bottom: var(--edge-w) solid var(--nc-edge); }
+  .top .mark { display: flex; align-items: center; gap: .55rem; margin-right: auto;
+               font: 600 .95rem var(--sans); color: var(--nc-ink); text-decoration: none; }
+  .top .mark svg { flex: 0 0 auto; }
+  .top nav { display: flex; gap: .9rem; font-size: .85rem; }
+  .top nav a { color: var(--nc-ink-dim); text-decoration: none; }
+  .top nav a:hover { color: var(--nc-accent); }
+
+  /* ---- hero ---- */
+  .hero { padding: 3rem 0 2.6rem; display: grid; gap: clamp(1.8rem, 4vw, 3.4rem);
+          grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .hero-main { min-width: 0; }
+  @media (min-width: 64rem) { .hero { grid-template-columns: minmax(0, 1fr) 19rem; } }
+  .hero h1 { font-size: clamp(2.3rem, 7.5vw, 4.1rem); line-height: 1.03; margin: 0 0 1.1rem;
+             letter-spacing: -.038em; max-width: 15ch; }
+  .hero .lede { font-size: clamp(1.03rem, 2.1vw, 1.17rem); max-width: 52ch; margin: 0 0 1rem;
+                color: var(--nc-ink-dim); }
+  .hero .lede strong { color: var(--nc-ink); font-weight: 600; }
+
+  .keybox { margin: 1.8rem 0 1.4rem; padding: var(--pad);
+            border: var(--edge-w) dashed var(--nc-edge); border-radius: var(--nc-radius);
+            background: var(--nc-panel); max-width: 44rem; }
+  .keybox > label { display: block; font: .7rem/1.4 var(--nc-mono); letter-spacing: .12em;
+                    text-transform: uppercase; color: var(--nc-ink-dim); margin-bottom: .5rem; }
+  .keyrow { display: flex; gap: .5rem; align-items: center; }
+  .keyrow input { flex: 1 1 6rem; min-width: 0; font: .82rem var(--nc-mono);
+                  padding: .5rem .6rem; color: var(--nc-ink); background: var(--nc-bg);
+                  border: var(--edge-w) solid var(--nc-edge); border-radius: var(--nc-radius-sm); }
+  .btn { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
+         font: 600 .88rem/1 var(--sans); padding: .62rem 1rem; white-space: nowrap;
+         border: var(--edge-w) solid var(--nc-edge); border-radius: var(--nc-radius-sm);
+         background: var(--nc-bg); color: var(--nc-ink); text-decoration: none; }
+  .btn:hover { border-color: var(--nc-accent); }
+  .btn.go { background: var(--nc-accent); border-color: var(--nc-accent); color: var(--nc-accent-ink); }
+  .btn.go:hover { filter: brightness(1.08); }
+
+  ol.steps { counter-reset: s; list-style: none; margin: 1.4rem 0 0; padding: 0;
+             display: grid; gap: .7rem; max-width: 46rem; }
+  ol.steps li { counter-increment: s; display: flex; gap: .8rem; align-items: baseline;
+                flex-wrap: wrap; }
+  ol.steps li::before { content: counter(s); flex: 0 0 auto;
+    font: 600 .72rem/1.55rem var(--nc-mono); width: 1.55rem; height: 1.55rem; text-align: center;
+    border-radius: 50%; background: var(--nc-accent); color: var(--nc-accent-ink); }
+  ol.steps li > span { flex: 1 1 12rem; min-width: 0; }
+  /* The steps are for someone who has not signed in. Once they have, the same
+     words would tell them to press a button that now says Sign out. */
+  html[nc\:owner-here="true"] .signed-in { display: block; }
+  .signed-in { display: none; margin: 1.4rem 0 0; max-width: 46ch; }
+
+  /* ---- the file, measured while you change it ---- */
+  .facts { min-width: 0; padding: var(--pad); background: var(--nc-panel);
+           border: var(--edge-w) solid var(--nc-edge); border-radius: var(--nc-radius); }
+  .facts h2 { margin: 0 0 .8rem; font: 600 .7rem var(--nc-mono); letter-spacing: .14em;
+              text-transform: uppercase; color: var(--nc-ink-dim); }
+  .facts dl { margin: 0; display: grid; gap: .55rem; }
+  .facts dl > div { display: flex; gap: .7rem; align-items: baseline; justify-content: space-between; }
+  .facts dt { font-size: .82rem; color: var(--nc-ink-dim); flex: 0 1 auto; }
+  .facts dd { margin: 0; font: .82rem var(--nc-mono); text-align: right; min-width: 0;
+              overflow-wrap: anywhere; }
+  .facts .big { font-size: 1.02rem; font-weight: 600; color: var(--nc-accent); }
+  .facts p { margin: .9rem 0 0; font-size: .8rem; color: var(--nc-ink-dim); }
+
+  /* ---- section furniture ---- */
+  section.band { border-top: var(--edge-w) solid var(--nc-edge); padding: 3rem 0; }
+  .band-head { display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .band-head .idx { font: 600 .7rem var(--nc-mono); letter-spacing: .16em; text-transform: uppercase;
+                    color: var(--nc-accent); }
+  .band-head h2 { font-size: clamp(1.4rem, 3.4vw, 1.85rem); margin: 0; }
+
+  /* ---- the gear legend ---- */
+  .legend { margin: 1rem 0 0; padding: .7rem .9rem; font-size: .87rem;
+            border-left: 3px solid var(--nc-accent); background: var(--nc-panel);
+            border-radius: 0 var(--nc-radius-sm) var(--nc-radius-sm) 0; }
+  .legend p { margin: 0; }
+
+  /* ---- the board ---- */
+  .board-bar { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap;
+               margin: 1.4rem 0 1rem; }
+  .board-bar .filter { flex: 1 1 12rem; min-width: 0; max-width: 22rem; font-size: .9rem; }
+  #board-summary { font: .78rem var(--nc-mono); color: var(--nc-ink-dim); }
+  .board { display: grid; gap: var(--gap);
+           grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.5rem), 1fr)); }
+  .col { min-width: 0; display: flex; flex-direction: column; gap: var(--stack);
+         padding: var(--pad); border: var(--edge-w) solid var(--nc-edge);
+         border-radius: var(--nc-radius); background:
+           linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 1.5rem,
+           var(--nc-panel); }
+  .col-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+  .col-title { margin: 0; font-size: 1.02rem; flex: 1 1 auto; min-width: 0; }
+  .col-count { font: .7rem var(--nc-mono); color: var(--nc-ink-dim); white-space: nowrap; }
+  /* Grows to fill the column, so the space under the last card is part of the
+     place cards land rather than a gap under it. */
+  .col-cards { display: flex; flex-direction: column; gap: var(--stack); flex: 1 1 auto;
+               min-height: 2.6rem; }
+  .col-gear, .col-add { margin: 0; padding: 0; }
+
+  .card { min-width: 0; overflow-wrap: anywhere; padding: var(--pad);
+          background: var(--nc-bg); border: var(--edge-w) solid var(--nc-edge);
+          border-left: 3px solid var(--tag-fact); border-radius: var(--nc-radius-sm);
+          box-shadow: var(--nc-shadow); }
+  .card[data-tag="idea"] { border-left-color: var(--tag-idea); }
+  .card[data-tag="dare"] { border-left-color: var(--tag-dare); }
+  .card-tag { margin: 0 0 .35rem; font: 600 .64rem var(--nc-mono); letter-spacing: .16em;
+              text-transform: uppercase; color: var(--tag-fact); }
+  .card[data-tag="idea"] .card-tag { color: var(--tag-idea); }
+  .card[data-tag="dare"] .card-tag { color: var(--tag-dare); }
+  .card-title { margin: 0 0 .35rem; font-size: 1rem; }
+  .card-body { font-size: .91rem; color: var(--nc-ink-dim); }
+  .card-body p { margin: 0 0 .5rem; }
+  .card-body p:last-child { margin-bottom: 0; }
+  .card-gear { margin: .6rem 0 0; padding: 0; }
+  .card.is-filtered { display: none; }
+
+  /* nc-gear-row is a flex row in the shared stylesheet; on a phone six small
+     buttons need to be allowed to wrap. */
+  .nc-gear-row { flex-wrap: wrap; }
+  .nc-gear button { font-family: var(--sans); }
+
+  /* ---- the checklist ---- */
+  .tasks { list-style: none; margin: 1.2rem 0 0; padding: 0; display: grid; gap: .4rem;
+           max-width: 48rem; }
+  .task { display: flex; align-items: baseline; gap: .65rem; flex-wrap: wrap;
+          padding: .5rem .7rem; border: var(--edge-w) solid var(--nc-edge);
+          border-radius: var(--nc-radius-sm); background: var(--nc-panel); }
+  .task-box { flex: 0 0 auto; width: 1.05rem; height: 1.05rem; accent-color: var(--nc-accent);
+              transform: translateY(.15rem); }
+  .task-text { flex: 1 1 12rem; min-width: 0; font-size: .95rem; }
+  .task-box:checked + .task-text { color: var(--nc-ink-dim); text-decoration: line-through; }
+  .task-gear { margin: 0; padding: 0; }
+  .task-add { margin: .7rem 0 0; padding: 0; }
+
+  /* ---- the JSON block, shown as itself ---- */
+  .state-grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+                align-items: start; margin-top: 1.2rem; }
+  pre.json { margin: 0; padding: var(--pad); overflow-x: auto; min-width: 0;
+             font: .82rem/1.6 var(--nc-mono); background: var(--nc-panel);
+             border: var(--edge-w) solid var(--nc-edge); border-radius: var(--nc-radius); }
+  /* nc-gear-row already supplies the wrapping flex row, and the shared rule now
+     carries !important so a gear cannot be shown to a reader by accident. Set
+     only what is not display. */
+  .chips { margin: 0; padding: 0; gap: .45rem; align-items: center; }
+  .chips .chip-label { font: .7rem var(--nc-mono); letter-spacing: .12em; text-transform: uppercase;
+                       color: var(--nc-ink-dim); margin-right: .2rem; }
+  .chip[aria-pressed="true"] { background: var(--nc-accent); border-color: var(--nc-accent);
+                               color: var(--nc-accent-ink); }
+
+  /* ---- media ---- */
+  .media { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+           margin-top: 1.4rem; }
+  .media .nc-figure { margin: 0; min-width: 0; }
+  .media img { width: 100%; height: auto; display: block;
+               border-radius: var(--nc-radius); background: var(--nc-panel);
+               border: var(--edge-w) solid var(--nc-edge); }
+  /* Whatever anyone puts here next could be any shape, so cap the height rather
+     than letting a portrait clip run a thousand pixels down the page. */
+  .media video { display: block; margin: 0 auto; width: auto; max-width: 100%; max-height: 26rem;
+                 border-radius: var(--nc-radius); background: var(--nc-panel);
+                 border: var(--edge-w) solid var(--nc-edge); }
+  .media figcaption { font-size: .86rem; color: var(--nc-ink-dim); margin-top: .5rem; }
+
+  /* ---- Nostr content, wearing this page's clothes ---- */
+  .feed { margin-top: 1.3rem; }
+  /* Grid items stretch by default, which leaves a summary of two lines sitting
+     in a card as tall as the longest one. */
+  .feed.nc-feed-grid { align-items: start; }
+  .nc-item { background: var(--nc-panel); border-width: var(--edge-w); }
+  .nc-by { font: .7rem var(--nc-mono); letter-spacing: .07em; text-transform: uppercase; opacity: .7; }
+  .nc-title { font-size: 1.02rem; }
+  .nc-tags { color: var(--nc-accent); opacity: .85; }
+  .baked:empty { display: block; margin-top: 1.2rem; padding: 1.6rem var(--pad);
+                 border: var(--edge-w) dashed var(--nc-edge); border-radius: var(--nc-radius);
+                 color: var(--nc-ink-dim); font-size: .88rem; text-align: center; }
+  .baked:empty::before { content: "Baked posts land here."; }
+  .nc-baked { border-top: var(--edge-w) solid var(--nc-edge); padding-top: 1.2rem; margin-top: 1.2rem; }
+
+  /* ---- rules ---- */
+  .rules { list-style: none; margin: 1.2rem 0 0; padding: 0; display: grid; gap: 1rem;
+           max-width: 52rem; }
+  .rules li { padding-left: 1rem; border-left: 3px solid var(--nc-edge); }
+  .rules h3 { margin: 0 0 .25rem; font-size: 1rem; }
+  .rules p { margin: 0; color: var(--nc-ink-dim); font-size: .93rem; }
+
+  footer { border-top: var(--edge-w) solid var(--nc-edge); padding: 2.2rem 0 5.5rem;
+           color: var(--nc-ink-dim); font-size: .9rem; }
+  footer .links { display: flex; gap: 1.1rem; flex-wrap: wrap; margin: 0 0 1rem; padding: 0;
+                  list-style: none; }
+  footer p { margin: 0 0 .6rem; max-width: 58ch; }
+
+  /* The toolbar sits bottom right; keep the last words clear of it. */
+  @media (max-width: 34rem) { footer { padding-bottom: 8rem; } }
+
+  /* Signed in as the owner the shared toolbar is seven controls wide, which is
+     wider than a phone. It is fixed, so it clips off the left edge instead of
+     scrolling. Let it wrap here. */
+  @media (max-width: 30rem) {
+    .nc-bar { left: .6rem; right: .6rem; flex-wrap: wrap; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <a class="mark" href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+        <rect x="7" y="9" width="18" height="3" rx="1.5" fill="currentColor"/>
+        <rect x="7" y="15" width="11" height="3" rx="1.5" fill="var(--nc-accent)"/>
+        <rect x="7" y="21" width="15" height="3" rx="1.5" fill="currentColor" opacity=".45"/>
+      </svg>
+      <span>nsite-clay demo</span>
+    </a>
+    <nav>
+      <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/">Home</a>
+      <a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html">Walkthrough</a>
+      <a href="https://github.com/jooray/nsite-clay">Source</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+   <div class="hero-main">
+    <h1 editable="single-line">Everyone has the key to this page.</h1>
+    <div class="prose" editable>
+      <p class="lede">It is printed a few lines down, in the open, on purpose. Sign in with it and
+        this document becomes editable in front of you. Press <strong>Save</strong> and the new HTML
+        goes to a Blossom server, the Nostr event pointing at it is republished, and that is the file
+        the next person loads.</p>
+      <p class="lede">Nothing here is private and nothing here lasts. A cron job puts the original
+        file back about once a week.</p>
+    </div>
+
+    <div class="keybox">
+      <label for="demokey">The key to this page</label>
+      <div class="keyrow">
+        <input id="demokey" readonly spellcheck="false" aria-label="The demo key, an nsec"
+               value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y">
+        <button type="button" class="btn nc-ui-chrome" onclick="demo.copyKey()">Copy</button>
+      </div>
+    </div>
+
+    <ol class="steps nc-guest-only">
+      <li><span editable="single-line">Copy the key.</span></li>
+      <li><span editable="single-line">Press <strong>Sign in</strong>, in the bar at the bottom
+        right, and paste it there.</span></li>
+      <li><span editable="single-line">Type into anything. Small grey buttons appear on the things
+        you can restructure, and only you can see them.</span></li>
+    </ol>
+
+    <p class="nc-ui-chrome nc-guest-only" style="margin:1.1rem 0 0">
+      <button type="button" class="btn go" data-nc-signin>Sign in</button>
+    </p>
+
+    <p class="signed-in" editable>You are in. Everything on this page is yours to change, including the parts
+      somebody else wrote. Press Save when you want the rest of the world to have it.</p>
+
+    <menu class="nc-gear nc-gear-row chips" style="margin-top:1.5rem">
+      <span class="chip-label">Look</span>
+      <button type="button" class="btn chip theme-chip" data-theme="clay" aria-pressed="true" onclick="demo.setTheme('clay')">Clay</button>
+      <button type="button" class="btn chip theme-chip" data-theme="night" aria-pressed="false" onclick="demo.setTheme('night')">Night</button>
+      <button type="button" class="btn chip theme-chip" data-theme="lunarpunk" aria-pressed="false" onclick="demo.setTheme('lunarpunk')">Lunarpunk</button>
+      <button type="button" class="btn chip theme-chip" data-theme="signal" aria-pressed="false" onclick="demo.setTheme('signal')">Signal</button>
+    </menu>
+
+    <menu class="nc-gear nc-gear-row chips" style="margin-top:.7rem">
+      <span class="chip-label">Or</span>
+      <button type="button" class="btn chip" onclick="nc.cms.toggle()">Edit content in a form</button>
+    </menu>
+   </div>
+
+    <aside class="facts">
+      <h2 editable="single-line">This file, right now</h2>
+      <dl>
+        <div><dt>Size</dt><dd class="big" id="fact-bytes">55,263 bytes</dd></div>
+        <div><dt>Cards</dt><dd id="fact-cards">6</dd></div>
+        <div><dt>Owner</dt><dd>npub16kw&hellip;4uk9u</dd></div>
+        <div><dt>Path</dt><dd>/index.html</dd></div>
+        <div><dt>Relays</dt><dd id="fact-relays">4</dd></div>
+        <div><dt>Blossom servers</dt><dd id="fact-servers">2</dd></div>
+      </dl>
+      <p editable>The size is what a save would upload, and it moves while you type. The number is
+        inside the file it measures.</p>
+    </aside>
+  </div>
+
+  <!-- ================= the board ================= -->
+  <section class="band" id="board-section">
+    <div class="band-head">
+      <span class="idx">01</span>
+      <h2 editable="single-line">The board</h2>
+    </div>
+    <div class="prose" editable>
+      <p>Columns are <code>section</code> elements, cards are <code>article</code> elements, and
+        moving a card to the next column moves the element. Whatever you typed into it comes along,
+        because it is the same node arriving somewhere else. There is no store behind this and
+        nothing to keep in sync with it.</p>
+    </div>
+
+    <div class="legend nc-gear">
+      <p editable>Only you can see these buttons. They are not drawn by a script either. They are
+        markup in the file, and one rule in the stylesheet keeps them away from everybody else. The
+        arrows walk a card between columns, and up and down inside one. Copy duplicates a card, Tag
+        cycles its label, Delete asks first.</p>
+    </div>
+
+    <div class="board-bar">
+      <input type="search" class="nc-input filter" nc:no-persist autocomplete="off"
+             placeholder="Filter the cards" aria-label="Filter the cards" oninput="demo.filter(this)">
+      <span id="board-summary">6 cards</span>
+      <menu class="nc-gear nc-gear-row" style="margin:0;padding:0">
+        <button type="button" onclick="nc.dom.addFrom('col-tpl', '#board')">Add a column</button>
+      </menu>
+    </div>
+
+    <div class="board" id="board">
+
+      <section class="col">
+        <header class="col-head">
+          <h3 class="col-title" editable="single-line">Open</h3>
+          <span class="col-count">2 cards</span>
+          <menu class="nc-gear nc-gear-row col-gear">
+            <button type="button" title="Move this column left" aria-label="Move this column left" onclick="nc.dom.moveClosest(this, -1, '.col')">&larr;</button>
+            <button type="button" title="Move this column right" aria-label="Move this column right" onclick="nc.dom.moveClosest(this, 1, '.col')">&rarr;</button>
+            <button type="button" onclick="nc.dom.removeClosestAsk(this, '.col', 'this column and everything in it')">Delete</button>
+          </menu>
+        </header>
+        <div class="col-cards">
+
+          <article class="card" data-tag="dare">
+            <p class="card-tag">dare</p>
+            <h4 class="card-title" editable="single-line">Wreck the layout</h4>
+            <div class="card-body" editable>
+              <p>Delete a column. Add four and name them after people who owe you money. None of it
+                is load bearing, and the weekly reset puts it back whether you liked the result or
+                not.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+          <article class="card" data-tag="idea">
+            <p class="card-tag">idea</p>
+            <h4 class="card-title" editable="single-line">Leave something for the next person</h4>
+            <div class="card-body" editable>
+              <p>Most of what you are reading was typed by a stranger who is not coming back. Add to
+                it, or argue with it in a card of your own.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+        </div>
+        <menu class="nc-gear col-add">
+          <button type="button" onclick="nc.dom.addFrom('card-tpl', this.closest('.col').querySelector('.col-cards'), 'afterbegin')">Add a card</button>
+        </menu>
+      </section>
+
+      <section class="col">
+        <header class="col-head">
+          <h3 class="col-title" editable="single-line">Someone is on it</h3>
+          <span class="col-count">2 cards</span>
+          <menu class="nc-gear nc-gear-row col-gear">
+            <button type="button" title="Move this column left" aria-label="Move this column left" onclick="nc.dom.moveClosest(this, -1, '.col')">&larr;</button>
+            <button type="button" title="Move this column right" aria-label="Move this column right" onclick="nc.dom.moveClosest(this, 1, '.col')">&rarr;</button>
+            <button type="button" onclick="nc.dom.removeClosestAsk(this, '.col', 'this column and everything in it')">Delete</button>
+          </menu>
+        </header>
+        <div class="col-cards">
+
+          <article class="card" data-tag="fact">
+            <p class="card-tag">fact</p>
+            <h4 class="card-title" editable="single-line">The card is the record</h4>
+            <div class="card-body" editable>
+              <p>Open your browser's element inspector and drag this node into another column. The
+                page cannot tell that apart from the arrow button, because the arrow button does the
+                same thing.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+          <article class="card" data-tag="fact">
+            <p class="card-tag">fact</p>
+            <h4 class="card-title" editable="single-line">Nothing was fetched to draw this</h4>
+            <div class="card-body" editable>
+              <p>The board came out of the HTML. No request goes out to fill it in, which is why it
+                still reads with JavaScript switched off and why a crawler sees the words.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+        </div>
+        <menu class="nc-gear col-add">
+          <button type="button" onclick="nc.dom.addFrom('card-tpl', this.closest('.col').querySelector('.col-cards'), 'afterbegin')">Add a card</button>
+        </menu>
+      </section>
+
+      <section class="col">
+        <header class="col-head">
+          <h3 class="col-title" editable="single-line">Done, or dropped</h3>
+          <span class="col-count">2 cards</span>
+          <menu class="nc-gear nc-gear-row col-gear">
+            <button type="button" title="Move this column left" aria-label="Move this column left" onclick="nc.dom.moveClosest(this, -1, '.col')">&larr;</button>
+            <button type="button" title="Move this column right" aria-label="Move this column right" onclick="nc.dom.moveClosest(this, 1, '.col')">&rarr;</button>
+            <button type="button" onclick="nc.dom.removeClosestAsk(this, '.col', 'this column and everything in it')">Delete</button>
+          </menu>
+        </header>
+        <div class="col-cards">
+
+          <article class="card" data-tag="fact">
+            <p class="card-tag">fact</p>
+            <h4 class="card-title" editable="single-line">Save is the deploy</h4>
+            <div class="card-body" editable>
+              <p>One press uploads this whole file to a Blossom server and republishes a single
+                replaceable Nostr event naming its hash. Gateways that serve nsites pick it up in
+                seconds.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+          <article class="card" data-tag="idea">
+            <p class="card-tag">idea</p>
+            <h4 class="card-title" editable="single-line">History is the undo button</h4>
+            <div class="card-body" editable>
+              <p>Every save this key ever made is listed under History in the bar, and each one can be
+                read back from Blossom. Restoring an old version files a new one, so trying it costs
+                nothing.</p>
+            </div>
+            <menu class="nc-gear nc-gear-row card-gear">
+              <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+              <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+              <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+              <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+              <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+              <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+              <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+            </menu>
+          </article>
+
+        </div>
+        <menu class="nc-gear col-add">
+          <button type="button" onclick="nc.dom.addFrom('card-tpl', this.closest('.col').querySelector('.col-cards'), 'afterbegin')">Add a card</button>
+        </menu>
+      </section>
+
+    </div>
+
+    <div class="prose dim" editable style="margin-top:1.3rem">
+      <p>The filter box above is marked <code>nc:no-persist</code>. Its value stays in your browser,
+        because a half-typed search has no business being published, and the class it hangs on the
+        hidden cards comes off again on the way out.</p>
+    </div>
+  </section>
+
+  <!-- ================= the checklist ================= -->
+  <section class="band">
+    <div class="band-head">
+      <span class="idx">02</span>
+      <h2 editable="single-line">Ticks that outlive you</h2>
+    </div>
+    <div class="prose" editable>
+      <p>A ticked box is written into the file as <code>checked</code> before it is uploaded, so the
+        next visitor finds it ticked. Tick one, save, and come back tomorrow to find out whether
+        somebody unticked it out of spite.</p>
+      <p>Readers can tick these too. Nothing they tick reaches anyone else, because the file has
+        exactly one signer and a signature is not something you can borrow.</p>
+    </div>
+
+    <ul class="tasks" id="tasks">
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Signed in with the key at the top of the page</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Moved a card into a different column and watched the text travel with it</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Renamed a column</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Put a picture in that was not here before</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Wrote a Nostr post from the Write button</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+      <li class="task">
+        <input type="checkbox" class="task-box" aria-label="Done">
+        <span class="task-text" editable="single-line">Left the page worse than I found it</span>
+        <menu class="nc-gear nc-gear-row task-gear">
+          <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+          <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+        </menu>
+      </li>
+    </ul>
+
+    <menu class="nc-gear nc-gear-row task-add">
+      <button type="button" onclick="nc.dom.addFrom('task-tpl', '#tasks')">Add a line</button>
+      <button type="button" onclick="demo.clearTicks()">Clear every tick</button>
+    </menu>
+  </section>
+
+  <!-- ================= state with no shape ================= -->
+  <section class="band">
+    <div class="band-head">
+      <span class="idx">03</span>
+      <h2 editable="single-line">The part with no shape</h2>
+    </div>
+    <div class="prose" editable>
+      <p>A theme has no paragraph to live in and no element to hang off, so it lives in a JSON
+        block near the bottom of this file, and <code>nc.state</code> reads and writes it. The chips
+        in the hero write to that block. So do these.</p>
+      <p>It is real state, saved and published like the rest of the document, which is why a
+        stranger arriving tomorrow gets the colours somebody chose today rather than the colours
+        their laptop prefers.</p>
+    </div>
+
+    <div class="state-grid">
+      <div>
+        <menu class="nc-gear nc-gear-row chips" style="margin-bottom:.7rem">
+          <span class="chip-label">Density</span>
+          <button type="button" class="btn chip density-chip" data-density="roomy" aria-pressed="true" onclick="demo.setDensity('roomy')">Roomy</button>
+          <button type="button" class="btn chip density-chip" data-density="tight" aria-pressed="false" onclick="demo.setDensity('tight')">Tight</button>
+        </menu>
+        <p class="dim" editable="single-line" style="margin:0;font-size:.9rem">Signed out, that block
+          still shows what the page is running on, because it was published with the file.</p>
+      </div>
+      <pre class="json" id="state-json">{
+  "theme": "clay",
+  "density": "roomy"
+}</pre>
+    </div>
+  </section>
+
+  <!-- ================= media ================= -->
+  <section class="band">
+    <div class="band-head">
+      <span class="idx">04</span>
+      <h2 editable="single-line">A picture and a video</h2>
+    </div>
+    <div class="prose" editable>
+      <p>Both files sit on the same Blossom servers that hold this page, and the markup holds their
+        URLs and nothing else. Put the caret in any paragraph and the floating toolbar grows an image
+        button and a video button. A file you drop there is uploaded and addressed by its own hash,
+        so the URL can never point at something else later. A YouTube or Vimeo link becomes a
+        thumbnail that loads the player only once a reader clicks it.</p>
+    </div>
+
+    <div class="media">
+      <figure class="nc-figure">
+        <img src="https://cdn.hzrd149.com/605f5fcc26f7e88cef1f7c55d2e089036e99c4253c27e47122b953096f313ac5.png"
+             width="3200" height="1720" loading="lazy"
+             alt="A dark page in edit mode. The heading reads 'A self-editable nsite' with part of it selected, a small formatting toolbar floats above it, and a bar in the corner says owner and Save.">
+        <figcaption editable="single-line">nsite-clay editing itself, which is how this page was written.</figcaption>
+      </figure>
+      <figure class="nc-figure">
+        <video controls preload="metadata" playsinline>
+          <source src="https://blossom.primal.net/9f08b0582dc808cfbe8cd48acac1552e18daef96c7d270b0e85f416b58f61674.mp4" type="video/mp4">
+        </video>
+        <figcaption editable="single-line">A phone recording of a Lightning app, sitting on Blossom next to this page. Replace it with something better; you have the key.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= Nostr ================= -->
+  <section class="band">
+    <div class="band-head">
+      <span class="idx">05</span>
+      <h2 editable="single-line">Posts, which do not live here</h2>
+    </div>
+    <div class="prose" editable>
+      <p>Everything above is markup in this file. The list below is not. It is a query to a few
+        relays, run when the page loads, and the results are marked so that a save can never freeze
+        them in. Save the page, read the published bytes, and there are no articles in them.</p>
+      <p>The Write button in the bar composes a long-form Nostr post, signs it with the key you
+        signed in with and publishes it. It can also bake a rendered copy into this page, which lands
+        in the space below. The post then exists twice: as an event any Nostr client can show, and as
+        plain HTML for a reader with no JavaScript.</p>
+    </div>
+
+    <div class="feed" nc:feed="articles"
+         nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+         nc:limit="4" nc:style="grid"></div>
+
+    <div class="baked" nc:baked></div>
+  </section>
+
+  <!-- ================= house rules ================= -->
+  <section class="band">
+    <div class="band-head">
+      <span class="idx">06</span>
+      <h2 editable="single-line">What you are walking into</h2>
+    </div>
+    <ul class="rules">
+      <li>
+        <h3 editable="single-line">The key is public</h3>
+        <p editable="single-line">Everyone reading this can rewrite it, including the parts you
+          wrote. Two people editing at once will lose one side's work, and neither of them will be
+          told.</p>
+      </li>
+      <li>
+        <h3 editable="single-line">Whatever you type is published</h3>
+        <p editable="single-line">It goes to Blossom servers and to relays under that public key,
+          where anyone can read it and nobody can be made to delete it.</p>
+      </li>
+      <li>
+        <h3 editable="single-line">It resets weekly</h3>
+        <p editable="single-line">A cron job puts the file back the way it started, so anything left
+          here has days rather than months. Every version in between stays in the history, so a good
+          one can be dug out again.</p>
+      </li>
+      <li>
+        <h3 editable="single-line">Use your own key somewhere else</h3>
+        <p editable="single-line">Never paste a key you care about into a page somebody else
+          published, this one included. The key above is a throwaway, which is exactly why it can be
+          printed in the open.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <ul class="links">
+      <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/">nsite-clay</a></li>
+      <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/docs.html">Walkthrough</a></li>
+      <li><a href="https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/templates.html">Templates</a></li>
+      <li><a href="https://github.com/jooray/nsite-clay">Source</a></li>
+    </ul>
+    <div editable>
+      <p>MIT-0. Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
+        nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>. The malleable-HTML idea
+        comes from <a href="https://hyperclay.com">HyperClay</a>.</p>
+      <p>For one of these that only you can write to, <code>npx nsite-clay init mysite</code>
+        generates a key nobody else has.</p>
+    </div>
+  </footer>
+
+</div>
+
+<!-- The shapes the Add buttons clone. A template's contents are inert until
+     nc.dom.addFrom copies one out, and both survive a save. -->
+<template id="card-tpl">
+  <article class="card" data-tag="idea">
+    <p class="card-tag">idea</p>
+    <h4 class="card-title" editable="single-line">Untitled</h4>
+    <div class="card-body" editable><p>Say what it is.</p></div>
+    <menu class="nc-gear nc-gear-row card-gear">
+      <button type="button" title="Move to the previous column" aria-label="Move to the previous column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', -1)">&larr;</button>
+      <button type="button" title="Move to the next column" aria-label="Move to the next column" onclick="nc.dom.moveToClosest(this, '.card', '.col-cards', 1)">&rarr;</button>
+      <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.card')">&uarr;</button>
+      <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.card')">&darr;</button>
+      <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Copy</button>
+      <button type="button" onclick="demo.cycleTag(this)">Tag</button>
+      <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+    </menu>
+  </article>
+</template>
+
+<template id="col-tpl">
+  <section class="col">
+    <header class="col-head">
+      <h3 class="col-title" editable="single-line">New column</h3>
+      <span class="col-count">0 cards</span>
+      <menu class="nc-gear nc-gear-row col-gear">
+        <button type="button" title="Move this column left" aria-label="Move this column left" onclick="nc.dom.moveClosest(this, -1, '.col')">&larr;</button>
+        <button type="button" title="Move this column right" aria-label="Move this column right" onclick="nc.dom.moveClosest(this, 1, '.col')">&rarr;</button>
+        <button type="button" onclick="nc.dom.removeClosestAsk(this, '.col', 'this column and everything in it')">Delete</button>
+      </menu>
+    </header>
+    <div class="col-cards"></div>
+    <menu class="nc-gear col-add">
+      <button type="button" onclick="nc.dom.addFrom('card-tpl', this.closest('.col').querySelector('.col-cards'), 'afterbegin')">Add a card</button>
+    </menu>
+  </section>
+</template>
+
+<template id="task-tpl">
+  <li class="task">
+    <input type="checkbox" class="task-box" aria-label="Done">
+    <span class="task-text" editable="single-line">Something else worth doing here</span>
+    <menu class="nc-gear nc-gear-row task-gear">
+      <button type="button" title="Move up" aria-label="Move up" onclick="nc.dom.moveClosest(this, -1, '.task')">&uarr;</button>
+      <button type="button" title="Move down" aria-label="Move down" onclick="nc.dom.moveClosest(this, 1, '.task')">&darr;</button>
+      <button type="button" onclick="nc.dom.removeClosestAsk(this, '.task', 'this line')">Delete</button>
+    </menu>
+  </li>
+</template>
+
+<!-- The page described as fields. nc.cms generates a form from this, so someone
+     who would rather not hunt through the page for the third paragraph does not
+     have to. It is published with the page; the panel it draws never is. -->
+<script type="application/json" nc:cms>
+{
+  "headline": "h1",
+  "columns": [".col", { "name": ".col-title" }],
+  "cards": [".card", { "tag": ".card-tag", "title": ".card-title", "text": ".card-body" }],
+  "checklist": [".task", { "done": ".task-box@checked", "text": ".task-text" }]
+}
+</script>
+
+<!-- State with no visual form. nc.state reads and writes this. -->
+<script id="app-state" type="application/json">
+{
+  "theme": "clay",
+  "density": "roomy"
+}
+</script>
+
+<div class="nc-bar nc-ui-chrome">
+  <span class="nc-dot"></span>
+  <span class="nc-who" data-nc-who>read-only</span>
+  <button data-nc-signin>Sign in</button>
+  <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-settings>Settings</button>
+  <button class="nc-owner-only" data-nc-history>History</button>
+  <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
+</div>
+<!-- No .nc-edit-hint here. It only shows for an owner whose gate is closed, and
+     this page has nc:edit-gate="always" so a stranger finds Sign in without
+     being told about #edit. -->
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+<script>
+/* This page's own code. A save is a serialisation of the live DOM with a short
+   list of removals, so this block comes back byte for byte and the inline
+   handlers above keep working in the published file. */
+window.demo = {
+  TAGS: ["idea", "fact", "dare"],
+
+  // nc.dom.set does the bookkeeping: it marks the page unsaved and re-arms any
+  // new editable markup. The visible word is kept next to the attribute so the
+  // label is in the file rather than in a stylesheet.
+  cycleTag(btn) {
+    const card = btn.closest(".card");
+    if (!card) return;
+    const next = demo.TAGS[(demo.TAGS.indexOf(card.getAttribute("data-tag")) + 1) % demo.TAGS.length];
+    nc.dom.set(card, "data-tag", next);
+    const label = card.querySelector(".card-tag");
+    if (label) label.textContent = next;
+  },
+
+  clearTicks() {
+    for (const box of nc.dom.all(".task-box")) box.checked = false;
+    nc.dirty = true;
+    nc.toast("Cleared. Save to publish that.");
+  },
+
+  // Reading the document back as data. The DOM is the query engine.
+  counts() {
+    for (const col of nc.dom.all(".col")) {
+      const n = nc.dom.all(".card", col).length;
+      const out = col.querySelector(".col-count");
+      if (out) out.textContent = n === 1 ? "1 card" : n + " cards";
+    }
+    const total = nc.dom.all(".card").length;
+    const grouped = [...nc.dom.by(".card", "data-tag")]
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([tag, cards]) => cards.length + " " + (tag || "untagged"));
+    const line = document.getElementById("board-summary");
+    if (line) line.textContent = (total === 1 ? "1 card" : total + " cards") +
+      (grouped.length ? " · " + grouped.join(" · ") : "");
+  },
+
+  // The byte count is what a save would upload, measured the same way: serialise
+  // the document and count the encoded bytes. Debounced, because typing should
+  // not re-serialise the page on every keystroke.
+  facts() {
+    clearTimeout(demo._factTimer);
+    demo._factTimer = setTimeout(() => {
+      const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      set("fact-bytes", new TextEncoder().encode(nc.getHTML()).length.toLocaleString("en") + " bytes");
+      set("fact-cards", String(nc.dom.all(".card").length));
+      set("fact-relays", String(nc.cfg.relays.length));
+      set("fact-servers", String(nc.cfg.servers.length));
+    }, 500);
+  },
+
+  filter(input) {
+    const q = input.value.trim().toLowerCase();
+    for (const card of nc.dom.all(".card")) {
+      card.classList.toggle("is-filtered", !!q && !card.textContent.toLowerCase().includes(q));
+    }
+  },
+
+  setTheme(name) { nc.state.update({ theme: name }); demo.applyState(); },
+  setDensity(name) { nc.state.update({ density: name }); demo.applyState(); },
+
+  applyState() {
+    const s = nc.state.get();
+    const theme = s.theme || "clay";
+    const density = s.density || "roomy";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute("data-density", density);
+    for (const b of nc.dom.all(".theme-chip")) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-theme") === theme));
+    }
+    for (const b of nc.dom.all(".density-chip")) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-density") === density));
+    }
+    const view = document.getElementById("state-json");
+    if (view) view.textContent = nc.state.block().textContent.trim();
+  },
+
+  copyKey() {
+    const el = document.getElementById("demokey");
+    el.focus();
+    el.select();
+    const done = () => nc.toast("Key copied. Press Sign in and paste it.");
+    const manual = () => nc.toast("It is selected. Copy it with your keyboard.");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(el.value).then(done, manual);
+    } else {
+      try { document.execCommand("copy") ? done() : manual(); } catch { manual(); }
+    }
+  },
+};
+
+(async () => {
+  await nc.ready;
+
+  // data-theme and data-density are a rendering of the JSON block, not a second
+  // copy of it, so they come off before the file is written. The filter's class
+  // goes the same way: a page saved mid-search would publish hidden cards.
+  nc.addDocumentTransform((clone) => {
+    clone.removeAttribute("data-theme");
+    clone.removeAttribute("data-density");
+    for (const el of clone.querySelectorAll(".is-filtered")) el.classList.remove("is-filtered");
+  });
+
+  demo.applyState();
+  demo.counts();
+  demo.facts();
+  nc.addEventListener("nsiteclay:dom", () => { demo.counts(); demo.facts(); });
+  nc.addEventListener("nsiteclay:state", () => { demo.applyState(); demo.facts(); });
+  document.addEventListener("input", demo.facts, true);
+})();
+</script>
+</body>
+</html>
