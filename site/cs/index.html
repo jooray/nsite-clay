@@ -180,10 +180,10 @@
     <h1 editable="single-line">nsite-clay</h1>
     <p class="tag" editable="single-line">Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHubu</a>
-      <a class="btn" href="/cs/guide.html">Jak to funguje</a>
+      <a class="btn primary" href="/cs/deploy.html">Publikuj web</a>
+      <a class="btn" href="/cs/guide.html">Přečti si návod</a>
       <a class="btn" href="#try">Vyzkoušej živé demo</a>
-      <a class="btn" href="#deploy">Nasaď si vlastní</a>
+      <a class="btn" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHubu</a>
     </div>
     <figure class="shot">
       <img src="/editing.png" alt="Nadpis publikované stránky se upravuje přímo v prohlížeči, otevřená nabídka bloků" width="1600" height="860">
@@ -305,7 +305,7 @@
         <p>Systémové fonty a ze všeho ostatního co nejmíň. Změří a vypíše vlastní přenosovou váhu.</p>
       </li>
     </ul>
-    <p><a class="btn" href="/cs/templates.html">Všech jedenáct šablon</a></p>
+    <p><a class="btn" href="/cs/templates.html">Všech dvanáct šablon</a></p>
   </section>
 
   <section id="try">
@@ -331,8 +331,12 @@
   <section id="deploy">
     <h2 editable="single-line">Nasaď si vlastní</h2>
     <div editable>
-      <p class="lede">První verzi publikuje CLI. Pak už se stránka ukládá sama a vracíš se sem jen
-        kvůli změnám, které děláš mimo prohlížeč.</p>
+      <p class="lede">Celou tu práci zvládne <a href="/cs/deploy.html">webový publisher</a> v jedné
+        záložce prohlížeče: vybereš šablonu, přihlásíš se klíčem nebo si ho necháš vygenerovat, a
+        stránka je online. Jak to vypadá, ukazuje <a href="/cs/guide.html">návod se snímky
+        obrazovky</a>. Pak už se stránka ukládá sama a publisher nikdy znovu nepotřebuješ.</p>
+      <p class="lede">Stejnou práci udělá CLI, pro každého, kdo chce mít radši adresář na disku
+        a příkaz ke spuštění.</p>
     </div>
 <pre><span class="c"># vytvoř kostru webu a vygeneruj k němu klíč</span>
 npx nsite-clay init mysite
@@ -359,8 +363,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <h2 editable="single-line">Postavené pro agenty, protože web teď staví agenti</h2>
     <div editable>
       <p class="lede">Většinu stránek z tohohle nepostaví člověk ručně, ale agent, a tak k projektu
-        patří instrukce právě pro něj. Nasměruj svého kódovacího agenta na ten soubor a řekni si
-        o stránku, jakou chceš.</p>
+        patří instrukce právě pro něj. Nasměruj svého kódovacího agenta na <code>llms.txt</code>
+        a řekni si o stránku, jakou chceš.</p>
       <p class="lede">Je v nich, na co se tě má zeptat, jak vybrat a předělat šablonu, jak dostat
         stránku na web přes vzdálený signer místo holého klíče a těch pár věcí, co se obvykle
         pokazí. Odkazují na dokumentaci, místo aby ji opisovaly, a v projektu
@@ -370,7 +374,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
   </section>
 
   <section id="gateways">
-    <h2 editable="single-line">Odkud se to servíruje</h2>
+    <h2 editable="single-line">Gateway, a odkud se servíruje tvoje stránka</h2>
     <div editable>
       <p class="lede">Gateway přeloží tvůj manifest a naservíruje soubory. Všechny čtou stejné
         eventy, takže tvůj web na žádné z nich nevisí. Když jedna nejede, vyměň hostname.</p>
@@ -408,6 +412,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <a href="https://hyperclay.com">HyperClay</a> a <a href="https://clayjs.com">ClayJS</a>.
       Hosting stojí na nsites podle <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       a na <a href="https://github.com/hzrd149/blossom">Blossomu</a>.</p>
+    <p><a href="/cs/deploy.html">Publikuj web</a> · <a href="/cs/guide.html">Návod</a> ·
+      <a href="/cs/templates.html">Šablony</a> · <a href="/llms.txt">Pro agenty</a></p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
     <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
       Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.

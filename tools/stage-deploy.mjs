@@ -19,6 +19,9 @@ import { execFileSync } from "node:child_process";
 
 const LANGS = ["es", "sk", "cs"];
 
+// Paths that exist in every language, so a translated copy must point at its own.
+const LOCALISED = ["/", "/guide.html", "/templates.html", "/docs.html", "/index.html"];
+
 // Only what a crawler and a reader see before the strings table runs.
 const TITLES = {
   "deploy.html": {
@@ -39,10 +42,29 @@ for (const page of Object.keys(TITLES)) {
 
   for (const lang of LANGS) {
     const [title, description] = TITLES[page][lang];
-    const out = source
+    let out = source
       .replace(/<html lang="en"/, `<html lang="${lang}"`)
       .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
       .replace(/(<meta name="description" content=")[^"]*(">)/, `$1${description}$2`);
+
+    // Every link in the copy has to lead to that language's page. Left alone,
+    // a reader of the Slovak publisher who presses Guide lands in English, and
+    // a check that the target file exists says nothing is wrong, because
+    // /guide.html does exist.
+    //
+    // The language switcher and the hreflang alternates are the exception:
+    // those name every language on purpose, so they are lifted out first and
+    // put back untouched.
+    const kept = [];
+    out = out
+      .replace(/<span class="langs">[\s\S]*?<\/span>\s*<\/p>/,
+               (m) => `\u0000${kept.push(m) - 1}\u0000`)
+      .replace(/<link rel="alternate"[^>]*>/g, (m) => `\u0000${kept.push(m) - 1}\u0000`);
+
+    for (const path of LOCALISED) {
+      out = out.split(`href="${path}"`).join(`href="/${lang}${path === "/" ? "/" : path}"`);
+    }
+    out = out.replace(/\u0000(\d+)\u0000/g, (_, i) => kept[Number(i)]);
     if (out === source) {
       console.warn(`stage-deploy: nothing was substituted in ${page} for ${lang}`);
     }

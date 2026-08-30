@@ -180,10 +180,10 @@
     <h1 editable="single-line">nsite-clay</h1>
     <p class="tag" editable="single-line">Nsite, ktorý sa upravuje sám. Jeden HTML súbor na Nostri, ktorý sa sám upraví aj znovu zverejní.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHube</a>
-      <a class="btn" href="/sk/guide.html">Ako to funguje</a>
+      <a class="btn primary" href="/sk/deploy.html">Zverejni stránku</a>
+      <a class="btn" href="/sk/guide.html">Prečítaj si návod</a>
       <a class="btn" href="#try">Vyskúšaj živé demo</a>
-      <a class="btn" href="#deploy">Nasaď si vlastnú stránku</a>
+      <a class="btn" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHube</a>
     </div>
     <figure class="shot">
       <img src="/editing.png" alt="Nadpis zverejnenej stránky sa upravuje v prehliadači, otvorená je ponuka blokov" width="1600" height="860">
@@ -305,7 +305,7 @@
         <p>Systémové fonty a zo všetkého ostatného čo najmenej. Zmeria a vypíše vlastnú prenosovú váhu.</p>
       </li>
     </ul>
-    <p><a class="btn" href="/sk/templates.html">Všetkých jedenásť šablón</a></p>
+    <p><a class="btn" href="/sk/templates.html">Všetkých dvanásť šablón</a></p>
   </section>
 
   <section id="try">
@@ -330,8 +330,13 @@
   <section id="deploy">
     <h2 editable="single-line">Nasaď si vlastnú stránku</h2>
     <div editable>
-      <p class="lede">Prvú verziu zverejní CLI. Potom sa stránka ukladá sama a k terminálu sa
-        vrátiš len kvôli zmenám, ktoré urobíš mimo prehliadača.</p>
+      <p class="lede"><a href="/sk/deploy.html">Publisher</a> to vybaví celé v jednej karte
+        prehliadača: vyberieš šablónu, prihlásiš sa kľúčom alebo si ho necháš vygenerovať
+        a stránka je online. Ak chceš vidieť, ako to vyzerá, pozri si najprv
+        <a href="/sk/guide.html">návod so screenshotmi</a>. Potom sa stránka ukladá sama
+        a publisher už nikdy nepotrebuješ.</p>
+      <p class="lede">CLI robí to isté pre každého, kto by chcel radšej priečinok na disku
+        a príkaz, ktorý spustí.</p>
     </div>
 <pre><span class="c"># vytvorí kostru stránky a vygeneruje k nej kľúč</span>
 npx nsite-clay init mysite
@@ -407,6 +412,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <a href="https://hyperclay.com">HyperClay</a> a <a href="https://clayjs.com">ClayJS</a>.
       Hosting stojí na nsitoch podľa <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       a na <a href="https://github.com/hzrd149/blossom">Blossome</a>.</p>
+    <p><a href="/sk/deploy.html">Zverejni stránku</a> · <a href="/sk/guide.html">Návod</a> ·
+      <a href="/sk/templates.html">Šablóny</a> · <a href="/llms.txt">Pre agentov</a></p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
     <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
       Projekt píše ako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.

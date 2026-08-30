@@ -180,10 +180,10 @@
     <h1 editable="single-line">nsite-clay</h1>
     <p class="tag" editable="single-line">Un nsite que se edita a sí mismo. Un solo archivo HTML que se edita y se vuelve a publicar por su cuenta, alojado en Nostr.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Código en GitHub</a>
-      <a class="btn" href="/es/guide.html">Cómo funciona</a>
+      <a class="btn primary" href="/es/deploy.html">Publica un sitio</a>
+      <a class="btn" href="/es/guide.html">Lee la guía</a>
       <a class="btn" href="#try">Prueba la demo</a>
-      <a class="btn" href="#deploy">Publica el tuyo</a>
+      <a class="btn" href="https://github.com/jooray/nsite-clay">Código en GitHub</a>
     </div>
     <figure class="shot">
       <img src="/editing.png" alt="El título de una página publicada mientras se edita en el navegador, con el menú de bloques abierto" width="1600" height="860">
@@ -309,7 +309,7 @@
         <p>Tipografías del sistema y lo mínimo de todo lo demás. Mide e imprime su propio peso de transferencia.</p>
       </li>
     </ul>
-    <p><a class="btn" href="/es/templates.html">Las once plantillas</a></p>
+    <p><a class="btn" href="/es/templates.html">Las doce plantillas</a></p>
   </section>
 
   <section id="try">
@@ -335,8 +335,13 @@
   <section id="deploy">
     <h2 editable="single-line">Publica el tuyo</h2>
     <div editable>
-      <p class="lede">La CLI publica la primera versión. A partir de ahí la página se guarda sola,
-        y solo vuelves a ella para los cambios que hagas fuera del navegador.</p>
+      <p class="lede">El <a href="/es/deploy.html">publicador web</a> hace todo el trabajo en una
+        pestaña del navegador: eliges una plantilla, inicias sesión con una clave o creas una, y
+        ya está en línea. Hay una <a href="/es/guide.html">guía con capturas de pantalla</a> si
+        quieres verlo antes. Después la página se guarda sola y no vuelves a necesitar el
+        publicador.</p>
+      <p class="lede">La CLI hace el mismo trabajo para quien prefiera tener una carpeta en el
+        disco y un comando que ejecutar.</p>
     </div>
 <pre><span class="c"># crea la carpeta de un sitio y genera una clave para él</span>
 npx nsite-clay init mysite
@@ -364,9 +369,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <div editable>
       <p class="lede">La mayoría de las páginas hechas con esto las construirá un agente y no una
         persona a mano, así que el proyecto trae instrucciones para uno. Apunta tu agente de código
-        a ese archivo y pídele la página que quieras.</p>
+        a <code>llms.txt</code> y pídele la página que quieras.</p>
       <p class="lede">Explica qué preguntarte, cómo elegir y retocar una plantilla, cómo poner la
-        página en línea con un firmante remoto —en lugar de con la clave en crudo— y las pocas
+        página en línea con un firmante remoto en lugar de con la clave en crudo, y las pocas
         cosas que se tuercen. Enlaza la documentación en vez de repetirla, y sirve como
         <code>AGENTS.md</code> en un proyecto construido sobre nsite-clay.</p>
     </div>
@@ -374,7 +379,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
   </section>
 
   <section id="gateways">
-    <h2 editable="single-line">Dónde se sirve</h2>
+    <h2 editable="single-line">Gateways, y dónde se sirve tu página</h2>
     <div editable>
       <p class="lede">Un gateway resuelve tu manifiesto y sirve los archivos. Todos leen los mismos
         eventos, así que tu sitio no depende de ninguno en concreto. Si uno se cae, cambias el
@@ -416,6 +421,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <a href="https://hyperclay.com">HyperClay</a> y <a href="https://clayjs.com">ClayJS</a>.
       El alojamiento se apoya en los nsites <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       y en <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
+    <p><a href="/es/deploy.html">Publica un sitio</a> · <a href="/es/guide.html">Guía</a> ·
+      <a href="/es/templates.html">Plantillas</a> · <a href="/llms.txt">Para agentes</a></p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
     <p class="nc-credit">Hecho por <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
       El proyecto publica como <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.

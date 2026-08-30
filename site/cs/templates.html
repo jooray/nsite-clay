@@ -92,6 +92,7 @@
   </nav>
   <h1 editable="single-line">Šablony</h1>
   <p class="lede" editable="single-line">Dvanáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
+  <p class="lede"><a href="/cs/deploy.html">Kteroukoli z nich publikuj přímo z prohlížeče</a>, bez příkazové řádky. Celý postup se snímky obrazovky ukazuje <a href="/cs/guide.html">návod</a>.</p>
 
   <pre><span class="c"># začni od jedné z nich</span>
 npx nsite-clay init mysite --template=blog --npub=npub1…
@@ -226,7 +227,7 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p class="lede">Každá šablona odkazuje na tentýž <code>/nsite-clay-base.css</code> a tentýž
         <code>/nsite-clay.js</code> z kořene webu a žádná si nenese kopii. Styluje se přes CSS
         proměnné, takže lišta, dialogy i feedy jdou za paletou, kterou si šablona nastaví. Změnit
-        engine znamená upravit jeden soubor, ne deset.</p>
+        engine znamená upravit jeden soubor, ne dvanáct.</p>
       <p class="lede">Pravidla, kterými se šablona řídí, jsou v
         <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
         Jestli tohle předáváš agentovi, nasměruj ho radši na <a href="/llms.txt">llms.txt</a>
@@ -235,7 +236,7 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
   </section>
 
   <footer>
-    <p><a href="/cs/">Domovská stránka</a> · <a href="/cs/guide.html">Průvodce</a> · <a href="/llms.txt">Pro agenty</a> · <a href="https://github.com/jooray/nsite-clay">Zdrojový kód</a></p>
+    <p><a href="/cs/">Domovská stránka</a> · <a href="/cs/guide.html">Návod</a> · <a href="/llms.txt">Pro agenty</a> · <a href="https://github.com/jooray/nsite-clay">Zdrojový kód</a></p>
     <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
       Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
       MIT-0.</p>
