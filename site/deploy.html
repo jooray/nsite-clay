@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<!--
+  The web publisher.
+
+  Everything the CLI's `deploy` does, in a browser tab: sign in, pick a template,
+  choose where it goes, and publish it under your own key. No Node, no terminal,
+  no account.
+
+  It runs on the nsite it publishes from, so the templates and the runtime it
+  uploads are fetched from this same origin with no cross-origin request and
+  nothing to allow. The bytes it hands to Blossom are the bytes this page was
+  served, which is also why it stays current: republish this site and the next
+  person to open the wizard publishes the new runtime.
+
+  The four language versions are generated from this file by
+  tools/stage-deploy.mjs. Edit this one.
+-->
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/deploy.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: publish a site</title>
+<meta name="description" content="Publish a self-editable website to Nostr from your browser. Pick a template, sign in with your key, and it is online. No command line and no account.">
+<link rel="alternate" hreflang="en" href="/deploy.html">
+<link rel="alternate" hreflang="es" href="/es/deploy.html">
+<link rel="alternate" hreflang="sk" href="/sk/deploy.html">
+<link rel="alternate" hreflang="cs" href="/cs/deploy.html">
+<link rel="alternate" hreflang="x-default" href="/deploy.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-ok: #6FD39A; --nc-bad: #E88A8A;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+    --nc-shadow: 0 24px 60px -30px rgba(0,0,0,.85);
+    --violet: #AB82F1; --ink-faint: #6F5D8E;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --nc-chrome-font: var(--sans); --nc-mono: var(--mono);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 16.5px/1.68 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code, .mono { font-family: var(--mono); font-size: .9em; }
+  .wrap { max-width: 52rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+           color: var(--ink-faint); padding-top: 2.5rem; flex-wrap: wrap; }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
+  .crumb .langs { margin-left: auto; display: flex; gap: .55rem; }
+
+  h1 { font-size: clamp(2rem, 5.5vw, 2.7rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
+  .lede { color: var(--nc-ink-dim); font-size: 1.08rem; max-width: 40rem; margin: 0 0 2.5rem; }
+
+  /* ---- the stepper ------------------------------------------------------ */
+
+  ol.steps { list-style: none; display: flex; gap: .4rem; margin: 0 0 2rem; padding: 0;
+             flex-wrap: wrap; font-size: .82rem; color: var(--ink-faint); }
+  ol.steps li { display: flex; align-items: center; gap: .45rem; padding: .3rem .75rem;
+                border: 1px solid var(--nc-edge); border-radius: 999px; }
+  ol.steps li .n { display: grid; place-items: center; width: 1.35rem; height: 1.35rem;
+                   border-radius: 50%; background: var(--nc-edge); color: var(--nc-ink);
+                   font-size: .74rem; font-weight: 600; }
+  ol.steps li[aria-current="step"] { color: var(--nc-ink); border-color: var(--nc-accent); }
+  ol.steps li[aria-current="step"] .n { background: var(--nc-accent); color: var(--nc-accent-ink); }
+  ol.steps li[data-done="true"] { color: var(--nc-ink-dim); }
+  ol.steps li[data-done="true"] .n { background: var(--nc-ok); color: #0b2418; }
+
+  section.step { display: none; }
+  section.step[data-on] { display: block; }
+
+  .card { background: var(--nc-panel); border: 1px solid var(--nc-edge);
+          border-radius: var(--nc-radius); padding: 1.4rem 1.5rem; margin: 0 0 1.1rem; }
+  .card h2 { font-size: 1.15rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
+  .card p.sub { color: var(--nc-ink-dim); font-size: .93rem; margin: 0 0 1.1rem; }
+
+  button, .btn {
+    font: inherit; font-size: .92rem; cursor: pointer; padding: .58rem 1.05rem;
+    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
+    background: var(--nc-bg); color: var(--nc-ink); text-decoration: none; display: inline-block;
+  }
+  button:hover, .btn:hover { border-color: var(--nc-accent); }
+  button.primary, .btn.primary {
+    background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); font-weight: 600;
+  }
+  button.primary:hover { filter: brightness(1.09); }
+  button[disabled] { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+  .row.end { justify-content: flex-end; margin-top: 1.2rem; }
+
+  label.f { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+            color: var(--nc-ink-dim); margin: 0 0 .35rem; }
+  input[type=text], input[type=password], textarea {
+    width: 100%; font: inherit; font-size: .93rem; padding: .6rem .7rem;
+    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
+    background: var(--nc-bg); color: inherit;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--nc-accent); outline-offset: 1px; }
+
+  .note { font-size: .86rem; color: var(--nc-ink-dim); margin: .6rem 0 0; }
+  .warn { border-color: #7a4a2a; background: #2a1710; }
+  .warn h2 { color: #F0B48A; }
+  .good { border-color: #2c5f45; background: #10231a; }
+  .bad { color: var(--nc-bad); }
+
+  /* ---- sign in ---------------------------------------------------------- */
+
+  .ways { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+  .way { text-align: left; padding: .9rem 1rem; display: grid; gap: .2rem; }
+  .way b { font-weight: 600; font-size: .95rem; }
+  .way small { color: var(--nc-ink-dim); font-size: .8rem; line-height: 1.5; }
+  #qrbox { text-align: center; margin-top: 1rem; }
+  #qrbox svg { max-width: min(300px, 100%); height: auto; }
+
+  .keybox { font-family: var(--mono); font-size: .82rem; word-break: break-all;
+            background: var(--nc-bg); border: 1px solid var(--nc-edge);
+            border-radius: var(--nc-radius-sm); padding: .8rem; margin: .8rem 0; }
+
+  /* ---- templates -------------------------------------------------------- */
+
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+  .tpl { padding: 0; overflow: hidden; text-align: left; display: flex; flex-direction: column;
+         background: var(--nc-panel); border: 1px solid var(--nc-edge);
+         border-radius: var(--nc-radius); cursor: pointer; }
+  .tpl:hover { border-color: var(--nc-accent); }
+  .tpl[aria-pressed=true] { border-color: var(--nc-accent); box-shadow: 0 0 0 2px var(--nc-accent) inset; }
+  .tpl .shot { aspect-ratio: 16/10; background: #100722; overflow: hidden; display: block; }
+  .tpl .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .tpl .shot .none { display: grid; place-items: center; height: 100%; color: var(--ink-faint);
+                     font: .78rem var(--mono); }
+  .tpl .body { padding: .8rem .9rem 1rem; display: flex; flex-direction: column; gap: .2rem; flex: 1; }
+  .tpl .name { font: .72rem var(--mono); color: var(--violet); letter-spacing: .04em; }
+  .tpl b { font-size: 1rem; font-weight: 600; }
+  .tpl p { margin: .2rem 0 0; font-size: .86rem; color: var(--nc-ink-dim); }
+
+  /* ---- progress --------------------------------------------------------- */
+
+  ul.log { list-style: none; margin: 1rem 0 0; padding: 0; font: .86rem/1.9 var(--mono); }
+  ul.log li { color: var(--nc-ink-dim); }
+  ul.log li::before { content: "· "; }
+  ul.log li[data-ok]::before { content: "✓ "; color: var(--nc-ok); }
+  ul.log li[data-bad]::before { content: "✕ "; color: var(--nc-bad); }
+  ul.log li[data-bad] { color: var(--nc-bad); }
+
+  .url { font-family: var(--mono); font-size: .95rem; word-break: break-all;
+         background: var(--nc-bg); border: 1px solid var(--nc-edge);
+         border-radius: var(--nc-radius-sm); padding: .8rem; margin: .9rem 0; }
+
+  footer { border-top: 1px solid var(--nc-edge); margin-top: 4rem; padding: 2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+  footer a { color: var(--nc-ink-dim); }
+
+  noscript p { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+               padding: 1rem 1.2rem; background: var(--nc-panel); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="crumb">
+    <img src="/nsite-clay-transparent.png" alt="" width="28" height="28">
+    <a href="/">nsite-clay</a> <span>/</span> <span data-t="crumb">publish</span>
+    <span class="langs">
+      <a href="/deploy.html" hreflang="en">EN</a>
+      <a href="/es/deploy.html" hreflang="es">ES</a>
+      <a href="/sk/deploy.html" hreflang="sk">SK</a>
+      <a href="/cs/deploy.html" hreflang="cs">CS</a>
+    </span>
+  </p>
+
+  <h1 data-t="h1">Publish a site</h1>
+  <p class="lede" data-t="lede">Pick a template, sign in with your Nostr key, and it is online. The page
+  you publish edits itself afterwards, so this is the only time you need this wizard.</p>
+
+  <noscript><p data-t="noscript">This publisher runs entirely in your browser, so it needs JavaScript.
+  Without it you can still publish from a terminal with <code>npx nsite-clay deploy</code>.</p></noscript>
+
+  <ol class="steps" id="steps">
+    <li data-step="1"><span class="n">1</span><span data-t="s1">Sign in</span></li>
+    <li data-step="2"><span class="n">2</span><span data-t="s2">Template</span></li>
+    <li data-step="3"><span class="n">3</span><span data-t="s3">Address</span></li>
+    <li data-step="4"><span class="n">4</span><span data-t="s4">Publish</span></li>
+  </ol>
+
+  <!-- ---- 1. sign in ---------------------------------------------------- -->
+  <section class="step" data-step="1">
+    <div class="card">
+      <h2 data-t="signinTitle">Who is publishing?</h2>
+      <p class="sub" data-t="signinSub">A site belongs to a key, not to an account. Whichever key signs
+      in here becomes the only one that can change the page afterwards.</p>
+
+      <div class="ways">
+        <button class="way" id="way-nip07" hidden>
+          <b data-t="wayExt">Browser extension</b>
+          <small data-t="wayExtSub">Alby, nos2x and the rest. Nothing to type.</small>
+        </button>
+        <button class="way" id="way-remote">
+          <b data-t="wayApp">Signer app</b>
+          <small data-t="wayAppSub">Amber or another NIP-46 signer. Scan a code from a second device and your key never leaves the phone.</small>
+        </button>
+        <button class="way" id="way-key">
+          <b data-t="wayKey">Paste a key</b>
+          <small data-t="wayKeySub">An nsec, an encrypted ncryptsec, or a bunker:// address.</small>
+        </button>
+        <button class="way" id="way-new">
+          <b data-t="wayNew">I have no key yet</b>
+          <small data-t="wayNewSub">Make one here. Nothing keeps a copy of it, so you have to write it down yourself.</small>
+        </button>
+      </div>
+
+      <div id="qrbox" hidden></div>
+
+      <div id="keyform" hidden style="margin-top:1.1rem">
+        <label class="f" for="key" data-t="keyLabel">Your key</label>
+        <input type="password" id="key" autocomplete="off" spellcheck="false"
+               placeholder="nsec1… / ncryptsec1… / bunker://…">
+        <div id="passwrap" hidden style="margin-top:.8rem">
+          <label class="f" for="pass" data-t="passLabel">Password for that ncryptsec</label>
+          <input type="password" id="pass" autocomplete="off">
+        </div>
+        <p class="note" data-t="keyNote">The key stays in this tab's memory for as long as it is open and is
+        never written anywhere. A signer app is safer, because the key never reaches the page at all.</p>
+        <div class="row end"><button class="primary" id="key-go" data-t="keyGo">Sign in</button></div>
+      </div>
+
+      <div id="newkey" hidden style="margin-top:1.1rem">
+        <p class="sub" data-t="newIntro">This is your new key. It is the only thing that can ever change your
+        site. Nobody can reset it and nobody else has a copy.</p>
+        <label class="f" data-t="newSecret">Secret key, write this down</label>
+        <div class="keybox" id="newkey-nsec"></div>
+        <div class="row">
+          <button id="newkey-copy" data-t="copy">Copy</button>
+          <button id="newkey-file" data-t="newDownload">Save an encrypted backup file</button>
+        </div>
+        <div id="encwrap" hidden style="margin-top:1rem">
+          <label class="f" for="encpass" data-t="newPass">A password for the backup file</label>
+          <input type="password" id="encpass" autocomplete="new-password">
+          <p class="note" data-t="newPassNote">The file is encrypted with this password using NIP-49. Losing
+          the password loses the key, exactly like losing the key itself.</p>
+          <div class="row end"><button id="encgo" data-t="newPassGo">Write the file</button></div>
+        </div>
+        <p class="note"><label><input type="checkbox" id="newkey-ok" style="width:auto"> <span data-t="newConfirm">I have saved this key somewhere safe.</span></label></p>
+        <div class="row end"><button class="primary" id="newkey-go" disabled data-t="newGo">Continue</button></div>
+      </div>
+
+      <p class="note bad" id="signin-error" hidden></p>
+    </div>
+  </section>
+
+  <!-- ---- 2. template --------------------------------------------------- -->
+  <section class="step" data-step="2">
+    <div class="card">
+      <h2 data-t="tplTitle">Pick a starting point</h2>
+      <p class="sub" data-t="tplSub">Every one of these is a finished page you can type over. The first one
+      is built out of blocks you add and rearrange, which is the easiest place to begin.</p>
+      <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
+      <div class="row end">
+        <button id="tpl-back" data-t="back">Back</button>
+        <button class="primary" id="tpl-go" disabled data-t="next">Next</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- 3. address ---------------------------------------------------- -->
+  <section class="step" data-step="3">
+    <div class="card">
+      <h2 data-t="whereTitle">Where should it live?</h2>
+      <p class="sub" data-t="whereSub">Your site is at your npub on any nsite gateway. This is the path
+      inside it. Leave it as a single slash for the front page.</p>
+      <label class="f" for="path" data-t="pathLabel">Path</label>
+      <input type="text" id="path" value="/" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <p class="note" id="path-preview"></p>
+      <div id="occupied" hidden></div>
+      <p class="note bad" id="where-error" hidden></p>
+      <div class="row end">
+        <button id="where-back" data-t="back">Back</button>
+        <button class="primary" id="where-go" data-t="publish">Publish it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- 4. publish ---------------------------------------------------- -->
+  <section class="step" data-step="4">
+    <div class="card" id="progress-card">
+      <h2 data-t="pubTitle">Publishing</h2>
+      <p class="sub" data-t="pubSub">Each file becomes a Blossom blob, then one signed manifest says which
+      blob each path points at. Your signer may ask you to approve each signature.</p>
+      <ul class="log" id="log"></ul>
+      <div class="row end" id="retry-row" hidden>
+        <button id="retry" data-t="retry">Try again</button>
+      </div>
+    </div>
+
+    <div class="card good" id="done-card" hidden>
+      <h2 data-t="doneTitle">It is online</h2>
+      <p class="sub" data-t="doneSub">Open it and sign in with the same key. The page edits itself from now
+      on, so you do not need this wizard again.</p>
+      <div class="url" id="done-url"></div>
+      <div class="row">
+        <a class="btn primary" id="done-open" href="#" target="_blank" rel="noopener" data-t="doneOpen">Open it and start editing</a>
+        <a class="btn" id="done-plain" href="#" target="_blank" rel="noopener" data-t="doneView">Just look at it</a>
+        <a class="btn" href="/guide.html" data-t="doneGuide">Read the guide</a>
+      </div>
+      <p class="note" data-t="doneSlow">A gateway can take a minute to notice a brand new site. If it is not
+      there yet, wait a moment and reload.</p>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><a href="/">nsite-clay</a> · <a href="/templates.html" data-t="fTemplates">Templates</a> ·
+       <a href="/guide.html" data-t="fGuide">Guide</a> · <a href="/llms.txt">llms.txt</a></p>
+    <p data-t="fNote">This wizard runs in your browser. There is no server behind it, nothing is
+    recorded, and your key reaches the page only if you paste one in.</p>
+  </div>
+</footer>
+
+<script src="/nsite-clay.js"></script>
+<script>
+/* The publisher.
+ *
+ * The runtime already knows how to sign in, hash bytes, talk to Blossom and
+ * publish a NIP-5A manifest. This file is the wizard around nc.publishFiles():
+ * which template, which path, and what to say while it happens. */
+(async () => {
+  await nc.ready;
+
+  // ---- language ----------------------------------------------------------
+  // One page carries all four, picked by <html lang>. The four files differ
+  // only in that attribute, so a string added here reaches every language.
+  const STRINGS = {
+    en: {},
+    es: {
+      crumb: "publicar", h1: "Publica un sitio",
+      lede: "Elige una plantilla, inicia sesión con tu clave de Nostr y ya está en línea. La página que publicas se edita a sí misma después, así que este asistente solo se usa una vez.",
+      noscript: "Este publicador funciona entero en tu navegador, así que necesita JavaScript. Sin él todavía puedes publicar desde una terminal con npx nsite-clay deploy.",
+      s1: "Entrar", s2: "Plantilla", s3: "Dirección", s4: "Publicar",
+      signinTitle: "¿Quién publica?",
+      signinSub: "Un sitio pertenece a una clave, no a una cuenta. La clave que entre aquí será la única que pueda cambiar la página después.",
+      wayExt: "Extensión del navegador", wayExtSub: "Alby, nos2x y las demás. No hay que escribir nada.",
+      wayApp: "App de firma", wayAppSub: "Amber u otra app NIP-46. Escanea el código desde otro dispositivo y tu clave no sale del teléfono.",
+      wayKey: "Pegar una clave", wayKeySub: "Un nsec, un ncryptsec cifrado o una dirección bunker://.",
+      wayNew: "Todavía no tengo clave", wayNewSub: "Créala aquí. Es tuya, no se guarda en ningún sitio y tienes que apuntarla.",
+      keyLabel: "Tu clave", passLabel: "Contraseña de ese ncryptsec",
+      keyNote: "La clave se queda en la memoria de esta pestaña mientras esté abierta y no se escribe en ningún sitio. Una app de firma es más segura, porque la clave nunca llega a la página.",
+      keyGo: "Entrar",
+      newIntro: "Esta es tu clave nueva. Es lo único que podrá cambiar tu sitio. Nadie puede restablecerla y nadie más tiene una copia.",
+      newSecret: "Clave secreta, apúntala", copy: "Copiar",
+      newDownload: "Guardar una copia cifrada", newPass: "Una contraseña para el archivo",
+      newPassNote: "El archivo se cifra con esta contraseña usando NIP-49. Perder la contraseña es perder la clave, igual que perder la clave misma.",
+      newPassGo: "Escribir el archivo", newConfirm: "He guardado esta clave en un sitio seguro.",
+      newGo: "Continuar",
+      tplTitle: "Elige un punto de partida",
+      tplSub: "Todas son páginas terminadas sobre las que puedes escribir. La primera se construye con bloques que añades y reordenas, y es la más fácil para empezar.",
+      tplLoading: "cargando plantillas…", back: "Atrás", next: "Siguiente",
+      whereTitle: "¿Dónde va a vivir?",
+      whereSub: "Tu sitio está en tu npub en cualquier pasarela nsite. Esto es la ruta dentro de él. Deja una sola barra para la portada.",
+      pathLabel: "Ruta", publish: "Publicar",
+      pubTitle: "Publicando",
+      pubSub: "Cada archivo se convierte en un blob de Blossom y después un manifiesto firmado dice a qué blob apunta cada ruta. Tu firmante puede pedirte que apruebes cada firma.",
+      retry: "Intentar otra vez",
+      doneTitle: "Ya está en línea",
+      doneSub: "Ábrelo e inicia sesión con la misma clave. La página se edita a sí misma a partir de ahora, así que no necesitas volver aquí.",
+      doneOpen: "Abrir y empezar a editar", doneView: "Solo verlo", doneGuide: "Leer la guía",
+      doneSlow: "Una pasarela puede tardar un minuto en ver un sitio recién creado. Si aún no está, espera un momento y recarga.",
+      fTemplates: "Plantillas", fGuide: "Guía", fDocs: "Documentación",
+      fNote: "Este asistente funciona en tu navegador. No tiene servidor, no guarda registros y nunca ve tu clave salvo que la pegues aquí.",
+    },
+    sk: {
+      crumb: "publikovať", h1: "Zverejni stránku",
+      lede: "Vyber si šablónu, prihlás sa svojím nostr kľúčom a je online. Stránka, ktorú zverejníš, sa potom upravuje sama, takže tohto sprievodcu potrebuješ iba raz.",
+      noscript: "Tento publikátor beží celý v prehliadači, takže potrebuje JavaScript. Aj bez neho vieš zverejniť z terminálu cez npx nsite-clay deploy.",
+      s1: "Prihlásenie", s2: "Šablóna", s3: "Adresa", s4: "Zverejnenie",
+      signinTitle: "Kto zverejňuje?",
+      signinSub: "Stránka patrí kľúču, nie účtu. Kľúč, ktorý sa tu prihlási, bude jediný, ktorý ju potom vie zmeniť.",
+      wayExt: "Rozšírenie prehliadača", wayExtSub: "Alby, nos2x a ďalšie. Nič netreba písať.",
+      wayApp: "Podpisová aplikácia", wayAppSub: "Amber alebo iná NIP-46 aplikácia. Naskenuj kód z druhého zariadenia a kľúč neopustí telefón.",
+      wayKey: "Vložiť kľúč", wayKeySub: "nsec, zašifrovaný ncryptsec alebo adresa bunker://.",
+      wayNew: "Kľúč zatiaľ nemám", wayNewSub: "Vyrob si ho tu. Je tvoj, nikde sa neukladá a musíš si ho zapísať.",
+      keyLabel: "Tvoj kľúč", passLabel: "Heslo k tomu ncryptsecu",
+      keyNote: "Kľúč zostáva v pamäti tejto karty, kým je otvorená, a nikam sa nezapisuje. Podpisová aplikácia je bezpečnejšia, lebo kľúč sa na stránku vôbec nedostane.",
+      keyGo: "Prihlásiť sa",
+      newIntro: "Toto je tvoj nový kľúč. Je jediné, čo vie tvoju stránku zmeniť. Nikto ho nevie obnoviť a nikto iný jeho kópiu nemá.",
+      newSecret: "Tajný kľúč, zapíš si ho", copy: "Skopírovať",
+      newDownload: "Uložiť zašifrovanú zálohu", newPass: "Heslo k záložnému súboru",
+      newPassNote: "Súbor sa zašifruje týmto heslom cez NIP-49. Stratiť heslo znamená stratiť kľúč, rovnako ako stratiť samotný kľúč.",
+      newPassGo: "Zapísať súbor", newConfirm: "Kľúč mám uložený na bezpečnom mieste.",
+      newGo: "Pokračovať",
+      tplTitle: "Vyber si, odkiaľ začneš",
+      tplSub: "Každá z nich je hotová stránka, ktorú vieš prepísať. Prvá sa skladá z blokov, ktoré pridávaš a presúvaš, a je najjednoduchší začiatok.",
+      tplLoading: "načítavajú sa šablóny…", back: "Späť", next: "Ďalej",
+      whereTitle: "Kde má bývať?",
+      whereSub: "Tvoja stránka je na tvojom npube na ktorejkoľvek nsite bráne. Toto je cesta vnútri nej. Pre titulnú stránku nechaj jednu lomku.",
+      pathLabel: "Cesta", publish: "Zverejniť",
+      pubTitle: "Zverejňuje sa",
+      pubSub: "Z každého súboru sa stane blossom blob a potom jeden podpísaný manifest povie, na ktorý blob ktorá cesta ukazuje. Podpisovač si môže vypýtať schválenie každého podpisu.",
+      retry: "Skúsiť znova",
+      doneTitle: "Je to online",
+      doneSub: "Otvor si to a prihlás sa tým istým kľúčom. Stránka sa odteraz upravuje sama, takže sem sa už vracať nemusíš.",
+      doneOpen: "Otvoriť a začať upravovať", doneView: "Len sa pozrieť", doneGuide: "Prečítať návod",
+      doneSlow: "Bráne môže chvíľu trvať, kým si všimne úplne novú stránku. Ak tam ešte nie je, chvíľu počkaj a obnov.",
+      fTemplates: "Šablóny", fGuide: "Návod", fDocs: "Dokumentácia",
+      fNote: "Tento sprievodca beží v prehliadači. Nemá server, nič si nezapisuje a tvoj kľúč nikdy nevidí, pokiaľ ho sem sám nevložíš.",
+    },
+    cs: {
+      crumb: "publikovat", h1: "Zveřejni stránku",
+      lede: "Vyber si šablonu, přihlas se svým nostr klíčem a je online. Stránka, kterou zveřejníš, se pak upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
+      noscript: "Tenhle publikátor běží celý v prohlížeči, takže potřebuje JavaScript. I bez něj můžeš zveřejnit z terminálu přes npx nsite-clay deploy.",
+      s1: "Přihlášení", s2: "Šablona", s3: "Adresa", s4: "Zveřejnění",
+      signinTitle: "Kdo zveřejňuje?",
+      signinSub: "Stránka patří klíči, ne účtu. Klíč, který se tu přihlásí, bude jediný, který ji pak umí změnit.",
+      wayExt: "Rozšíření prohlížeče", wayExtSub: "Alby, nos2x a další. Nic se nemusí psát.",
+      wayApp: "Podpisová aplikace", wayAppSub: "Amber nebo jiná NIP-46 aplikace. Naskenuj kód z druhého zařízení a klíč neopustí telefon.",
+      wayKey: "Vložit klíč", wayKeySub: "nsec, zašifrovaný ncryptsec nebo adresa bunker://.",
+      wayNew: "Klíč zatím nemám", wayNewSub: "Vyrob si ho tady. Je tvůj, nikde se neukládá a musíš si ho zapsat.",
+      keyLabel: "Tvůj klíč", passLabel: "Heslo k tomu ncryptsecu",
+      keyNote: "Klíč zůstává v paměti téhle karty, dokud je otevřená, a nikam se nezapisuje. Podpisová aplikace je bezpečnější, protože klíč se na stránku vůbec nedostane.",
+      keyGo: "Přihlásit se",
+      newIntro: "Tohle je tvůj nový klíč. Je jediné, co umí tvoji stránku změnit. Nikdo ho neumí obnovit a nikdo jiný jeho kopii nemá.",
+      newSecret: "Tajný klíč, zapiš si ho", copy: "Zkopírovat",
+      newDownload: "Uložit zašifrovanou zálohu", newPass: "Heslo k zálohovacímu souboru",
+      newPassNote: "Soubor se zašifruje tímhle heslem přes NIP-49. Ztratit heslo znamená ztratit klíč, stejně jako ztratit klíč samotný.",
+      newPassGo: "Zapsat soubor", newConfirm: "Klíč mám uložený na bezpečném místě.",
+      newGo: "Pokračovat",
+      tplTitle: "Vyber si, odkud začneš",
+      tplSub: "Každá z nich je hotová stránka, kterou můžeš přepsat. První se skládá z bloků, které přidáváš a přesouváš, a je nejjednodušší začátek.",
+      tplLoading: "načítají se šablony…", back: "Zpět", next: "Dál",
+      whereTitle: "Kde má bydlet?",
+      whereSub: "Tvoje stránka je na tvém npubu na kterékoli nsite bráně. Tohle je cesta uvnitř ní. Pro titulní stránku nech jedno lomítko.",
+      pathLabel: "Cesta", publish: "Zveřejnit",
+      pubTitle: "Zveřejňuje se",
+      pubSub: "Z každého souboru se stane blossom blob a pak jeden podepsaný manifest řekne, na který blob která cesta ukazuje. Podpisovač si může vyžádat schválení každého podpisu.",
+      retry: "Zkusit znovu",
+      doneTitle: "Je to online",
+      doneSub: "Otevři si to a přihlas se stejným klíčem. Stránka se odteď upravuje sama, takže se sem už vracet nemusíš.",
+      doneOpen: "Otevřít a začít upravovat", doneView: "Jen se podívat", doneGuide: "Přečíst návod",
+      doneSlow: "Bráně může chvíli trvat, než si všimne úplně nové stránky. Pokud tam ještě není, chvíli počkej a obnov.",
+      fTemplates: "Šablony", fGuide: "Návod", fDocs: "Dokumentace",
+      fNote: "Tenhle průvodce běží v prohlížeči. Nemá server, nic si nezapisuje a tvůj klíč nikdy nevidí, pokud ho sem sám nevložíš.",
+    },
+  };
+  const LANG = (document.documentElement.lang || "en").slice(0, 2).toLowerCase();
+  const T = STRINGS[LANG] || {};
+  for (const el of document.querySelectorAll("[data-t]")) {
+    const s = T[el.dataset.t];
+    if (s) el.textContent = s;
+  }
+  const say = (key, fallback) => T[key] || fallback;
+
+  const $ = (s) => document.querySelector(s);
+  const state = { template: null, catalogue: [], path: "/", confirmed: false };
+
+  // ---- the stepper -------------------------------------------------------
+  function step(n) {
+    for (const s of document.querySelectorAll("section.step")) {
+      s.toggleAttribute("data-on", Number(s.dataset.step) === n);
+    }
+    for (const li of document.querySelectorAll("#steps li")) {
+      const i = Number(li.dataset.step);
+      li.setAttribute("data-done", String(i < n));
+      i === n ? li.setAttribute("aria-current", "step") : li.removeAttribute("aria-current");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const fail = (sel, message) => {
+    const el = $(sel);
+    el.textContent = message;
+    el.hidden = !message;
+  };
+
+  // ---- 1. sign in --------------------------------------------------------
+
+  function signedIn() {
+    step(2);
+    loadTemplates();
+  }
+
+  if (window.nostr) $("#way-nip07").hidden = false;
+  $("#way-nip07").onclick = async () => {
+    fail("#signin-error", "");
+    try { await nc.login("nip07"); signedIn(); }
+    catch (e) { fail("#signin-error", e.message); }
+  };
+
+  $("#way-key").onclick = () => {
+    $("#keyform").hidden = false;
+    $("#newkey").hidden = true;
+    $("#qrbox").hidden = true;
+    $("#key").focus();
+  };
+  $("#key").addEventListener("input", () => {
+    $("#passwrap").hidden = !$("#key").value.trim().startsWith("ncryptsec");
+  });
+  $("#key-go").onclick = async () => {
+    fail("#signin-error", "");
+    const raw = $("#key").value.trim();
+    if (!raw) return fail("#signin-error", say("needKey", "Paste a key first."));
+    $("#key-go").disabled = true;
+    try {
+      // A bunker:// address is a remote signer, not a key, and takes a
+      // different door into the same runtime.
+      if (raw.startsWith("bunker://")) await nc.login("bunker", { uri: raw });
+      else await nc.login("nsec", { key: raw, password: $("#pass").value });
+      $("#key").value = "";                       // out of the DOM the moment it is used
+      signedIn();
+    } catch (e) { fail("#signin-error", e.message); }
+    finally { $("#key-go").disabled = false; }
+  };
+
+  // The signer app. connectRemote() mints the URI and hands back a promise that
+  // settles when the signer answers; the code is drawn here rather than fetched,
+  // because whoever renders it could answer the connection instead of you.
+  let attempt = null;
+  $("#way-remote").onclick = () => {
+    fail("#signin-error", "");
+    $("#keyform").hidden = true;
+    $("#newkey").hidden = true;
+    const box = $("#qrbox");
+    box.hidden = false;
+
+    const start = () => {
+      attempt?.cancel?.();
+      const { uri, ready, cancel } = nc.connectRemote();
+      attempt = { cancel, done: false };
+      const mine = attempt;
+      box.replaceChildren(nc.qrElement(uri, { size: 300 }));
+
+      const open = document.createElement("p");
+      const a = document.createElement("a");
+      a.href = uri;
+      a.textContent = say("qrOpen", "Open in your signer app");
+      open.appendChild(a);
+
+      const status = document.createElement("p");
+      status.className = "note";
+      status.textContent = say("qrWait", "Waiting for the signer. Keep this page open while you approve it.");
+
+      const again = document.createElement("button");
+      again.textContent = say("qrRetry", "Show a new code");
+      again.hidden = true;
+      again.onclick = start;
+
+      box.append(open, status, again);
+      ready.then(
+        () => { mine.done = true; signedIn(); },
+        (e) => {
+          if (mine !== attempt) return;
+          mine.done = true;
+          status.textContent = e?.message || String(e);
+          status.classList.add("bad");
+          again.hidden = false;
+        },
+      );
+      // Tapping the link foregrounds the signer, which can suspend this tab's
+      // socket. A NIP-46 answer is an ephemeral event, so one missed while we
+      // were not listening is gone: say so and offer a fresh code.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible" || mine !== attempt || mine.done) return;
+        status.textContent = say("qrMissed", "No answer came through. Show a new code and try again.");
+        status.classList.add("bad");
+        again.hidden = false;
+      });
+    };
+    start();
+  };
+
+  // A key for somebody who has none. Generated here, shown once, never stored.
+  let fresh = null;
+  $("#way-new").onclick = () => {
+    $("#keyform").hidden = true;
+    $("#qrbox").hidden = true;
+    $("#newkey").hidden = false;
+    if (!fresh) {
+      const signer = new nc.LocalSigner();
+      fresh = { nsec: nc.nip19.nsecEncode(signer.sec), npub: nc.nip19.npubEncode(signer.pubkey) };
+    }
+    $("#newkey-nsec").textContent = fresh.nsec;
+  };
+  $("#newkey-copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(fresh.nsec); $("#newkey-copy").textContent = say("copied", "Copied"); }
+    catch { /* a browser that refuses the clipboard still shows the key on screen */ }
+  };
+  $("#newkey-file").onclick = () => { $("#encwrap").hidden = false; $("#encpass").focus(); };
+  $("#encgo").onclick = () => {
+    const pass = $("#encpass").value;
+    if (pass.length < 8) return fail("#signin-error", say("passShort", "Use at least eight characters."));
+    fail("#signin-error", "");
+    // NIP-49, scrypt-hardened, so the file on disk is worth something less than
+    // the key itself if somebody finds it.
+    const enc = nc.LocalSigner.encrypt(fresh.nsec, pass);
+    const blob = new Blob([
+      "# nsite-clay key backup\n",
+      "# This is your site's key, encrypted with NIP-49 and the password you chose.\n",
+      "# Restore it by pasting the line below into a signer, or into the publisher.\n\n",
+      enc + "\n",
+    ], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `nsite-clay-key-${fresh.npub.slice(0, 12)}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    $("#encgo").textContent = say("newPassDone", "Saved");
+  };
+  $("#newkey-ok").onchange = (e) => { $("#newkey-go").disabled = !e.target.checked; };
+  $("#newkey-go").onclick = async () => {
+    fail("#signin-error", "");
+    try { await nc.login("nsec", { key: fresh.nsec }); signedIn(); }
+    catch (e) { fail("#signin-error", e.message); }
+  };
+
+  // ---- 2. templates ------------------------------------------------------
+
+  async function loadTemplates() {
+    if (state.catalogue.length) return;
+    const host = $("#tpls");
+    try {
+      // Same origin: this wizard is published on the site that carries the
+      // templates, so there is no cross-origin request and nothing to allow.
+      const res = await fetch("/t/index.json", { cache: "no-cache" });
+      state.catalogue = await res.json();
+    } catch (e) {
+      host.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "note bad";
+      p.textContent = say("tplFailed", "Could not load the template list: ") + e.message;
+      host.appendChild(p);
+      return;
+    }
+    host.innerHTML = "";
+    // The block composer first: it is the one to start with.
+    const order = [...state.catalogue].sort((a, b) => (a.name === "cms" ? -1 : b.name === "cms" ? 1 : 0));
+    for (const t of order) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "tpl";
+      card.setAttribute("aria-pressed", "false");
+      const shot = document.createElement("span");
+      shot.className = "shot";
+      if (t.shot) {
+        const img = document.createElement("img");
+        img.src = t.shot; img.alt = ""; img.loading = "lazy";
+        shot.appendChild(img);
+      } else {
+        const none = document.createElement("span");
+        none.className = "none";
+        none.textContent = t.name;
+        shot.appendChild(none);
+      }
+      const body = document.createElement("span");
+      body.className = "body";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = t.name;
+      const title = document.createElement("b");
+      title.textContent = t.title || t.name;
+      const desc = document.createElement("p");
+      desc.textContent = t.description || "";
+      body.append(name, title, desc);
+      card.append(shot, body);
+      card.onclick = () => {
+        state.template = t;
+        for (const c of host.querySelectorAll(".tpl")) c.setAttribute("aria-pressed", String(c === card));
+        $("#tpl-go").disabled = false;
+      };
+      host.appendChild(card);
+    }
+  }
+
+  $("#tpl-back").onclick = () => step(1);
+  $("#tpl-go").onclick = () => { step(3); checkPath(); };
+
+  // ---- 3. where ----------------------------------------------------------
+
+  // A gateway resolves /blog to /blog/index.html, so a path that is not already
+  // a file becomes a directory with a document in it. Typing /blog.html means
+  // exactly that file, which is also allowed.
+  function normalise(input) {
+    let p = String(input || "/").trim();
+    if (!p.startsWith("/")) p = "/" + p;
+    p = p.replace(/\/{2,}/g, "/");
+    if (/\.html?$/i.test(p)) return p;
+    return p.replace(/\/$/, "") + "/index.html";
+  }
+
+  const gateway = (npub, docPath) =>
+    `https://${npub}.nsite.lol${docPath.replace(/index\.html$/, "")}`;
+
+  let checking = null;
+  async function checkPath() {
+    const docPath = normalise($("#path").value);
+    state.path = docPath;
+    state.confirmed = false;
+    $("#path-preview").textContent =
+      say("pathPreview", "Your page will be at ") + gateway(nc.npub, docPath);
+    const box = $("#occupied");
+    box.hidden = true;
+    box.innerHTML = "";
+    fail("#where-error", "");
+
+    // Publishing replaces one entry in a manifest that may already name other
+    // pages. Overwriting the one that is there is a decision, not a default.
+    const token = {};
+    checking = token;
+    let manifest = null;
+    try { manifest = await nc.manifestOf(nc.pubkey, ""); } catch { /* offline is not occupied */ }
+    if (checking !== token) return;
+    if (!manifest) return;
+
+    const paths = nc.manifestPaths(manifest);
+    const taken = Object.keys(paths);
+    if (!taken.length) return;
+
+    const here = !!paths[docPath];
+    box.hidden = false;
+    box.className = here ? "card warn" : "card";
+    box.style.margin = "1.1rem 0 0";
+
+    const h = document.createElement("h2");
+    h.textContent = here
+      ? say("occTitle", "There is already a page here")
+      : say("occOtherTitle", "This key already has a site");
+    const p = document.createElement("p");
+    p.className = "sub";
+    p.textContent = here
+      ? say("occSub", "Publishing will replace what is at this path. Everything else this key has published stays where it is, and the old version is kept in the page's history.")
+      : say("occOtherSub", "Your other pages are left alone. This one is added alongside them.");
+    box.append(h, p);
+
+    const list = document.createElement("p");
+    list.className = "note mono";
+    list.textContent = say("occList", "Already published: ") + taken.sort().join("  ");
+    box.appendChild(list);
+
+    if (here) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const look = document.createElement("a");
+      look.className = "btn";
+      look.href = gateway(nc.npub, docPath);
+      look.target = "_blank"; look.rel = "noopener";
+      look.textContent = say("occLook", "See what is there now");
+      row.appendChild(look);
+      box.appendChild(row);
+
+      const confirm = document.createElement("p");
+      confirm.className = "note";
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.style.width = "auto";
+      cb.onchange = () => { state.confirmed = cb.checked; };
+      const span = document.createElement("span");
+      span.textContent = " " + say("occConfirm", "Replace the page that is there.");
+      label.append(cb, span);
+      confirm.appendChild(label);
+      box.appendChild(confirm);
+    }
+  }
+
+  let debounce;
+  $("#path").addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(checkPath, 350);
+  });
+  $("#where-back").onclick = () => step(2);
+  $("#where-go").onclick = () => {
+    const docPath = normalise($("#path").value);
+    if (!/^\/[\w\-./]*$/.test(docPath)) {
+      return fail("#where-error", say("pathBad", "A path can hold letters, numbers, dashes and slashes."));
+    }
+    const box = $("#occupied");
+    if (!box.hidden && box.classList.contains("warn") && !state.confirmed) {
+      return fail("#where-error", say("needConfirm", "Tick the box to confirm you are replacing that page."));
+    }
+    state.path = docPath;
+    step(4);
+    publish();
+  };
+
+  // ---- 4. publish --------------------------------------------------------
+
+  const log = $("#log");
+  function line(text, status) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    if (status) li.setAttribute(status === "ok" ? "data-ok" : "data-bad", "");
+    log.appendChild(li);
+    return li;
+  }
+
+  // Everything the template's own npub appears in becomes yours: nc:owner, the
+  // feed that pulls the author's notes, the link to their profile. Replacing
+  // only nc:owner would hand somebody a blog whose feed is another person's.
+  function personalise(html, from, toNpub, docPath) {
+    let out = html;
+    if (from && from !== toNpub) {
+      out = out.split(from).join(toNpub);
+      const fromHex = nc.toHex(from), toHexKey = nc.toHex(toNpub);
+      if (fromHex && toHexKey) out = out.split(fromHex).join(toHexKey);
+    }
+    out = out.replace(/nc:owner="[^"]*"/, `nc:owner="${toNpub}"`);
+    out = out.replace(/\s*nc:site="[^"]*"/, "");        // a fresh site is a root site
+    out = /nc:path="[^"]*"/.test(out)
+      ? out.replace(/nc:path="[^"]*"/, `nc:path="${docPath}"`)
+      : out.replace(/<html\b/i, `<html nc:path="${docPath}"`);
+    return out;
+  }
+
+  async function publish() {
+    log.innerHTML = "";
+    $("#retry-row").hidden = true;
+    $("#done-card").hidden = true;
+    $("#progress-card").hidden = false;
+
+    const enc = new TextEncoder();
+    const t = state.template;
+    const docPath = state.path;
+
+    try {
+      line(say("logFetch", "Reading the template and the runtime…"));
+      const shared = [
+        ["/nsite-clay.js", "text/javascript"],
+        ["/nsite-clay-base.css", "text/css"],
+        ["/nsite-clay-chrome.js", "text/javascript"],
+      ];
+      const [tplHtml, ...sharedText] = await Promise.all([
+        fetch(`/t/${t.name}/index.html`, { cache: "no-cache" }).then((r) => {
+          if (!r.ok) throw new Error(`${t.name}: ${r.status}`);
+          return r.text();
+        }),
+        ...shared.map(([p]) => fetch(p, { cache: "no-cache" }).then((r) => {
+          if (!r.ok) throw new Error(`${p}: ${r.status}`);
+          return r.text();
+        })),
+      ]);
+
+      // A template may ship more than a document. Those files sit next to it in
+      // the catalogue and have to sit next to it in the published site too, or
+      // the page arrives referencing pictures that were never uploaded.
+      const dir = docPath.slice(0, docPath.lastIndexOf("/") + 1);
+      const extras = await Promise.all((t.files || [])
+        .filter((f) => f !== "index.html")
+        .map(async (f) => {
+          const r = await fetch(`/t/${t.name}/${f}`, { cache: "no-cache" });
+          if (!r.ok) throw new Error(`${f}: ${r.status}`);
+          const buf = new Uint8Array(await r.arrayBuffer());
+          return { path: dir + f, bytes: buf, type: r.headers.get("content-type") || "application/octet-stream" };
+        }));
+
+      // The published document hardcodes its asset URLs and a gateway serves
+      // them with a cache lifetime, so a later runtime at the same path would
+      // be invisible to a browser holding the old one. The content hash in the
+      // name makes a new build a new URL, which no cache can answer from stock.
+      const files = [];
+      const renames = [];
+      sharedText.forEach((text, i) => {
+        const [path, type] = shared[i];
+        const dot = path.lastIndexOf(".");
+        const stamped = `${path.slice(0, dot)}-${nc.hashText(text).slice(0, 8)}${path.slice(dot)}`;
+        renames.push([path, stamped]);
+        files.push({ path: stamped, bytes: enc.encode(text), type });
+      });
+
+      let html = personalise(tplHtml, t.owner, nc.npub, docPath);
+      for (const [from, to] of renames.sort((a, b) => b[0].length - a[0].length)) {
+        html = html.split(from).join(to);
+      }
+      files.push(...extras);
+      files.unshift({ path: docPath, bytes: enc.encode(html), type: "text/html" });
+      line(say("logReady", "Ready: ") + files.length + say("logFiles", " files"), "ok");
+
+      const title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "";
+      const uploading = line(say("logUpload", "Uploading to Blossom…"));
+      const out = await nc.publishFiles(files, {
+        title,
+        onProgress: ({ stage, path, done, total, uploaded, reused }) => {
+          if (stage === "upload") uploading.textContent = `${say("logUpload", "Uploading to Blossom…")} ${done + 1}/${total}  ${path}`;
+          if (stage === "manifest") {
+            uploading.setAttribute("data-ok", "");
+            // Say when nothing had to be sent. The runtime is the same blob for
+            // everybody, so most of a publish is usually already there.
+            uploading.textContent = reused
+              ? `${say("logUploaded", "Every file is on Blossom")} (${uploaded} ${say("logSent", "uploaded")}, ${reused} ${say("logReused", "already there")})`
+              : say("logUploaded", "Every file is on Blossom");
+            line(say("logManifest", "Publishing the manifest to the relays…"));
+          }
+        },
+      });
+      log.lastElementChild.setAttribute("data-ok", "");
+      log.lastElementChild.textContent = say("logPublished", "Manifest published, version filed");
+
+      const url = gateway(nc.npub, docPath);
+      $("#done-url").textContent = url;
+      $("#done-open").href = url + "#edit";
+      $("#done-plain").href = url;
+      $("#progress-card").hidden = true;
+      $("#done-card").hidden = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      line((e && e.message) || String(e), "bad");
+      $("#retry-row").hidden = false;
+    }
+  }
+
+  $("#retry").onclick = publish;
+
+  // ---- start -------------------------------------------------------------
+  step(1);
+})();
+</script>
+</body>
+</html>

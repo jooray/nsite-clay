@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<!--
+  Od ničoho k zverejnenej stránke.
+
+  Obrázky pochádzajú z tools/publish-walkthrough.mjs, ktorý ženie skutočný
+  publisher proti lokálnemu relayu a Blossom serveru a odfotí každý krok.
+  Spusti ho znova a obrázky sa vygenerujú nanovo z fungujúceho softvéru, nie
+  z pamäte.
+
+  Táto stránka je súvislý text, takže jej preklady sú skutočné súbory:
+  site/es/guide.html a jeho súrodenci. Zdieľané sú len screenshoty.
+-->
+<html lang="sk"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/sk/guide.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: od ničoho k zverejnenej stránke</title>
+<meta name="description" content="Návod so screenshotmi: vytvor si kľúč, zverejni stránku priamo z prehliadača, pridaj obrázok a Nostr feed a ulož ju. Príkladom je stránka pre Nostr meetup.">
+<link rel="alternate" hreflang="en" href="/guide.html">
+<link rel="alternate" hreflang="es" href="/es/guide.html">
+<link rel="alternate" hreflang="sk" href="/sk/guide.html">
+<link rel="alternate" hreflang="cs" href="/cs/guide.html">
+<link rel="alternate" hreflang="x-default" href="/guide.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+    --violet: #AB82F1; --ink-faint: #6F5D8E;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --nc-chrome-font: var(--sans); --nc-mono: var(--mono);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 16.5px/1.7 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 44rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+           color: var(--ink-faint); padding-top: 2.5rem; flex-wrap: wrap; }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
+  .crumb .langs { margin-left: auto; display: flex; gap: .55rem; }
+
+  h1 { font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -.03em; margin: 1.1rem 0 .6rem; line-height: 1.1; }
+  .lede { color: var(--nc-ink-dim); font-size: 1.1rem; margin: 0 0 1.4rem; }
+  h2 { font-size: 1.5rem; letter-spacing: -.02em; margin: 3.6rem 0 .8rem; }
+  h2 .n {
+    display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; margin-right: .5rem;
+    border-radius: 50%; background: var(--nc-accent); color: var(--nc-accent-ink);
+    font-size: .95rem; font-weight: 700; vertical-align: .05em;
+  }
+  h3 { font-size: 1.1rem; margin: 2.2rem 0 .5rem; }
+  p { margin: 0 0 1.1rem; }
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+
+  figure { margin: 1.6rem 0 2rem; }
+  figure img {
+    display: block; width: 100%; height: auto; border-radius: var(--nc-radius);
+    border: 1px solid var(--nc-edge); background: #100722;
+  }
+  figcaption { font-size: .88rem; color: var(--nc-ink-dim); margin-top: .6rem; }
+
+  .aside {
+    border: 1px solid var(--nc-edge); border-left: 3px solid var(--nc-accent);
+    border-radius: var(--nc-radius); background: var(--nc-panel);
+    padding: 1.1rem 1.3rem; margin: 1.8rem 0;
+  }
+  .aside p:last-child { margin-bottom: 0; }
+  .aside b { color: var(--nc-ink); }
+
+  .warnbox {
+    border: 1px solid #7a4a2a; border-left: 3px solid #E08B56; border-radius: var(--nc-radius);
+    background: #2a1710; padding: 1.1rem 1.3rem; margin: 1.8rem 0;
+  }
+  .warnbox p:last-child { margin-bottom: 0; }
+  .warnbox b { color: #F0B48A; }
+
+  .cta { display: flex; gap: .6rem; flex-wrap: wrap; margin: 2rem 0 0; }
+  .cta a {
+    font-size: .95rem; font-weight: 600; text-decoration: none; padding: .65rem 1.3rem;
+    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge); color: var(--nc-ink);
+  }
+  .cta a.primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); }
+  .cta a:hover { border-color: var(--nc-accent); }
+
+  /* The terminal route, folded away. It is a real option and not the first one,
+     so it gets a disclosure rather than a section of its own. */
+  details {
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+    background: var(--nc-panel); padding: .3rem 1.3rem; margin: 1.8rem 0;
+  }
+  details[open] { padding-bottom: 1rem; }
+  summary {
+    cursor: pointer; padding: .9rem 0; font-weight: 600; font-size: .96rem;
+    color: var(--nc-ink); list-style-position: outside;
+  }
+  summary::marker { color: var(--nc-accent); }
+  summary:hover { color: var(--violet); }
+  details p:last-child { margin-bottom: 0; }
+
+  pre {
+    background: #100722; border: 1px solid var(--nc-edge); border-radius: var(--nc-radius-sm);
+    padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1.1rem;
+    font: .85rem/1.7 var(--mono); color: #D9CCF3;
+  }
+  pre code { color: inherit; font-size: 1em; }
+
+  nav.toc {
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+    background: var(--nc-panel); padding: 1.1rem 1.4rem; margin: 2.2rem 0 0;
+  }
+  nav.toc p { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
+              color: var(--ink-faint); margin: 0 0 .5rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; font-size: .95rem; }
+  nav.toc li { margin-bottom: .25rem; }
+  nav.toc a { text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  footer { border-top: 1px solid var(--nc-edge); margin-top: 4.5rem; padding: 2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+  footer a { color: var(--nc-ink-dim); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="crumb">
+    <img src="/nsite-clay-transparent.png" alt="" width="28" height="28">
+    <a href="/">nsite-clay</a> <span>/</span> <span>návod</span>
+    <span class="langs">
+      <a href="/guide.html" hreflang="en">EN</a>
+      <a href="/es/guide.html" hreflang="es">ES</a>
+      <a href="/sk/guide.html" hreflang="sk">SK</a>
+      <a href="/cs/guide.html" hreflang="cs">CS</a>
+    </span>
+  </p>
+
+  <h1>Od ničoho k zverejnenej stránke</h1>
+  <p class="lede">Toto je celá cesta od prázdnej karty v prehliadači k stránke, ktorá je online, so
+  screenshotmi z každého kroku. Vytvoríš kľúč, zverejníš stránku, vložíš do nej obrázok a Nostr
+  feed a uložíš ju. Netreba terminál ani registráciu.</p>
+
+  <p>Príkladom je stránka pre Nostr meetup, ktorý sa koná počas
+  <a href="https://lunarpunk.sk" rel="noopener">Lunarpunk Košice</a> 5. septembra 2026. Postavíš ju
+  za asi desať minút a chýba jej ešte obrázok, program a cudzie posty, čo stačí na to, aby si pri
+  nej vyskúšal väčšinu z toho, čo editor vie.</p>
+
+  <nav class="toc">
+    <p>Na tejto stránke</p>
+    <ol>
+      <li><a href="#key">Získanie kľúča</a></li>
+      <li><a href="#template">Výber šablóny</a></li>
+      <li><a href="#address">Výber adresy</a></li>
+      <li><a href="#publish">Zverejnenie</a></li>
+      <li><a href="#edit">Úprava stránky</a></li>
+      <li><a href="#picture">Pridanie obrázka</a></li>
+      <li><a href="#video">Pridanie videa</a></li>
+      <li><a href="#feed">Zobrazenie Nostr postov</a></li>
+      <li><a href="#write">Napísanie postu</a></li>
+      <li><a href="#save">Uloženie</a></li>
+      <li><a href="#history">Návrat k staršej verzii</a></li>
+      <li><a href="#more">Druhá stránka pod tým istým kľúčom</a></li>
+      <li><a href="#address-of">Kde tvoja stránka býva</a></li>
+    </ol>
+  </nav>
+
+  <div class="cta">
+    <a class="primary" href="/deploy.html">Otvor publisher</a>
+    <a href="/templates.html">Najprv sa pozri na šablóny</a>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 1 -->
+  <h2 id="key"><span class="n">1</span>Získanie kľúča</h2>
+
+  <p>Stránka tu patrí kľúču, nie účtu. Nie je čo registrovať a nie je koho sa pýtať. Kľúč, ktorý
+  stránku zverejní, je jediný, ktorý ju dokáže neskôr zmeniť, takže keď ho stratíš, stránka
+  zamrzne presne v takom stave, v akom je.</p>
+
+  <p>Otvor <a href="/deploy.html">publisher</a>. Ponúka štyri cesty dnu.</p>
+
+  <figure>
+    <img src="/shots/p1-start.png" alt="Prvý krok publishera, ktorý sa pýta, kto zverejňuje, so štyrmi spôsobmi prihlásenia" loading="lazy" width="1400" height="973">
+    <figcaption>Štyri dvere na to isté miesto. Ak máš signer aplikáciu, použi ju.</figcaption>
+  </figure>
+
+  <ul>
+    <li><b>Rozšírenie prehliadača.</b> Alby, nos2x a podobné. Objaví sa len vtedy, keď je nejaké
+    nainštalované. Nič netreba písať a kľúč zostáva v rozšírení.</li>
+    <li><b>Signer aplikácia.</b> Amber a ďalšie NIP-46 signery. Stránka ukáže kód, naskenuješ ho
+    a tvoj kľúč sa k prehliadaču vôbec nedostane. Skenuj ho z druhého zariadenia: keď na ten istý
+    telefón klikneš na odkaz, táto stránka sa dostane na pozadie a karta na pozadí môže odpoveď
+    zmeškať.</li>
+    <li><b>Vlož kľúč.</b> <code>nsec</code>, zašifrovaný <code>ncryptsec</code>, alebo adresu
+    <code>bunker://</code>. Kľúč zostáva len v pamäti karty a nikam sa nezapisuje, ale vložený
+    kľúč je kľúč, ktorý sa dotkol webovej stránky, a preto je v poradí tretí.</li>
+    <li><b>Ešte nemám kľúč.</b> Vytvor si ho tu.</li>
+  </ul>
+
+  <h3>Vytvorenie kľúča</h3>
+
+  <p>Stlač <b>Ešte nemám kľúč</b> a v prehliadači sa vygeneruje nový kľúč. Vidíš ho len raz. Nikam
+  inam sa neposiela a nikto si z neho nenechá kópiu, takže keď zavrieš kartu bez toho, aby si si
+  ho zapísal, je preč.</p>
+
+  <figure>
+    <img src="/shots/p2-new-key.png" alt="Čerstvo vygenerovaný tajný kľúč zobrazený celý, s tlačidlami na skopírovanie alebo uloženie zašifrovanej zálohy" loading="lazy" width="1400" height="973">
+    <figcaption>Zobrazí sa len raz. Skopíruj si ho do správcu hesiel skôr, než budeš pokračovať.</figcaption>
+  </figure>
+
+  <p>Oplatí sa stiahnuť si aj záložný súbor. Zapíše tvoj kľúč zašifrovaný heslom, ktoré si zvolíš,
+  podľa NIP-49, takže súbor na disku už nie je ten kľúč sám osebe. Stratiť to heslo je rovnako zlé
+  ako stratiť samotný kľúč, takže si niekam ulož aj heslo.</p>
+
+  <figure>
+    <img src="/shots/p3-backup.png" alt="Krok zálohy, ktorý sa pýta na heslo na zašifrovanie súboru s kľúčom" loading="lazy" width="1400" height="973">
+    <figcaption>Heslo súbor zašifruje. Stránka si z neho nič neuchováva.</figcaption>
+  </figure>
+
+  <div class="warnbox">
+    <p><b>Neexistuje obnovenie.</b> Nikto nedrží kópiu, ktorú by ti mohol poslať, pretože nikto
+    kópiu nedrží vôbec. To je cena za to, že ho naozaj vlastníš. Kľúč si zapíš skôr, než
+    zaškrtneš políčko.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 2 -->
+  <h2 id="template"><span class="n">2</span>Výber šablóny</h2>
+
+  <p>Každá šablóna je hotová stránka, do ktorej píšeš navrch, nie prázdny rám. Sťahujú sa priamo
+  z tejto stránky, takže sa nič nesťahuje odnikiaľ inde.</p>
+
+  <figure>
+    <img src="/shots/p4-templates.png" alt="Mriežka kariet so šablónami a ich screenshotmi, prvý je blokový editor" loading="lazy" width="1400" height="973">
+    <figcaption>Blokový editor je prvý, lebo sa z neho začína najľahšie.</figcaption>
+  </figure>
+
+  <p>Tento návod používa tú, čo sa volá <code>cms</code>. Je poskladaná z blokov, ktoré pridávaš
+  a preusporadúvaš: nadpis, odsek, obrázok, video, rad kariet, Nostr feed. Ostatné sú jednotlivé
+  dizajny, ktoré sa hodia na konkrétny typ stránky, a rovnako do nich môžeš písať navrch.</p>
+
+  <div class="aside">
+    <p>Nech si vyberieš ktorúkoľvek, ukážkový obsah šablóny ukazuje na jej autora: feed ťahá jeho
+    poznámky, pätička odkazuje na jeho profil. Publisher všetko toto pri zverejnení nahradí tvojím
+    kľúčom, takže stránka, ktorá pristane online, je tvoja od prvého bajtu.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 3 -->
+  <h2 id="address"><span class="n">3</span>Výber adresy</h2>
+
+  <p>Tvoja stránka býva na tvojom npube na hociktorom nsite gatewayi. Tu si vyberáš cestu vnútri
+  nej. Samotné lomítko je titulná stránka.</p>
+
+  <figure>
+    <img src="/shots/p5-address.png" alt="Krok s adresou, ktorý ukazuje celú nsite.lol adresu, akú stránka bude mať" loading="lazy" width="1400" height="973">
+    <figcaption>Celá adresa sa ukáže ešte pred zverejnením.</figcaption>
+  </figure>
+
+  <p>Napíš <code>/meetup</code> a stránka skončí na
+  <code>your-npub.nsite.lol/meetup</code>. Cesty, ktoré nekončia na <code>.html</code>, sa berú
+  ako priečinky, presne tak ich totiž gatewaye vyhodnocujú.</p>
+
+  <p>Pod jedným npubom môže byť koľko stránok chceš a navzájom si neprekážajú. Publisher
+  skontroluje, čo už ten kľúč zverejnil, a povie ti to skôr, než budeš pokračovať.</p>
+
+  <!-- ---------------------------------------------------------------- 4 -->
+  <h2 id="publish"><span class="n">4</span>Zverejnenie</h2>
+
+  <p>Stlač tlačidlo. Každý súbor sa nahrá na
+  <a href="https://github.com/hzrd149/blossom" rel="noopener">Blossom</a> server, ktorý ukladá
+  bloby podľa ich vlastného hashu. Podpísaný manifest potom povie, na aký hash ukazuje ktorá
+  cesta, a druhý event zaznamená túto sadu hashov ako verziu, ku ktorej sa dá neskôr vrátiť.</p>
+
+  <p>Ak podpisuješ aplikáciou a nie vloženým kľúčom, požiada ťa o schválenie každého podpisu.</p>
+
+  <figure>
+    <img src="/shots/p6-published.png" alt="Posledný krok, ktorý ukazuje zverejnenú adresu a tlačidlá na jej otvorenie" loading="lazy" width="1400" height="973">
+    <figcaption>Adresa je skutočná a funguje na hociktorom nsite gatewayi, nielen na tomto.</figcaption>
+  </figure>
+
+  <p>Tým je stránka online. Gatewayu môže chvíľu trvať, kým si všimne úplne novú stránku, takže
+  ak tam hneď nie je, počkaj a obnov stránku.</p>
+
+  <div class="aside">
+    <p>Toto je posledný raz, čo potrebuješ publisher. Odteraz sa stránka upravuje a znovu
+    zverejňuje sama.</p>
+  </div>
+
+  <details>
+    <summary>Zverejnenie z terminálu namiesto prehliadača</summary>
+    <p>CLI robí tú istú prácu pre každého, kto chce mať priečinok na disku. Nie je to kratšia
+    cesta a nepotrebuješ ju, ale je tu pre prípad, že chceš súbory pod kontrolou verzií alebo
+    stránku, ktorú postaví skript.</p>
+<pre><code>npx nsite-clay init mysite --template=cms --npub=npub1…
+npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
+    <p>Radšej použi vzdialený signer než holý kľúč a podaj ho cez premennú prostredia, nie ako
+    argument, pretože argument vidí každý proces na počítači:</p>
+<pre><code>NOSTR_BUNKER_URI="bunker://…" npx nsite-clay deploy mysite</code></pre>
+    <p>Po prvom nasadení sa stránka ukladá sama, takže sa do terminálu vraciaš len pre zmeny,
+    ktoré robíš mimo prehliadača.</p>
+  </details>
+
+  <!-- ---------------------------------------------------------------- 5 -->
+  <h2 id="edit"><span class="n">5</span>Úprava stránky</h2>
+
+  <p>Otvor adresu s <code>#edit</code> na konci a prihlás sa tým istým kľúčom. Bez
+  <code>#edit</code> dostane čitateľ stránku a nič, na čo by sa dalo kliknúť, presne to, čo má
+  vidieť každý ostatný.</p>
+
+  <figure>
+    <img src="/shots/p7-editing.png" alt="Zverejnená stránka v režime úprav, s panelom dole a ovládacou lištou pri každom bloku" loading="lazy" width="1400" height="973">
+    <figcaption>Režim úprav: panel po celej šírke dole a lišta pri každom bloku.</figcaption>
+  </figure>
+
+  <p>Klikni do ľubovoľného textu a píš. Nadpisy, odseky, popisky aj názvy kariet sú na stránke
+  len text, žiadne polia a žiadny formulár za tým nie je. Keď označíš pár slov, vyskočí malý
+  panel na tučné písmo, odkazy a zoznamy.</p>
+
+  <p>Každý blok má v rohu lištu: presuň ho hore, presuň ho dole, duplikuj ho, zmaž ho, a tam, kde
+  blok drží obrázok alebo feed, aj ozubené koliesko, ktoré znovu otvorí výber. Medzi blokmi je
+  <code>+</code>, ktorý otvorí paletu.</p>
+
+  <figure>
+    <img src="/shots/p8-palette.png" alt="Paleta blokov s textovými, mediálnymi, rozloženými a Nostr blokmi" loading="lazy" width="1400" height="973">
+    <figcaption>Každý blok je obyčajné HTML. Čitatelia dostanú obyčajný dokument.</figcaption>
+  </figure>
+
+  <p>Pre stránku meetupu: názov, pod ním dátum, úvodná veta, nadpis, odsek o tom, čo sa bude
+  diať, a rad troch kariet s programom.</p>
+
+  <!-- ---------------------------------------------------------------- 6 -->
+  <h2 id="picture"><span class="n">6</span>Pridanie obrázka</h2>
+
+  <p>Ozubené koliesko obrázkového bloku otvorí výber. Pretiahni naň súbor, vyber si niektorý
+  z už nahraných, alebo vlož adresu URL.</p>
+
+  <figure>
+    <img src="/shots/p9-picture.png" alt="Dialóg s obrázkom, s plochou na pretiahnutie, mriežkou už nahraných obrázkov a poliami na URL, alt text a popisku" loading="lazy" width="1400" height="973">
+    <figcaption>Nahraný súbor ide na tvoje Blossom servery, adresovaný vlastným hashom.</figcaption>
+  </figure>
+
+  <p>Pretiahnutý súbor sa nahrá na tie isté Blossom servery, ktoré držia stránku, pod tvojím
+  kľúčom. Mriežka ukazuje všetko, čo ten kľúč nahral predtým, takže druhýkrát, keď budeš chcieť
+  obrázok, stačia dve kliknutia.</p>
+
+  <p>Vyplň alt text. Je to to, čo namiesto obrázka dostane niekto, kto používa čítačku obrazovky,
+  a stojí ťa to jednu vetu.</p>
+
+  <!-- ---------------------------------------------------------------- 7 -->
+  <h2 id="video"><span class="n">7</span>Pridanie videa</h2>
+
+  <p>Video blok zoberie odkaz na YouTube alebo Vimeo, alebo súbor na nahratie.</p>
+
+  <figure>
+    <img src="/shots/g6-add-video.png" alt="Panel na vloženie videa s vyplneným odkazom na YouTube" loading="lazy">
+    <figcaption>Vlož ten odkaz, ktorý by si normálne poslal ďalej.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="/shots/g7-video-in-page.png" alt="Video v stránke ako náhľad s tlačidlom na prehratie" loading="lazy">
+    <figcaption>Pristane ako náhľad s tlačidlom na prehratie.</figcaption>
+  </figure>
+
+  <div class="aside">
+    <p>Prehrávač sa načíta, až keď niekto stlačí play. Dovtedy čitateľov YouTube nesleduje a
+    náhľad funguje ako odkaz aj tým, čo majú vypnutý JavaScript.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 8 -->
+  <h2 id="feed"><span class="n">8</span>Zobrazenie Nostr postov</h2>
+
+  <p>Blok Nostr feedu ukazuje posty od koho uvedieš. Je to dobrý spôsob, ako držať stránku
+  aktuálnu bez toho, aby si sa jej dotýkal: posty sa načítajú vždy, keď čitateľ stránku otvorí,
+  takže stránka je čerstvá presne tak, ako účet za ňou.</p>
+
+  <p>Stránka meetupu ukazuje účet Lunarpunk Košice, pretože práve v rámci tohto podujatia sa
+  meetup koná. Vlož jeden alebo viac npubov a posty sa zobrazia, takže vidíš, čo sa chystáš
+  ukázať.</p>
+
+  <figure>
+    <img src="/shots/p10-feed.png" alt="Dialóg Nostr feedu, ktorý vypisuje skutočné posty z účtu, ktorého npub bol zadaný" loading="lazy" width="1400" height="973">
+    <figcaption>Skutočné posty, vypísané už počas písania. Klikni na niektorý a pripneš ho navrch.</figcaption>
+  </figure>
+
+  <p>Môžeš si vybrať krátke poznámky, dlhé články alebo obrázkové posty, zvoliť, koľko ich
+  zobraziť, a niektoré pripnúť navrch. Každý podpis sa overuje priamo v prehliadači čitateľa,
+  takže relay, ktorý by podsunul niečo, čo autor nenapísal, sa odhalí namiesto toho, aby sa
+  zobrazil.</p>
+
+  <div class="aside">
+    <p>Existuje aj blok na <b>tvoj vlastný post</b>. Ten post skopíruje priamo do stránky namiesto
+    toho, aby ho ťahal odniekiaľ, takže sa dá prečítať bez relaya a bez JavaScriptu, no stále si
+    pamätá, z ktorého Nostr eventu pochádza. Uprav post v hociktorom Nostr klientovi a kópiu je
+    možné znova zladiť s originálom.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 9 -->
+  <h2 id="write"><span class="n">9</span>Napísanie postu</h2>
+
+  <p>Stránka, ktorá vie ukázať tvoje posty, ich vie aj písať. <b>Napísať</b> v paneli s nástrojmi
+  vypíše všetko, čo si doteraz zverejnil, a otvorí hociktorý článok na úpravu.</p>
+
+  <figure>
+    <img src="/shots/g10-your-posts.png" alt="Zoznam zverejnených článkov s tlačidlami na úpravu a zobrazenie" loading="lazy">
+    <figcaption>Tvoje články a poznámky, s tlačidlom na nový.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="/shots/g11-write-article.png" alt="Editor článku s názvom, adresou, zhrnutím, obrázkom, témami a textom" loading="lazy">
+    <figcaption>Dlhý post má názov, zhrnutie, nepovinný úvodný obrázok, témy a samotný
+    text.</figcaption>
+  </figure>
+
+  <p>Poľom, ktoré treba vyplniť správne, je <b>adresa</b>. Cez ňu vedie odkaz na tvoj článok
+  a opätovné zverejnenie pod tou istou adresou je spôsob, ako ho upraviť: oprav preklep,
+  zverejni, a každá Nostr aplikácia ukáže na tom istom odkaze opravenú verziu, s pôvodným
+  dátumom stále na nej.</p>
+
+  <p>Krátke poznámky fungujú rovnako, až na to, že sa po zverejnení už nedajú upraviť. Panel na to
+  upozorní ešte pred zverejnením.</p>
+
+  <p>Posty a stránky sú oddelené. Napísanie poznámky nezmení stránku a uloženie stránky sa
+  nedotkne postov.</p>
+
+  <!-- ---------------------------------------------------------------- 10 -->
+  <h2 id="save"><span class="n">10</span>Uloženie</h2>
+
+  <p>Stlač <b>Uložiť</b>. Stránka sa serializuje, výsledok nahrá ako jeden blob a znovu zverejní
+  manifest, ktorý naň ukazuje. Odteraz každý, kto stránku načíta, dostane tvoju verziu, ako
+  obyčajný statický dokument, v ktorom sú zmeny už zahrnuté.</p>
+
+  <figure>
+    <img src="/shots/p13-reader-top.png" alt="Hotová stránka meetupu tak, ako ju vidí čitateľ, bez ovládania úprav" loading="lazy" width="1400" height="973">
+    <figcaption>To, čo dostane každý ostatný: žiadny panel, žiadne lišty, na prečítanie netreba
+    JavaScript.</figcaption>
+  </figure>
+
+  <p>Uloženie trvá asi sekundu. Ak sa od posledného uloženia nič nezmenilo, povie to a neurobí
+  nič, takže druhé stlačenie neuškodí. Kto ešte číta starú verziu, dozvie sa, že existuje novšia,
+  a stránka sa mu obnoví sama, takže nikto nemusí vedieť, čo je tvrdý refresh.</p>
+
+  <p>Keď sa uloženie nepodarí, povie prečo. Najčastejšou príčinou je uspatá signer aplikácia:
+  zobuď ju, potvrď a stlač Uložiť znova.</p>
+
+  <!-- ---------------------------------------------------------------- 11 -->
+  <h2 id="history"><span class="n">11</span>Návrat k staršej verzii</h2>
+
+  <p>Každé uloženie sa uchová. <b>História</b> ich vypíše všetky.</p>
+
+  <figure>
+    <img src="/shots/g12-history.png" alt="História verzií so zoznamom uložení podľa dátumu, každé s tlačidlom na prečítanie" loading="lazy">
+    <figcaption>Ktorúkoľvek staršiu verziu si prečítaj, alebo ju vráť späť.</figcaption>
+  </figure>
+
+  <p>Obnovením starej verzie tú súčasnú nezahodíš. Stane sa z nej ďalší záznam v zozname, takže
+  si to môžeš znova rozmyslieť.</p>
+
+  <!-- ---------------------------------------------------------------- 12 -->
+  <h2 id="more"><span class="n">12</span>Druhá stránka pod tým istým kľúčom</h2>
+
+  <p>Vráť sa do publishera, prihlás sa tým istým kľúčom a vyber si inú cestu. Povie ti, čo tam
+  už je.</p>
+
+  <figure>
+    <img src="/shots/p14-second-page.png" alt="Krok s adresou, ktorý hlási, že tento kľúč už má stránku, s výpisom už zverejnených ciest" loading="lazy" width="1400" height="973">
+    <figcaption>Pridanie stránky na voľnú cestu nechá všetko ostatné netknuté.</figcaption>
+  </figure>
+
+  <p>Výber cesty, ktorá je už obsadená, je iná vec, a publisher to nespraví potichu.</p>
+
+  <figure>
+    <img src="/shots/p15-overwrite-warning.png" alt="Upozornenie, že na tejto ceste už stránka existuje, s odkazom na jej pozretie a políčkom na zaškrtnutie pred pokračovaním" loading="lazy" width="1400" height="973">
+    <figcaption>Najprv sa pozri, čo tam je. Zverejnenie nebude pokračovať, kým to nepotvrdíš.</figcaption>
+  </figure>
+
+  <p>Ani vtedy stará stránka nezmizne: nahradenie je nová verzia a história verzií stále drží to,
+  čo tam bolo predtým.</p>
+
+  <!-- ---------------------------------------------------------------- 13 -->
+  <h2 id="address-of"><span class="n">13</span>Kde tvoja stránka býva</h2>
+
+  <p>Tvoja stránka býva na tvojom npube:</p>
+
+<pre><code>https://&lt;your npub&gt;.nsite.lol/</code></pre>
+
+  <p>Tá adresa je tvoja preto, že kľúč je tvoj. Nikto ti ju nepridelil a nikto ti ju nezoberie.
+  Tú istú stránku z tých istých eventov obsluhuje viacero gatewayov, takže keď jeden nejde,
+  zmeníš hostname a nič iné sa nehýbe:
+  <a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a>,
+  <a href="https://nwb.tf">nwb.tf</a>, <a href="https://nsite.run">nsite.run</a>,
+  <a href="https://nsite.cloud">nsite.cloud</a> a
+  <a href="https://shakespeare.to">shakespeare.to</a>.
+  Ak chceš pozadie, najzrozumiteľnejšie vysvetlenie toho, čo nsite vlastne je, nájdeš na
+  <a href="https://nsite.run">nsite.run</a>.</p>
+
+  <p>Pre vlastnú doménu nasmeruj CNAME záznam na gateway a stránka bude odpovedať aj na nej.</p>
+
+  <!-- ---------------------------------------------------------------- -->
+  <h2>Čo si zapamätať</h2>
+
+  <p>Kľúč si poriadne zálohuj, pretože je to stránka sama a nedá sa vydať odznova.</p>
+
+  <p>Čitatelia od teba nepotrebujú nič. Zverejnená stránka je statické HTML a dá sa čítať aj
+  s vypnutým skriptovaním, okrem Nostr feedov, ktoré sú jediné, čo sa načítava až pri otvorení
+  stránky.</p>
+
+  <p>Nič z toho, čo robíš, nie je ničivé. Každé uloženie založí verziu a bloby sú adresované
+  vlastným hashom, takže žiadna úprava neprepíše bajty tej staršej.</p>
+
+  <p>Odísť môžeš, kedykoľvek chceš. Stránka je jeden HTML súbor: ulož si ho z prehliadača, daj
+  ho hocikde inde a je to stále tá istá stránka.</p>
+
+  <div class="cta">
+    <a class="primary" href="/deploy.html">Zverejni stránku</a>
+    <a href="/templates.html">Šablóny</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><a href="/">nsite-clay</a> · <a href="/templates.html">Šablóny</a> ·
+       <a href="/deploy.html">Zverejniť</a> · <a href="/llms.txt">Pre agentov</a></p>
+    <p>Screenshoty na tejto stránke vznikajú tak, že sa skutočný publisher ženie proti lokálnemu
+    relayu, takže ukazujú fungujúci softvér, nie maketu.</p>
+  </div>
+</footer>
+
+<script src="/nsite-clay.js"></script>
+</body>
+</html>

@@ -148,6 +148,7 @@ working page with the chrome wired up; the design is yours to change.
 
 | Template | For | Look |
 |---|---|---|
+| `cms` | a page assembled from blocks rather than a fixed design | warm paper, one column, generous air; the owner adds and reorders blocks in the browser |
 | `personal` | one person: who you are, what you write | deep blue-black, gold accent, articles as cards and notes as a timeline |
 | `blog` | someone who already writes on Nostr | black, lunar, slow glow; articles in the main column, notes in a sidebar |
 | `project` | a piece of software | warm paper and clay-red, numbered bands, terminal cards for the commands |
@@ -206,6 +207,13 @@ have and you do not.
 ---
 
 ## 5. Getting it online
+
+There is a publisher at `/deploy.html` on the project site that does all of this
+in a browser tab: pick a template, sign in or generate a key, choose a path, and
+it uploads the files and signs the manifest. Point a person there when they do
+not want a terminal, and read `/guide.html` if you want to describe the flow to
+them. What follows is the same job from a command line, which is what you want
+when you are building the page rather than picking one.
 
 ```bash
 npx nsite-clay deploy mysite --sec=nsec1…                    # a raw key
@@ -456,6 +464,41 @@ the size of a document.
 
 **No server-side anything.** No request handling, no scheduled work, no secrets.
 A key in the file is a key you have published.
+
+---
+
+## 9b. Blocks: when the owner should be able to add sections
+
+A page marked `nc:blocks` is assembled rather than typed over. Its direct
+children are blocks; in edit mode the runtime draws a rail on each (move,
+duplicate, configure, delete) and an insert point between them opening a palette
+built from the document's own library:
+
+```html
+<main nc:blocks>
+  <section nc:block-type="heading"><h2 editable="single-line">A heading</h2></section>
+</main>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥"
+          nc:group="Media" nc:on-add="image">
+  <section class="b-picture">
+    <figure>
+      <img nc:slot src="…" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+```
+
+`<template>` renders nothing and is saved with the page, so the library travels
+with the file. `nc:on-add` runs a picker when the block lands: `image`, `video`,
+`feed` or `post`. `nc:slot` marks what that picker acts on.
+
+Reach for this when the owner will want to add sections you have not thought of.
+Reach for a gear (§9) when the control is particular to one card or one row. The
+two mix; `templates/cms/index.html` uses both.
+
+Nothing the rail draws is saved. A reader gets plain markup.
 
 ---
 

@@ -67,7 +67,19 @@ Open it, press **Sign in**, paste that nsec, and edit the page. Your save rewrit
 document for everyone. It is a sandbox with no owner, so treat whatever is there as other
 people's leftovers.
 
-## Quick start
+## Quick start, without a terminal
+
+Open **[the publisher](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/deploy.html)**,
+pick a template, sign in with your key or make one on the spot, and it is online.
+It runs entirely in the browser: it fetches the template and the runtime from the
+site it is published on, uploads them to your Blossom servers, and signs the
+manifest with your key. There is no server in the loop and nothing to install.
+
+The [guide](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html)
+walks the whole path with screenshots, from having no key at all to a published
+page with a picture and a Nostr feed in it.
+
+## Quick start, with one
 
 ```bash
 npx nsite-clay init mysite      # scaffolds index.html + nsite-clay.js, generates a key
@@ -158,6 +170,42 @@ original date stays put.
 Posts and pages are separate. Writing a note does not change your page, and saving your page
 does not touch your posts.
 
+## Blocks
+
+A page marked `nc:blocks` is assembled rather than typed over. In edit mode the
+runtime draws a rail on every block (move it, duplicate it, delete it, and for a
+picture or a feed a gear that reopens the picker) and an insert point between
+them that opens a palette.
+
+The palette is built from the document's own library, which is a set of inert
+`<template>` elements:
+
+```html
+<main nc:blocks>
+  <section nc:block-type="heading"><h2 editable="single-line">A heading</h2></section>
+</main>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥"
+          nc:group="Media" nc:on-add="image">
+  <section class="b-picture">
+    <figure>
+      <img nc:slot src="…" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+```
+
+A `<template>` renders nothing and is saved with the page, so the library
+travels with the document. Whoever opens the file next can keep adding blocks
+with nothing to fetch and nothing to install. `nc:on-add` names a picker to run
+once the block lands (`image`, `video`, `feed`, `post`) and `nc:slot` marks what
+that picker acts on.
+
+Nothing the rail draws is written to disk. A reader gets the blocks as ordinary
+markup with no trace that a composer was ever involved. The full rules are in
+[`templates/_shared/CONTRACT.md`](templates/_shared/CONTRACT.md).
+
 ## Editing without a visible editor
 
 Templates ship with `nc:edit-gate="hash"`, so a reader gets the page and nothing
@@ -207,11 +255,16 @@ same file works as `AGENTS.md` in a project built on top of nsite-clay.
 
 ## Templates
 
-Eleven starting points, all sharing one stylesheet and one runtime so an engine
-change does not mean editing eleven files:
+Twelve starting points, all sharing one stylesheet and one runtime so an engine
+change does not mean editing twelve files:
 
-`event` `blog` `project` `personal` `links` `gallery` `terminal` `phrack`
+`cms` `event` `blog` `project` `personal` `links` `gallery` `terminal` `phrack`
 `brutal` `eco` `irc`
+
+`cms` is the one to start from. It is a page built out of blocks rather than a
+finished design to type over: press the `+` between two blocks and add a
+heading, a picture, a video, a row of cards or a Nostr feed. See
+[Blocks](#blocks) below.
 
 The last of those is worth opening: its content is the transcript of the
 conversation that produced it, held with an agent that was handed nothing but
@@ -318,6 +371,27 @@ path stops matching the bytes the tab was served, the page says so and reloads i
 cache-proof URL. A page with unsaved work is never reloaded out from under you. Nobody should
 need to know what a hard refresh is.
 
+### Deploying twice
+
+Blobs are addressed by their own hash, so a file whose bytes have not changed is
+already on the server under the same name. `deploy` asks each server before it
+uploads, and stops before publishing when the path table still hashes to what the
+live manifest says:
+
+```
+$ npx nsite-clay deploy mysite
+  /index.html                    1aa4b3323850…    18818 B  2/2  already there
+  /nsite-clay-328e2b9d.js        328e2b9d37e2…   303407 B  2/2  already there
+
+  unchanged: the published manifest already points at these 7 paths
+  nothing published. --force republishes anyway.
+```
+
+So a scheduled job that redeploys an unchanged site costs a few HEAD requests and
+writes nothing to any relay. A server that has dropped a blob gets it back, which
+makes a repeat deploy a repair rather than a no-op, and `--force` publishes
+regardless if a manifest needs rewriting for its own sake.
+
 ## Version history
 
 Every save files a permanent kind-5128 snapshot naming an immutable set of hashes, and blobs
@@ -345,7 +419,9 @@ Full attribute and API reference: **[docs/RUNTIME-API.md](docs/RUNTIME-API.md)**
   manifest, the blobs and the history all live outside the gateway, so you can check the same
   document through another one and compare aggregate hashes. Running a local gateway removes the
   trust entirely.
-- **No server code.** If your project needs a backend, this is the wrong tool.
+- **No server code.** If your project needs a backend, this is the wrong tool. Though your
+  project probably does not need one beyond Nostr. You would be surprised how far you get
+  without it.
 
 ## Developing locally
 
@@ -367,12 +443,32 @@ open http://npub1….localhost:4871/
 Stop the process and everything it held is gone. It trusts its caller and should never be
 reachable from anywhere else.
 
+To click through the web publisher against that stack rather than against public infrastructure:
+
+```bash
+npm run publish:local     # devnet, plus site/ served with its relay and Blossom lists rewritten
+```
+
+It prints the publisher's address. Publish as often as you like; nothing reaches a public relay.
+
+The whole path is also a test. It drives the real publisher from a key that did not exist a
+second ago, through the wizard, onto the devnet, back out of the gateway, edits the published
+page and saves it, and screenshots every step into `media/guide-publish/`:
+
+```bash
+curl -sLo /tmp/lunarpunk.jpg https://image.nostr.build/b9bf63cdfad604ce65598797a5564c9f1e9d7b45ccfef07df3016442addfd9eb.jpg
+npm run walkthrough
+```
+
+The pictures in the [guide](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/guide.html)
+come from that run, so they show working software rather than a mock-up.
+
 ## Building from source
 
 ```bash
 npm install
 npm run build     # dist/nsite-clay.js and dist/nsite-clay.esm.js
-npm test          # 44 behaviour checks in a real browser
+npm test          # 142 behaviour checks in a real browser
 ```
 
 The tests run in Chrome on purpose. Several of them are about what the HTML parser and the

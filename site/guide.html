@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<!--
+  From nothing to a published site.
+
+  The pictures come from tools/publish-walkthrough.mjs, which drives the real
+  publisher against a local relay and Blossom server and screenshots every step.
+  Rerun it and the pictures are regenerated from working software rather than
+  from memory.
+
+  This page is prose, so its translations are real files: site/es/guide.html and
+  its siblings. Only the screenshots are shared.
+-->
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/guide.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: from nothing to a published site</title>
+<meta name="description" content="A walkthrough with screenshots: make a key, publish a page from the browser, add a picture and a Nostr feed, and save it. The example is a Nostr meetup page.">
+<link rel="alternate" hreflang="en" href="/guide.html">
+<link rel="alternate" hreflang="es" href="/es/guide.html">
+<link rel="alternate" hreflang="sk" href="/sk/guide.html">
+<link rel="alternate" hreflang="cs" href="/cs/guide.html">
+<link rel="alternate" hreflang="x-default" href="/guide.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<style>
+  :root {
+    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
+    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
+    --nc-radius: 12px; --nc-radius-sm: 8px;
+    --violet: #AB82F1; --ink-faint: #6F5D8E;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --nc-chrome-font: var(--sans); --nc-mono: var(--mono);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
+    font: 16.5px/1.7 var(--sans);
+    background-image:
+      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
+      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  a:hover { color: #C9AAFF; }
+  code { font: .87em var(--mono); color: #D6C4F5; }
+  .wrap { max-width: 44rem; margin: 0 auto; padding: 0 1.4rem; }
+
+  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+           color: var(--ink-faint); padding-top: 2.5rem; flex-wrap: wrap; }
+  .crumb img { width: 28px; height: 28px; }
+  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
+  .crumb .langs { margin-left: auto; display: flex; gap: .55rem; }
+
+  h1 { font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -.03em; margin: 1.1rem 0 .6rem; line-height: 1.1; }
+  .lede { color: var(--nc-ink-dim); font-size: 1.1rem; margin: 0 0 1.4rem; }
+  h2 { font-size: 1.5rem; letter-spacing: -.02em; margin: 3.6rem 0 .8rem; }
+  h2 .n {
+    display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; margin-right: .5rem;
+    border-radius: 50%; background: var(--nc-accent); color: var(--nc-accent-ink);
+    font-size: .95rem; font-weight: 700; vertical-align: .05em;
+  }
+  h3 { font-size: 1.1rem; margin: 2.2rem 0 .5rem; }
+  p { margin: 0 0 1.1rem; }
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+
+  figure { margin: 1.6rem 0 2rem; }
+  figure img {
+    display: block; width: 100%; height: auto; border-radius: var(--nc-radius);
+    border: 1px solid var(--nc-edge); background: #100722;
+  }
+  figcaption { font-size: .88rem; color: var(--nc-ink-dim); margin-top: .6rem; }
+
+  .aside {
+    border: 1px solid var(--nc-edge); border-left: 3px solid var(--nc-accent);
+    border-radius: var(--nc-radius); background: var(--nc-panel);
+    padding: 1.1rem 1.3rem; margin: 1.8rem 0;
+  }
+  .aside p:last-child { margin-bottom: 0; }
+  .aside b { color: var(--nc-ink); }
+
+  .warnbox {
+    border: 1px solid #7a4a2a; border-left: 3px solid #E08B56; border-radius: var(--nc-radius);
+    background: #2a1710; padding: 1.1rem 1.3rem; margin: 1.8rem 0;
+  }
+  .warnbox p:last-child { margin-bottom: 0; }
+  .warnbox b { color: #F0B48A; }
+
+  .cta { display: flex; gap: .6rem; flex-wrap: wrap; margin: 2rem 0 0; }
+  .cta a {
+    font-size: .95rem; font-weight: 600; text-decoration: none; padding: .65rem 1.3rem;
+    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge); color: var(--nc-ink);
+  }
+  .cta a.primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); }
+  .cta a:hover { border-color: var(--nc-accent); }
+
+  /* The terminal route, folded away. It is a real option and not the first one,
+     so it gets a disclosure rather than a section of its own. */
+  details {
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+    background: var(--nc-panel); padding: .3rem 1.3rem; margin: 1.8rem 0;
+  }
+  details[open] { padding-bottom: 1rem; }
+  summary {
+    cursor: pointer; padding: .9rem 0; font-weight: 600; font-size: .96rem;
+    color: var(--nc-ink); list-style-position: outside;
+  }
+  summary::marker { color: var(--nc-accent); }
+  summary:hover { color: var(--violet); }
+  details p:last-child { margin-bottom: 0; }
+
+  pre {
+    background: #100722; border: 1px solid var(--nc-edge); border-radius: var(--nc-radius-sm);
+    padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1.1rem;
+    font: .85rem/1.7 var(--mono); color: #D9CCF3;
+  }
+  pre code { color: inherit; font-size: 1em; }
+
+  nav.toc {
+    border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
+    background: var(--nc-panel); padding: 1.1rem 1.4rem; margin: 2.2rem 0 0;
+  }
+  nav.toc p { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
+              color: var(--ink-faint); margin: 0 0 .5rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; font-size: .95rem; }
+  nav.toc li { margin-bottom: .25rem; }
+  nav.toc a { text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  footer { border-top: 1px solid var(--nc-edge); margin-top: 4.5rem; padding: 2rem 0 4rem;
+           color: var(--ink-faint); font-size: .9rem; }
+  footer a { color: var(--nc-ink-dim); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="crumb">
+    <img src="/nsite-clay-transparent.png" alt="" width="28" height="28">
+    <a href="/">nsite-clay</a> <span>/</span> <span>guide</span>
+    <span class="langs">
+      <a href="/guide.html" hreflang="en">EN</a>
+      <a href="/es/guide.html" hreflang="es">ES</a>
+      <a href="/sk/guide.html" hreflang="sk">SK</a>
+      <a href="/cs/guide.html" hreflang="cs">CS</a>
+    </span>
+  </p>
+
+  <h1>From nothing to a published site</h1>
+  <p class="lede">This is the whole path from an empty browser tab to a page that is online,
+  with the screenshots taken along the way. You will make a key, publish a page, put a picture
+  and a Nostr feed in it, and save it. There is no terminal and nothing to sign up for.</p>
+
+  <p>The example is a page for a Nostr meetup held during
+  <a href="https://lunarpunk.sk" rel="noopener">Lunarpunk Košice</a> on 5 September 2026. It takes
+  about ten minutes to build, and it still needs a picture, a timetable and somebody else's posts,
+  which is enough to reach most of what the editor can do.</p>
+
+  <nav class="toc">
+    <p>On this page</p>
+    <ol>
+      <li><a href="#key">Getting a key</a></li>
+      <li><a href="#template">Picking a template</a></li>
+      <li><a href="#address">Choosing an address</a></li>
+      <li><a href="#publish">Publishing</a></li>
+      <li><a href="#edit">Editing the page</a></li>
+      <li><a href="#picture">Adding a picture</a></li>
+      <li><a href="#video">Adding a video</a></li>
+      <li><a href="#feed">Showing Nostr posts</a></li>
+      <li><a href="#write">Writing a post</a></li>
+      <li><a href="#save">Saving</a></li>
+      <li><a href="#history">Going back to an earlier version</a></li>
+      <li><a href="#more">A second page under the same key</a></li>
+      <li><a href="#address-of">Where your page lives</a></li>
+    </ol>
+  </nav>
+
+  <div class="cta">
+    <a class="primary" href="/deploy.html">Open the publisher</a>
+    <a href="/templates.html">Look at the templates first</a>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 1 -->
+  <h2 id="key"><span class="n">1</span>Getting a key</h2>
+
+  <p>A site here belongs to a key rather than to an account. There is nothing to register and
+  nobody to ask. The key that publishes a page is the only key that can ever change it, so losing
+  it leaves the page frozen exactly as it stands.</p>
+
+  <p>Open <a href="/deploy.html">the publisher</a>. It offers four ways in.</p>
+
+  <figure>
+    <img src="/shots/p1-start.png" alt="The publisher's first step, asking who is publishing, with four ways to sign in" loading="lazy" width="1400" height="973">
+    <figcaption>Four doors to the same place. Use a signer app if you have one.</figcaption>
+  </figure>
+
+  <ul>
+    <li><b>Browser extension.</b> Alby, nos2x and the rest. It appears only when one is installed.
+    Nothing to type and the key stays in the extension.</li>
+    <li><b>Signer app.</b> Amber and other NIP-46 signers. The page shows a code, you scan it, and
+    your key never reaches the browser at all. Scan it from a second device: tapping the link on
+    the same phone puts this page in the background, and a backgrounded tab can miss the answer.</li>
+    <li><b>Paste a key.</b> An <code>nsec</code>, an encrypted <code>ncryptsec</code>, or a
+    <code>bunker://</code> address. The key stays in the tab's memory and is never written
+    anywhere, but a pasted key is a key that has touched a web page, which is why it is third on
+    the list.</li>
+    <li><b>No key yet.</b> Make one here.</li>
+  </ul>
+
+  <h3>Making one</h3>
+
+  <p>Press <b>I have no key yet</b> and a key is generated in your browser. You see it once. It
+  goes nowhere else and nothing keeps a copy, so if you close the tab without writing it down it
+  is gone.</p>
+
+  <figure>
+    <img src="/shots/p2-new-key.png" alt="A freshly generated secret key shown in full, with buttons to copy it or save an encrypted backup" loading="lazy" width="1400" height="973">
+    <figcaption>Shown once. Copy it into a password manager before going further.</figcaption>
+  </figure>
+
+  <p>The backup file is worth taking. It writes your key encrypted with a password you choose,
+  using NIP-49, so the file on your disk is not the key itself. Losing that password loses the key
+  just as thoroughly as losing the key, so put the password somewhere too.</p>
+
+  <figure>
+    <img src="/shots/p3-backup.png" alt="The backup step asking for a password to encrypt the key file" loading="lazy" width="1400" height="973">
+    <figcaption>The password encrypts the file. Nothing about it is stored on this page.</figcaption>
+  </figure>
+
+  <div class="warnbox">
+    <p><b>There is no reset.</b> Nobody holds a copy to send you, because nobody holds a copy at
+    all. That is what owning it costs. Write the key down before you tick the box.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 2 -->
+  <h2 id="template"><span class="n">2</span>Picking a template</h2>
+
+  <p>Every template is a finished page you type over rather than an empty frame. They are fetched
+  from this site, so nothing is downloaded from anywhere else.</p>
+
+  <figure>
+    <img src="/shots/p4-templates.png" alt="A grid of template cards with screenshots, the block composer first" loading="lazy" width="1400" height="973">
+    <figcaption>The block composer is first because it is the easiest to start from.</figcaption>
+  </figure>
+
+  <p>The one called <code>cms</code> is the one this guide uses. It is built out of blocks you add
+  and rearrange: a heading, a paragraph, a picture, a video, a row of cards, a Nostr feed. The
+  others are single designs that suit a particular kind of page, and you can type over any of
+  them the same way.</p>
+
+  <div class="aside">
+    <p>Whichever you pick, the template's own demo content points at the person who wrote it: the
+    feed pulls their notes, the footer links their profile. The publisher replaces every one of
+    those with your key on the way out, so the page that lands is yours from the first byte.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 3 -->
+  <h2 id="address"><span class="n">3</span>Choosing an address</h2>
+
+  <p>Your site lives at your npub on any nsite gateway. What you choose here is the path inside
+  it. A single slash is the front page.</p>
+
+  <figure>
+    <img src="/shots/p5-address.png" alt="The address step, showing the full nsite.lol URL the page will have" loading="lazy" width="1400" height="973">
+    <figcaption>The full address is shown before anything is published.</figcaption>
+  </figure>
+
+  <p>Type <code>/meetup</code> and the page ends up at
+  <code>your-npub.nsite.lol/meetup</code>. Paths that do not end in <code>.html</code> are treated
+  as folders, which is how gateways resolve them.</p>
+
+  <p>One npub can hold as many pages as you like, and they do not interfere with each other. The
+  publisher checks what the key has already published and says so before you go on.</p>
+
+  <!-- ---------------------------------------------------------------- 4 -->
+  <h2 id="publish"><span class="n">4</span>Publishing</h2>
+
+  <p>Press the button. Every file is uploaded to a
+  <a href="https://github.com/hzrd149/blossom" rel="noopener">Blossom</a> server, which stores
+  blobs by their own hash. A signed manifest then says which hash each path points at, and a
+  second event files that set of hashes as a version you can come back to.</p>
+
+  <p>If you are signing with an app rather than a pasted key, it will ask you to approve each
+  signature.</p>
+
+  <figure>
+    <img src="/shots/p6-published.png" alt="The finished step showing the published address and buttons to open it" loading="lazy" width="1400" height="973">
+    <figcaption>The address is real and works on any nsite gateway, not only this one.</figcaption>
+  </figure>
+
+  <p>That is the site online. A gateway can take a minute to notice a brand new one, so if it is
+  not there immediately, wait and reload.</p>
+
+  <div class="aside">
+    <p>This is the last time you need the publisher. From here the page edits and republishes
+    itself.</p>
+  </div>
+
+  <details>
+    <summary>Publishing from a terminal instead</summary>
+    <p>The CLI does the same job for anyone who would rather have a directory on disk. It is not
+    the shorter path and you do not need it, but it is there if you want the files under version
+    control or a page built by a script.</p>
+<pre><code>npx nsite-clay init mysite --template=cms --npub=npub1…
+npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
+    <p>Prefer a remote signer over a raw key, and pass it in the environment rather than as an
+    argument, because an argument is visible to every process on the machine:</p>
+<pre><code>NOSTR_BUNKER_URI="bunker://…" npx nsite-clay deploy mysite</code></pre>
+    <p>After the first deploy the page saves itself, so you come back to the terminal only for
+    changes you make outside the browser.</p>
+  </details>
+
+  <!-- ---------------------------------------------------------------- 5 -->
+  <h2 id="edit"><span class="n">5</span>Editing the page</h2>
+
+  <p>Open the address with <code>#edit</code> on the end and sign in with the same key. Without
+  <code>#edit</code> a reader gets the page and nothing to click, which is what everyone else
+  should see.</p>
+
+  <figure>
+    <img src="/shots/p7-editing.png" alt="The published page in edit mode, with a toolbar at the bottom and a control rail on each block" loading="lazy" width="1400" height="973">
+    <figcaption>Edit mode: a toolbar along the bottom, and a rail on each block.</figcaption>
+  </figure>
+
+  <p>Click into any text and type. Headings, paragraphs, captions and card titles are all just
+  text on the page; there are no fields and no form behind it. Selecting a few words brings up a
+  small toolbar for bold, links and lists.</p>
+
+  <p>Each block has a rail in its corner: move it up, move it down, duplicate it, delete it, and
+  where the block holds a picture or a feed, a gear that reopens the picker. Between the blocks
+  is a <code>+</code> that opens the palette.</p>
+
+  <figure>
+    <img src="/shots/p8-palette.png" alt="The block palette, showing text, media, layout and Nostr blocks" loading="lazy" width="1400" height="973">
+    <figcaption>Every block is ordinary markup. Readers get a plain document.</figcaption>
+  </figure>
+
+  <p>For the meetup page: the title, the date under it, an opening line, a heading, a paragraph
+  about what happens, and a row of three cards for the timetable.</p>
+
+  <!-- ---------------------------------------------------------------- 6 -->
+  <h2 id="picture"><span class="n">6</span>Adding a picture</h2>
+
+  <p>The picture block's gear opens the picker. Drop a file on it, choose one you have uploaded
+  before, or paste a URL.</p>
+
+  <figure>
+    <img src="/shots/p9-picture.png" alt="The picture dialog with a drop area, a grid of previously uploaded images, and fields for the URL, alt text and caption" loading="lazy" width="1400" height="973">
+    <figcaption>An uploaded file goes to your Blossom servers, addressed by its own hash.</figcaption>
+  </figure>
+
+  <p>A dropped file is uploaded to the same Blossom servers that hold the page, under your key.
+  The grid shows everything that key has uploaded before, so the second time you want a picture it
+  is two clicks.</p>
+
+  <p>Fill in the alt text. It is what somebody using a screen reader gets instead of the picture,
+  and it costs one sentence.</p>
+
+  <!-- ---------------------------------------------------------------- 7 -->
+  <h2 id="video"><span class="n">7</span>Adding a video</h2>
+
+  <p>A video block takes a YouTube or Vimeo link, or a file to upload.</p>
+
+  <figure>
+    <img src="/shots/g6-add-video.png" alt="The insert video panel with a YouTube link filled in" loading="lazy">
+    <figcaption>Paste the link you would normally share.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="/shots/g7-video-in-page.png" alt="The video sitting in the page as a thumbnail with a play button" loading="lazy">
+    <figcaption>It lands as a thumbnail with a play button.</figcaption>
+  </figure>
+
+  <div class="aside">
+    <p>The player loads only when somebody presses play. Until then YouTube is not watching your
+    readers, and the thumbnail still works as a link for anyone browsing with JavaScript off.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 8 -->
+  <h2 id="feed"><span class="n">8</span>Showing Nostr posts</h2>
+
+  <p>A Nostr feed block shows posts by whoever you name. It is a good way to keep a page current
+  without touching it: the posts are fetched when a reader opens the page, so the page stays as
+  fresh as the account behind it.</p>
+
+  <p>The meetup page shows the Lunarpunk Košice account, since that is the event it happens
+  inside. Paste one or more npubs, and the posts appear so you can see what you are about to
+  show.</p>
+
+  <figure>
+    <img src="/shots/p10-feed.png" alt="The Nostr feed dialog, listing real posts from the account whose npub was entered" loading="lazy" width="1400" height="973">
+    <figcaption>The real posts, listed as you type. Click one to pin it to the top.</figcaption>
+  </figure>
+
+  <p>You can pick short notes, long-form articles or picture posts, choose how many to show, and
+  pin particular ones to the top. Every signature is checked in the reader's browser, so a relay
+  that hands over something the author did not write is caught rather than displayed.</p>
+
+  <div class="aside">
+    <p>There is also a block for <b>a post of yours</b>. That one copies the post into the page
+    rather than fetching it, so it reads with no relay and no JavaScript, while still remembering
+    which Nostr event it came from. Edit the post in any Nostr client and the copy can be brought
+    back in line.</p>
+  </div>
+
+  <!-- ---------------------------------------------------------------- 9 -->
+  <h2 id="write"><span class="n">9</span>Writing a post</h2>
+
+  <p>A page that can show your posts can write them too. <b>Write</b> in the toolbar lists
+  everything you have published and opens any article for editing.</p>
+
+  <figure>
+    <img src="/shots/g10-your-posts.png" alt="A list of published articles with edit and view buttons" loading="lazy">
+    <figcaption>Your articles and notes, with a button for a new one.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="/shots/g11-write-article.png" alt="The article editor with title, address, summary, image, topics and body" loading="lazy">
+    <figcaption>A long-form post takes a title, a summary, an optional header image, topics and the
+    text.</figcaption>
+  </figure>
+
+  <p>The <b>address</b> is the field to get right. It is how your article is linked, and publishing
+  again under the same address is how you edit it: fix a typo, publish, and every Nostr app shows
+  the corrected version at the same link, with the original date still on it.</p>
+
+  <p>Short notes work the same way except that they cannot be edited once they are out. The panel
+  says so before you publish one.</p>
+
+  <p>Posts and pages stay separate. Writing a note does not change your page, and saving your page
+  does not touch your posts.</p>
+
+  <!-- ---------------------------------------------------------------- 10 -->
+  <h2 id="save"><span class="n">10</span>Saving</h2>
+
+  <p>Press <b>Save</b>. The page serialises itself, uploads the result as one blob, and
+  republishes the manifest pointing at it. Anyone loading the page from now on gets your version,
+  as a plain static document with the changes already in it.</p>
+
+  <figure>
+    <img src="/shots/p13-reader-top.png" alt="The finished meetup page as a reader sees it, with no editing controls" loading="lazy" width="1400" height="973">
+    <figcaption>What everybody else gets. The editing controls are gone, and the page reads
+    without JavaScript.</figcaption>
+  </figure>
+
+  <p>Saving takes about a second. If nothing has changed since the last one it says so and does
+  nothing, so pressing it twice is harmless. Anyone still reading the old version is told a newer
+  one exists and their page updates itself, so nobody has to know what a hard refresh is.</p>
+
+  <p>When a save fails it says why. The usual cause is a signer app that has gone to sleep: wake
+  it, approve, and press Save again.</p>
+
+  <!-- ---------------------------------------------------------------- 11 -->
+  <h2 id="history"><span class="n">11</span>Going back to an earlier version</h2>
+
+  <p>Every save is kept. <b>History</b> lists them all.</p>
+
+  <figure>
+    <img src="/shots/g12-history.png" alt="The version history listing saves by date, each with a read button" loading="lazy">
+    <figcaption>Read any earlier version, or put it back.</figcaption>
+  </figure>
+
+  <p>Restoring an old version does not throw the current one away. It becomes another entry in the
+  list, so you can change your mind again.</p>
+
+  <!-- ---------------------------------------------------------------- 12 -->
+  <h2 id="more"><span class="n">12</span>A second page under the same key</h2>
+
+  <p>Go back to the publisher, sign in with the same key, and pick another path. It tells you what
+  is already there.</p>
+
+  <figure>
+    <img src="/shots/p14-second-page.png" alt="The address step reporting that this key already has a site, listing the paths already published" loading="lazy" width="1400" height="973">
+    <figcaption>Adding a page at a free path leaves everything else alone.</figcaption>
+  </figure>
+
+  <p>Choosing a path that is already taken is a different matter, and the publisher will not do it
+  quietly.</p>
+
+  <figure>
+    <img src="/shots/p15-overwrite-warning.png" alt="A warning that a page already exists at this path, with a link to look at it and a box to tick before continuing" loading="lazy" width="1400" height="973">
+    <figcaption>Look at what is there first. Publishing will not proceed until you confirm.</figcaption>
+  </figure>
+
+  <p>Even then the old page is not gone: replacing one is a new version, and the version history
+  still holds what was there before.</p>
+
+  <!-- ---------------------------------------------------------------- 13 -->
+  <h2 id="address-of"><span class="n">13</span>Where your page lives</h2>
+
+  <p>Your page is at your npub:</p>
+
+<pre><code>https://&lt;your npub&gt;.nsite.lol/</code></pre>
+
+  <p>That address is yours because the key is yours. Nobody assigned it and nobody can take it
+  away. Several gateways serve the same page from the same events, so if one is down you change
+  the hostname and nothing else moves:
+  <a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a>,
+  <a href="https://nwb.tf">nwb.tf</a>, <a href="https://nsite.run">nsite.run</a>,
+  <a href="https://nsite.cloud">nsite.cloud</a> and
+  <a href="https://shakespeare.to">shakespeare.to</a>.
+  <a href="https://nsite.run">nsite.run</a> has the clearest explanation of what an nsite is if you
+  want the background.</p>
+
+  <p>For a domain of your own, point a CNAME record at a gateway and your page answers there
+  instead.</p>
+
+  <!-- ---------------------------------------------------------------- -->
+  <h2>What to remember</h2>
+
+  <p>Back the key up properly, because it is the site and there is no way to reissue it.</p>
+
+  <p>Your readers need nothing from you. The published page is static HTML and reads with
+  scripting turned off, apart from the Nostr feeds, which are the one thing fetched when the page
+  opens.</p>
+
+  <p>Nothing you do is destructive. Every save files a version, and blobs are addressed by their
+  own hash, so no edit overwrites the bytes of an older one.</p>
+
+  <p>And you can leave whenever you like. The page is one HTML file: save it from your browser,
+  put it anywhere else, and it is the same page.</p>
+
+  <div class="cta">
+    <a class="primary" href="/deploy.html">Publish a site</a>
+    <a href="/templates.html">The templates</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><a href="/">nsite-clay</a> · <a href="/templates.html">Templates</a> ·
+       <a href="/deploy.html">Publish</a> · <a href="/llms.txt">For agents</a></p>
+    <p>The screenshots on this page are generated by driving the real publisher against a local
+    relay, so they show working software rather than a mock-up.</p>
+  </div>
+</footer>
+
+<script src="/nsite-clay.js"></script>
+</body>
+</html>

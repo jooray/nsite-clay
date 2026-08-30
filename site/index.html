@@ -167,8 +167,9 @@
   <nav class="nc-nav">
     <a class="nc-brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
     <a href="/" aria-current="page">Home</a>
-    <a href="/docs.html">How it works</a>
+    <a href="/guide.html">Guide</a>
     <a href="/templates.html">Templates</a>
+    <a href="/deploy.html">Publish</a>
     <a href="/llms.txt">For agents</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
     <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
@@ -179,10 +180,10 @@
     <h1 editable="single-line">nsite-clay</h1>
     <p class="tag" editable="single-line">A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
-      <a class="btn" href="/docs.html">How it works</a>
+      <a class="btn primary" href="/deploy.html">Publish a site</a>
+      <a class="btn" href="/guide.html">Read the guide</a>
       <a class="btn" href="#try">Try the live demo</a>
-      <a class="btn" href="#deploy">Deploy your own</a>
+      <a class="btn" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
     </div>
     <figure class="shot">
       <img src="/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="1600" height="860">
@@ -304,7 +305,7 @@
         <p>System fonts and as little of everything else as the job allows. It measures and prints its own transfer weight.</p>
       </li>
     </ul>
-    <p><a class="btn" href="/templates.html">All eleven templates</a></p>
+    <p><a class="btn" href="/templates.html">All twelve templates</a></p>
   </section>
 
   <section id="try">
@@ -329,8 +330,12 @@
   <section id="deploy">
     <h2 editable="single-line">Deploy your own</h2>
     <div editable>
-      <p class="lede">The CLI publishes the first version. After that the page saves itself, and
-        you only come back for changes made outside the browser.</p>
+      <p class="lede">The <a href="/deploy.html">web publisher</a> does the whole thing in a
+        browser tab: pick a template, sign in with a key or make one, and it is online. There is
+        a <a href="/guide.html">walkthrough with screenshots</a> if you would like to see it
+        first. After that the page saves itself and you never need the publisher again.</p>
+      <p class="lede">The CLI does the same job for anyone who would rather have a directory on
+        disk and a command to run.</p>
     </div>
 <pre><span class="c"># scaffold a site and generate a key for it</span>
 npx nsite-clay init mysite
@@ -394,7 +399,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
         history all live outside the gateway, so you can verify through another one or run your
         own.</li>
       <li><strong>No server code.</strong> If your project needs a backend, this is the wrong
-        tool.</li>
+        tool. Though your project probably does not need one beyond Nostr. You would be
+        surprised how far you get without it.</li>
     </ul>
   </section>
 
@@ -403,6 +409,8 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <a href="https://hyperclay.com">HyperClay</a> and <a href="https://clayjs.com">ClayJS</a>.
       Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
+    <p><a href="/deploy.html">Publish a site</a> · <a href="/guide.html">Guide</a> ·
+      <a href="/templates.html">Templates</a> · <a href="/llms.txt">For agents</a></p>
     <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
     <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
       The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
