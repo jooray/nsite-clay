@@ -59,6 +59,16 @@ for (const name of readdirSync("templates")) {
     if (statSync(from).isFile()) { copyFileSync(from, join(out, name, f)); files.push(f); }
   }
 
+  // A template carries no nc:path, because it is written to be deployed at the
+  // root of somebody's own site. Here it is served from /t/<name>/, so without
+  // this it defaults to /index.html, compares its own bytes against the hash of
+  // the gallery's front page, never matches, and reloads itself forever. Only
+  // the templates whose owner happens to be this site were affected, since the
+  // rest fail the canonical-host check first, which is luck rather than design.
+  const preview = join(out, name, "index.html");
+  writeFileSync(preview, readFileSync(preview, "utf8").replace(
+    /<html\b/i, `<html nc:path="/t/${name}/index.html"`));
+
   const html = readFileSync(join(dir, "index.html"), "utf8");
   const owner = between(html, /nc:owner="([^"]*)"/);
 

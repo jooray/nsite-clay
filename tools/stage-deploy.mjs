@@ -44,6 +44,11 @@ for (const page of Object.keys(TITLES)) {
     const [title, description] = TITLES[page][lang];
     let out = source
       .replace(/<html lang="en"/, `<html lang="${lang}"`)
+      // The copy has to say where it actually lives. A page watches its own
+      // manifest entry to know when a newer version exists, so a Slovak copy
+      // claiming to be /deploy.html compares its own bytes against the English
+      // file's hash, never matches, and reloads itself forever.
+      .replace(/nc:path="\/([^"]*)"/, `nc:path="/${lang}/$1"`)
       .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
       .replace(/(<meta name="description" content=")[^"]*(">)/, `$1${description}$2`);
 
@@ -74,6 +79,30 @@ for (const page of Object.keys(TITLES)) {
   }
 }
 console.log(`staged ${made} translated page${made === 1 ? "" : "s"} into site/{${LANGS.join(",")}}/`);
+
+// A page that misreports its own path reloads itself forever: it watches the
+// manifest entry for the path it claims, compares that hash against the bytes it
+// was served, and never matches. Cheap to check, and invisible until somebody
+// opens the page and watches it flicker.
+{
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(join(dir, e.name))
+                    : (e.name.endsWith(".html") ? [join(dir, e.name)] : []));
+  let wrong = 0;
+  for (const file of walk("site")) {
+    const want = "/" + file.split("/").slice(1).join("/");
+    // A missing nc:path is not a free pass: it defaults to /index.html, which
+    // is exactly how the staged templates ended up in a reload loop.
+    const said = (readFileSync(file, "utf8").match(/nc:path="([^"]*)"/) || [])[1]
+      || "/index.html";
+    if (said !== want) {
+      console.error(`stage-deploy: ${file} says nc:path="${said}" but lives at ${want}. ` +
+                    `It will reload itself in a loop.`);
+      wrong++;
+    }
+  }
+  if (wrong) process.exitCode = 1;
+}
 
 // The guide's pictures. They are captured at 2360px for a retina display, which
 // is several megabytes for one page, so they go out at the width the guide
