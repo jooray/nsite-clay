@@ -33,12 +33,25 @@
 // file changes.
 import { modal, toast } from "./ui.js";
 
-// A block is a direct element child of the container that is not runtime
-// furniture and not part of the library.
-const isBlock = (el) =>
+// Content rather than furniture: not a rail or an insert point we drew, and not
+// a library entry. True of a block in its container and of anything inside one,
+// which is why the parts tree uses it too.
+const isContent = (el) =>
   el.nodeType === 1 &&
   el.tagName !== "TEMPLATE" &&
   !el.hasAttribute("nc:chrome");
+
+// How a part is named in the tree: what a person would call it if they opened
+// the file, which is the tag and whatever class the stylesheet keys on.
+const describe = (el) => {
+  const cls = [...el.classList].slice(0, 2).map((c) => "." + c).join("");
+  return el.localName + cls + (el.id ? "#" + el.id : "");
+};
+
+const snippet = (el) => {
+  const t = el.textContent.replace(/\s+/g, " ").trim();
+  return t.length > 70 ? t.slice(0, 70) + "\u2026" : t;
+};
 
 export class Blocks {
   constructor(nc) {
@@ -54,7 +67,7 @@ export class Blocks {
   container(el) { return el?.closest?.("[nc\\:blocks]") || this.containers()[0] || null; }
 
   blocksIn(container) {
-    return [...(container?.children || [])].filter(isBlock);
+    return [...(container?.children || [])].filter(isContent);
   }
 
   // The library is document-wide rather than per container, so a page with two
@@ -260,6 +273,7 @@ export class Blocks {
     if (has) rail.appendChild(this.button("⚙", "Change what this block shows", () => this.configure(block)));
     rail.append(
       this.button("⧉", "Duplicate this block", () => { this.nc.dom.clone(block); this.refresh(); }),
+      this.button("⌷", "What this block is made of", () => this.parts(block)),
       this.button("✕", "Delete this block", () => this.removeBlock(block)),
     );
     return rail;
@@ -296,6 +310,117 @@ export class Blocks {
     return block;
   }
 
+  // ---- what a block is made of ---------------------------------------------
+
+  // The rail acts on whole blocks. This reaches inside one, because a block is
+  // markup and markup accumulates: an element an editing command split in two,
+  // a duplicate of a card, an empty box left behind by something that went
+  // wrong. Without a way in, the only cure for one stray element is to delete
+  // the block around it and build the whole thing again.
+  //
+  // It is a list of what is there rather than an editor. Anything cleverer would
+  // be a DOM inspector, and the browser already ships one of those.
+  partsOf(block) {
+    const out = [];
+    const walk = (el, depth) => {
+      for (const kid of el.children) {
+        if (!isContent(kid)) continue;
+        out.push({ el: kid, depth });
+        walk(kid, depth + 1);
+      }
+    };
+    walk(block, 0);
+    return out;
+  }
+
+  // "Empty" has to mean empty to a reader rather than empty to the DOM. A
+  // picture holds no text and is not a leftover; an <a> holding neither is.
+  isEmpty(el) {
+    if (el.textContent.trim()) return false;
+    return !el.querySelector("img, picture, video, audio, iframe, svg, canvas, hr, input, " +
+                             "[nc\\:feed], [nc\\:slot]");
+  }
+
+  // dom.move walks every sibling, and the rail we drew is a sibling of anything
+  // at the top of a block. Moving against the unfiltered list would swap a part
+  // with the rail and appear to do nothing -- the same trap moveBlock avoids.
+  movePart(el, dir) {
+    const kin = [...(el.parentElement?.children || [])].filter(isContent);
+    const i = kin.indexOf(el);
+    const j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= kin.length) return el;
+    dir < 0 ? kin[j].before(el) : kin[j].after(el);
+    return this.nc.dom.armed(el);
+  }
+
+  parts(block) {
+    return modal({
+      doc: this.doc,
+      title: "Parts of this block",
+      hint: "Everything inside this block. A change here goes when you next save the page, " +
+            "and version history keeps the old one either way.",
+      submitLabel: "Close",
+      noCancel: true,
+      build: (body) => {
+        const list = this.doc.createElement("div");
+        list.className = "nc-blk-parts";
+        const draw = () => {
+          list.textContent = "";
+          const parts = this.partsOf(block);
+          if (!parts.length) {
+            const p = this.doc.createElement("p");
+            p.className = "nc-hint";
+            p.textContent = "This block is a single element with nothing inside it.";
+            list.appendChild(p);
+            return;
+          }
+          for (const part of parts) list.appendChild(this.partRow(part, draw));
+        };
+        draw();
+        body.appendChild(list);
+      },
+      onSubmit: () => null,
+    });
+  }
+
+  partRow({ el, depth }, redraw) {
+    const row = this.doc.createElement("div");
+    row.className = "nc-blk-part";
+    row.style.marginLeft = depth * 1.1 + "rem";
+    const empty = this.isEmpty(el);
+
+    const name = this.doc.createElement("b");
+    name.textContent = describe(el);
+    const what = this.doc.createElement("span");
+    if (empty) what.className = "nc-blk-part-empty";
+    what.textContent = empty ? "empty" : snippet(el);
+
+    // A second click rather than a second dialog: a modal opened on top of this
+    // one would share its Escape key with the one underneath.
+    const del = this.button("✕", "Remove this part", () => {
+      if (empty || del.dataset.armed) { this.nc.dom.remove(el); redraw(); return; }
+      del.dataset.armed = "1";
+      del.textContent = "Remove?";
+      del.title = "Click again to remove this part";
+    });
+
+    const acts = this.doc.createElement("div");
+    acts.className = "nc-blk-part-acts";
+    acts.append(
+      this.button("↑", "Move this part up", () => { this.movePart(el, -1); redraw(); }),
+      this.button("↓", "Move this part down", () => { this.movePart(el, 1); redraw(); }),
+      del,
+    );
+
+    // Two anchors that look alike in a list look alike in the page too, so the
+    // row says which one it is.
+    row.onmouseenter = () => el.setAttribute("nc:highlight", "");
+    row.onmouseleave = () => el.removeAttribute("nc:highlight");
+
+    row.append(name, what, acts);
+    return row;
+  }
+
   adder(container, before) {
     const wrap = this.doc.createElement("div");
     wrap.className = "nc-blk-add";
@@ -329,7 +454,18 @@ html[nc\\:blocks-on="true"] [nc\\:blocks] > *:not(.nc-blk-add) { position: relat
   font: inherit; cursor: pointer; color: #eee; background: #14121b; border: 1px solid #3a3350; border-radius: 9px; }
 .nc-blk-choice:hover { border-color: #8c64e1; }
 .nc-blk-icon { font-size: 1.3rem; line-height: 1; }
-.nc-blk-choice small { color: #9a92ad; font-size: .76rem; }`;
+.nc-blk-choice small { color: #9a92ad; font-size: .76rem; }
+.nc-blk-parts { display: grid; gap: .1rem; margin: .2rem 0 .4rem; }
+.nc-blk-part { display: flex; gap: .5rem; align-items: center; padding: .2rem .3rem; border-radius: 7px; }
+.nc-blk-part:hover { background: #14121b; }
+.nc-blk-part b { font-weight: 600; white-space: nowrap; }
+.nc-blk-part span { color: #9a92ad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nc-blk-part-empty { font-style: italic; }
+.nc-blk-part-acts { display: flex; gap: 2px; margin-left: auto; flex: none; }
+.nc-blk-part-acts button { font: 13px/1 system-ui, sans-serif; cursor: pointer; color: #eee;
+  background: transparent; border: 0; border-radius: 6px; padding: 4px 7px; }
+.nc-blk-part-acts button:hover { background: #2c2540; }
+[nc\\:highlight] { outline: 2px solid #8c64e1 !important; outline-offset: 2px; }`;
     this.doc.head.appendChild(s);
   }
 }

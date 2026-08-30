@@ -906,10 +906,13 @@
       // name makes a new build a new URL, which no cache can answer from stock.
       const files = [];
       const renames = [];
+      // nc.stamp takes any existing stamp off first. This wizard is itself a
+      // published page, so the CLI has already rewritten the paths in the array
+      // above to the stamped names; stamping those again would publish
+      // /nsite-clay-a1b2c3d4-a1b2c3d4.js and hash the same bytes twice.
       sharedText.forEach((text, i) => {
         const [path, type] = shared[i];
-        const dot = path.lastIndexOf(".");
-        const stamped = `${path.slice(0, dot)}-${nc.hashText(text).slice(0, 8)}${path.slice(dot)}`;
+        const stamped = nc.stamp(path, nc.hashText(text));
         renames.push([path, stamped]);
         files.push({ path: stamped, bytes: enc.encode(text), type });
       });

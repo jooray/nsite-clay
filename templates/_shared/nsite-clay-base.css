@@ -329,6 +329,32 @@ html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add):hover { outline-col
 .nc-blk-choice small { color: var(--nc-ink-dim); font-size: .76rem; }
 .nc-blk-icon { font-size: 1.3rem; line-height: 1; }
 
+/* The parts tree. The rail acts on a whole block; this is the way inside one,
+ * for the stray element that no block-level control can reach. */
+.nc-blk-parts { display: grid; gap: .1rem; margin: .2rem 0 .4rem; }
+.nc-blk-part {
+  display: flex; gap: .5rem; align-items: center;
+  padding: .25rem .35rem; border-radius: var(--nc-radius-sm);
+  font-size: .85rem; line-height: 1.35;
+}
+.nc-blk-part:hover { background: var(--nc-bg); }
+.nc-blk-part b { font-weight: 600; white-space: nowrap; }
+.nc-blk-part span {
+  color: var(--nc-ink-dim); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nc-blk-part-empty { font-style: italic; }
+.nc-blk-part-acts { display: flex; gap: 2px; margin-left: auto; flex: none; }
+.nc-ui .nc-blk-part-acts button {
+  font-size: .8rem; line-height: 1; padding: .3rem .45rem;
+  border: 0; background: transparent;
+}
+.nc-ui .nc-blk-part-acts button:hover { background: var(--nc-panel); border-color: transparent; }
+
+/* Hovering a row in that tree says which part of the page it means. The
+ * attribute is runtime state and comes off every save. */
+[nc\:highlight] { outline: 2px solid var(--nc-accent) !important; outline-offset: 2px; }
+
 /* ---- reading a post in the page -------------------------------------------
  * A feed set to nc:open-with="reader" opens a post here instead of sending the
  * reader to another site. It is nc:chrome, so a save made while it is open

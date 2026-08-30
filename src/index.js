@@ -22,10 +22,15 @@ import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
 import { Cms } from "./cms.js";
 import { Blocks } from "./blocks.js";
+import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { toast, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
+
+// Stamped in by build.mjs. Reading src/ directly is allowed by the package, and
+// an honest "unknown" beats a crash when nobody ran the build.
+export const VERSION = typeof __NC_VERSION__ === "string" ? __NC_VERSION__ : "0.0.0-src";
 
 // A publish succeeds the moment one relay accepts it -- waiting for the whole
 // set would add every dead relay's full timeout to every save. Only when all of
@@ -63,6 +68,8 @@ class NsiteClay extends EventTarget {
     this.state = new State(this);
     this.cms = new Cms(this);
     this.blocks = new Blocks(this);
+    this.upgrade = new Upgrade(this);
+    this.version = VERSION;
     this.status = "idle";
     this._subs = [];
     this._transforms = [];
@@ -157,6 +164,9 @@ class NsiteClay extends EventTarget {
     for (const el of [...clone.querySelectorAll("[contenteditable]")]) el.removeAttribute("contenteditable");
     for (const el of [...clone.querySelectorAll("[nc\\:keep-editable]")]) el.removeAttribute("nc:keep-editable");
     for (const el of [...clone.querySelectorAll("[nc\\:armed]")]) el.removeAttribute("nc:armed");
+    // The parts tree marks whichever element the pointer is over. Left behind,
+    // it would publish one element wearing an outline nobody asked for.
+    for (const el of [...clone.querySelectorAll("[nc\\:highlight]")]) el.removeAttribute("nc:highlight");
   }
 
   getHTML() {
@@ -167,19 +177,31 @@ class NsiteClay extends EventTarget {
   }
 
   // One save = one blob upload, one replaceable manifest, one version snapshot.
-  async save({ extraPaths = {}, snapshotVersion = true } = {}) {
+  async save({ extraPaths = {}, dropPaths = [], snapshotVersion = true } = {}) {
     if (!this.signer) throw new Error("Not signed in");
     if (!this.isOwner) throw new Error("Only the site owner can save this document");
     const html = this.getHTML();
+    // A caller changing the path table -- swapping the runtime for a newer blob
+    // at the same name -- can leave the document byte-identical, and the
+    // shortcut below would skip the very publish that carries the change.
+    const tableOnly = Object.keys(extraPaths).length > 0 || dropPaths.length > 0;
     // Identical bytes deduplicate to the same Blossom blob anyway; skipping
     // spares the relays a version event that says nothing new.
-    if (hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
+    if (!tableOnly && hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
     this._set("saving");
     try {
       const bytes = new TextEncoder().encode(html);
       const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
 
       const paths = { ...(await this._currentPaths()), ...extraPaths, [this.cfg.path]: hash };
+      // Paths the caller is retiring. An upgraded runtime would otherwise leave
+      // its predecessor named in the table for the life of the site. Nothing is
+      // destroyed by this: every kind-5128 snapshot still names the old hash and
+      // the blob is still on Blossom, so an old version still restores. The
+      // reference check below is what makes it safe -- drop a path the document
+      // still points at and the save refuses rather than publishing a broken
+      // site -- and the document's own path can never be dropped at all.
+      for (const p of dropPaths) if (p !== this.cfg.path) delete paths[p];
 
       // Refuse to publish a document that references a file the manifest does
       // not name. This is the failure that looks like the runtime is broken:
@@ -515,6 +537,7 @@ nc.ready = (async () => {
   nc.media.armEmbeds();
   nc.feed.start();
   nc.blocks.start();
+  nc.upgrade.start();
   nc._watchVersion();
   if (nc.cfg.owner) {
     nc.currentManifest().then((ev) => { if (ev) { nc._manifest = ev; nc._bootManifest = ev; } }).catch(() => {});
@@ -526,6 +549,7 @@ nc.ready = (async () => {
 
 Object.assign(nc, {
   nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
+  VERSION, stamp, unstamp,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
   manifestPaths, manifestServers, aggregateHash, readFeedConfig, postUrl, addressOf,
 });

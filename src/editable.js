@@ -40,6 +40,22 @@ const INPUT_RULES = [
 
 const tokensOf = (el) => new Set((el.getAttribute("editable") || "").split(/\s+/).filter(Boolean));
 
+// Elements that hold words but cannot hold boxes. Anything block-shaped inside
+// one of these is markup the parser will rearrange the moment it is written out
+// and read back, so it never gets to survive a save.
+const INLINE = new Set(["A", "SPAN", "CITE", "B", "I", "EM", "STRONG", "SMALL", "CODE",
+                        "LABEL", "TIME", "ABBR", "SUB", "SUP", "MARK", "S", "U", "DEL", "INS"]);
+const BLOCKISH = "p, div, h1, h2, h3, h4, h5, h6, ul, ol, li, blockquote, pre, " +
+                 "section, article, figure, figcaption, table, header, footer";
+
+// The rule the sanitiser uses, so a typed link cannot go anywhere pasted markup
+// could not.
+const SAFE_URL = /^(https?:|mailto:|#|\/)/i;
+
+// A single line takes the words and drops the shape, whitespace included: a
+// pasted paragraph should not arrive carrying the source document's line breaks.
+const oneLine = (s) => (s || "").replace(/\s+/g, " ").trim();
+
 export class Editable {
   constructor(nc) {
     this.nc = nc;
@@ -143,8 +159,8 @@ export class Editable {
     if (k === "i") return run(() => this.exec("italic"));
     if (k === "u") return run(() => this.exec("underline"));
     if (k === "k") return run(() => this.link());
-    if (e.shiftKey && k === "7") return run(() => this.exec("insertOrderedList"));
-    if (e.shiftKey && k === "8") return run(() => this.exec("insertUnorderedList"));
+    if (e.shiftKey && k === "7") return run(() => this.list("insertOrderedList"));
+    if (e.shiftKey && k === "8") return run(() => this.list("insertUnorderedList"));
     if (e.shiftKey && k === "9") return run(() => this.block("BLOCKQUOTE"));
     if (e.altKey && "0123".includes(e.key)) {
       const b = BLOCKS.find((x) => x.key === e.key);
@@ -156,7 +172,8 @@ export class Editable {
     const host = this.host(e.target);
     if (!host || !host.isContentEditable) return;
     this.nc.dirty = true;
-    if (tokensOf(host).has("no-markdown")) return;
+    // "# " and "- " make blocks, and a single line has nowhere to put one.
+    if (tokensOf(host).has("no-markdown") || tokensOf(host).has("single-line")) return;
     const sel = this.doc.getSelection();
     if (!sel || !sel.isCollapsed || !sel.anchorNode || sel.anchorNode.nodeType !== 3) return;
     const text = sel.anchorNode.textContent.slice(0, sel.anchorOffset);
@@ -177,21 +194,54 @@ export class Editable {
   // Paste arrives as whatever the source app produced. Clean HTML output is the
   // whole point of a malleable file, so it goes through the same allowlist that
   // contributed markup does.
+  //
+  // A single line is the exception, and takes text with no markup at all. The
+  // allowlist passes <p> and <div>, and a browser asked to put one of those
+  // inside an inline host splits the host to make room: paste a paragraph into a
+  // button and Chrome nests a second <a> inside the first. Nested anchors are
+  // not representable in HTML, so the save writes them out and the next load
+  // parses them back as siblings -- a page that has grown a second button, empty,
+  // with nothing on the block rail that can reach inside a block to remove it.
   onPaste(e) {
     const host = this.activeHost();
     if (!host) return;
     e.preventDefault();
     const html = e.clipboardData.getData("text/html");
     const text = e.clipboardData.getData("text/plain");
-    if (html) this.exec("insertHTML", sanitize(html));
+    if (tokensOf(host).has("single-line")) {
+      this.exec("insertText", oneLine(html ? this.textOf(html) : text));
+    }
+    else if (html) this.exec("insertHTML", sanitize(html));
     else this.exec("insertText", text);
     this.normalise(host);
     this.nc.dirty = true;
   }
 
+  // The words out of pasted markup. Sanitised first, so the body of a <script>
+  // the source app included does not arrive as visible text.
+  textOf(html) {
+    const holder = this.doc.createElement("div");
+    holder.innerHTML = sanitize(html);
+    // A paragraph boundary is a word boundary. Plain textContent would run the
+    // last word of one block into the first word of the next.
+    for (const el of [...holder.querySelectorAll(BLOCKISH + ", br")]) el.before(" ");
+    return holder.textContent;
+  }
+
   // ---- commands -----------------------------------------------------------
 
   exec(cmd, value = null) { try { this.doc.execCommand(cmd, false, value); } catch {} }
+
+  // A list is flow content, so it needs the guard block() has: asked for one
+  // inside a single line, the browser puts a <ul> inside the host and the next
+  // parse rearranges it. The buttons are hidden there too, so this only catches
+  // the keyboard shortcut and the "- " input rule.
+  list(cmd) {
+    const host = this.activeHost();
+    if (!host || tokensOf(host).has("single-line")) return;
+    this.exec(cmd);
+    this.normalise(host);
+  }
 
   block(tag) {
     const host = this.activeHost();
@@ -205,14 +255,34 @@ export class Editable {
   }
 
   link() {
+    // A host that is itself a link -- a button block's <a> -- is already the
+    // link, and state() never notices, because it only walks up as far as the
+    // host. Asked to create one anyway, the browser makes a link inside a link
+    // by splitting the host, which is the other way a page grows a second empty
+    // button. Edit the anchor that is already there instead, which is also the
+    // only way to change where a button points.
+    const own = this.activeHost()?.closest("a");
+    if (own) return this.retarget(own);
+
     const sel = this.doc.getSelection();
     if (!sel || sel.isCollapsed) return;
     const existing = this.state().link;
     if (existing) return this.exec("unlink");
     const url = this.doc.defaultView.prompt("Link to:", "https://");
     if (!url) return;
-    if (!/^(https?:|mailto:|#|\/)/i.test(url)) return;   // same rule the sanitiser uses
+    if (!SAFE_URL.test(url)) return;
     this.exec("createLink", url);
+  }
+
+  // Point an existing anchor somewhere else, or clear it. Emptying the box
+  // removes the href rather than the element: the element is the button.
+  retarget(a) {
+    const url = this.doc.defaultView.prompt("Link to:", a.getAttribute("href") || "https://");
+    if (url === null) return;
+    if (!url.trim()) { a.removeAttribute("href"); this.nc.dirty = true; return; }
+    if (!SAFE_URL.test(url.trim())) return;
+    a.setAttribute("href", url.trim());
+    this.nc.dirty = true;
   }
 
   // execCommand output varies by engine. Strip the debris it leaves behind so
@@ -227,6 +297,25 @@ export class Editable {
       const p = this.doc.createElement("p");
       p.append(...el.childNodes);
       el.replaceWith(p);
+    }
+
+    // An <a> inside an <a> is not something the HTML parser can represent. It
+    // gets into the live DOM when an editing command splits the host to make
+    // room for what it was told to insert, and it stays there, looking fine,
+    // until a save writes it out and the next load reads it back as two
+    // siblings. Unwrapping it here is what stops that becoming bytes.
+    for (const el of [...host.querySelectorAll("a a")]) el.replaceWith(...el.childNodes);
+
+    // An inline host cannot hold boxes. Keep the words and drop the boxes,
+    // rather than leave markup the parser will rearrange behind our back.
+    if (INLINE.has(host.tagName) || host.closest("a")) {
+      for (const el of [...host.querySelectorAll(BLOCKISH)]) el.replaceWith(...el.childNodes);
+    }
+
+    // One line means one line, however the break got in -- a pasted "a\nb"
+    // reaches insertText as a <br> rather than as two blocks.
+    if (tokensOf(host).has("single-line")) {
+      for (const el of [...host.querySelectorAll("br")]) el.replaceWith(" ");
     }
   }
 
@@ -297,15 +386,16 @@ export class Editable {
     }
     sep();
 
-    const listBtns = [
+    this.listBtns = [];
+    for (const [cmd, title, glyph] of [
       ["insertUnorderedList", "Bulleted list", "\u2022 \u2013"],
       ["insertOrderedList", "Numbered list", "1."],
-    ];
-    for (const [cmd, title, glyph] of listBtns) {
+    ]) {
       const b = mk("button", btnCss, { type: "button", title, textContent: glyph });
       b.onmousedown = (e) => e.preventDefault();
-      b.onclick = () => { this.exec(cmd); this.nc.dirty = true; this.syncBar(); };
+      b.onclick = () => { this.list(cmd); this.nc.dirty = true; this.syncBar(); };
       bar.appendChild(b);
+      this.listBtns.push(b);
     }
 
     const linkBtn = mk("button", btnCss, { type: "button", title: "Link (⌘K)", textContent: "🔗" });
@@ -366,8 +456,11 @@ export class Editable {
     bar.style.top = Math.max(win.scrollY + 4, top) + "px";
     bar.style.left = Math.max(4, Math.min(left, win.innerWidth - bar.offsetWidth - 4)) + "px";
 
+    // A single line takes no blocks and no lists, so the controls that would
+    // make one are not offered there rather than offered and refused.
     const single = tokensOf(host).has("single-line");
     this.select.style.display = single ? "none" : "";
+    for (const b of this.listBtns) b.style.display = single ? "none" : "";
     this.select.value = st.list ? "P" : st.block;
     for (const [b, cmd] of this.markBtns) {
       b.style.background = st[cmd] ? "color-mix(in srgb, var(--nc-accent, #31404b) 30%, transparent)" : "transparent";

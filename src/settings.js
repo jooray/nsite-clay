@@ -43,6 +43,32 @@ export class Settings {
     this.nc._emit("nsiteclay:settings", { editGate: m });
   }
 
+  // The front door to a runtime upgrade. It has to be here rather than on the
+  // toolbar: the toolbar is markup in the document, so a page published before a
+  // button existed will never grow one, whereas every template already carries a
+  // Settings button and always will. A dialog the runtime draws reaches every
+  // page that will ever exist.
+  runtimeRow(body) {
+    const label = this.doc.createElement("label");
+    label.textContent = "Runtime";
+    const row = this.doc.createElement("div");
+    row.className = "nc-row";
+
+    const what = this.doc.createElement("span");
+    what.className = "nc-hint";
+    what.style.margin = "0";
+    what.textContent = `nsite-clay ${this.nc.version}`;
+
+    const btn = this.doc.createElement("button");
+    btn.type = "button";
+    btn.style.marginLeft = "auto";
+    btn.textContent = "Check for an update";
+    btn.onclick = () => this.nc.upgrade.prompt();
+
+    row.append(what, btn);
+    body.append(label, row);
+  }
+
   async open() {
     const before = { autosave: this.autosave, editGate: this.editGate };
     let autosave, gate;
@@ -59,6 +85,7 @@ export class Settings {
           checked: this.editGate === "hash", note:
           "Readers get the page with nothing to click. Add #edit to the address to bring the " +
           "controls back." });
+        this.runtimeRow(body);
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always" }),
     });

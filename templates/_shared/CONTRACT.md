@@ -28,6 +28,11 @@ nothing to click; the owner adds `#edit` to the URL and the controls appear.
 Do not add `autosave`. It is off on purpose: every save stores the whole page
 again and files a version.
 
+`nc:runtime-owner` is optional and is best left out. Absent, a published page
+offers its owner the project's own newer runtime when one exists; set it to your
+own key if you fork the engine, or to `"off"` to never look. It is only ever an
+offer — nothing upgrades itself.
+
 ## The toolbar
 
 Copy this verbatim, near the end of `<body>`. The classes come from the shared
@@ -58,6 +63,11 @@ no save handler and no version dialog of its own.
 
 - `editable="single-line"` for a heading, a title, a caption, a list row.
 - `editable` on a container for prose, where Enter makes a paragraph.
+
+Use `single-line` for anything whose element is inline — a button's `<a>`, a
+`<cite>`, a `<span>`. Those cannot legally hold a paragraph, and the runtime
+relies on the token to keep one out: it pastes text rather than markup there, and
+hides the controls that would make a block.
 
 Mark everything an owner would plausibly want to change. A template nobody can
 edit without opening a text editor has missed the point.

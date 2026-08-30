@@ -16,6 +16,8 @@ site/shots/
 site/t/
 site/nsite-clay-base.css
 site/nsite-clay-chrome.js
+# generated from package.json and docs/releases.json by tools/stage-runtime.mjs
+site/runtime.json
 
 # assembled by `npm run demo:build`
 demo-dist/

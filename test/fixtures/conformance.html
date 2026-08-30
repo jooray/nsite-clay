@@ -47,6 +47,12 @@
   <main id="blockarea" nc:blocks>
     <section nc:block-type="heading"><h2 editable="single-line">First</h2></section>
     <section nc:block-type="rule"><hr></section>
+    <!-- The shape the paste bug came out of: a single-line region that is
+         itself an inline element, so anything block-shaped put inside it makes
+         the browser split it. -->
+    <section id="btnblock" class="b-button" nc:block-type="button">
+      <a id="btn" href="#" editable="single-line">Stay cool</a>
+    </section>
   </main>
   <template nc:block="heading" nc:label="Heading" nc:icon="H" nc:group="Text">
     <section class="b-heading"><h2 editable="single-line">A heading</h2></section>

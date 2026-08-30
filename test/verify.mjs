@@ -119,6 +119,55 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   r.selectNodeContents(line); sel.removeAllRanges(); sel.addRange(r);
   nc.editable.block("H2");
   t("a single-line region refuses block changes", line.tagName === "H1");
+  nc.editable.list("insertUnorderedList");
+  t("and refuses lists, which are blocks too", !line.querySelector("ul"), line.innerHTML);
+
+  // A single line takes words and nothing else. The allowlist passes <p>, and a
+  // browser asked to put one inside an inline host splits the host to make room:
+  // pasting a paragraph into a button nested a second <a> inside the first, which
+  // looks fine in a live DOM and comes back from the next parse as two buttons
+  // with the first one empty. There is no way to remove one of those from the
+  // page, which is why it is worth a test rather than a fix and a shrug.
+  {
+    const btnblock = document.getElementById("btnblock");
+    const btn = document.getElementById("btn");
+    const paste = (host, html, text = "") => {
+      const rr = document.createRange();
+      rr.selectNodeContents(host);
+      sel.removeAllRanges(); sel.addRange(rr);
+      host.focus();
+      nc.editable.onPaste({
+        preventDefault() {},
+        clipboardData: { getData: (type) => (type === "text/html" ? html : text) },
+      });
+    };
+
+    paste(btn, "<p>Stay</p><p>cool</p>");
+    t("a paste into a single line brings no markup with it", btn.children.length === 0, btn.innerHTML);
+    t("so no second anchor appears inside the first",
+      btnblock.querySelectorAll("a").length === 1, btnblock.innerHTML);
+    t("and the words still arrive", /Stay\s+cool/.test(btn.textContent), btn.textContent);
+
+    // The round trip is the part that matters: nested anchors are only ever
+    // visible as two elements after the bytes have been read back.
+    const reparsed = document.createElement("div");
+    reparsed.innerHTML = btnblock.outerHTML;
+    t("and it is still one button when the file is parsed again",
+      reparsed.querySelectorAll("a").length === 1, reparsed.innerHTML);
+
+    // Repair as well as prevention: a page saved by an older runtime has the
+    // nested anchor in it already, and normalise runs on every edit.
+    btn.innerHTML = '<p></p><a href="#"><p>Stay cool</p></a>';
+    nc.editable.normalise(btn);
+    t("normalise unwraps an anchor nested in an anchor", !btn.querySelector("a"), btn.innerHTML);
+    t("and the boxes an inline host cannot hold", !btn.querySelector("p"), btn.innerHTML);
+
+    btn.innerHTML = "one<br>two";
+    nc.editable.normalise(btn);
+    t("a line break in a single line becomes a space",
+      !btn.querySelector("br") && /one two/.test(btn.textContent), btn.innerHTML);
+    btn.textContent = "Stay cool";
+  }
 
   prose.querySelector("p").innerHTML = '<font color="red"><span style="color:red">x</span></font>';
   nc.editable.normalise(prose);
@@ -514,7 +563,7 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     const area = document.getElementById("blockarea");
     const before = nc.blocks.blocksIn(area).length;
     t("a block area is found", nc.blocks.containers().length === 1);
-    t("blocks are its element children", before === 2);
+    t("blocks are its element children", before === 3, String(before));
     const lib = nc.blocks.library();
     t("the library comes from the page's <template> elements", lib.size === 3);
     t("a library entry carries its palette label", lib.get("heading").label === "Heading");
@@ -554,9 +603,64 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("and so does the added block",
       (withBlocks.match(/nc:block-type="heading"/g) || []).length === 2);
 
+    // Reaching inside a block. The rail acts on whole blocks, so without this
+    // the only cure for one stray element is to delete the block around it and
+    // build the whole thing again.
+    {
+      const block = document.getElementById("btnblock");
+      block.insertAdjacentHTML("beforeend", '<a href="#" editable="single-line"></a>');
+      const parts = nc.blocks.partsOf(block);
+      t("the parts tree lists what is inside a block", parts.length === 2,
+        parts.map((p) => p.el.localName).join(","));
+      t("and says which of them is empty",
+        !nc.blocks.isEmpty(parts[0].el) && nc.blocks.isEmpty(parts[1].el));
+      t("a rail is not a part of the block it sits on",
+        parts.every((p) => !p.el.closest(".nc-blk-rail")));
+
+      // The rail is a sibling of everything at the top of a block, so a move
+      // against the unfiltered list would swap a part with it and do nothing.
+      block.insertAdjacentHTML("afterbegin", '<span id="p1">one</span>');
+      const p1 = document.getElementById("p1");
+      nc.blocks.movePart(p1, 1);
+      t("moving a part down skips the rail", block.children[1] === p1, block.innerHTML);
+      p1.remove();
+
+      nc.dom.remove(parts[1].el);
+      t("removing a part leaves the block standing",
+        nc.blocks.partsOf(block).length === 1 && block.isConnected);
+
+      block.setAttribute("nc:highlight", "");
+      t("the tree's hover marker never reaches the file", !nc.getHTML().includes("nc:highlight"));
+      block.removeAttribute("nc:highlight");
+    }
+
     nc.blocks.disarm();
     t("disarming takes every rail away", document.querySelectorAll(".nc-blk-rail").length === 0);
     nc.dom.remove(added);
+  }
+
+  // --- moving to a newer runtime ------------------------------------------
+  // A deployed page's only record of which engine it runs is the content stamp
+  // in its asset URL, so the stamping has to survive being read back.
+  t("the runtime knows its own version", /^\d+\.\d+\.\d+/.test(nc.version), nc.version);
+  t("a stamped asset path unstamps", nc.unstamp("/nsite-clay-1f3a9c02.js") === "/nsite-clay.js");
+  t("a doubly stamped one unstamps too",
+    nc.unstamp("/nsite-clay-1f3a9c02-1f3a9c02.js") === "/nsite-clay.js");
+  t("a name that merely contains a dash is left alone",
+    nc.unstamp("/nsite-clay-base.css") === "/nsite-clay-base.css");
+  t("stamping takes off any stamp already there",
+    nc.stamp("/nsite-clay-aaaaaaaa.js", "b".repeat(64)) === "/nsite-clay-bbbbbbbb.js");
+  t("a stylesheet keeps its own name when stamped",
+    nc.stamp("/nsite-clay-base.css", "c".repeat(64)) === "/nsite-clay-base-cccccccc.css");
+  t("this page's own runtime reference is found",
+    nc.upgrade.refs().some((ref) => ref.canonical === "/nsite-clay.js"),
+    nc.upgrade.refs().map((ref) => ref.path).join(","));
+  {
+    const keep = nc.cfg.runtimeOwner;
+    nc.cfg.runtimeOwner = null;
+    t("a page told not to look for a newer runtime does not",
+      (await nc.upgrade.source()) === null);
+    nc.cfg.runtimeOwner = keep;
   }
 
   // --- saving guards ------------------------------------------------------

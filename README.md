@@ -177,9 +177,14 @@ does not touch your posts.
 ## Blocks
 
 A page marked `nc:blocks` is assembled rather than typed over. In edit mode the
-runtime draws a rail on every block (move it, duplicate it, delete it, and for a
-picture or a feed a gear that reopens the picker) and an insert point between
-them that opens a palette.
+runtime draws a rail on every block (move it, duplicate it, delete it, list what
+it is made of, and for a picture or a feed a gear that reopens the picker) and an
+insert point between them that opens a palette.
+
+The list is the way inside a block. A block is markup, and markup accumulates: a
+duplicated card, an element some editing command split in two, an empty box left
+behind by something that went wrong. Without a way in, the only cure for one
+stray element is to delete the block around it and build the whole thing again.
 
 The palette is built from the document's own library, which is a set of inert
 `<template>` elements:
@@ -431,6 +436,29 @@ fetches one and refuses bytes that do not hash to what the snapshot claims, and 
 republishes an old path table as the current one. Restoring is itself a new version, so nothing
 is destroyed. Each version also has its own permanent URL, which does mean your history is
 public.
+
+## Upgrading a published page
+
+A published document hardcodes the URLs of the files it runs on, and a gateway
+serves those with a cache lifetime, so the deployed copy stays on the engine it
+was deployed with. That is the right default — a site that changed under its
+owner would not be theirs — but a fix has to be able to reach it somehow.
+
+It reaches it the same way everything else here moves. The project publishes its
+own nsite; that manifest is a signed event naming content-addressed blobs; the
+page re-hashes whatever a Blossom server hands back before believing a byte of
+it. A server cannot lie, and the only thing being trusted is the key the page
+names in `nc:runtime-owner` — the same key its owner published from. The new
+bytes go onto **your** Blossom servers and into **your** manifest, so afterwards
+nothing of ours is in the path and nothing can be withdrawn from under you.
+
+Nothing upgrades itself. Open your page for editing and you are told a newer
+runtime exists, with what changed; Settings has the same offer behind a button.
+A reader triggers neither, and `nc:runtime-owner="off"` never looks at all.
+
+An upgrade replaces the engine, the toolbar script and the stylesheet. It does
+not rewrite your page: your blocks, your words and your design are yours, and
+version history keeps the old manifest either way.
 
 ## Configuration
 

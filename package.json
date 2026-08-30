@@ -1,6 +1,6 @@
 {
   "name": "nsite-clay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.",
   "license": "MIT-0",
@@ -45,7 +45,7 @@
     "build": "node build.mjs",
     "test": "node test/verify.mjs",
     "prepublishOnly": "npm run build && npm test",
-    "site:build": "node build.mjs && cp dist/nsite-clay.js site/ && cp templates/_shared/nsite-clay-base.css templates/_shared/nsite-clay-chrome.js site/ && cp icons/nsite-clay-transparent.png icons/nsite-clay-mark.svg icons/nsite-clay.png site/ && cp media/editing.png site/ && mkdir -p site/shots && cp media/guide/*.png site/shots/ && node tools/stage-templates.mjs && node tools/stage-deploy.mjs",
+    "site:build": "node build.mjs && cp dist/nsite-clay.js site/ && cp templates/_shared/nsite-clay-base.css templates/_shared/nsite-clay-chrome.js site/ && cp icons/nsite-clay-transparent.png icons/nsite-clay-mark.svg icons/nsite-clay.png site/ && cp media/editing.png site/ && mkdir -p site/shots && cp media/guide/*.png site/shots/ && node tools/stage-templates.mjs && node tools/stage-deploy.mjs && node tools/stage-runtime.mjs",
     "devnet": "node tools/devnet.mjs",
     "publish:local": "npm run site:build && node tools/publish-local.mjs",
     "walkthrough": "npm run site:build && node tools/publish-walkthrough.mjs",

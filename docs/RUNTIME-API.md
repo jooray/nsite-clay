@@ -31,6 +31,7 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 | `nc:path` | no | this document's path inside the manifest. Default `/index.html` |
 | `autosave` | no | save once edits settle (2.5 s debounce, 15 s throttle). `⌘S` / `Ctrl+S` works either way |
 | `nc:autoreload` | no | `"false"` stops the document watching its manifest for newer versions |
+| `nc:runtime-owner` | no | whose runtime this page will offer to upgrade to. Default is the project's own key; `"off"` never looks |
 
 Unknown `nc:*` attributes are ignored, so a document written for a later version still renders.
 
@@ -63,6 +64,8 @@ await nc.logout()
 nc.getHTML()                       // the exact string a save would store
 await nc.save()                    // → { hash, bytes, manifest, version, aggregate }
                                    //   or { skipped: true } when nothing changed
+await nc.save({ extraPaths, dropPaths })      // publish other files in the same manifest.
+                                   //   A drop the document still references is refused
 await nc.currentManifest()         // the live nsite manifest event
 await nc.versions()                // kind-5128 snapshots, newest first
 await nc.readVersion(snap)         // that version's HTML, fetched and hash-verified
@@ -71,6 +74,17 @@ await nc.restore(snap)             // republish that version's path table as cur
 nc.editable.enable() / .disable()  // re-run enable() after inserting new [editable] nodes
 nc.editable.block("H2")            // what the block menu calls
 nc.reloadToLatest()                // reload through a URL no cache can satisfy
+
+// blocks: a page built out of markup rather than out of rows
+nc.blocks.open() / .add(name, { container, before })
+nc.blocks.partsOf(block)           // what is inside one, depth-first, furniture excluded
+nc.blocks.parts(block)             // and the dialog that lists it, with remove and reorder
+
+// moving a published site to a newer runtime
+nc.version                         // the version of the engine this page is running
+await nc.upgrade.check()           // → a plan, or null when there is nothing newer
+await nc.upgrade.prompt()          // check, then offer it; what Settings calls
+nc.unstamp(path) / nc.stamp(path, hash)   // the content stamp in an asset URL
 
 // structure: the DOM is the database, these are the operations on it
 nc.dom.clone(el) / .remove(el) / .move(el, +1|-1, selector)   // move reorders in one parent
@@ -99,6 +113,28 @@ nc.addEventListener("nsiteclay:status", handler)
 
 Helpers re-exported for convenience: `nc.nip19`, `nc.verifyEvent`, `nc.sanitize`,
 `nc.sanitizeAs`, `nc.hashText`, `nc.fetchVerified`, `nc.LocalSigner`.
+
+## Upgrading a published page
+
+A deployed document hardcodes the URLs of the three shared files it runs on, and a gateway serves
+those with a cache lifetime, so the published copy is pinned to the engine it was published with.
+That is the right default — a site that changed under its owner would not be theirs — but it needs
+a door.
+
+The door is Nostr. The project publishes its own nsite; that manifest is a signed event naming
+content-addressed blobs; `fetchVerified` re-hashes whatever a Blossom server returns before
+believing a byte of it. So a server cannot lie, and the only thing being trusted is the key named in
+`nc:runtime-owner`. The new bytes are stored on **the owner's own** Blossom servers and named in
+**the owner's own** manifest, so afterwards nothing of anybody else's is in the path.
+
+It is never automatic. An owner who opens the page for editing is shown a notice, and Settings has
+the same offer behind a button; a reader triggers neither. The offer lives in a dialog the runtime
+draws rather than on the toolbar, because the toolbar is markup in the document: a page published
+before a button existed would never grow one.
+
+An upgrade replaces the engine, the toolbar script and the stylesheet. It does not rewrite the
+document — the template's own CSS, its `<template nc:block>` library and its toolbar buttons are the
+author's page. Version history keeps the old path table either way, so a restore undoes it.
 
 ## Editing markup
 

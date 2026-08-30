@@ -18,6 +18,12 @@ const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://blossom.primal.net"
 // rather than borrowing the set the site publishes to.
 const DEFAULT_SIGNER_RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom"];
 
+// The key that publishes the canonical runtime -- the project's own nsite. An
+// upgrade therefore travels over the same substrate the site does: a signed
+// manifest naming content-addressed blobs, with no server to ask and no domain
+// to lapse. A fork points nc:runtime-owner at its own key; "off" never looks.
+const RUNTIME_OWNER = "npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2";
+
 function list(value, fallback) {
   if (!value) return fallback.slice();
   return value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
@@ -58,6 +64,11 @@ export function readConfig(doc = document) {
     // A saved document hardcodes its own asset URLs and has no update channel,
     // so it watches its own manifest instead. Opt out with nc:autoreload="false".
     autoreload: (attr("nc:autoreload") || "").toLowerCase() !== "false",
+    // Whose runtime this page is willing to be upgraded to. Never acted on by
+    // itself: it says where to look, and the owner still has to say yes.
+    runtimeOwner: (attr("nc:runtime-owner") || "").trim().toLowerCase() === "off"
+      ? null
+      : toHex(attr("nc:runtime-owner")) || toHex(RUNTIME_OWNER),
   };
 }
 

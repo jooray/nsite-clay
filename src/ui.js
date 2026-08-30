@@ -116,6 +116,12 @@ function cancelLabel(doc) {
 // A modal that resolves to whatever `onSubmit` returns, or null if dismissed.
 // `build(body, helpers)` fills in the fields; helpers.submit() triggers the
 // primary action, so a form can resolve on Enter.
+// Dialogs stack -- an update offer opened from Settings, a picker opened from a
+// block -- and every one of them listens for Escape on the document. Without a
+// stack the outer one hears the key too and a single press closes the lot,
+// including the dialog the person was actually looking at.
+const openModals = [];
+
 export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, doc = document, wide = false, noCancel = false }) {
   styles(doc);
   return new Promise((resolve) => {
@@ -141,9 +147,19 @@ export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, do
     const helpers = {
       status(msg, bad = false) { status.textContent = msg || ""; status.classList.toggle("nc-bad", !!bad); },
       busy(on) { primary.disabled = !!on; },
-      close(value) { root.remove(); doc.removeEventListener("keydown", esc, true); resolve(value ?? null); },
+      close(value) {
+        root.remove();
+        doc.removeEventListener("keydown", esc, true);
+        const i = openModals.indexOf(helpers);
+        if (i >= 0) openModals.splice(i, 1);
+        resolve(value ?? null);
+      },
     };
-    const esc = (e) => { if (e.key === "Escape") { e.preventDefault(); helpers.close(null); } };
+    const esc = (e) => {
+      if (e.key !== "Escape" || openModals[openModals.length - 1] !== helpers) return;
+      e.preventDefault();
+      helpers.close(null);
+    };
 
     build?.(card.querySelector(".nc-body"), helpers);
     const cancel = card.querySelector(".nc-cancel");
@@ -162,6 +178,7 @@ export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, do
 
     root.appendChild(card);
     doc.body.appendChild(root);
+    openModals.push(helpers);
     doc.addEventListener("keydown", esc, true);
     card.querySelector("input, textarea, select")?.focus();
   });

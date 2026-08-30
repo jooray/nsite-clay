@@ -1,0 +1,13 @@
+[
+  {
+    "version": "0.2.0",
+    "released": "2026-08-30",
+    "notes": [
+      "Pasting into a one-line region no longer splits it. A pasted paragraph used to nest a second <a> inside a button, which came back after the next load as two buttons with the first one empty.",
+      "A block's rail can reach inside the block. The new ⌷ button lists what a block is made of, so a stray element can be removed without deleting the block around it.",
+      "A button's link can be changed. Pressing the link button inside one used to try to put a link inside a link.",
+      "Settings says which runtime the page is running, and can move it to a newer one.",
+      "A dialog opened on top of another no longer shares its Escape key with the one underneath."
+    ]
+  }
+]
