@@ -345,8 +345,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <div editable>
       <p class="lede">Tvůj web přistane na <code>https://&lt;npub&gt;.nsite.lol/</code>.
         Pojmenované weby dostanou vlastní subdoménu, každé uložení založí trvalou verzi s vlastní
-        URL a stejný web servíruje kterákoli NIP-5A gateway, takže na jednu můžeš namířit CNAME
-        a mít vlastní doménu.</p>
+        URL a stejný web servíruje kterákoli NIP-5A gateway. Stačí CNAME z vlastní domény na
+        tvou npub subdoménu a stránku tam servíruje gateway taky, HTTPS na tom jméně ale
+        potřebuje gateway, co pro něj vydává certifikáty.</p>
       <p class="lede">Soubory se publikují na cestách, které nesou hash obsahu, a každý dokument
         sleduje vlastní manifest a načte se znovu, jakmile se objeví novější verze. Nikdo nemusí
         vědět, co je to tvrdý refresh.</p>
@@ -380,8 +381,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
         a <a href="https://shakespeare.to">shakespeare.to</a> jsou referenční implementace.
         Na nsite.run navíc najdeš nejsrozumitelnější vysvětlení, co to nsite vlastně je.</li>
-      <li>CNAME na kteroukoli z nich ti dá vlastní doménu a <code>npm run devnet</code> rozjede
-        jednu na notebooku.</li>
+      <li>Stačí CNAME z tvé domény na npub subdoménu a stránku tam servíruje kterákoli z nich,
+        přes obyčejné HTTP. HTTPS na tom jméně potřebuje certifikát, a to dnes znamená
+        provozovat gateway sám. <code>npm run devnet</code> rozjede jednu na notebooku.</li>
     </ul>
   </section>
 

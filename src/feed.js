@@ -12,6 +12,7 @@
 // it is marked `nc:transient` so a save never freezes a feed into the file.
 import { verifyEvent, nip19 } from "nostr-tools";
 import { sanitize } from "./sanitize.js";
+import { markdownish } from "./markdown.js";
 import { toHex } from "./config.js";
 import { modal, field } from "./ui.js";
 
@@ -74,6 +75,45 @@ function imetaUrls(ev) {
   return urls.filter((u) => /^https?:\/\//i.test(u));
 }
 
+// Where a post opens when somebody clicks it.
+//
+// Every route here was checked against the live site, because an article and a
+// note are not at the same path and guessing gives you a 404 rather than an
+// error anybody would notice:
+//
+//   njump      njump.me/<naddr>               njump.me/<nevent>
+//   yakihonne  yakihonne.com/article/<naddr>  yakihonne.com/note/<nevent>
+//   primal     primal.net/a/<naddr>           primal.net/e/<nevent>
+const CLIENTS = {
+  njump:     { article: (id) => `https://njump.me/${id}`,              note: (id) => `https://njump.me/${id}` },
+  yakihonne: { article: (id) => `https://yakihonne.com/article/${id}`, note: (id) => `https://yakihonne.com/note/${id}` },
+  primal:    { article: (id) => `https://primal.net/a/${id}`,          note: (id) => `https://primal.net/e/${id}` },
+};
+
+// An addressable event is named by its address, so it survives the author
+// editing it. Everything else is named by the id of the one event.
+export function addressOf(ev) {
+  return ev.kind >= 30000 && ev.kind < 40000
+    ? nip19.naddrEncode({ kind: ev.kind, pubkey: ev.pubkey, identifier: tag(ev, "d") || "" })
+    : nip19.neventEncode({ id: ev.id, author: ev.pubkey });
+}
+
+// `openWith` is a client name, or a URL template with {id}, {npub}, {kind} and
+// {d} in it. The reader is handled in the page, so it falls back to njump here:
+// that is the href a middle click or a reader with no JavaScript follows.
+export function postUrl(ev, openWith = "reader") {
+  const id = addressOf(ev);
+  if (/\{|:\/\//.test(openWith)) {
+    return openWith
+      .replace(/\{id\}/g, id)
+      .replace(/\{npub\}/g, nip19.npubEncode(ev.pubkey))
+      .replace(/\{kind\}/g, String(ev.kind))
+      .replace(/\{d\}/g, encodeURIComponent(tag(ev, "d") || ""));
+  }
+  const client = CLIENTS[openWith] || CLIENTS.njump;
+  return id.startsWith("naddr") ? client.article(id) : client.note(id);
+}
+
 export function readFeedConfig(el) {
   const a = (n, d = "") => el.getAttribute(n) ?? d;
   const list = (v) => String(v || "").split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
@@ -86,6 +126,9 @@ export function readFeedConfig(el) {
     topic: a("nc:topic") || "",
     pinned: list(a("nc:pinned")),
     relays: list(a("nc:feed-relays")),
+    // "reader" opens the post in the page. A client name or a URL template
+    // sends it somewhere else instead.
+    openWith: (a("nc:open-with") || "reader").trim(),
   };
 }
 
@@ -94,6 +137,7 @@ export class Feed {
     this.nc = nc;
     this.doc = nc.doc;
     this.profiles = new Map();
+    this.events = new Map();
   }
 
   readFeedConfig(el) { return readFeedConfig(el); }
@@ -211,19 +255,19 @@ export class Feed {
       title = tag(ev, "title") || tag(ev, "d") || "Untitled";
       const summary = tag(ev, "summary") || excerpt(ev.content);
       const image = tag(ev, "image");
-      href = `https://njump.me/${nip19.naddrEncode({ kind: 30023, pubkey: ev.pubkey, identifier: tag(ev, "d") || "" })}`;
+      href = postUrl(ev, cfg.openWith);
       body =
         (image && /^https?:\/\//i.test(image) ? `<img class="nc-cover" src="${esc(image)}" alt="" loading="lazy">` : "") +
         `<h3 class="nc-title"><a href="${esc(href)}" rel="noopener" target="_blank">${esc(title)}</a></h3>` +
         `<p class="nc-summary">${esc(summary)}</p>`;
     } else if (cfg.type === "images") {
-      href = `https://njump.me/${nip19.neventEncode({ id: ev.id, author: ev.pubkey })}`;
+      href = postUrl(ev, cfg.openWith);
       const pics = imetaUrls(ev).slice(0, 4)
         .map((u) => `<img src="${esc(u)}" alt="" loading="lazy">`).join("");
       body = `<div class="nc-pics">${pics}</div>` +
         (ev.content ? `<p class="nc-text">${linkify(ev.content)}</p>` : "");
     } else {
-      href = `https://njump.me/${nip19.neventEncode({ id: ev.id, author: ev.pubkey })}`;
+      href = postUrl(ev, cfg.openWith);
       body = `<div class="nc-text"><p>${linkify(ev.content)}</p></div>`;
     }
 
@@ -236,14 +280,140 @@ export class Feed {
       `<a class="nc-when" href="${esc(href)}" rel="noopener" target="_blank">${esc(when(ev.created_at))}</a></header>` +
       body + (tags ? `<footer class="nc-tags">${tags}</footer>` : ""),
     );
+    // Marked after sanitising, not before: the allowlist would drop an unknown
+    // attribute, and widening it for this would widen it for pasted markup too.
+    // The same goes for target, which the card markup has always asked for and
+    // never got, so a feed link replaced the page it was sitting on.
+    // a.nc-when, not ".nc-when a": the date is the anchor itself. Written the
+    // other way it matched nothing, and a feed of notes has no title link, so
+    // the reader had nothing to open from at all.
+    for (const a of art.querySelectorAll(".nc-title a, a.nc-when")) {
+      a.setAttribute("nc:open", "");
+      a.setAttribute("rel", "noopener noreferrer");
+      a.setAttribute("target", "_blank");
+    }
+    for (const a of art.querySelectorAll(".nc-name")) {
+      a.setAttribute("rel", "noopener noreferrer");
+      a.setAttribute("target", "_blank");
+    }
+
     art.setAttribute("nc:by", ev.pubkey);
+    // The reader opens from what the feed already fetched, so a click costs no
+    // relay round trip. The card is nc:transient and never saved, so neither is
+    // this.
+    art.setAttribute("nc:post", ev.id);
+    this.events.set(ev.id, ev);
     // When it was posted, so a page merging two feeds can interleave them
     // without parsing the formatted date back out of the byline.
     art.setAttribute("nc:at", String(ev.created_at));
     return art;
   }
 
+  // ---- reading a post without leaving the page ----------------------------
+
+  // The feed already fetched the event to draw the card, so opening it costs no
+  // relay round trip and usually no wait at all. Closing is an overlay coming
+  // off, not a navigation, so the page underneath is exactly where it was:
+  // nothing reloads, nothing scrolls back to the top, nothing half-typed is
+  // lost.
+  //
+  // All of it is nc:chrome, so a save that happens while a post is open writes
+  // the page without it.
+  openPost(ev, openWith = "njump") {
+    this.closePost();
+    this.injectStyles();
+    const doc = this.doc;
+    const who = this.profiles.get(ev.pubkey) || {};
+    const npub = nip19.npubEncode(ev.pubkey);
+    const name = who.name || npub.slice(0, 12) + "…";
+
+    const wrap = doc.createElement("div");
+    wrap.className = "nc-read";
+    wrap.setAttribute("nc:chrome", "");
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-label", tag(ev, "title") || "Post");
+
+    const title = tag(ev, "title");
+    const image = tag(ev, "image");
+    const pics = imetaUrls(ev).slice(0, 8);
+    // Long-form is Markdown. A note is plain text whose links and mentions are
+    // already handled by the same linkifier the cards use.
+    const rendered = ev.kind === 30023
+      ? markdownish(ev.content)
+      : pics.map((u) => `<img src="${esc(u)}" alt="" loading="lazy">`).join("") +
+        `<p>${linkify(ev.content)}</p>`;
+
+    wrap.innerHTML = sanitize(
+      `<article class="nc-read-card">` +
+      `<header class="nc-read-head">` +
+        `<a class="nc-read-by" href="https://njump.me/${esc(npub)}" rel="noopener" target="_blank">${esc(name)}</a>` +
+        `<span class="nc-read-when">${esc(when(ev.created_at))}</span>` +
+      `</header>` +
+      (title ? `<h2 class="nc-read-title">${esc(title)}</h2>` : "") +
+      (ev.kind === 30023 && image && /^https?:\/\//i.test(image)
+        ? `<img class="nc-read-cover" src="${esc(image)}" alt="" loading="lazy">` : "") +
+      `<div class="nc-read-body">${rendered}</div>` +
+      `<p class="nc-read-out"><a href="${esc(postUrl(ev, openWith === "reader" ? "njump" : openWith))}" ` +
+        `rel="noopener" target="_blank">Open it in a Nostr client</a></p>` +
+      `</article>`,
+    );
+
+    // The close button is built rather than parsed, because sanitize() drops
+    // the handler and a button that does nothing is worse than no button.
+    const close = doc.createElement("button");
+    close.type = "button";
+    close.className = "nc-read-x";
+    close.textContent = "Close";
+    close.setAttribute("aria-label", "Close");
+    close.onclick = () => this.closePost();
+    wrap.querySelector(".nc-read-head").appendChild(close);
+
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) this.closePost(); });
+    this._onEsc = (e) => { if (e.key === "Escape") this.closePost(); };
+    doc.addEventListener("keydown", this._onEsc);
+
+    doc.body.appendChild(wrap);
+    doc.documentElement.setAttribute("nc:reading", "true");
+    this._reading = wrap;
+    close.focus();
+    this.nc._emit("nsiteclay:read", { event: ev });
+    return wrap;
+  }
+
+  closePost() {
+    if (this._onEsc) { this.doc.removeEventListener("keydown", this._onEsc); this._onEsc = null; }
+    this._reading?.remove();
+    this._reading = null;
+    this.doc.documentElement.removeAttribute("nc:reading");
+  }
+
+  // One listener for the whole document. Only the links the card marked
+  // nc:open are intercepted, so the author's name still goes to their profile.
+  armReader() {
+    if (this._armedReader) return;
+    this._armedReader = true;
+    this.doc.addEventListener("click", (e) => {
+      const a = e.target.closest?.("a[nc\\:open]");
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+      const item = a.closest("[nc\\:post]");
+      const widget = a.closest("[nc\\:feed]");
+      if (!item || !widget) return;
+      const cfg = readFeedConfig(widget);
+      if (cfg.openWith !== "reader") return;          // it is a real link elsewhere
+      const ev = this.events.get(item.getAttribute("nc:post"));
+      if (!ev) return;                                 // nothing cached: follow the link
+      e.preventDefault();
+      this.openPost(ev, cfg.openWith);
+    });
+  }
+
   start() {
+    // Armed before the widget check, not after. It is one delegated listener on
+    // the document, and a page that starts with no feed can still gain one from
+    // the block palette; returning early left that feed with a reader that had
+    // never been switched on.
+    this.armReader();
     const all = this.widgets();
     if (!all.length) return;
     this.injectStyles();
@@ -295,7 +465,24 @@ export class Feed {
 .nc-embed .nc-embed-link { position: relative; display: block; }
 .nc-embed-play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 3rem;
   color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,.7); }
-`;
+
+.nc-read { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: start center;
+  background: rgba(6,4,12,.62); padding: 1rem; overflow-y: auto; }
+.nc-read-card { width: min(42rem,100%); background: #14121b; color: #eee; border: 1px solid #332f3f;
+  border-radius: 12px; padding: 1.4rem 1.5rem 1.6rem; font: 16px/1.7 system-ui, sans-serif; }
+.nc-read-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; font-size: .85rem; opacity: .7; }
+.nc-read-by { color: inherit; font-weight: 600; text-decoration: none; }
+.nc-read-when { flex: 1; }
+.nc-read-x { font: inherit; font-size: .85rem; cursor: pointer; padding: .35rem .8rem; border-radius: 8px;
+  border: 1px solid #423c52; background: #0f0d15; color: #eee; }
+.nc-read-title { margin: 0 0 .8rem; font-size: 1.5rem; line-height: 1.25; }
+.nc-read-cover, .nc-read-body img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+.nc-read-cover { margin-bottom: 1rem; }
+.nc-read-body { overflow-wrap: anywhere; }
+.nc-read-body pre { overflow-x: auto; padding: .8rem 1rem; border-radius: 8px; background: #0f0d15;
+  border: 1px solid #332f3f; font: .85rem/1.6 ui-monospace, monospace; }
+.nc-read-out { margin: 1.4rem 0 0; padding-top: 1rem; border-top: 1px solid #332f3f; font-size: .88rem; }
+html[nc\\:reading="true"] body { overflow: hidden; }`;
     // First child, not last: this is a fallback so an unstyled page still looks
     // deliberate, and a linked stylesheet must be able to override it at equal
     // specificity rather than losing to whatever was injected later.
@@ -309,7 +496,7 @@ export class Feed {
   // place, its classes and whatever the template styled it with. The form
   // starts from what that widget already says.
   async promptInsert({ target = null } = {}) {
-    let type, authors, limit, style, minLength, topic;
+    let type, authors, limit, style, minLength, topic, openWith, customUrl;
     const now = target ? readFeedConfig(target) : null;
     const picked = new Set(now?.pinned || []);   // slugs for articles, ids for notes
 
@@ -343,6 +530,27 @@ export class Feed {
         if (now) style.value = now.style;
         minLength = field(row, { label: "Minimum length", type: "number", value: String(now?.minLength ?? 0) });
         topic = field(body, { label: "Only events tagged (optional)", value: now?.topic || "", placeholder: "nostr" });
+
+        // What happens when a reader clicks a post. Reading it here keeps them
+        // on the page, which is the point of putting the feed on it.
+        openWith = field(body, { label: "Clicking a post", options: [
+          { value: "reader", label: "Reads it here, without leaving the page" },
+          { value: "yakihonne", label: "Opens Yakihonne" },
+          { value: "primal", label: "Opens Primal" },
+          { value: "njump", label: "Opens njump" },
+          { value: "custom", label: "Opens a URL of my own" },
+        ] });
+        customUrl = field(body, {
+          label: "That URL. {id} is the post, and {npub}, {kind} and {d} are there too",
+          placeholder: "https://example.com/{id}",
+        });
+        const known = ["reader", "yakihonne", "primal", "njump"];
+        const current = now?.openWith || "reader";
+        openWith.value = known.includes(current) ? current : "custom";
+        if (!known.includes(current)) customUrl.value = current;
+        const syncCustom = () => { customUrl.parentElement.hidden = openWith.value !== "custom"; };
+        openWith.addEventListener("change", syncCustom);
+        syncCustom();
 
         const pickLabel = doc.createElement("label");
         pickLabel.textContent = "Their posts. Click to pin one to the top.";
@@ -412,16 +620,22 @@ export class Feed {
         if (!list.length) throw new Error("Give at least one npub");
         const bad = list.find((a) => !toHex(a));
         if (bad) throw new Error(`Not a valid npub: ${bad}`);
+        const opener = openWith.value === "custom" ? customUrl.value.trim() : openWith.value;
+        if (openWith.value === "custom") {
+          if (!/^https?:\/\//i.test(opener)) throw new Error("That URL needs to start with http:// or https://");
+          if (!opener.includes("{id}")) throw new Error("Put {id} in the URL where the post goes");
+        }
         return {
           type: type.value, authors: list, limit: limit.value, style: style.value,
           minLength: minLength.value, topic: topic.value.trim(), pinned: [...picked],
+          openWith: opener,
         };
       },
     });
     if (!out) return null;
 
     const el = target || this.doc.createElement("div");
-    for (const a of ["nc:min-length", "nc:topic", "nc:pinned"]) el.removeAttribute(a);
+    for (const a of ["nc:min-length", "nc:topic", "nc:pinned", "nc:open-with"]) el.removeAttribute(a);
     el.setAttribute("nc:feed", out.type);
     el.setAttribute("nc:authors", out.authors.join(","));
     el.setAttribute("nc:limit", String(out.limit));
@@ -429,6 +643,8 @@ export class Feed {
     if (Number(out.minLength) > 0) el.setAttribute("nc:min-length", String(out.minLength));
     if (out.topic) el.setAttribute("nc:topic", out.topic);
     if (out.pinned.length) el.setAttribute("nc:pinned", out.pinned.join(","));
+    // Reading it in the page is the default, so it needs no attribute.
+    if (out.openWith && out.openWith !== "reader") el.setAttribute("nc:open-with", out.openWith);
 
     if (!target) this.nc.media.insert(el);
     else { this.clear(el); this.nc.dirty = true; }

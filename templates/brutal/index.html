@@ -202,7 +202,9 @@
   </div>
 </header>
 
-<section>
+<main nc:blocks>
+
+<section nc:block-type="activities">
   <h2 editable="single-line">What happens</h2>
   <div class="cols">
     <div class="card block">
@@ -231,7 +233,7 @@
   </div>
 </section>
 
-<section>
+<section nc:block-type="schedule">
   <h2 editable="single-line">The day</h2>
   <div class="sched">
     <div class="slot">
@@ -265,7 +267,7 @@
   </div>
 </section>
 
-<section>
+<section nc:block-type="rules">
   <h2 editable="single-line">House rules</h2>
   <ol class="rules" editable>
     <li>Anyone can come. Beginners get the front row and the first questions.</li>
@@ -277,7 +279,7 @@
   </ol>
 </section>
 
-<section>
+<section nc:block-type="shout">
   <div class="shout" editable>
     Ninety seats, no tickets
     <small>Mail hello at hardrefresh dot sk with the name you want on the tag.
@@ -286,7 +288,7 @@
   </div>
 </section>
 
-<section>
+<section nc:block-type="dispatches">
   <h2 editable="single-line">Dispatches</h2>
   <div editable>
     <p>Notes from the organisers, straight off Nostr.</p>
@@ -297,6 +299,8 @@
        nc:style="grid"></div>
 </section>
 
+</main>
+
 <footer editable>
   <p>Run by four people and a print shop that owes us a favour. Nová Cvernovka,
   Račianska 78, Bratislava. Tram 3 to Riazanská, then five minutes on foot.</p>
@@ -304,10 +308,91 @@
 
 </div>
 
+<!-- The block library. A <template> renders nothing and is saved with the page,
+     so the palette travels with the file. Each shape is this template's own
+     markup, so a block added tomorrow looks like the ones already here. -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section>
+    <h2 editable="single-line">A heading</h2>
+    <div class="lede" editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <section>
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="shout" nc:label="Shout" nc:icon="!" nc:group="Layout"
+          nc:hint="One big bold line with a smaller note underneath.">
+  <section>
+    <div class="shout" editable>
+      Say the big thing here
+      <small>The smaller line underneath.</small>
+    </div>
+  </section>
+</template>
+
+<template nc:block="cards" nc:label="Cards" nc:icon="▤" nc:group="Layout"
+          nc:hint="A row of boxes that wraps on a phone.">
+  <section>
+    <h2 editable="single-line">A heading</h2>
+    <div class="cols">
+      <div class="card block">
+        <h3 editable="single-line">A card</h3>
+        <div editable><p>What it says.</p></div>
+        <menu class="nc-gear nc-gear-row">
+          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
+          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+        </menu>
+      </div>
+    </div>
+    <menu class="nc-gear nc-gear-row">
+      <button type="button" onclick="nc.dom.cloneClosest(this.closest('.cols').querySelector('.card:last-of-type'), '.card')">Add a card</button>
+    </menu>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section>
+    <figure class="nc-figure card block">
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23ffe14d'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section>
+    <figure nc:slot class="nc-figure card block"></figure>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <h2 editable="single-line">Lately</h2>
+    <div nc:feed="notes" nc:limit="6" nc:style="grid"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <h2 editable="single-line">From the notes</h2>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

@@ -18,42 +18,13 @@
 // See docs/state.md for which of the two anything belongs in.
 import { verifyEvent, nip19 } from "nostr-tools";
 import { modal, field, checkbox, toast } from "./ui.js";
+import { markdownish, esc } from "./markdown.js";
 
 const slugify = (s) => String(s || "").toLowerCase().trim()
   .replace(/['"]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
 
 const tag = (ev, name) => ev.tags.find((t) => t[0] === name)?.[1];
 
-const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-// Long-form content is Markdown, and a baked copy has to be readable without
-// JavaScript, so it is rendered once at bake time. This handles the parts a
-// post actually uses. A page that needs full Markdown should bake the HTML it
-// wants instead of asking this to grow.
-function markdownish(md) {
-  const blocks = String(md || "").replace(/\r\n/g, "\n").split(/\n{2,}/);
-  const inline = (t) => esc(t)
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/(^|\W)\*([^*\n]+)\*/g, "$1<em>$2</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>');
-  return blocks.map((b) => {
-    const line = b.trim();
-    if (!line) return "";
-    const h = line.match(/^(#{1,4})\s+(.*)$/s);
-    if (h) { const n = Math.min(h[1].length + 1, 5); return `<h${n}>${inline(h[2])}</h${n}>`; }
-    if (/^```/.test(line)) return `<pre><code>${esc(line.replace(/^```\w*\n?|```$/g, ""))}</code></pre>`;
-    if (/^>\s/.test(line)) return `<blockquote><p>${inline(line.replace(/^>\s?/gm, ""))}</p></blockquote>`;
-    if (/^[-*]\s/.test(line)) {
-      return "<ul>" + line.split("\n").map((li) => `<li>${inline(li.replace(/^[-*]\s+/, ""))}</li>`).join("") + "</ul>";
-    }
-    if (/^\d+\.\s/.test(line)) {
-      return "<ol>" + line.split("\n").map((li) => `<li>${inline(li.replace(/^\d+\.\s+/, ""))}</li>`).join("") + "</ol>";
-    }
-    return `<p>${inline(line).replace(/\n/g, "<br>")}</p>`;
-  }).join("\n");
-}
 
 export class Compose {
   constructor(nc) { this.nc = nc; this.doc = nc.doc; }

@@ -176,6 +176,13 @@
     .understory { position: sticky; top: 2rem; }
   }
 
+  /* The two-column split is built for exactly the two feeds it ships with. The
+     runtime keeps its own insert points out of the grid, so nothing overflows,
+     but with only two real blocks the narrow column would sit empty for the
+     whole session. One column while composing, the magazine layout the rest of
+     the time. */
+  html[nc\:blocks-on="true"] main { grid-template-columns: minmax(0, 1fr); }
+
   h2.band {
     font: 400 .78rem/1 var(--nc-chrome-font); letter-spacing: .28em; text-transform: uppercase;
     color: var(--nc-ink-dim); margin: 0 0 1.4rem;
@@ -415,9 +422,9 @@
     </p>
   </header>
 
-  <main>
+  <main nc:blocks>
 
-    <section>
+    <section nc:block-type="entries">
       <h2 class="band" editable="single-line">Entries</h2>
       <div id="flow" class="flow"
            nc:feed="articles"
@@ -432,7 +439,7 @@
       </noscript>
     </section>
 
-    <aside class="understory">
+    <aside class="understory" nc:block-type="understory">
       <h2 class="band" editable="single-line">Understory</h2>
       <p class="lede" editable="single-line">What was posted without a picture: the replies and the odd aside.</p>
       <div id="floor" class="strand"
@@ -455,10 +462,68 @@
 
 </div>
 
+<!-- The block library. A <template> renders nothing and is saved with the page,
+     so the palette travels with the file. Each shape is this template's own
+     markup, so a block added tomorrow looks like the ones already here. -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section>
+    <h2 class="band" editable="single-line">A heading</h2>
+    <div class="intro" editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <section>
+    <div class="intro" editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="highlight" nc:label="Highlight" nc:icon="✦" nc:group="Text"
+          nc:hint="One line, lit up in the accent colour.">
+  <section>
+    <p class="tagline" editable="single-line">A line worth lighting up.</p>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section>
+    <figure class="nc-figure">
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%231c2b2c'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section>
+    <figure nc:slot class="nc-figure"></figure>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <h2 class="band" editable="single-line">Lately</h2>
+    <div nc:feed="notes" nc:limit="5" nc:style="list" class="strand"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <h2 class="band" editable="single-line">From the notes</h2>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

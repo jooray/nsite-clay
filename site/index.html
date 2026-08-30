@@ -348,7 +348,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <div editable>
       <p class="lede">Your site is served at <code>https://&lt;npub&gt;.nsite.lol/</code>. Named sites
         get their own subdomain, every save files a permanent version with its own URL, and any
-        NIP-5A gateway serves the same site, so you can point a CNAME at one for a custom domain.</p>
+        NIP-5A gateway serves the same site. A CNAME from your own domain to your npub subdomain
+        gets a gateway to serve it there too, though HTTPS on that name needs a gateway that issues
+        certificates for it.</p>
       <p class="lede">Assets are published at paths carrying their content hash, and each
         document watches its own manifest and reloads itself when a newer version appears. Nobody
         needs to know what a hard refresh is.</p>
@@ -382,8 +384,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
         and <a href="https://shakespeare.to">shakespeare.to</a> are reference implementations.
         nsite.run also has the clearest explanation of what an nsite is.</li>
-      <li>A CNAME at any of them gives you a custom domain, and <code>npm run devnet</code> runs
-        one on your laptop.</li>
+      <li>A CNAME from your domain to your npub subdomain gets any of them to serve it, over
+        plain HTTP. HTTPS needs a certificate for that name, which today means running your own.
+        <code>npm run devnet</code> runs one on your laptop.</li>
     </ul>
   </section>
 

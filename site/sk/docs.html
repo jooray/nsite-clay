@@ -377,8 +377,9 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
           implementácia. Ak chceš pozadie, najzrozumiteľnejšie vysvetlenie toho, čo nsite vlastne
           je, nájdeš na <a href="https://nsite.run">nsite.run</a>.</li>
       </ul>
-      <p>Ak chceš vlastnú doménu, nasmeruj CNAME záznam na gateway a stránka bude odvtedy
-        odpovedať aj na nej.</p>
+      <p>Ak chceš vlastnú doménu, CNAME nasmeruj na svoju npub subdoménu, nie na samotný gateway,
+        a HTTPS na tomto mene potrebuje vlastný gateway, podrobný postup je v
+        <a href="/sk/guide.html">návode</a>.</p>
       <p>Stránok môžeš mať aj viac. Pri nasadení pridaj <code>--site=blog</code> a tá dostane
         vlastnú adresu, za ktorou stojí ten istý kľúč.</p>
     </div>

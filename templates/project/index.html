@@ -178,7 +178,9 @@
     </dl>
   </header>
 
-  <section class="band" id="why">
+  <main nc:blocks>
+
+  <section class="band" id="why" nc:block-type="reasons">
     <div class="band-in">
       <p class="band-label"><b>01</b> Why</p>
       <div>
@@ -209,7 +211,7 @@
     </div>
   </section>
 
-  <section class="band" id="start">
+  <section class="band" id="start" nc:block-type="start">
     <div class="band-in">
       <p class="band-label"><b>02</b> Start</p>
       <div>
@@ -233,7 +235,7 @@
     </div>
   </section>
 
-  <section class="band" id="limits">
+  <section class="band" id="limits" nc:block-type="limits">
     <div class="band-in">
       <p class="band-label"><b>03</b> Limits</p>
       <div>
@@ -260,7 +262,7 @@
     </div>
   </section>
 
-  <section class="band" id="docs">
+  <section class="band" id="docs" nc:block-type="links">
     <div class="band-in">
       <p class="band-label"><b>04</b> Docs</p>
       <div>
@@ -290,7 +292,7 @@
     </div>
   </section>
 
-  <section class="band" id="writing">
+  <section class="band" id="writing" nc:block-type="feed">
     <div class="band-in">
       <p class="band-label"><b>05</b> Writing</p>
       <div>
@@ -306,6 +308,8 @@
     </div>
   </section>
 
+  </main>
+
   <footer>
     <div editable>
       <p>MIT-0. The malleable-HTML idea and the editing model come from
@@ -318,10 +322,98 @@
 
 </div>
 
+<!-- The block library. A <template> renders nothing and is saved with the page,
+     so the palette travels with the file. Each shape is this template's own
+     markup, so a block added tomorrow looks like the ones already here. -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <div>
+        <h2 editable="single-line">A heading</h2>
+        <div editable><p class="dim">Write here.</p></div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <div editable><p class="dim">Write here.</p></div>
+    </div>
+  </section>
+</template>
+
+<template nc:block="terminal" nc:label="Command" nc:icon="$" nc:group="Layout"
+          nc:hint="A terminal-styled command line.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <div>
+        <h2 editable="single-line">Run this</h2>
+<pre class="term"><span class="p">$</span> <span editable="single-line">command here</span></pre>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <figure class="nc-figure">
+        <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23E1D7C7'/%3E%3C/svg%3E" alt="">
+        <figcaption editable="single-line">Caption</figcaption>
+      </figure>
+    </div>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <figure nc:slot class="nc-figure"></figure>
+    </div>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <div>
+        <h2 editable="single-line">Lately</h2>
+        <div nc:feed="notes" nc:limit="4" nc:style="grid"></div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section class="band">
+    <div class="band-in">
+      <p class="band-label" editable="single-line">note</p>
+      <div>
+        <h2 editable="single-line">From the notes</h2>
+      </div>
+    </div>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

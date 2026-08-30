@@ -266,6 +266,14 @@ finished design to type over: press the `+` between two blocks and add a
 heading, a picture, a video, a row of cards or a Nostr feed. See
 [Blocks](#blocks) below.
 
+Ten of the twelve take blocks, each in its own shapes, so one added to `phrack`
+comes out in monospace and one added to `terminal` comes out as another command.
+`gallery` and `irc` do not: the gallery's wall is redrawn from a live feed on
+every load and has nothing persisted to make a block of, and the chat log is
+append-only by design and already has its own way of growing.
+
+`node tools/template-blocks.mjs` checks every one of them in a browser.
+
 The last of those is worth opening: its content is the transcript of the
 conversation that produced it, held with an agent that was handed nothing but
 [llms.txt](https://npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2.nsite.lol/llms.txt).
@@ -316,8 +324,8 @@ A key has one **root site** and any number of **named sites**:
 | a specific version | `https://v<50-char-base36-snapshot-id>.nsite.lol/` |
 
 Any NIP-5A gateway serves the same site: [nsite.lol](https://nsite.lol),
-[nsite.run](https://nsite.run), or one you run yourself. Point a `CNAME` at a gateway for a
-custom domain.
+[nsite.run](https://nsite.run), or one you run yourself. For a domain of your own, see
+[Custom domains](#custom-domains).
 
 Named sites need a `d` tag of 1 to 13 characters from `[a-z0-9-]`, because a DNS label is 63
 characters and the base36 pubkey uses 50 of them.
@@ -336,8 +344,27 @@ same events, so a site is not tied to any of them:
 | [nsite.cloud](https://nsite.cloud) | reference implementation |
 | [shakespeare.to](https://shakespeare.to) | reference implementation |
 
-If one is down, swap the hostname and your site is still there. A CNAME at any
-of them gives you a custom domain, and `npm run devnet` runs one on your laptop.
+If one is down, swap the hostname and your site is still there, and
+`npm run devnet` runs one on your laptop.
+
+### Custom domains
+
+A gateway reads the npub out of the hostname. When the name it was asked for is
+not an nsite label it resolves the CNAME and reads the npub from where that
+points, so the record goes to your npub subdomain rather than to the gateway:
+
+```
+blog.example.com.  CNAME  npub1….nsite.lol.
+```
+
+A CNAME at `nsite.lol` itself cannot work: it carries no npub.
+
+That is the routing. HTTPS is separate and, on the public gateways today, not
+solved. nsite.lol holds one certificate covering `*.nsite.lol`, and answers any
+other name with a TLS `unrecognized name` alert and no certificate, so a browser
+asking for `https://blog.example.com` never reaches the page. Run the gateway
+yourself if you want a name of your own over HTTPS: the reference deployment
+puts Caddy in front, which issues certificates on demand.
 
 ### Relays and Blossom servers
 

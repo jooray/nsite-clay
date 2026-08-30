@@ -166,6 +166,26 @@ Style them by overriding `.nc-item`, `.nc-title`, `.nc-by` and friends. The
 shared stylesheet defines them against the variables, so a template that sets
 its variables gets a feed that matches without touching feed markup.
 
+`nc:open-with` decides what a click on a post does. Left out, it reads the post
+in the page: the feed already fetched the event to draw the card, so the reader
+opens with no relay round trip, and closing it is an overlay coming off rather
+than a navigation, so the page underneath has not moved.
+
+| value | what a click does |
+|---|---|
+| absent, or `reader` | opens it in the page |
+| `yakihonne` | `yakihonne.com/article/<naddr>`, `yakihonne.com/note/<nevent>` |
+| `primal` | `primal.net/a/<naddr>`, `primal.net/e/<nevent>` |
+| `njump` | `njump.me/<naddr>` or `njump.me/<nevent>` |
+| a URL | your own, with `{id}`, `{npub}`, `{kind}` and `{d}` filled in |
+
+An article and a note are not at the same path in any of them, which is why this
+is a name rather than a URL you assemble yourself. The reader still puts a real
+link in the href, so a middle click and a reader with scripting off both work.
+
+Style the reader by overriding `.nc-read-card`, `.nc-read-title` and
+`.nc-read-body`. It follows the variables like everything else.
+
 ## Variables
 
 Set these on `:root` and the shared chrome follows the template:

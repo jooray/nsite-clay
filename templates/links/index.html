@@ -198,7 +198,7 @@
 </head>
 <body>
 
-<main class="page">
+<div class="page">
 
   <header class="me">
     <span class="avatar-wrap">
@@ -268,25 +268,95 @@
   <button type="button" class="add nc-ui-chrome" id="add">+ Add a row</button>
   <p class="tip nc-ui-chrome">Type over the address under a label to point the row somewhere else.</p>
 
-  <h2 class="label" editable="single-line no-toolbar">Lately on Nostr</h2>
-  <div nc:feed="notes" nc:authors="npub1g6j68mjzj0g52x8uav7yw9le86nwct2v22qhf2h49k6nc00pe5lqc0gths" nc:limit="3"></div>
+  <!-- Everything between here and </main> is a block. In edit mode the runtime
+       draws a rail on each one and a + between them; the header, the contents
+       list above and the footer below stay fixed. -->
+  <main nc:blocks>
 
-  <h2 class="label" editable="single-line no-toolbar">Zap</h2>
-  <p class="zap">
-    <span class="addr" id="lud16" editable="single-line no-toolbar">you@your.wallet</span>
-    <button type="button" class="copy" id="copy-lud16" hidden>copy</button>
-  </p>
+  <section nc:block-type="feed">
+    <h2 class="label" editable="single-line no-toolbar">Lately on Nostr</h2>
+    <div nc:feed="notes" nc:authors="npub1g6j68mjzj0g52x8uav7yw9le86nwct2v22qhf2h49k6nc00pe5lqc0gths" nc:limit="3"></div>
+  </section>
+
+  <section nc:block-type="zap">
+    <h2 class="label" editable="single-line no-toolbar">Zap</h2>
+    <p class="zap">
+      <span class="addr" id="lud16" editable="single-line no-toolbar">you@your.wallet</span>
+      <button type="button" class="copy" id="copy-lud16" hidden>copy</button>
+    </p>
+  </section>
+
+  </main>
 
   <footer>
     <p editable="single-line">One HTML file. It lives on Nostr and Blossom, and it rewrites itself.</p>
   </footer>
 
-</main>
+</div>
+
+<!-- ==========================================================================
+     The block library. A <template> renders nothing, so none of this is on
+     the page; it is saved with the file, so the palette works for whoever
+     opens the document next.
+     ========================================================================== -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section>
+    <h2 class="label" editable="single-line no-toolbar">A heading</h2>
+    <p editable>Write here.</p>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <p editable>Write here.</p>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <figure class="nc-figure">
+    <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23d8cdb8'/%3E%3C/svg%3E" alt="">
+    <figcaption editable="single-line">Caption</figcaption>
+  </figure>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <figure nc:slot class="nc-figure"></figure>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <h2 class="label" editable="single-line no-toolbar">Lately</h2>
+    <div nc:feed="notes" nc:limit="3"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <h2 class="label" editable="single-line no-toolbar">From my notes</h2>
+  </section>
+</template>
+
+<template nc:block="link" nc:label="Link row" nc:icon="→" nc:group="Layout"
+          nc:hint="One more row, styled like the contents list above, for a link that stands on its own.">
+  <a class="go" href="https://example.com" style="grid-template-columns: 1fr 1.4rem;">
+    <span>
+      <span class="name" editable="single-line no-toolbar">A link</span>
+      <span class="desc" editable="single-line no-toolbar"></span>
+      <span class="url" editable="single-line no-toolbar">https://example.com</span>
+    </span>
+    <span class="arrow" aria-hidden="true">&rarr;</span>
+  </a>
+</template>
 
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

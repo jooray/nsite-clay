@@ -82,7 +82,12 @@
 <h1 editable="single-line">Marram</h1>
 <p class="sub" editable="single-line">A two-person studio in Ghent. We build small websites and keep them small.</p>
 
-<div editable>
+<!-- Everything between here and </main> is a block. In edit mode the runtime
+     draws a rail on each one and a + between them; the masthead above and the
+     footer below stay fixed. -->
+<main nc:blocks>
+
+<div editable nc:block-type="intro">
   <p>Katrien writes the code, Ivo does the words and the pictures. We take
   three or four projects a year, mostly for museums, small publishers and people
   who run something on their own.</p>
@@ -94,56 +99,66 @@
   and costs almost nothing to host.</p>
 </div>
 
-<h2 editable="single-line">Recent work</h2>
-<dl editable>
-  <dt>Museum Dr. Guislain, collection guide</dt>
-  <dd>Nine hundred objects, searchable without a database.
-  <span class="w">64 kB</span> on the first page, 11 kB per object after that.</dd>
+<section nc:block-type="cases">
+  <h2 editable="single-line">Recent work</h2>
+  <dl editable>
+    <dt>Museum Dr. Guislain, collection guide</dt>
+    <dd>Nine hundred objects, searchable without a database.
+    <span class="w">64 kB</span> on the first page, 11 kB per object after that.</dd>
 
-  <dt>De Lage Landen, a small press</dt>
-  <dd>Catalogue, shop and twenty years of back issues.
-  <span class="w">102 kB</span>, one typeface, no tracking of any kind.</dd>
+    <dt>De Lage Landen, a small press</dt>
+    <dd>Catalogue, shop and twenty years of back issues.
+    <span class="w">102 kB</span>, one typeface, no tracking of any kind.</dd>
 
-  <dt>Bram Weyts, luthier</dt>
-  <dd>Twelve photographs that had to look right, which took most of the budget.
-  <span class="w">148 kB</span>, and he can add an instrument himself in about
-  four minutes.</dd>
+    <dt>Bram Weyts, luthier</dt>
+    <dd>Twelve photographs that had to look right, which took most of the budget.
+    <span class="w">148 kB</span>, and he can add an instrument himself in about
+    four minutes.</dd>
 
-  <dt>Ghent Cycling Union</dt>
-  <dd>Route sheets and a repair calendar, built to work on an old phone in the
-  rain. <span class="w">38 kB</span>, and it caches so the second visit is
-  nothing.</dd>
-</dl>
+    <dt>Ghent Cycling Union</dt>
+    <dd>Route sheets and a repair calendar, built to work on an old phone in the
+    rain. <span class="w">38 kB</span>, and it caches so the second visit is
+    nothing.</dd>
+  </dl>
+</section>
 
-<h2 editable="single-line">How we work</h2>
-<div editable>
-  <ul>
-    <li>Plain HTML and CSS, and JavaScript only where the page cannot do the
-    job without it.</li>
-    <li>System fonts. The letters on your screen are already on your
-    computer.</li>
-    <li>Images sized for the space they sit in, in one modern format with one
-    fallback.</li>
-    <li>Hosting you can leave. Everything we hand over is a folder of files.</li>
-    <li>One round of edits after launch, then we teach you to make your
-    own.</li>
-  </ul>
-  <p>We charge by the project, not the hour, and we will tell you before we
-  start if we think you need a smaller studio than ours.</p>
-</div>
+<section nc:block-type="practice">
+  <h2 editable="single-line">How we work</h2>
+  <div editable>
+    <ul>
+      <li>Plain HTML and CSS, and JavaScript only where the page cannot do the
+      job without it.</li>
+      <li>System fonts. The letters on your screen are already on your
+      computer.</li>
+      <li>Images sized for the space they sit in, in one modern format with one
+      fallback.</li>
+      <li>Hosting you can leave. Everything we hand over is a folder of files.</li>
+      <li>One round of edits after launch, then we teach you to make your
+      own.</li>
+    </ul>
+    <p>We charge by the project, not the hour, and we will tell you before we
+    start if we think you need a smaller studio than ours.</p>
+  </div>
+</section>
 
-<h2 editable="single-line">Notes</h2>
-<div nc:feed="notes"
-     nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
-     nc:limit="3"
-     nc:style="list"></div>
+<section nc:block-type="feed">
+  <h2 editable="single-line">Notes</h2>
+  <div nc:feed="notes"
+       nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+       nc:limit="3"
+       nc:style="list"></div>
+</section>
 
-<h2 editable="single-line">Talk to us</h2>
-<div editable>
-  <p>Write to hallo at marram dot studio, or come by the workshop on
-  Baudelostraat on a Thursday afternoon. Tell us what the site is for and
-  roughly when you need it. We answer every mail, usually within a week.</p>
-</div>
+<section nc:block-type="contact">
+  <h2 editable="single-line">Talk to us</h2>
+  <div editable>
+    <p>Write to hallo at marram dot studio, or come by the workshop on
+    Baudelostraat on a Thursday afternoon. Tell us what the site is for and
+    roughly when you need it. We answer every mail, usually within a week.</p>
+  </div>
+</section>
+
+</main>
 
 <footer>
   <p editable>The page you are reading holds to the same budget, with one
@@ -175,10 +190,66 @@
   });
 </script>
 
+<!-- ==========================================================================
+     The block library. A <template> renders nothing, so none of this is on
+     the page; it is saved with the file, so the palette works for whoever
+     opens the document next. Kept plain, the way the rest of this page is:
+     no image treatment of its own, because none of the essay does either.
+     ========================================================================== -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section>
+    <h2 editable="single-line">A heading</h2>
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <div editable><p>Write here.</p></div>
+</template>
+
+<template nc:block="case" nc:label="Case" nc:icon="=" nc:group="Text"
+          nc:hint="One more line for Recent work: a name, what it does, what it weighs.">
+  <dl>
+    <dt editable="single-line">Project name</dt>
+    <dd editable>What it does. <span class="w">0 kB</span> on the first page.</dd>
+  </dl>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL. Every kilobyte here is one the budget has to pay for.">
+  <figure class="nc-figure">
+    <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23ddd9cd'/%3E%3C/svg%3E" alt="">
+    <figcaption editable="single-line">Caption</figcaption>
+  </figure>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <figure nc:slot class="nc-figure"></figure>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <h2 editable="single-line">Lately</h2>
+    <div nc:feed="notes" nc:limit="3" nc:style="list"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <h2 editable="single-line">From my notes</h2>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

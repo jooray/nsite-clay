@@ -183,14 +183,19 @@
 
   <div class="body">
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> --version</p>
-    <div class="out" editable>
+    <!-- Everything between here and the closing div is blocks: a command
+         and its output, paired. In edit mode the runtime draws a rail on
+         each and a + between them. -->
+    <div nc:blocks>
+
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>hush</b> --version</p>
+    <div class="out" editable nc:block-type="output">
       <p>hush 0.9.3 (build 2026-07-14, MIT-0)<br>
       A command-line tool that strips metadata out of photos before they leave your machine.</p>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> README</p>
-    <div class="out" editable>
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>cat</b> README</p>
+    <div class="out" editable nc:block-type="output">
       <p>Every phone camera writes more into a JPEG than the picture. The GPS
       fix, the serial number of the body, the timestamp down to the second, and
       on some phones the name you gave the device. Social sites strip most of it
@@ -203,8 +208,8 @@
       stdin. It has no config file, no daemon and no update checker.</p>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> --help</p>
-    <div class="out">
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>hush</b> --help</p>
+    <div class="out" nc:block-type="output">
       <div class="rows" editable>
         <span class="k">-o, --out DIR</span><span class="n">path</span><span class="d">write cleaned copies here instead of in place</span>
         <span class="k">-r, --recursive</span><span class="n">flag</span><span class="d">walk subdirectories</span>
@@ -218,8 +223,8 @@
       photos on a phone sideways.</p>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>hush</b> -n ~/Pictures/roll-14</p>
-    <div class="out">
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>hush</b> -n ~/Pictures/roll-14</p>
+    <div class="out" nc:block-type="output">
       <pre class="block" editable>roll-14/IMG_0091.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.4 kB
 roll-14/IMG_0092.jpg   GPS 48.14, 17.11   Apple iPhone 14   -18.1 kB
 roll-14/IMG_0093.jpg   no GPS             Apple iPhone 14    -9.6 kB
@@ -228,8 +233,8 @@ roll-14/scan-A.tif     XMP history (7)    Epson V600        -41.2 kB
 4 files, 87.3 kB of metadata, nothing written (dry run)</pre>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>ls</b> releases/</p>
-    <div class="out">
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>ls</b> releases/</p>
+    <div class="out" nc:block-type="output">
       <div class="rows" editable>
         <span class="k">0.9.3</span><span class="n">2026-07-14</span><span class="d">TIFF support, and a fix for HEIC files written by iOS 18</span>
         <span class="k">0.9.0</span><span class="n">2026-04-02</span><span class="d">--jobs, --json, and a rewrite of the JPEG segment walker</span>
@@ -240,8 +245,8 @@ roll-14/scan-A.tif     XMP history (7)    Epson V600        -41.2 kB
       Every release is reproducible from a clean checkout.</p>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> INSTALL</p>
-    <div class="out">
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>cat</b> INSTALL</p>
+    <div class="out" nc:block-type="output">
       <pre class="block" editable># macOS and Linux, from source
 git clone https://example.org/hush.git
 cd hush &amp;&amp; make &amp;&amp; sudo make install
@@ -256,8 +261,8 @@ sha256sum -c hush-0.9.3.sums</pre>
       </div>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> docs/limits.md</p>
-    <div class="out" editable>
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>cat</b> docs/limits.md</p>
+    <div class="out" editable nc:block-type="output">
       <p>hush does not touch the pixels, so it cannot help with anything the
       pixels give away. A window in the background is still a window in the
       background.</p>
@@ -269,20 +274,22 @@ sha256sum -c hush-0.9.3.sums</pre>
       why a Nikon NEF comes out of it smaller than you expect.</p>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>nostr</b> feed --kind note --limit 4</p>
-    <div class="out">
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>nostr</b> feed --kind note --limit 4</p>
+    <div class="out" nc:block-type="feed">
       <div nc:feed="notes"
            nc:authors="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
            nc:limit="4"
            nc:style="list"></div>
     </div>
 
-    <p class="cmd" data-prompt="$" editable="single-line"><b>cat</b> CONTRIBUTING</p>
-    <div class="out" editable>
+    <p class="cmd" data-prompt="$" editable="single-line" nc:block-type="cmd"><b>cat</b> CONTRIBUTING</p>
+    <div class="out" editable nc:block-type="output">
       <p>Patches by email, plain diff or git format-patch, either is fine. Bug
       reports want the camera model and a file that shows the problem. If you
       cannot share the photo, run with <code>--json</code> and send the report
       instead, it has the segment layout and no image data.</p>
+    </div>
+
     </div>
 
     <p class="cmd" data-prompt="$"><span class="cursor"></span></p>
@@ -292,10 +299,71 @@ sha256sum -c hush-0.9.3.sums</pre>
 </div>
 </main>
 
+
+<!-- ==========================================================================
+     The block library.
+
+     A <template> renders nothing, so none of this is on the page. It is
+     saved with the file, so the palette works for whoever opens the
+     document next.
+     ========================================================================== -->
+
+<template nc:block="command" nc:label="Command" nc:icon="$" nc:group="Session"
+          nc:hint="A prompt line and the output under it.">
+  <div>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>command</b> --flag</p>
+    <div class="out" editable><p>Write the output here.</p></div>
+  </div>
+</template>
+
+<template nc:block="text" nc:label="Note" nc:icon="¶" nc:group="Session"
+          nc:hint="Output with no command above it.">
+  <div class="out" editable><p>Write here.</p></div>
+</template>
+
+<template nc:block="picture" nc:label="Screenshot" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <div>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>open</b> screenshot.png</p>
+    <div class="out">
+      <figure class="nc-figure">
+        <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%230e1512'/%3E%3C/svg%3E" alt="">
+        <figcaption editable="single-line">Caption</figcaption>
+      </figure>
+    </div>
+  </div>
+</template>
+
+<template nc:block="video" nc:label="Recording" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <div>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>play</b> demo.mp4</p>
+    <div class="out">
+      <figure nc:slot class="nc-figure"></figure>
+    </div>
+  </div>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <div>
+    <p class="cmd" data-prompt="$" editable="single-line"><b>nostr</b> feed --kind note --limit 4</p>
+    <div class="out">
+      <div nc:feed="notes" nc:limit="4" nc:style="list"></div>
+    </div>
+  </div>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <div class="out"></div>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

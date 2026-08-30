@@ -16,7 +16,7 @@ import { snapshot } from "./snapshot.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
 import { Editable } from "./editable.js";
 import { Media, parseVideoUrl } from "./media.js";
-import { Feed, readFeedConfig } from "./feed.js";
+import { Feed, readFeedConfig, postUrl, addressOf } from "./feed.js";
 import { Compose } from "./compose.js";
 import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
@@ -145,7 +145,7 @@ class NsiteClay extends EventTarget {
     // nc:autosave and nc:edit-gate are settings and stay. The rest is runtime
     // state that means nothing in a file.
     for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
-                     "nc:editable", "nc:outdated", "nc:editing"]) clone.removeAttribute(a);
+                     "nc:editable", "nc:outdated", "nc:editing", "nc:reading"]) clone.removeAttribute(a);
     for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
     // A feed's items and an opened video frame are fetched at view time. They
     // are not this document's content and must not be frozen into it.
@@ -527,7 +527,7 @@ nc.ready = (async () => {
 Object.assign(nc, {
   nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
-  manifestPaths, manifestServers, aggregateHash,
+  manifestPaths, manifestServers, aggregateHash, readFeedConfig, postUrl, addressOf,
 });
 
 if (typeof window !== "undefined") window.nsiteclay = window.nc = nc;

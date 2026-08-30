@@ -243,7 +243,7 @@ await page.evaluate(() => {
     "The best conversations at a conference happen after the conference.");
   set('[nc\\:block-type="quote"] cite', "Every conference, ever");
   const btn = document.querySelector('[nc\\:block-type="button"] a');
-  if (btn) { btn.textContent = "Lunarpunk Košice, all day"; btn.href = "https://lunarpunk.sk"; }
+  if (btn) { btn.textContent = "Lunarpunk Košice, all day"; btn.href = "https://lunarpunk.cypherpunk.today"; }
   const foot = document.querySelectorAll("footer p");
   if (foot[0]) foot[0].textContent = "Paralelná Polis Košice, Hlavná 68. Saturday 5 September 2026, from 22:00.";
   if (foot[1]) foot[1].textContent = "This page is an nsite. It belongs to a key, not to a company.";

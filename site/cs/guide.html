@@ -158,10 +158,9 @@
   snímky obrazovky pořízenými cestou. Vytvoříš klíč, publikuješ stránku, vložíš do ní obrázek
   a Nostr feed a uložíš ji. Žádný terminál, nic, k čemu by ses musel registrovat.</p>
 
-  <p>Příkladem je stránka pro Nostr meetup, který se koná v rámci
-  <a href="https://lunarpunk.sk" rel="noopener">Lunarpunk Košice</a> 5. září 2026. Postavíš ji
-  zhruba za deset minut, a pořád bude potřebovat obrázek, program a příspěvky někoho jiného, což
-  stačí na to, abys prošel většinou toho, co editor umí.</p>
+  <p>Příkladem je stránka Nostr meetupu. Postavíš ji zhruba za deset minut, a pořád bude
+  potřebovat obrázek, program a příspěvky někoho jiného, což stačí na to, abys prošel většinou toho,
+  co editor umí.</p>
 
   <nav class="toc">
     <p>Na téhle stránce</p>
@@ -249,9 +248,10 @@
   </figure>
 
   <p>Tenhle návod používá tu, která se jmenuje <code>cms</code>. Skládá se z bloků, které přidáváš
-  a přerovnáváš: nadpis, odstavec, obrázek, video, řada karet, Nostr feed. Ostatní šablony jsou
-  hotové jednotné designy pro konkrétní typ stránky, a přepisuješ do nich text stejným
-  způsobem.</p>
+  a přerovnáváš: nadpis, odstavec, obrázek, video, řada karet, Nostr feed. Bloky zvládne i
+  většina ostatních šablon, každá ale po svém: blok přidaný do zinu vyjde v monospace, blok
+  přidaný do terminálu vyjde jako další příkaz. Dvě to nedělají: galerie se při každém načtení
+  překreslí znovu z živého feedu a log kanálu jenom přidává řádky, schválně.</p>
 
   <p>Kliknutím na šablonu přejdeš rovnou na další krok. Pokud nakonec chceš jinou, vrátit se dá
   přes očíslované kroky nahoře: stačí kliknout na kterýkoli, kterým jsi už prošel.</p>
@@ -403,6 +403,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
   návštěvníka, takže relay, který by podstrčil něco, co autor nenapsal, se odhalí, místo aby se to
   zobrazilo.</p>
 
+  <p><b>Kliknutí na příspěvek</b> ho ve výchozím nastavení otevře rovnou na tvé stránce. Feed ho
+  měl stažený už kvůli kartě, takže se otevře bez čekání, a když ho zavřeš, stránka se znovu
+  nenačte a zůstane přesně taková, jaká byla. Pokud chceš čtenáře radši posílat do Nostr
+  klienta, stejné pole nabízí Yakihonne, Primal a njump, nebo vlastní adresu URL s
+  <code>{id}</code> v ní.</p>
+
   <div class="aside">
     <p>Existuje i blok pro <b>tvůj vlastní příspěvek</b>. Ten příspěvek do stránky zkopíruje místo
     toho, aby ho stahoval, takže se dá číst bez relaye a bez JavaScriptu, a přitom si pamatuje, ze
@@ -509,7 +515,22 @@ npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
   Na <a href="https://nsite.run">nsite.run</a> najdeš nejsrozumitelnější vysvětlení, co to nsite
   je, kdyby ses chtěl dozvědět, co je za tím.</p>
 
-  <p>Pro vlastní doménu namiř CNAME záznam na gateway a stránka se tam ozve místo toho.</p>
+  <h3>Vlastní doména</h3>
+
+  <p>CNAME namiř na svou npub subdoménu, ne na gateway samotnou:</p>
+
+<pre><code>blog.example.com.  CNAME  npub1….nsite.lol.</code></pre>
+
+  <p>Gateway čte npub přímo z hostname, takže CNAME namířený jen na <code>nsite.lol</code> jí
+  samo o sobě neřekne, čí stránku servírovat. Když hostname, na který přišel dotaz, sám o sobě
+  není nsite label, gateway se řídí CNAME záznamem a npub vezme z toho, kam ukazuje.</p>
+
+  <p>To je ale jen směrování, a to je jen polovina úspěchu. nsite.lol má certifikát jen pro
+  <code>*.nsite.lol</code>. Na jakékoli jiné jméno odpoví TLS alertem <code>unrecognized name</code>
+  a nepošle žádný certifikát, takže prohlížeč, který chce <code>https://blog.example.com</code>,
+  se ke stránce vůbec nedostane. HTTPS na vlastním jméně znamená provozovat gateway sám.
+  Referenční implementace nechává TLS na Caddy, který vydává certifikáty za běhu. Nebo požádej
+  provozovatele gateway, kterou máš rád, ať tvoje jméno přidá do svojí.</p>
 
   <!-- ---------------------------------------------------------------- -->
   <h2>Co si zapamatovat</h2>

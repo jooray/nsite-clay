@@ -186,7 +186,13 @@
 
 <div class="rule" aria-hidden="true"></div>
 
-<section id="s00">
+<!-- Everything between here and </main> is blocks: a phile, its divider
+     above it, and (once the owner adds one) whatever else belongs in the
+     issue. In edit mode the runtime draws a rail on each and a + between
+     them. -->
+<main nc:blocks>
+
+<section id="s00" nc:block-type="phile">
   <h2>0x00  Introduction</h2>
   <div editable>
     <p>I wanted somewhere to put a config file so a friend could read it five
@@ -200,9 +206,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s01">
+<section id="s01" nc:block-type="phile">
   <h2>0x01  What it does</h2>
   <div editable>
     <p>You POST some text and get back a URL. Anyone with the URL can read the
@@ -224,9 +230,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s02">
+<section id="s02" nc:block-type="phile">
   <h2>0x02  Building it</h2>
   <pre editable>    $ git clone https://example.org/slab.git
     $ cd slab
@@ -243,9 +249,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s03">
+<section id="s03" nc:block-type="phile">
   <h2>0x03  The on-disk format</h2>
   <div editable>
     <p>Everything lives in one append-only file called <code>slab.dat</code>.
@@ -272,9 +278,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s04">
+<section id="s04" nc:block-type="phile">
   <h2>0x04  Talking to it</h2>
   <pre editable>    $ curl --data-binary @sshd_config https://paste.example.org/
     https://paste.example.org/mq4h7t2xk9
@@ -294,9 +300,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s05">
+<section id="s05" nc:block-type="phile">
   <h2>0x05  Known bugs</h2>
   <dl editable>
     <dt>Compaction blocks writes</dt>
@@ -313,9 +319,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s06">
+<section id="s06" nc:block-type="phile">
   <h2>0x06  Dispatches</h2>
   <div editable>
     <p>Notes from the author, pulled from Nostr when you open the page.</p>
@@ -327,9 +333,9 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
-<div class="rule-thin" aria-hidden="true"></div>
+<div class="rule-thin" aria-hidden="true" nc:block-type="divider"></div>
 
-<section id="s07">
+<section id="s07" nc:block-type="phile">
   <h2>0x07  Greets</h2>
   <div editable>
     <p>To rk for the crc32 table and for telling me the first version of the
@@ -341,16 +347,90 @@
   <p><a class="back" href="#contents">[contents]</a></p>
 </section>
 
+</main>
+
 <div class="rule" aria-hidden="true"></div>
 
 <p class="center" editable="single-line">EOF</p>
 
 </div>
 
+
+<!-- ==========================================================================
+     The block library.
+
+     A <template> renders nothing, so none of this is on the page. It is
+     saved with the file, so the palette works for whoever opens the
+     document next.
+     ========================================================================== -->
+
+<template nc:block="phile" nc:label="Section" nc:icon="§" nc:group="Content"
+          nc:hint="A numbered heading with prose under it, and the divider above it.">
+  <section>
+    <div class="rule-thin" aria-hidden="true"></div>
+    <h2>0x08  A new heading</h2>
+    <div editable><p>Write here.</p></div>
+    <p><a class="back" href="#contents">[contents]</a></p>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Content"
+          nc:hint="Prose with no heading over it.">
+  <section>
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="divider" nc:label="Divider" nc:icon="—" nc:group="Content">
+  <div class="rule-thin" aria-hidden="true"></div>
+</template>
+
+<template nc:block="code" nc:label="Code" nc:icon="`" nc:group="Content"
+          nc:hint="A block quoted verbatim, the way a command or a listing is above.">
+  <section>
+    <pre editable>    $ type it here</pre>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section>
+    <figure class="nc-figure">
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23e8e4d8'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section>
+    <figure nc:slot class="nc-figure"></figure>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <h2>0x08  Dispatches</h2>
+    <div nc:feed="notes" nc:limit="3" nc:style="list"></div>
+    <p><a class="back" href="#contents">[contents]</a></p>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <h2>0x08  From the notes</h2>
+    <p><a class="back" href="#contents">[contents]</a></p>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

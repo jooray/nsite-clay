@@ -150,6 +150,8 @@
     </ul>
   </header>
 
+  <main nc:blocks>
+
   <section id="now">
     <div class="sec-head">
       <h2 editable="single-line">What I'm on about</h2>
@@ -199,6 +201,8 @@
     <p class="after-feed"><a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9" editable="single-line">All of it, including the replies →</a></p>
   </section>
 
+  </main>
+
   <footer>
     <div editable>
       <p>Zaps go to <a href="lightning:juraj-bzzz@pay.cypherpunk.today">juraj-bzzz@pay.cypherpunk.today</a>.
@@ -211,10 +215,70 @@
 
 </div>
 
+<!-- The block library. A <template> renders nothing and is saved with the page,
+     so the palette travels with the file. Each shape is this template's own
+     markup, so a block added tomorrow looks like the ones already here. -->
+
+<template nc:block="section" nc:label="Section" nc:icon="H" nc:group="Text">
+  <section>
+    <div class="sec-head">
+      <h2 editable="single-line">A heading</h2>
+      <span class="side" editable="single-line">note</span>
+    </div>
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="text" nc:label="Paragraph" nc:icon="¶" nc:group="Text"
+          nc:hint="Prose with no heading over it.">
+  <section>
+    <div editable><p>Write here.</p></div>
+  </section>
+</template>
+
+<template nc:block="picture" nc:label="Picture" nc:icon="▥" nc:group="Media"
+          nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section>
+    <figure class="nc-figure">
+      <img nc:slot src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Crect width='16' height='9' fill='%23222'/%3E%3C/svg%3E" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+
+<template nc:block="video" nc:label="Video" nc:icon="▷" nc:group="Media"
+          nc:on-add="video" nc:hint="A YouTube or Vimeo link, or upload a file.">
+  <section>
+    <figure nc:slot class="nc-figure"></figure>
+  </section>
+</template>
+
+<template nc:block="feed" nc:label="Nostr feed" nc:icon="⚡" nc:group="Nostr"
+          nc:on-add="feed" nc:hint="Posts fetched when the page loads.">
+  <section>
+    <div class="sec-head">
+      <h2 editable="single-line">Lately</h2>
+      <span class="side" editable="single-line">nostr</span>
+    </div>
+    <div nc:feed="notes" nc:limit="5" nc:style="list"></div>
+  </section>
+</template>
+
+<template nc:block="post" nc:label="A post of yours" nc:icon="✎" nc:group="Nostr"
+          nc:on-add="post" nc:hint="Copied into the page, so it reads without a relay.">
+  <section>
+    <div class="sec-head">
+      <h2 editable="single-line">From my notes</h2>
+      <span class="side" editable="single-line">nostr</span>
+    </div>
+  </section>
+</template>
+
 <div class="nc-bar nc-ui-chrome">
   <span class="nc-dot"></span>
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
+  <button class="nc-primary nc-owner-only" data-nc-blocks>Add a block</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>

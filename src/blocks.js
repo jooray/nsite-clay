@@ -321,7 +321,7 @@ html[nc\\:blocks-on="true"] [nc\\:blocks] > *:not(.nc-blk-add) { position: relat
 .nc-blk-rail button, .nc-blk-add button { font: 13px/1 system-ui, sans-serif; cursor: pointer; color: #eee;
   background: transparent; border: 0; border-radius: 6px; padding: 4px 7px; }
 .nc-blk-rail button:hover, .nc-blk-add button:hover { background: #2c2540; }
-.nc-blk-add { display: flex; justify-content: center; padding: 2px 0; }
+.nc-blk-add { display: flex; justify-content: center; padding: 2px 0; grid-column: 1 / -1; flex-basis: 100%; }
 .nc-blk-add button { border: 1px dashed #3a3350; width: 100%; }
 .nc-blk-palette { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
   margin: .3rem 0 1rem; }

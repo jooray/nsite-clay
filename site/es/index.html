@@ -349,8 +349,9 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     <div editable>
       <p class="lede">Tu sitio queda en <code>https://&lt;npub&gt;.nsite.lol/</code>. Los sitios
         con nombre reciben su propio subdominio, cada guardado deja una versión permanente con su
-        propia URL y cualquier gateway NIP-5A sirve el mismo sitio, así que puedes apuntar un CNAME
-        a uno de ellos para tener dominio propio.</p>
+        propia URL y cualquier gateway NIP-5A sirve el mismo sitio. Un CNAME desde tu propio
+        dominio a tu subdominio npub hace que un gateway también lo sirva ahí, aunque el HTTPS en
+        ese nombre necesita un gateway que emita certificados para él.</p>
       <p class="lede">Los recursos se publican en rutas que llevan su hash de contenido, y cada
         documento vigila su propio manifiesto y se recarga cuando aparece una versión más nueva.
         Nadie tiene que saber qué es una recarga forzada.</p>
@@ -385,8 +386,10 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
         y <a href="https://shakespeare.to">shakespeare.to</a> son implementaciones de referencia.
         nsite.run tiene además la explicación más clara de qué es un nsite.</li>
-      <li>Un CNAME hacia cualquiera de ellos te da un dominio propio, y <code>npm run devnet</code>
-        levanta uno en tu propia máquina.</li>
+      <li>Un CNAME desde tu dominio a tu subdominio npub hace que cualquiera de ellos lo sirva,
+        por HTTP simple. El HTTPS necesita un certificado para ese nombre, que hoy por hoy
+        significa correr el tuyo propio. <code>npm run devnet</code> levanta uno en tu propia
+        máquina.</li>
     </ul>
   </section>
 

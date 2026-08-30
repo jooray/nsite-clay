@@ -158,10 +158,9 @@
   with the screenshots taken along the way. You will make a key, publish a page, put a picture
   and a Nostr feed in it, and save it. There is no terminal and nothing to sign up for.</p>
 
-  <p>The example is a page for a Nostr meetup held during
-  <a href="https://lunarpunk.sk" rel="noopener">Lunarpunk Košice</a> on 5 September 2026. It takes
-  about ten minutes to build, and it still needs a picture, a timetable and somebody else's posts,
-  which is enough to reach most of what the editor can do.</p>
+  <p>The example is a page for a Nostr meetup. It takes about ten minutes to build, and it still
+  needs a picture, a timetable and somebody else's posts, which is enough to reach most of what the
+  editor can do.</p>
 
   <nav class="toc">
     <p>On this page</p>
@@ -251,9 +250,11 @@
   </figure>
 
   <p>The one called <code>cms</code> is the one this guide uses. It is built out of blocks you add
-  and rearrange: a heading, a paragraph, a picture, a video, a row of cards, a Nostr feed. The
-  others are single designs that suit a particular kind of page, and you can type over any of
-  them the same way.</p>
+  and rearrange: a heading, a paragraph, a picture, a video, a row of cards, a Nostr feed. Most of
+  the others take blocks too, each in its own shapes, so a block added to the zine comes out in
+  monospace and one added to the terminal comes out as another command. Two do not: the gallery
+  redraws itself from a live feed every time it loads, and the chat log is append-only by
+  design.</p>
 
   <p>Clicking a template takes you straight to the next step. If you want a different one after
   all, the numbered steps along the top are the way back: any step you have already been through
@@ -407,6 +408,11 @@ npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
   pin particular ones to the top. Every signature is checked in the reader's browser, so a relay
   that hands over something the author did not write is caught rather than displayed.</p>
 
+  <p><b>Clicking a post</b> reads it on your page by default. The feed already fetched it to draw
+  the card, so it opens with no waiting, and closing it puts the page back exactly as it was
+  rather than reloading anything. If you would rather send people to a Nostr client, the same
+  field offers Yakihonne, Primal and njump, or a URL of your own with <code>{id}</code> in it.</p>
+
   <div class="aside">
     <p>There is also a block for <b>a post of yours</b>. That one copies the post into the page
     rather than fetching it, so it reads with no relay and no JavaScript, while still remembering
@@ -513,8 +519,22 @@ npx nsite-clay deploy mysite --sec=nsec1…</code></pre>
   <a href="https://nsite.run">nsite.run</a> has the clearest explanation of what an nsite is if you
   want the background.</p>
 
-  <p>For a domain of your own, point a CNAME record at a gateway and your page answers there
-  instead.</p>
+  <h3>A domain of your own</h3>
+
+  <p>Point a CNAME at your npub subdomain, not at the gateway itself:</p>
+
+<pre><code>blog.example.com.  CNAME  npub1….nsite.lol.</code></pre>
+
+  <p>The npub is the part a gateway reads, so a CNAME at <code>nsite.lol</code> on its own tells it
+  nothing about whose site to serve. When the hostname it was asked for is not an nsite label, it
+  follows the CNAME and takes the npub from where the name points.</p>
+
+  <p>That is the routing, and routing is only half of it. nsite.lol holds one certificate, for
+  <code>*.nsite.lol</code>, and answers any other name with a TLS <code>unrecognized name</code>
+  alert and no certificate at all, so a browser asking for <code>https://blog.example.com</code>
+  never gets as far as the page. For HTTPS on a name of your own, run a gateway yourself: the
+  reference one leaves TLS to Caddy, which issues certificates on demand. Or ask whoever runs the
+  gateway you like to add your name to theirs.</p>
 
   <!-- ---------------------------------------------------------------- -->
   <h2>What to remember</h2>

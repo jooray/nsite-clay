@@ -146,6 +146,10 @@ npx nsite-clay deploy mysite --sec=nsec1…
 Pick by what the page is *for*, then redesign it. The template gives you a
 working page with the chrome wired up; the design is yours to change.
 
+Ten of the twelve carry a block library, so an owner can add sections you did
+not think of. `gallery` and `irc` do not, on purpose. Check yours with
+`node tools/template-blocks.mjs <name>`.
+
 | Template | For | Look |
 |---|---|---|
 | `cms` | a page assembled from blocks rather than a fixed design | warm paper, one column, generous air; the owner adds and reorders blocks in the browser |
@@ -225,8 +229,15 @@ matters when that machine is yours rather than theirs. Pass the URI in the
 environment, never as an argument: an argument is visible to every process on the
 box.
 
-The page lands at `https://<their npub>.nsite.lol/`. A CNAME at any gateway gives
-a custom domain. `--site=blog` makes a second, separate site under the same key.
+The page lands at `https://<their npub>.nsite.lol/`. `--site=blog` makes a
+second, separate site under the same key.
+
+A custom domain is a CNAME to the *npub subdomain*, not to the gateway, because
+the npub is what the gateway reads out of the hostname:
+`blog.example.com CNAME npub1….nsite.lol`. Do not promise HTTPS on it. The public
+gateways hold a wildcard for their own domain only, so a browser asking for
+`https://blog.example.com` gets a TLS `unrecognized name` alert. Say plain HTTP,
+or a gateway they run themselves.
 
 Develop against the local stack rather than public infrastructure:
 
@@ -540,6 +551,21 @@ more: short notes and long-form articles, with an option to bake a copy into the
 page as it publishes.
 
 ---
+
+### Where a post opens
+
+`nc:open-with` on a feed decides what a click does. Leave it out and the post
+opens in the page, which is usually what you want: the event is already there
+from drawing the card, so it costs no relay call, and closing it does not
+navigate. Otherwise `yakihonne`, `primal`, `njump`, or a URL of your own with
+`{id}`, `{npub}`, `{kind}` and `{d}` in it.
+
+Do not assemble those URLs yourself. An article and a note are at different
+paths in every one of these clients, and the name picks the right one:
+
+    yakihonne  /article/<naddr>   /note/<nevent>
+    primal     /a/<naddr>         /e/<nevent>
+    njump      /<naddr>           /<nevent>
 
 ## 11. Customising a template
 

@@ -404,6 +404,18 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("a published post can be baked into the page", !!el && el.classList.contains("nc-baked"));
     t("the baked copy remembers the event it came from",
       /^naddr1/.test(el.getAttribute("nc:from") || ""));
+    {
+      const md = nc.compose.render({ kind: 30023, pubkey: PUB, id: "c".repeat(64), created_at: 1,
+        tags: [["d", "img"], ["title", "T"]],
+        content: "Look:\n\n![](https://example.com/a.png)\n\nAnd ![a cat](https://example.com/b.png) inline." });
+      const html = md.innerHTML;
+      t("a Markdown image with no alt text becomes an image",
+        /<img[^>]+src="https:\/\/example\.com\/a\.png"/.test(html), html.slice(0, 90));
+      t("and one with alt text keeps it",
+        /<img[^>]+src="https:\/\/example\.com\/b\.png"[^>]*alt="a cat"|alt="a cat"[^>]*src="https:\/\/example\.com\/b\.png"/.test(html));
+      t("the image is not left as literal text", !html.includes("!["));
+    }
+
     t("Markdown becomes real markup", /<h2>Why<\/h2>/.test(el.innerHTML) && /<strong>/.test(el.innerHTML));
     t("a list survives", /<li>one<\/li>/.test(el.innerHTML));
     t("the baked copy is editable", el.querySelector("[editable]") !== null);
@@ -426,6 +438,75 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("§8.2 it fetches nothing from anywhere", urls.length === 0, urls.join(","));
     const el = nc.qrElement(uri);
     t("§8.2 and comes back as a real element", el.tagName.toLowerCase() === "svg");
+  }
+
+  // --- where a post opens --------------------------------------------------
+  {
+    // The routes differ between an article and a note, and between clients.
+    // Each of these was checked against the live site; a wrong one is a 404
+    // that nothing here would otherwise notice.
+    const article = { kind: 30023, pubkey: PUB, id: "a".repeat(64), created_at: 1,
+                      tags: [["d", "hello"], ["title", "Hello"]], content: "# Hi\n\nBody **here**." };
+    const note = { kind: 1, pubkey: PUB, id: "b".repeat(64), created_at: 1, tags: [], content: "just a note" };
+    const naddr = nc.addressOf(article), nevent = nc.addressOf(note);
+    t("an addressable event is named by its address", naddr.startsWith("naddr1"));
+    t("a note is named by its event id", nevent.startsWith("nevent1"));
+
+    t("njump takes both at the root",
+      nc.postUrl(article, "njump") === `https://njump.me/${naddr}` &&
+      nc.postUrl(note, "njump") === `https://njump.me/${nevent}`);
+    t("yakihonne puts an article under /article and a note under /note",
+      nc.postUrl(article, "yakihonne") === `https://yakihonne.com/article/${naddr}` &&
+      nc.postUrl(note, "yakihonne") === `https://yakihonne.com/note/${nevent}`);
+    t("primal puts an article under /a and a note under /e",
+      nc.postUrl(article, "primal") === `https://primal.net/a/${naddr}` &&
+      nc.postUrl(note, "primal") === `https://primal.net/e/${nevent}`);
+    t("an unknown name falls back rather than building a broken URL",
+      nc.postUrl(note, "nosuchclient") === `https://njump.me/${nevent}`);
+    t("the reader still has a real link behind it, for a middle click",
+      nc.postUrl(note, "reader") === `https://njump.me/${nevent}`);
+
+    const custom = nc.postUrl(article, "https://x.example/{kind}/{npub}/{d}/{id}");
+    t("a custom URL fills in every variable",
+      custom === `https://x.example/30023/${nc.nip19.npubEncode(PUB)}/hello/${naddr}`,
+      custom);
+
+    // Reading it in the page.
+    nc.feed.openPost(article, "reader");
+    const read = document.querySelector(".nc-read");
+    t("the reader opens over the page", !!read);
+    t("it renders the Markdown", !!read.querySelector(".nc-read-body strong"));
+    t("it shows the title", read.querySelector(".nc-read-title")?.textContent === "Hello");
+    t("it offers a way out to a real client", /njump\.me/.test(read.querySelector(".nc-read-out a")?.href || ""));
+    t("the page is marked as reading", document.documentElement.getAttribute("nc:reading") === "true");
+
+    const whileReading = nc.getHTML();
+    t("an open post never reaches a save", !whileReading.includes("nc-read-card"));
+    t("nor does the reading attribute", !/nc:reading/.test(whileReading));
+
+    nc.feed.openPost(note, "reader");
+    t("opening another replaces the first", document.querySelectorAll(".nc-read").length === 1);
+
+    // A card is what the reader opens from, and a feed of notes has no title
+    // link, so the date has to be one of the openers.
+    for (const [kind, type, expect] of [[30023, "articles", 2], [1, "notes", 1]]) {
+      const ev = { kind, pubkey: PUB, id: String(kind).padStart(64, "d"), created_at: 1,
+                   tags: kind === 30023 ? [["d", "x"], ["title", "T"]] : [], content: "hello" };
+      const el = nc.feed.card(ev, { type, style: "list", openWith: "reader" });
+      t(`a ${type} card offers ${expect} way(s) into the reader`,
+        el.querySelectorAll("a[nc\\:open]").length === expect,
+        String(el.querySelectorAll("a[nc\\:open]").length));
+      t(`and its date link is one of them`, el.querySelector("a.nc-when")?.hasAttribute("nc:open") === true);
+      t(`while the author's name is not`, el.querySelector("a.nc-name")?.hasAttribute("nc:open") !== true);
+    }
+
+    nc.feed.closePost();
+    t("closing takes it away", !document.querySelector(".nc-read"));
+    t("and unmarks the page", !document.documentElement.hasAttribute("nc:reading"));
+    nc.feed.closePost();
+    t("closing twice is harmless", !document.querySelector(".nc-read"));
+    // A page can gain its first feed from the block palette long after load.
+    t("the reader is armed even before any feed exists", nc.feed._armedReader === true);
   }
 
   // --- blocks -------------------------------------------------------------
