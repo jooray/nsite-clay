@@ -320,9 +320,24 @@ async function cmdDeploy() {
     for (const f of files) {
       if (!isHtml(f)) continue;
       let text = contents.get(f).toString("utf8");
-      for (const [from, to] of rules) {
-        text = text.split(from).join(to).split(from.slice(1)).join(to.slice(1));
-      }
+      // Only where a path is a path. A blind replace across the whole file also
+      // rewrote the words a reader sees, so a button labelled "llms.txt" came
+      // out as "llms-fab02d05.txt", and a code sample teaching somebody to write
+      // <script src="/nsite-clay.js"> published the hashed name, which is wrong
+      // for every site but this one.
+      //
+      // Tags carry the attributes, and script and style bodies can carry a URL
+      // too. Everything between tags is what the reader actually reads, and it
+      // is left exactly as written.
+      const rewrite = (chunk) => {
+        for (const [from, to] of rules) {
+          chunk = chunk.split(from).join(to).split(from.slice(1)).join(to.slice(1));
+        }
+        return chunk;
+      };
+      text = text.replace(
+        /<!--[\s\S]*?-->|<(script|style)\b[^>]*>[\s\S]*?<\/\2\s*>|<[^>]+>/gi,
+        (m) => (m.startsWith("<!--") ? m : rewrite(m)));
       contents.set(f, Buffer.from(text, "utf8"));
     }
   }
