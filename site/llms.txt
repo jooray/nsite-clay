@@ -11,8 +11,14 @@ nsite-clay, read all of it before you start. It is long on purpose: it tells you
 what the thing is, what to ask for, which template to begin from, and what will
 go wrong. It links the documentation rather than restating it.
 
-- Human walkthrough with screenshots: https://nsite-clay.cypherpunk.today/docs.html
+- The guide, with screenshots, for the person you are building it for:
+  https://nsite-clay.cypherpunk.today/guide.html
+- The publisher, if they would rather do it themselves in a browser:
+  https://nsite-clay.cypherpunk.today/deploy.html
 - Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
+- The block composer template, the one to read before writing a block library:
+  https://nsite-clay.cypherpunk.today/t/cms/
+- What a template must do: https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md
 - Runtime reference: https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md
 - Where state lives: https://github.com/jooray/nsite-clay/blob/main/docs/state.md
 - Source: https://github.com/jooray/nsite-clay
@@ -212,12 +218,20 @@ have and you do not.
 
 ## 5. Getting it online
 
-There is a publisher at `/deploy.html` on the project site that does all of this
-in a browser tab: pick a template, sign in or generate a key, choose a path, and
-it uploads the files and signs the manifest. Point a person there when they do
-not want a terminal, and read `/guide.html` if you want to describe the flow to
-them. What follows is the same job from a command line, which is what you want
-when you are building the page rather than picking one.
+Two routes to the same three steps. Pick by who is doing it.
+
+**They publish, in a browser.** <https://nsite-clay.cypherpunk.today/deploy.html>
+picks a template, signs in or generates a key with a NIP-49 backup file, checks
+what is already at that path, uploads the files and signs the manifest. Nothing
+to install. Send a person there when they only want one of the twelve templates
+with their own words in it, and point them at
+<https://nsite-clay.cypherpunk.today/guide.html> for the walkthrough with
+screenshots. You do not need to do anything in that case.
+
+**You publish, from a terminal.** This is the route when you have *built*
+something: a design of your own, a block library, a page that is an app. The
+publisher only ships the templates that are on the project site; a page you wrote
+has to go up from where you wrote it.
 
 ```bash
 npx nsite-clay deploy mysite --sec=nsec1…                    # a raw key
@@ -231,6 +245,12 @@ box.
 
 The page lands at `https://<their npub>.nsite.lol/`. `--site=blog` makes a
 second, separate site under the same key.
+
+You will not have their key, and should not ask for one. Two ways round it:
+build the directory, hand it over and let them run the one deploy command; or
+have them paste a `bunker://` URI from their signer, which signs without the key
+ever reaching your machine. Either way, after the first deploy the page publishes
+itself and they never need either route again.
 
 A custom domain is a CNAME to the *npub subdomain*, not to the gateway, because
 the npub is what the gateway reads out of the hostname:
@@ -478,20 +498,28 @@ A key in the file is a key you have published.
 
 ---
 
-## 9b. Blocks: when the owner should be able to add sections
+## 9b. Blocks: a page they can extend without you
 
-A page marked `nc:blocks` is assembled rather than typed over. Its direct
-children are blocks; in edit mode the runtime draws a rail on each (move,
-duplicate, configure, delete) and an insert point between them opening a palette
-built from the document's own library:
+A finished page is a page that goes stale, because the next thing they want to
+add is a thing you did not build. Blocks are the answer: you design the page, and
+they add sections to it afterwards, in your design, with no editor and no you.
+
+Mark the container. Every element child of it is a block:
 
 ```html
 <main nc:blocks>
-  <section nc:block-type="heading"><h2 editable="single-line">A heading</h2></section>
+  <section nc:block-type="intro">…</section>
+  <section nc:block-type="work">…</section>
 </main>
+```
 
+In edit mode the runtime draws a rail on each block (move, duplicate, configure,
+delete) and a `+` between them that opens a palette. The palette is built from
+the document's own library, which is a set of inert `<template>` elements:
+
+```html
 <template nc:block="picture" nc:label="Picture" nc:icon="▥"
-          nc:group="Media" nc:on-add="image">
+          nc:group="Media" nc:on-add="image" nc:hint="Upload one or paste a URL.">
   <section class="b-picture">
     <figure>
       <img nc:slot src="…" alt="">
@@ -501,15 +529,38 @@ built from the document's own library:
 </template>
 ```
 
-`<template>` renders nothing and is saved with the page, so the library travels
-with the file. `nc:on-add` runs a picker when the block lands: `image`, `video`,
-`feed` or `post`. `nc:slot` marks what that picker acts on.
+**Write every shape in the page's own markup and classes.** That is the whole
+trick and the only part you can get wrong: a block added next March has to come
+out looking like the ones you wrote today, so a library for a monospace zine
+produces monospace, and one for a card grid produces a card. Do not reach for
+generic markup, and do not add CSS for the library that the page does not
+already use.
 
-Reach for this when the owner will want to add sections you have not thought of.
-Reach for a gear (§9) when the control is particular to one card or one row. The
-two mix; `templates/cms/index.html` uses both.
+`nc:on-add` runs a picker once the block lands and `nc:slot` marks what it acts
+on: `image`, `video`, `feed`, `post`. Backing out of the picker removes the block
+again, so a cancelled "add a picture" leaves nothing behind.
 
-Nothing the rail draws is saved. A reader gets plain markup.
+A `<template>` renders nothing and is saved with the page, so the library travels
+with the file. Whoever opens the document next has the palette, with nothing to
+fetch and nothing to install. Nothing the rail draws is written to disk; a reader
+gets plain markup.
+
+Ten of the twelve shipped templates carry a library. Read one before writing
+yours: `templates/cms/index.html` is the fullest, twelve shapes over four groups,
+and it is browsable at <https://nsite-clay.cypherpunk.today/t/cms/>.
+`templates/phrack/index.html` and `templates/terminal/index.html` show the same
+idea bent hard into a particular design. `gallery` and `irc` deliberately have
+none, which is the other lesson: a page whose content is redrawn from a live feed
+on every load has nothing persisted to make a block of.
+
+Reach for a block when the owner will want sections you have not thought of.
+Reach for a gear (§9) when the control belongs to one card or one row. The two
+mix freely; `templates/cms/index.html` uses both.
+
+Check your work: `node tools/template-blocks.mjs <name>` loads the page in a
+browser and tests the reader's view, the rails, the insert points, the library,
+that adding a block adds one, that nothing the runtime draws reaches a save, and
+that the page does not scroll sideways.
 
 ---
 
@@ -567,7 +618,24 @@ paths in every one of these clients, and the name picks the right one:
     primal     /a/<naddr>         /e/<nevent>
     njump      /<naddr>           /<nevent>
 
-## 11. Customising a template
+## 11. The design is yours to write
+
+There is no theme system, no skin, no config. A page is one HTML file and you
+write its CSS, so whatever you can build in HTML and CSS is what the page looks
+like: a poster, a zine in 79 monospace columns, a shell session, a photo wall.
+All twelve shipped templates are that and nothing more, which is why they look
+nothing like each other.
+
+The runtime draws a few surfaces of its own, and they follow you rather than the
+other way round. Set the variables and the toolbar, the dialogs, the version
+list, the pickers, the text toolbar, the toasts, the feeds, the block rails and
+the post reader all come out in your palette. You never restyle the chrome
+directly and you never fight it.
+
+So the job for a page somebody asked you for is: pick the nearest template as a
+starting point, or start from `cms` if the shape is "a page", write the design,
+write the words, mark what is editable, and give it a block library so they can
+add to it later. Then §5 to get it online.
 
 Work in this order; it saves rewriting.
 
@@ -584,6 +652,13 @@ Work in this order; it saves rewriting.
 2. **The content.** Real words. Mark everything editable.
 3. **The layout and type.** Your own rules, under the variables.
 4. **The feeds.** Restyle, do not rebuild.
+5. **The block library.** Last, because it copies the shapes you just settled.
+
+Images: a page that phones home is not a page they own, so no CDN, no third
+party fonts, no analytics. An SVG inline or as a `data:` URI costs one request
+of zero bytes and cannot go away. A photograph goes on Blossom, where the rest
+of the page already lives, either through the picture picker or by deploying it
+alongside the document.
 
 ---
 
