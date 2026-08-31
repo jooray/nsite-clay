@@ -209,7 +209,10 @@ async function upload(server, bytes, type, signer) {
 
 function walk(base, cur = base, out = []) {
   for (const name of readdirSync(cur)) {
-    if (name.startsWith(".")) continue;
+    // Dot-entries stay out of a deploy (.git, .DS_Store, .env) — except .well-known,
+    // the RFC 8615 metadata directory (NIP-05 nostr.json, LNURL lnurlp, …), which is
+    // the one dot-path a site publishes on purpose.
+    if (name.startsWith(".") && name !== ".well-known") continue;
     const p = join(cur, name);
     statSync(p).isDirectory() ? walk(base, p, out) : out.push(p);
   }
