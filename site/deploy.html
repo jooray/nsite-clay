@@ -414,6 +414,10 @@
       pubTitle: "Publicando",
       pubSub: "Cada archivo se convierte en un blob de Blossom y después un manifiesto firmado dice a qué blob apunta cada ruta. Tu firmante puede pedirte que apruebes cada firma.",
       retry: "Intentar otra vez",
+      logChecking: "Preguntando a los servidores Blossom qué tienen ya…",
+      logChecked: "Preguntado a cada servidor qué tiene ya",
+      logSigning: "Firmando las subidas. Tu app de firma puede pedirte que apruebes cada una.",
+      logSigned: "Todas las subidas están firmadas",
       advTitle: "Relays y servidores Blossom",
       advSub: "Uno por línea. Los relays guardan el puntero a tu sitio y los servidores Blossom guardan los bytes, así que cuantos más haya de cada uno, en más sitios sobrevive tu página. Los valores por defecto funcionan; cámbialos si tienes los tuyos, o si alguno te está rechazando.",
       advRelays: "Relays", advServers: "Servidores Blossom",
@@ -458,6 +462,10 @@
       pubTitle: "Zverejňuje sa",
       pubSub: "Z každého súboru sa stane blossom blob a potom jeden podpísaný manifest povie, na ktorý blob ktorá cesta ukazuje. Podpisovač si môže vypýtať schválenie každého podpisu.",
       retry: "Skúsiť znova",
+      logChecking: "Pýtame sa Blossom serverov, čo už majú…",
+      logChecked: "Každého servera sme sa spýtali, čo už má",
+      logSigning: "Podpisujú sa nahrávania. Podpisovacia aplikácia si môže vypýtať schválenie každého.",
+      logSigned: "Všetky nahrávania sú podpísané",
       advTitle: "Relaye a Blossom servery",
       advSub: "Jeden na riadok. Relaye držia ukazovateľ na tvoju stránku a Blossom servery držia samotné bajty, takže čím viac oboch, tým na viacerých miestach stránka prežije. Predvolené fungujú; zmeň ich, ak máš vlastné, alebo ak ťa niektorý odmieta.",
       advRelays: "Relaye", advServers: "Blossom servery",
@@ -502,6 +510,10 @@
       pubTitle: "Zveřejňuje se",
       pubSub: "Z každého souboru se stane blossom blob a pak jeden podepsaný manifest řekne, na který blob která cesta ukazuje. Podpisovač si může vyžádat schválení každého podpisu.",
       retry: "Zkusit znovu",
+      logChecking: "Ptáme se Blossom serverů, co už mají…",
+      logChecked: "Každého serveru jsme se zeptali, co už má",
+      logSigning: "Podepisují se nahrávání. Podpisová aplikace si může vyžádat schválení každého.",
+      logSigned: "Všechna nahrávání jsou podepsaná",
       advTitle: "Relaye a Blossom servery",
       advSub: "Jeden na řádek. Relaye drží ukazatel na tvoji stránku a Blossom servery drží samotné bajty, takže čím víc obojího, tím na víc místech stránka přežije. Výchozí fungují; změň je, pokud máš vlastní, nebo pokud tě některý odmítá.",
       advRelays: "Relaye", advServers: "Blossom servery",
@@ -1003,9 +1015,26 @@
       line(say("logReady", "Ready: ") + files.length + say("logFiles", " files"), "ok");
 
       const title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "";
-      const uploading = line(say("logUpload", "Uploading to Blossom…"));
-      timers.forEach(clearInterval);
-      timers.length = 0;
+      let checking = null, signing = null, uploading = null;
+
+      // A clock on any line that is waiting for something. The longest wait in a
+      // publish is a person finding their phone, and a line that has not changed
+      // since it appeared is the thing that reads as a freeze.
+      const tick = (li, text) => {
+        clearInterval(li._t);
+        const from = Date.now();
+        const draw = () => { li.textContent = text + "  " + Math.round((Date.now() - from) / 1000) + "s"; };
+        draw();
+        li._t = setInterval(draw, 1000);
+        timers.push(li._t);
+        return li;
+      };
+      const settle = (li, text) => {
+        if (!li) return;
+        clearInterval(li._t);
+        li.setAttribute("data-ok", "");
+        if (text) li.textContent = text;
+      };
 
       // A line per server under the file being pushed, replaced when the file
       // changes. Watching one of two servers sit on "uploading…" is the whole
@@ -1062,15 +1091,37 @@
         servers: lines($("#adv-servers")),
         onProgress: (p) => {
           const { stage, path, done, total, uploaded, reused } = p;
-          if (stage === "upload") uploading.textContent = `${say("logUpload", "Uploading to Blossom…")} ${done + 1}/${total}  ${path}`;
           if (stage === "server") return serverLine(p);
+
+          // Asking every server what it already holds, before anything is signed
+          // or sent: blobs are content addressed, so most of a publish is
+          // usually already there, and this is what works out which signatures
+          // are actually needed.
+          if (stage === "checking") {
+            checking = checking || line("");
+            checking.textContent =
+              `${say("logChecking", "Asking the Blossom servers what they already have…")} ${done + 1}/${total}  ${path}`;
+            return;
+          }
+          if (stage === "signing") {
+            settle(checking, say("logChecked", "Asked every server what it already holds"));
+            signing = signing || line("");
+            tick(signing, `${say("logSigning", "Signing the uploads. Your signer may ask you to approve each one.")} ${done}/${total}`);
+            return;
+          }
+          if (stage === "upload") {
+            settle(checking, say("logChecked", "Asked every server what it already holds"));
+            settle(signing, say("logSigned", "Every upload is signed"));
+            uploading = uploading || line("");
+            uploading.textContent = `${say("logUpload", "Uploading to Blossom…")} ${done + 1}/${total}  ${path}`;
+            return;
+          }
           if (stage === "manifest") {
-            uploading.setAttribute("data-ok", "");
             // Say when nothing had to be sent. The runtime is the same blob for
             // everybody, so most of a publish is usually already there.
-            uploading.textContent = reused
+            settle(uploading, reused
               ? `${say("logUploaded", "Every file is on Blossom")} (${uploaded} ${say("logSent", "uploaded")}, ${reused} ${say("logReused", "already there")})`
-              : say("logUploaded", "Every file is on Blossom");
+              : say("logUploaded", "Every file is on Blossom"));
             line(say("logManifest", "Publishing the manifest to the relays…"));
           }
         },

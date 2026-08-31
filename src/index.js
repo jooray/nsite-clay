@@ -10,7 +10,7 @@
 import { SimplePool, verifyEvent, nip19 } from "nostr-tools";
 import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
 import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
-import { fetchVerified, hashText, uploadAll } from "./blossom.js";
+import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from "./blossom.js";
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
 import { snapshot } from "./snapshot.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
@@ -302,21 +302,48 @@ class NsiteClay extends EventTarget {
     const existing = merge ? await this.manifestOf(pubkey, site).catch(() => null) : null;
     const paths = existing ? manifestPaths(existing) : {};
 
-    let done = 0, sent = 0, reused = 0;
+    // Ask, then sign, then upload. Blobs are content addressed, so most of a
+    // publish is usually already on the servers from whoever published before;
+    // signing first would have a phone signer approve uploads that never happen,
+    // and a second publish of an unchanged site would ask for approvals it has
+    // no use for at all. Asking first means the signatures are exactly the ones
+    // needed, and they are all taken in one burst rather than one appearing
+    // between each upload.
+    //
+    // `server` progress is reported from here rather than from uploadAll,
+    // because the asking and the uploading are now two separate passes.
+    const onServer = (path) => (server, state, detail) =>
+      step({ stage: "server", path, server, state, detail });
+
+    const plan = [];
     for (const f of files) {
+      const hash = hashBytes(f.bytes);
+      const say = onServer(f.path);
+      step({ stage: "checking", path: f.path, done: plan.length, total: files.length });
+      const present = await Promise.all(to.map(async (s) => {
+        say(s, "checking");
+        const held = await has(s, hash, f.bytes.length);
+        say(s, held ? "present" : "absent");
+        return held;
+      }));
+      plan.push({ f, hash, present });
+      paths[f.path] = hash;
+    }
+
+    const needed = plan.filter((p) => p.present.some((x) => !x)).map((p) => p.hash);
+    const signed = needed.length
+      ? await signUploads(this.signer, needed, {
+          onSign: (n, total) => step({ stage: "signing", done: n, total }),
+        })
+      : new Map();
+
+    let done = 0, sent = 0, reused = 0;
+    for (const { f, hash, present } of plan) {
       step({ stage: "upload", path: f.path, done, total: files.length });
       const r = await uploadAll(to, f.bytes, {
-        signer: this.signer, type: f.type,
-        // Passed straight through, so a caller can show which server is being
-        // asked and which one stopped answering. A publish that has stalled with
-        // two servers configured is a different problem depending on which.
-        onServer: (server, state, detail) =>
-          step({ stage: "server", path: f.path, server, state, detail, done, total: files.length }),
+        signer: this.signer, type: f.type, known: present, signed: signed.get(hash),
+        onServer: onServer(f.path),
       });
-      paths[f.path] = r.hash;
-      // Blobs are content addressed, so the runtime and the stylesheet are
-      // already on the servers from whoever published before. Only what is
-      // genuinely new goes over the wire.
       r.uploaded ? sent++ : reused++;
       done++;
     }
@@ -501,6 +528,46 @@ class NsiteClay extends EventTarget {
     }, true);
     this.addEventListener("nsiteclay:status", (e) => {
       if (e.detail?.status === "saved") this._dirty = false;
+    });
+    if (this.cfg.watchDom) this._watchDom();
+  }
+
+  // Off unless a page asks for it with nc:watch-dom.
+  //
+  // getHTML() serialises the live DOM, so a change made from the console, from
+  // devtools or from the page's own script is saved like any other -- but
+  // nothing notices it, so autosave does not fire and the unload guard does not
+  // warn about work it would lose. This closes that, for a page that wants it
+  // closed.
+  //
+  // Opt-in, because a DOM changes for plenty of reasons that are not edits: a
+  // carousel advancing, a script updating a clock, a widget polling. On a page
+  // like that, with autosave on, this would publish a new version every few
+  // seconds forever. Only the page's author knows which kind of page theirs is.
+  _watchDom() {
+    // Runtime furniture is not content. Rails, the toolbar, modals and a feed's
+    // fetched items all come off the save clone anyway, so a mutation that only
+    // touches those has changed nothing that would ever be published.
+    const ours = (node) => {
+      const el = node?.nodeType === 1 ? node : node?.parentElement;
+      return !!el?.closest?.("[nc\\:chrome], [nc\\:transient]");
+    };
+    // Attributes the runtime sets on the way in and strips on the way out.
+    const MACHINERY = new Set(["contenteditable", "spellcheck"]);
+
+    this._domWatch = new MutationObserver((records) => {
+      for (const m of records) {
+        if (m.type === "attributes" &&
+            (MACHINERY.has(m.attributeName) || m.attributeName?.startsWith("nc:"))) continue;
+        if (ours(m.target)) continue;
+        if (m.type === "childList" &&
+            [...m.addedNodes, ...m.removedNodes].every(ours)) continue;
+        this._dirty = true;
+        return;
+      }
+    });
+    this._domWatch.observe(this.doc.body, {
+      subtree: true, childList: true, characterData: true, attributes: true,
     });
   }
 

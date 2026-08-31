@@ -32,6 +32,7 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 | `autosave` | no | save once edits settle (2.5 s debounce, 15 s throttle). `⌘S` / `Ctrl+S` works either way |
 | `nc:autoreload` | no | `"false"` stops the document watching its manifest for newer versions |
 | `nc:runtime-owner` | no | whose runtime this page will offer to upgrade to. Default is the project's own key; `"off"` never looks |
+| `nc:watch-dom` | no | count any DOM change as an edit, not only typing. Off by default: a page that redraws itself would be permanently unsaved |
 
 Unknown `nc:*` attributes are ignored, so a document written for a later version still renders.
 

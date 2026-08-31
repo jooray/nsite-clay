@@ -64,6 +64,11 @@ export function readConfig(doc = document) {
     // A saved document hardcodes its own asset URLs and has no update channel,
     // so it watches its own manifest instead. Opt out with nc:autoreload="false".
     autoreload: (attr("nc:autoreload") || "").toLowerCase() !== "false",
+    // Mark the page unsaved when its DOM changes by any route, not only when
+    // somebody types into it. Off by default: a page with a carousel or a clock
+    // in it would be permanently unsaved, and with autosave on would republish
+    // itself every few seconds.
+    watchDom: html.hasAttribute("nc:watch-dom"),
     // Whose runtime this page is willing to be upgraded to. Never acted on by
     // itself: it says where to look, and the owner still has to say yes.
     runtimeOwner: (attr("nc:runtime-owner") || "").trim().toLowerCase() === "off"

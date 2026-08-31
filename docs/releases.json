@@ -10,7 +10,9 @@
       "A dialog opened on top of another no longer shares its Escape key with the one underneath.",
       "A publish that stalls now ends and says which Blossom server stopped answering, instead of sitting on \"Uploading… 1/4\" forever. Every network call has a timeout, and each server gets its own line with a running clock.",
       "A blob is signed once rather than once per base64 encoding, which halves how many times a phone signer asks you to approve the same upload.",
-      "The publisher has a panel for the relays and Blossom servers it uses, so one server refusing you is something you can work around without a terminal."
+      "The publisher has a panel for the relays and Blossom servers it uses, so one server refusing you is something you can work around without a terminal.",
+      "A publish asks the Blossom servers what they already hold before it signs anything, so a phone signer is asked once per file rather than once per file per server, all in one burst at the start. Republishing an unchanged site now needs no upload approvals at all.",
+      "nc:watch-dom, off by default, makes any change to the page count as an edit rather than only typing."
     ]
   }
 ]

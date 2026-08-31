@@ -646,6 +646,42 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.dom.remove(added);
   }
 
+  // --- noticing a change nobody typed --------------------------------------
+  // Off by default, because a page with a clock in it would be permanently
+  // unsaved and, with autosave on, would republish itself forever.
+  {
+    t("nc:watch-dom is off unless asked for", nc.cfg.watchDom === false);
+    nc._dirty = false;
+    document.getElementById("prose").insertAdjacentHTML("beforeend", "<p>from a script</p>");
+    await new Promise((r) => setTimeout(r, 30));
+    t("so a scripted change does not mark the page unsaved on its own", nc.dirty === false);
+
+    nc.cfg.watchDom = true;
+    nc._watchDom();
+    nc._dirty = false;
+    document.getElementById("prose").insertAdjacentHTML("beforeend", "<p>and again</p>");
+    await new Promise((r) => setTimeout(r, 30));
+    t("with nc:watch-dom it does", nc.dirty === true);
+
+    // The runtime's own furniture must not count, or a page with the block rails
+    // drawn on it would be unsaved the moment editing began.
+    nc._dirty = false;
+    const chrome = document.createElement("div");
+    chrome.setAttribute("nc:chrome", "");
+    document.body.appendChild(chrome);
+    chrome.innerHTML = "<b>drawn by the runtime</b>";
+    await new Promise((r) => setTimeout(r, 30));
+    t("but the runtime's own chrome does not", nc.dirty === false, document.body.lastElementChild.outerHTML);
+    chrome.remove();
+
+    nc._domWatch.disconnect();
+    nc.cfg.watchDom = false;
+    nc._dirty = false;
+    for (const p of document.getElementById("prose").querySelectorAll("p")) {
+      if (/from a script|and again/.test(p.textContent)) p.remove();
+    }
+  }
+
   // --- a server that never answers ----------------------------------------
   {
     const hang = location.origin + "/hang";

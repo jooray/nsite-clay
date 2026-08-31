@@ -28,6 +28,10 @@ nothing to click; the owner adds `#edit` to the URL and the controls appear.
 Do not add `autosave`. It is off on purpose: every save stores the whole page
 again and files a version.
 
+`nc:watch-dom` is optional and off by default. It makes any DOM change count as
+an edit rather than only typing, which a page whose own script edits it wants and
+a page with a carousel or a clock in it very much does not.
+
 `nc:runtime-owner` is optional and is best left out. Absent, a published page
 offers its owner the project's own newer runtime when one exists; set it to your
 own key if you fork the engine, or to `"off"` to never look. It is only ever an

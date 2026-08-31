@@ -42,14 +42,14 @@ function within(promise, ms, what) {
 // the base64 differs -- so signing inside the retry loop asked a remote signer to
 // approve the same thing twice, which with a phone means twice the prompts for
 // every blob on every server.
-async function authEvent(signer, { verb, hash, reason }, timeouts = TIMEOUTS) {
+async function authEvent(signer, { verb, hash, reason, ttl = 600 }, timeouts = TIMEOUTS) {
   const event = await within(
     signer.sign({
       kind: 24242,
       created_at: Math.floor(Date.now() / 1000),
       tags: [
         ["t", verb],
-        ["expiration", String(Math.floor(Date.now() / 1000) + 600)],
+        ["expiration", String(Math.floor(Date.now() / 1000) + ttl)],
         ...(hash ? [["x", hash]] : []),
       ],
       content: reason,
@@ -60,13 +60,36 @@ async function authEvent(signer, { verb, hash, reason }, timeouts = TIMEOUTS) {
   return new TextEncoder().encode(JSON.stringify(event));
 }
 
+// Sign the auth for a whole publish before any of it goes over the wire.
+//
+// A BUD-11 upload auth is bound to a blob hash and a verb, and to nothing else:
+// not to a server, so every server takes the same one. With a phone signer that
+// is the difference between approving one thing per file and one per file per
+// server, and doing all of it in a single burst at the start rather than having
+// a prompt appear between uploads, minutes apart, which is indistinguishable
+// from a publish that has stopped.
+//
+// The window is longer than a single upload's because it has to cover the whole
+// run. It is still bounded, and each event still only authorises the one blob it
+// names.
+export async function signUploads(signer, hashes, { timeouts = TIMEOUTS, ttl = 1800, onSign = () => {} } = {}) {
+  const want = [...new Set(hashes)];
+  const out = new Map();
+  for (const hash of want) {
+    onSign(out.size + 1, want.length, hash);
+    out.set(hash, await authEvent(signer, { verb: "upload", hash, reason: "Upload site file", ttl }, timeouts));
+  }
+  return out;
+}
+
 // Upload one blob to one server. Resolves to a BUD-02 blob descriptor.
-export async function upload(server, bytes, { signer, type = "text/html", onServer = () => {}, timeouts = TIMEOUTS } = {}) {
+// `signed` is a pre-signed auth from signUploads; without one this signs its own.
+export async function upload(server, bytes, { signer, type = "text/html", onServer = () => {}, timeouts = TIMEOUTS, signed: given = null } = {}) {
   const hash = hashBytes(bytes);
   const base = server.replace(/\/+$/, "");
   let lastError;
-  onServer(base, "signing");
-  const signed = await authEvent(signer, { verb: "upload", hash, reason: "Upload document" }, timeouts);
+  if (!given) onServer(base, "signing");
+  const signed = given || await authEvent(signer, { verb: "upload", hash, reason: "Upload document" }, timeouts);
   // BUD-11 says base64url without padding; some deployed servers only accept
   // padded standard base64. Worse, a server that omits `Access-Control-Allow-
   // Origin` on its *error* responses turns its own 400 into an opaque browser
@@ -136,9 +159,13 @@ export async function uploadAll(servers, bytes, opts = {}) {
   // onServer is how a caller says which server is doing what. Without it the
   // only thing a person watching a publish can see is a counter, and a counter
   // that has stopped says nothing about which of the two servers stopped it.
-  const { check = true, onServer = () => {} } = opts;
+  // `known` is a presence answer the caller already has, so a publish that asked
+  // every server up front -- to work out what actually needs signing -- does not
+  // ask all of them a second time.
+  const { check = true, onServer = () => {}, known = null } = opts;
 
-  const present = check
+  const present = known ? servers.map((_, i) => !!known[i])
+    : check
     ? await Promise.all(servers.map(async (s) => {
         onServer(s, "checking");
         const held = await has(s, hash, bytes.length, opts);

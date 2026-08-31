@@ -216,6 +216,105 @@ have and you do not.
 
 ---
 
+## 4b. When they already have a page
+
+Sometimes nobody wants a template. They have a page: a hand-written one, an
+export from a static site generator, a landing page somebody built them years
+ago. Do not rebuild it from a template and do not talk them out of the design
+they have. Convert it. It is four changes and none of them touch the markup you
+were given.
+
+**One. Attributes on `<html>`.**
+
+```html
+<html lang="en"
+      nc:owner="npub1…"
+      nc:edit-gate="hash"
+      nc:path="/index.html">
+```
+
+`nc:owner` is the only required one. `nc:edit-gate="hash"` keeps the controls
+away from readers, and `nc:path` has to name where this document actually lives
+or the page will watch somebody else's manifest entry and reload itself forever
+(see §12). Relays and Blossom servers have working defaults; set `nc:relays` and
+`nc:servers` only if they have their own.
+
+**Two. The three shared files, at the site root, deployed with the page.**
+
+```html
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+```
+
+Not from a CDN, and not pasted into the document. They are files in their site,
+uploaded to Blossom and named in their manifest like everything else. A save
+refuses to publish a document that references a path the manifest does not list,
+which is the error you will hit if you skip this.
+
+The stylesheet is only needed for the runtime's own dialogs and rails. Their CSS
+is untouched by it; it defines variables and styles elements whose names all
+start with `nc-`.
+
+**Three. The toolbar**, copied verbatim from
+[CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md)
+near the end of `<body>`. Without it there is no way to sign in or save from the
+page, and a person who cannot find the save button has not been given a
+self-editable site.
+
+**Four. `editable` on what should be editable.** That is §8, and it is the part
+that takes judgement rather than typing. Read the page and mark the headings,
+the paragraphs, the captions, the list rows, the button labels. Aim high: twenty
+or more on a content page. Anything whose element is inline, an `<a>` that is a
+button, a `<span>`, a `<cite>`, takes `editable="single-line"` rather than plain
+`editable`, because an inline element cannot legally hold a paragraph.
+
+That is the whole conversion. Everything from here on is optional.
+
+### Optionally, blocks
+
+A converted page usually already contains its own block library, written by
+whoever built it: the sections that repeat are the shapes. Wrap the region that
+should grow in `nc:blocks`, give each existing section an `nc:block-type`, and
+lift one of each distinct shape into a `<template nc:block>` (§9b). Do not invent
+shapes and do not add CSS the page does not already use. A block added next
+March has to come out looking like the ones that are there today, and on a
+converted page you have the answer in front of you.
+
+### What will not convert
+
+Say so early rather than halfway through.
+
+- **A page a framework renders at runtime.** React, Vue, Svelte and anything else
+  that builds its DOM from JavaScript on load. A save serialises the rendered
+  DOM, so what gets published is a snapshot of one render, and on the next load
+  the framework re-renders over it and the edits are gone. These are not
+  candidates. Their build output usually is, if it is genuinely static HTML.
+- **Anything that redraws itself on a timer.** A carousel, a clock, a widget that
+  polls. Whatever it happens to be showing at the moment of the save is what gets
+  published. Fine for a page where that region is decoration; not fine where it
+  is the content.
+- **Assets on somebody else's server.** Fonts from a CDN, an analytics script, an
+  image hotlinked from elsewhere. They keep working, and they also mean the page
+  is only as durable as those hosts, which is the thing an nsite exists to avoid.
+  Deploy them into the site, or inline them. Google Fonts in particular should be
+  replaced with a system stack.
+- **A `<script>` in the page** is saved verbatim and runs for every reader. That
+  is the point, and it is also worth reading before you publish somebody else's
+  file.
+
+### One thing worth knowing
+
+The runtime does not only save what was typed into an `editable` region. A save
+serialises the live DOM, so a change made from the browser's own inspector, from
+the console, or by the page's own script is published like any other. Nothing
+notices such a change by default, though, so autosave will not fire and the
+unload guard will not warn about it. A page whose own code edits itself can add
+`nc:watch-dom` to `<html>` to have those count as edits too. Leave it off
+otherwise: on a page with a clock in it, it would mark the page unsaved forever.
+
+---
+
 ## 5. Getting it online
 
 Two routes to the same three steps. Pick by who is doing it.
