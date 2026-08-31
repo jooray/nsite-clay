@@ -66,6 +66,11 @@ await nc.save()                    // → { hash, bytes, manifest, version, aggr
                                    //   or { skipped: true } when nothing changed
 await nc.save({ extraPaths, dropPaths })      // publish other files in the same manifest.
                                    //   A drop the document still references is refused
+await nc.publishFiles(files, { servers, relays, onProgress })   // a whole site, from the browser
+// onProgress stages: "upload" { path, done, total }, "server" { server, state, detail },
+// "manifest" { uploaded, reused }. Server states: checking, present, absent, signing,
+// sending, ok, failed. Every network call has a timeout (nc has none to override;
+// blossom.js TIMEOUTS: head 20s, get 60s, put 120s, signer 180s)
 await nc.currentManifest()         // the live nsite manifest event
 await nc.versions()                // kind-5128 snapshots, newest first
 await nc.readVersion(snap)         // that version's HTML, fetched and hash-verified

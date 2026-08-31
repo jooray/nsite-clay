@@ -168,13 +168,20 @@ function b64url(bytes) {
 // already there under the same name. Asking first turns a weekly republish of an
 // unchanged site into a handful of HEAD requests instead of a full re-upload,
 // and it saves a signature per blob, which for a remote signer is a prompt.
+// fetch has no timeout of its own, so a server that accepts the connection and
+// then says nothing hangs a deploy for as long as anyone is willing to watch it.
+const TIMEOUTS = { head: 20000, put: 120000, sign: 180000 };
+const until = (ms) => ({ signal: AbortSignal.timeout(ms) });
+const why = (err, ms) =>
+  err?.name === "TimeoutError" ? `no answer in ${Math.round(ms / 1000)}s` : err?.message || String(err);
+
 async function served(server, hash) {
   const url = `${server.replace(/\/+$/, "")}/${hash}`;
   try {
-    let res = await fetch(url, { method: "HEAD" });
+    let res = await fetch(url, { method: "HEAD", ...until(TIMEOUTS.head) });
     // Not every server implements HEAD. Fall back to asking for one byte.
     if (res.status === 405 || res.status === 501) {
-      res = await fetch(url, { headers: { Range: "bytes=0-0" } });
+      res = await fetch(url, { headers: { Range: "bytes=0-0" }, ...until(TIMEOUTS.head) });
     }
     return res.ok || res.status === 206;
   } catch { return false; }
@@ -183,24 +190,32 @@ async function served(server, hash) {
 async function upload(server, bytes, type, signer) {
   const hash = bytesToHex(sha256(bytes));
   let last;
-  // BUD-11 specifies base64url without padding; part of the deployed fleet only
-  // accepts padded standard base64, so try both before giving up on a server.
+  // One signature, both encodings. BUD-11 specifies base64url without padding
+  // and part of the deployed fleet only accepts padded standard base64, but the
+  // signed event is the same either way -- signing inside the loop asked a remote
+  // signer to approve the same upload twice.
+  const ev = await signer.sign({
+    kind: 24242, created_at: Math.floor(Date.now() / 1000),
+    tags: [["t", "upload"], ["expiration", String(Math.floor(Date.now() / 1000) + 600)], ["x", hash]],
+    content: "Upload site file",
+  });
+  const raw = Buffer.from(JSON.stringify(ev));
   for (const urlsafe of [true, false]) {
     try {
-      const ev = await signer.sign({
-        kind: 24242, created_at: Math.floor(Date.now() / 1000),
-        tags: [["t", "upload"], ["expiration", String(Math.floor(Date.now() / 1000) + 600)], ["x", hash]],
-        content: "Upload site file",
-      });
-      const raw = Buffer.from(JSON.stringify(ev));
       const auth = "Nostr " + (urlsafe ? b64url(raw) : raw.toString("base64"));
       const res = await fetch(`${server.replace(/\/+$/, "")}/upload`, {
         method: "PUT", headers: { Authorization: auth, "Content-Type": type }, body: bytes,
+        ...until(TIMEOUTS.put),
       });
       if (res.ok) return hash;
       last = `${res.status} ${res.headers.get("x-reason") || (await res.text().catch(() => ""))}`.trim();
       if (![400, 401].includes(res.status)) break;
-    } catch (e) { last = e.message; }
+    } catch (e) {
+      last = why(e, TIMEOUTS.put);
+      // A server that has stopped answering will not answer the other encoding
+      // either, and a second full timeout is two more minutes of nothing.
+      if (e?.name === "TimeoutError") break;
+    }
   }
   throw new Error(`${server}: ${last}`);
 }

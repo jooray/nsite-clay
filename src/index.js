@@ -305,7 +305,14 @@ class NsiteClay extends EventTarget {
     let done = 0, sent = 0, reused = 0;
     for (const f of files) {
       step({ stage: "upload", path: f.path, done, total: files.length });
-      const r = await uploadAll(to, f.bytes, { signer: this.signer, type: f.type });
+      const r = await uploadAll(to, f.bytes, {
+        signer: this.signer, type: f.type,
+        // Passed straight through, so a caller can show which server is being
+        // asked and which one stopped answering. A publish that has stalled with
+        // two servers configured is a different problem depending on which.
+        onServer: (server, state, detail) =>
+          step({ stage: "server", path: f.path, server, state, detail, done, total: files.length }),
+      });
       paths[f.path] = r.hash;
       // Blobs are content addressed, so the runtime and the stylesheet are
       // already on the servers from whoever published before. Only what is
@@ -316,6 +323,8 @@ class NsiteClay extends EventTarget {
 
     step({ stage: "manifest", done, total: files.length, uploaded: sent, reused });
     const manifest = await this.signer.sign(buildManifest(cfg, paths, { title }));
+    // Every relay at once, resolving on the first acceptance: a dead relay in the
+    // list costs nothing, and only a set where all of them refused is an error.
     await publishToAny(this.pool, on, manifest);
 
     // The version snapshot is filed after the manifest and never awaited: the

@@ -14,6 +14,10 @@ const DIR = join(HERE, "fixtures");
 // The bundle is served straight out of dist/, so the tests always run against
 // what was just built rather than a stale copy someone forgot to refresh.
 const server = createServer((req, res) => {
+  // Accepts the connection and never answers, which is what a Blossom server
+  // doing this used to do to a publish: fetch has no timeout of its own, so the
+  // wizard sat on "Uploading… 1/4" for as long as anyone would watch it.
+  if (req.url.startsWith("/hang")) return;
   const name = req.url === "/" ? "conformance.html" : req.url.split("?")[0].replace(/^\//, "");
   const p = name === "nsite-clay.js" ? join(HERE, "..", "dist", "nsite-clay.js") : join(DIR, name);
   let body;
@@ -640,6 +644,16 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.blocks.disarm();
     t("disarming takes every rail away", document.querySelectorAll(".nc-blk-rail").length === 0);
     nc.dom.remove(added);
+  }
+
+  // --- a server that never answers ----------------------------------------
+  {
+    const hang = location.origin + "/hang";
+    const began = Date.now();
+    const failed = await err(() => nc.fetchVerified([hang], "d".repeat(64), { timeouts: { get: 600 } }));
+    const took = Date.now() - began;
+    t("a Blossom server that never answers gives up rather than hanging", !!failed, failed || "it resolved");
+    t("and gives up when told to, not whenever", took < 5000, took + "ms");
   }
 
   // --- moving to a newer runtime ------------------------------------------

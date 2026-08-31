@@ -7,7 +7,10 @@
       "A block's rail can reach inside the block. The new ⌷ button lists what a block is made of, so a stray element can be removed without deleting the block around it.",
       "A button's link can be changed. Pressing the link button inside one used to try to put a link inside a link.",
       "Settings says which runtime the page is running, and can move it to a newer one.",
-      "A dialog opened on top of another no longer shares its Escape key with the one underneath."
+      "A dialog opened on top of another no longer shares its Escape key with the one underneath.",
+      "A publish that stalls now ends and says which Blossom server stopped answering, instead of sitting on \"Uploading… 1/4\" forever. Every network call has a timeout, and each server gets its own line with a running clock.",
+      "A blob is signed once rather than once per base64 encoding, which halves how many times a phone signer asks you to approve the same upload.",
+      "The publisher has a panel for the relays and Blossom servers it uses, so one server refusing you is something you can work around without a terminal."
     ]
   }
 ]

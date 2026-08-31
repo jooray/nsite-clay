@@ -162,6 +162,25 @@
   ul.log li[data-ok]::before { content: "✓ "; color: var(--nc-ok); }
   ul.log li[data-bad]::before { content: "✕ "; color: var(--nc-bad); }
   ul.log li[data-bad] { color: var(--nc-bad); }
+  /* One line per Blossom server under the file being pushed. A publish that has
+     stalled with two servers configured is a different problem depending on
+     which of them stopped answering, and a counter cannot say. */
+  ul.log li.srv { padding-left: 1.6rem; opacity: .85; }
+  ul.log li.srv::before { content: "· "; }
+  ul.log li.srv[data-ok]::before { content: "✓ "; }
+  ul.log li.srv[data-bad]::before { content: "✕ "; }
+  ul.log li.srv b { font-weight: 400; color: var(--nc-ink); }
+  ul.log li.srv i { font-style: normal; }
+  ul.log li.srv i.clock { color: var(--nc-ink-dim); opacity: .7; }
+
+  details.adv { margin-top: 1.2rem; border-top: 1px solid var(--nc-edge); padding-top: .9rem; }
+  details.adv > summary { cursor: pointer; font-size: .88rem; color: var(--nc-ink-dim); }
+  details.adv > summary:hover { color: var(--nc-ink); }
+  details.adv textarea {
+    width: 100%; font: .82rem/1.6 var(--mono); padding: .55rem .65rem; resize: vertical;
+    min-height: 4.4rem; border-radius: var(--nc-radius-sm);
+    border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink);
+  }
 
   .url { font-family: var(--mono); font-size: .95rem; word-break: break-all;
          background: var(--nc-bg); border: 1px solid var(--nc-edge);
@@ -292,6 +311,21 @@
       <p class="note" id="path-preview"></p>
       <div id="occupied" hidden></div>
       <p class="note bad" id="where-error" hidden></p>
+
+      <details class="adv">
+        <summary data-t="advTitle">Relays and Blossom servers</summary>
+        <p class="note" data-t="advSub">One per line. Relays hold the pointer to your site and Blossom
+        servers hold the bytes, so more of each is more places your page survives. The defaults work; change
+        them if you run your own, or if one of them is refusing you.</p>
+        <label class="f" for="adv-relays" data-t="advRelays">Relays</label>
+        <textarea id="adv-relays" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+        <label class="f" for="adv-servers" data-t="advServers">Blossom servers</label>
+        <textarea id="adv-servers" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+        <div class="row">
+          <button id="adv-reset" data-t="advReset">Back to the defaults</button>
+        </div>
+      </details>
+
       <div class="row end">
         <button id="where-back" data-t="back">Back</button>
         <button class="primary" id="where-go" data-t="publish">Publish it</button>
@@ -380,6 +414,14 @@
       pubTitle: "Publicando",
       pubSub: "Cada archivo se convierte en un blob de Blossom y después un manifiesto firmado dice a qué blob apunta cada ruta. Tu firmante puede pedirte que apruebes cada firma.",
       retry: "Intentar otra vez",
+      advTitle: "Relays y servidores Blossom",
+      advSub: "Uno por línea. Los relays guardan el puntero a tu sitio y los servidores Blossom guardan los bytes, así que cuantos más haya de cada uno, en más sitios sobrevive tu página. Los valores por defecto funcionan; cámbialos si tienes los tuyos, o si alguno te está rechazando.",
+      advRelays: "Relays", advServers: "Servidores Blossom",
+      advReset: "Volver a los valores por defecto",
+      srvChecking: "preguntando si ya lo tiene…", srvHere: "ya está ahí",
+      srvNeeds: "necesita una copia", srvSigning: "esperando a tu app de firma…",
+      srvSending: "subiendo…", srvOk: "subido", srvFailed: "falló",
+      logRetryHint: "No se ha perdido nada. Al intentarlo otra vez se salta lo que ya llegó, y puedes cambiar los relays o los servidores Blossom en el paso anterior.",
       doneTitle: "Ya está en línea",
       doneSub: "Ábrelo e inicia sesión con la misma clave. La página se edita a sí misma a partir de ahora, así que no necesitas volver aquí.",
       doneOpen: "Abrir y empezar a editar", doneView: "Solo verlo", doneGuide: "Leer la guía",
@@ -416,6 +458,14 @@
       pubTitle: "Zverejňuje sa",
       pubSub: "Z každého súboru sa stane blossom blob a potom jeden podpísaný manifest povie, na ktorý blob ktorá cesta ukazuje. Podpisovač si môže vypýtať schválenie každého podpisu.",
       retry: "Skúsiť znova",
+      advTitle: "Relaye a Blossom servery",
+      advSub: "Jeden na riadok. Relaye držia ukazovateľ na tvoju stránku a Blossom servery držia samotné bajty, takže čím viac oboch, tým na viacerých miestach stránka prežije. Predvolené fungujú; zmeň ich, ak máš vlastné, alebo ak ťa niektorý odmieta.",
+      advRelays: "Relaye", advServers: "Blossom servery",
+      advReset: "Späť na predvolené",
+      srvChecking: "pýtame sa, či to už má…", srvHere: "už tam je",
+      srvNeeds: "potrebuje kópiu", srvSigning: "čaká sa na podpisovú aplikáciu…",
+      srvSending: "nahráva sa…", srvOk: "nahraté", srvFailed: "zlyhalo",
+      logRetryHint: "Nič sa nestratilo. Ďalší pokus preskočí to, čo už dorazilo, a relaye alebo Blossom servery môžeš zmeniť v predchádzajúcom kroku.",
       doneTitle: "Je to online",
       doneSub: "Otvor si to a prihlás sa tým istým kľúčom. Stránka sa odteraz upravuje sama, takže sem sa už vracať nemusíš.",
       doneOpen: "Otvoriť a začať upravovať", doneView: "Len sa pozrieť", doneGuide: "Prečítať návod",
@@ -452,6 +502,14 @@
       pubTitle: "Zveřejňuje se",
       pubSub: "Z každého souboru se stane blossom blob a pak jeden podepsaný manifest řekne, na který blob která cesta ukazuje. Podpisovač si může vyžádat schválení každého podpisu.",
       retry: "Zkusit znovu",
+      advTitle: "Relaye a Blossom servery",
+      advSub: "Jeden na řádek. Relaye drží ukazatel na tvoji stránku a Blossom servery drží samotné bajty, takže čím víc obojího, tím na víc místech stránka přežije. Výchozí fungují; změň je, pokud máš vlastní, nebo pokud tě některý odmítá.",
+      advRelays: "Relaye", advServers: "Blossom servery",
+      advReset: "Zpět na výchozí",
+      srvChecking: "ptáme se, jestli to už má…", srvHere: "už tam je",
+      srvNeeds: "potřebuje kopii", srvSigning: "čeká se na podpisovou aplikaci…",
+      srvSending: "nahrává se…", srvOk: "nahráno", srvFailed: "selhalo",
+      logRetryHint: "Nic se neztratilo. Další pokus přeskočí to, co už dorazilo, a relaye nebo Blossom servery můžeš změnit v předchozím kroku.",
       doneTitle: "Je to online",
       doneSub: "Otevři si to a přihlas se stejným klíčem. Stránka se odteď upravuje sama, takže se sem už vracet nemusíš.",
       doneOpen: "Otevřít a začít upravovat", doneView: "Jen se podívat", doneGuide: "Přečíst návod",
@@ -841,6 +899,19 @@
     return li;
   }
 
+  // ---- relays and Blossom servers -----------------------------------------
+  // The defaults come from the runtime rather than from a list copied into this
+  // page, so there is one place they are written down. A publish reads whatever
+  // is in the boxes, which is also what makes "one of the servers is refusing
+  // me" a thing a person can do something about without a terminal.
+  const lines = (el) => el.value.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean);
+  function fillAdvanced() {
+    $("#adv-relays").value = nc.cfg.relays.join("\n");
+    $("#adv-servers").value = nc.cfg.servers.join("\n");
+  }
+  $("#adv-reset").onclick = (e) => { e.preventDefault(); fillAdvanced(); };
+  fillAdvanced();
+
   // Everything the template's own npub appears in becomes yours: nc:owner, the
   // feed that pulls the author's notes, the link to their profile. Replacing
   // only nc:owner would hand somebody a blog whose feed is another person's.
@@ -859,7 +930,13 @@
     return out;
   }
 
+  // Every ticking counter this run started, so a finished or failed publish does
+  // not leave one of them counting forever behind the done card.
+  const timers = [];
+
   async function publish() {
+    timers.forEach(clearInterval);
+    timers.length = 0;
     log.innerHTML = "";
     $("#retry-row").hidden = true;
     $("#done-card").hidden = true;
@@ -927,10 +1004,66 @@
 
       const title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "";
       const uploading = line(say("logUpload", "Uploading to Blossom…"));
+      timers.forEach(clearInterval);
+      timers.length = 0;
+
+      // A line per server under the file being pushed, replaced when the file
+      // changes. Watching one of two servers sit on "uploading…" is the whole
+      // difference between a frozen wizard and a slow server with a name.
+      const SRV = {
+        checking: ["srvChecking", "asking whether it has this already…"],
+        present: ["srvHere", "already there", "ok"],
+        absent: ["srvNeeds", "needs a copy"],
+        signing: ["srvSigning", "waiting for your signer…"],
+        sending: ["srvSending", "uploading…"],
+        ok: ["srvOk", "uploaded", "ok"],
+        failed: ["srvFailed", "failed", "bad"],
+      };
+      let shown = "";
+      let rows = new Map();
+      const host = (u) => { try { return new URL(u).host; } catch { return u; } };
+      const WAITING = new Set(["checking", "signing", "sending"]);
+
+      const serverLine = ({ path, server, state, detail }) => {
+        if (path !== shown) { shown = path; rows = new Map(); }
+        let row = rows.get(server);
+        if (!row) {
+          const li = document.createElement("li");
+          li.className = "srv";
+          li.append(Object.assign(document.createElement("b"), { textContent: host(server) + "  " }),
+                    document.createElement("i"),
+                    Object.assign(document.createElement("i"), { className: "clock" }));
+          log.appendChild(li);
+          row = { li, timer: 0 };
+          rows.set(server, row);
+        }
+        const [key, fallback, status] = SRV[state] || [null, state];
+        const [what, clock] = row.li.querySelectorAll("i");
+        what.textContent = (key ? say(key, fallback) : fallback) + (detail ? "  " + detail : "");
+        row.li.removeAttribute("data-ok"); row.li.removeAttribute("data-bad");
+        if (status) row.li.setAttribute(status === "ok" ? "data-ok" : "data-bad", "");
+
+        // A wait with nothing moving in it is indistinguishable from a freeze,
+        // which is what this whole log is for. Two minutes is a long time to
+        // trust a line that has not changed since it appeared.
+        clearInterval(row.timer);
+        clock.textContent = "";
+        if (!WAITING.has(state)) return;
+        const from = Date.now();
+        row.timer = setInterval(() => {
+          clock.textContent = "  " + Math.round((Date.now() - from) / 1000) + "s";
+        }, 1000);
+        timers.push(row.timer);
+      };
+
       const out = await nc.publishFiles(files, {
         title,
-        onProgress: ({ stage, path, done, total, uploaded, reused }) => {
+        relays: lines($("#adv-relays")),
+        servers: lines($("#adv-servers")),
+        onProgress: (p) => {
+          const { stage, path, done, total, uploaded, reused } = p;
           if (stage === "upload") uploading.textContent = `${say("logUpload", "Uploading to Blossom…")} ${done + 1}/${total}  ${path}`;
+          if (stage === "server") return serverLine(p);
           if (stage === "manifest") {
             uploading.setAttribute("data-ok", "");
             // Say when nothing had to be sent. The runtime is the same blob for
@@ -942,6 +1075,7 @@
           }
         },
       });
+      timers.forEach(clearInterval);
       log.lastElementChild.setAttribute("data-ok", "");
       log.lastElementChild.textContent = say("logPublished", "Manifest published, version filed");
 
@@ -955,7 +1089,14 @@
       $("#done-card").hidden = false;
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
+      timers.forEach(clearInterval);
       line((e && e.message) || String(e), "bad");
+      // Retrying is close to free: Blossom addresses blobs by their own hash, so
+      // whatever already landed is skipped, and the manifest is merged rather
+      // than replaced. Say so, because "try again" after a two minute wait does
+      // not look free.
+      line(say("logRetryHint", "Nothing was lost. Trying again skips whatever already " +
+        "arrived, and you can change the relays or Blossom servers on the previous step."));
       $("#retry-row").hidden = false;
     }
   }
