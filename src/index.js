@@ -164,6 +164,13 @@ class NsiteClay extends EventTarget {
     for (const el of [...clone.querySelectorAll("[contenteditable]")]) el.removeAttribute("contenteditable");
     for (const el of [...clone.querySelectorAll("[nc\\:keep-editable]")]) el.removeAttribute("nc:keep-editable");
     for (const el of [...clone.querySelectorAll("[nc\\:armed]")]) el.removeAttribute("nc:armed");
+    // Same for the spellchecker: the runtime turns it on to edit with, and a
+    // published file carrying spellcheck="true" on every heading is machinery
+    // that leaked. Only the ones we set are marked, so an authored value stays.
+    for (const el of [...clone.querySelectorAll("[nc\\:spellcheck]")]) {
+      el.removeAttribute("spellcheck");
+      el.removeAttribute("nc:spellcheck");
+    }
     // The parts tree marks whichever element the pointer is over. Left behind,
     // it would publish one element wearing an outline nobody asked for.
     for (const el of [...clone.querySelectorAll("[nc\\:highlight]")]) el.removeAttribute("nc:highlight");

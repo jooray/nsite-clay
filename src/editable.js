@@ -87,7 +87,13 @@ export class Editable {
     el.setAttribute("nc:armed", "");
     el.contentEditable = "true";
     el.setAttribute("nc:keep-editable", "");
-    el.spellcheck = true;
+    // The red underline is editing machinery, not content, so it is marked as
+    // ours and comes off again in disable() and on every save. An authored value
+    // is left alone: a page saying spellcheck="false" on a code block means it.
+    if (!el.hasAttribute("spellcheck")) {
+      el.spellcheck = true;
+      el.setAttribute("nc:spellcheck", "");
+    }
     if (tokensOf(el).has("single-line")) el.addEventListener("keydown", blockEnter);
     return el;
   }
@@ -101,6 +107,10 @@ export class Editable {
       el.removeAttribute("contenteditable");
       el.removeAttribute("nc:keep-editable");
       el.removeAttribute("nc:armed");
+      if (el.hasAttribute("nc:spellcheck")) {
+        el.removeAttribute("spellcheck");
+        el.removeAttribute("nc:spellcheck");
+      }
       el.removeEventListener("keydown", blockEnter);
     }
     this._unbind();

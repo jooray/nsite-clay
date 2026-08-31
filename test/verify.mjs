@@ -182,6 +182,9 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("the editable marker survives a save", /id="prose" editable/.test(edited));
   t("contenteditable does not", !/contenteditable=/.test(edited));
   t("nc:keep-editable does not", !edited.includes("nc:keep-editable"));
+  t("nor the spellchecker the runtime turned on", !/spellcheck="true"/.test(edited),
+    (edited.match(/spellcheck="[a-z]*"/g) || []).join(","));
+  t("but an authored spellcheck is left alone", /spellcheck="false"/.test(edited));
   t("the toolbar never reaches the file", !edited.includes('role="toolbar"'));
 
   // A page that inserts content while editing must be able to arm it.
