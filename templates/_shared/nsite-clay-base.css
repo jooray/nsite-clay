@@ -128,6 +128,35 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row {
 }
 .nc-gear button:hover { border-color: var(--nc-accent); }
 
+/* nc-gear-rail is the same strip of controls the runtime draws on a block,
+ * available to the repeating shapes a page builds for itself: the events in a
+ * list, the cards in a grid, the people on a team page. A page that invents its
+ * own row of worded buttons for each of those teaches its owner a different
+ * vocabulary per kind of thing; one rail, in the same corner, with the same
+ * icons, is learnt once. Buttons carry a title, because an icon nobody can name
+ * is not a control.
+ *
+ * The item is given a positioning context from here rather than by the page, so
+ * a shape only has to carry the rail. Nothing else about its layout changes:
+ * position: relative on its own moves nothing. */
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-rail { display: flex !important; }
+html[nc\:owner-here="true"][nc\:editing="true"] :has(> .nc-gear-rail) { position: relative; }
+.nc-blk-rail, .nc-gear-rail {
+  position: absolute; top: .3rem; right: .3rem; z-index: 20;
+  gap: 2px; margin: 0; padding: 3px; list-style: none;
+  background: var(--nc-panel); border: 1px solid var(--nc-edge);
+  border-radius: var(--nc-radius-sm);
+  box-shadow: var(--nc-shadow);
+  opacity: .35; transition: opacity .15s ease;
+}
+:hover > .nc-gear-rail, .nc-gear-rail:focus-within { opacity: 1; }
+.nc-gear-rail button {
+  font: inherit; font-size: .8rem; line-height: 1; cursor: pointer;
+  padding: .3rem .45rem; border: 0; border-radius: var(--nc-radius-sm);
+  background: transparent; color: var(--nc-ink);
+}
+.nc-gear-rail button:hover { background: var(--nc-bg); border-color: transparent; }
+
 /* ---- media inserted by the toolbar -------------------------------------- */
 
 .nc-figure { margin: 1.4rem 0; }
@@ -298,14 +327,7 @@ html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add) {
 }
 html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add):hover { outline-color: var(--nc-accent); }
 
-.nc-blk-rail {
-  position: absolute; top: .3rem; right: .3rem; z-index: 20;
-  display: flex; gap: 2px; margin: 0; padding: 3px; list-style: none;
-  background: var(--nc-panel); border: 1px solid var(--nc-edge);
-  border-radius: var(--nc-radius-sm);
-  box-shadow: var(--nc-shadow);
-  opacity: .35; transition: opacity .15s ease;
-}
+.nc-blk-rail { display: flex; }
 /* Out of the way until wanted: a rail at full strength on every block turns a
  * page being edited into a page covered in buttons. */
 [nc\:blocks] > *:hover > .nc-blk-rail, .nc-blk-rail:focus-within { opacity: 1; }

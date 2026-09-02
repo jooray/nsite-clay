@@ -109,6 +109,13 @@ persists is the way to have both.
 `nc-gear` sets visibility only; `nc-gear-row` adds the usual row layout, so a
 control shaped differently can lay itself out without out-specifying anything.
 
+For the controls on a repeating item, prefer `nc-gear-rail` over a row of worded
+buttons. It is the strip the runtime draws on a block: top right of the item,
+faint until the pointer is on it, `↑` `↓` `⧉` `✕` in that order, each with a
+`title` naming the kind of thing ("Delete this card"). One vocabulary across
+every shape a page repeats is one thing for an owner to learn rather than one
+per template.
+
 `nc.dom` arms new markup for editing and marks the page unsaved, so a control is
 one attribute rather than a closure. It calls `nc.editable.refresh()` for you;
 you only need it yourself for markup you inserted some other way. State with no visual form goes in a JSON

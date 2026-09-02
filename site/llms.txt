@@ -537,7 +537,7 @@ Every repeating shape gets four operations: add, duplicate, delete and reorder.
 Two mechanisms provide them, they cost a few lines each, and a page should have
 both, because they suit different people and different moments.
 
-**A gear on the item**, for the person looking at the page who wants to change
+**A rail on the item**, for the person looking at the page who wants to change
 the thing in front of them:
 
 ```html
@@ -549,11 +549,15 @@ the thing in front of them:
       <p class="event-when" editable="single-line">27 May, 19:00</p>
       <h3 class="event-title" editable="single-line">Agentic organisations</h3>
       <div class="event-body" editable><p>An evening about what happens when…</p></div>
-      <menu class="nc-gear nc-gear-row">
-        <button type="button" onclick="nc.dom.cloneClosest(this, '.event')">Duplicate</button>
-        <button type="button" onclick="nc.dom.moveClosest(this, -1, '.event')">Up</button>
-        <button type="button" onclick="nc.dom.moveClosest(this, 1, '.event')">Down</button>
-        <button type="button" onclick="nc.dom.removeClosestAsk(this, '.event', 'this event')">Delete</button>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this event up"
+                onclick="nc.dom.moveClosest(this, -1, '.event')">↑</button>
+        <button type="button" title="Move this event down"
+                onclick="nc.dom.moveClosest(this, 1, '.event')">↓</button>
+        <button type="button" title="Duplicate this event"
+                onclick="nc.dom.cloneClosest(this, '.event')">⧉</button>
+        <button type="button" title="Delete this event"
+                onclick="nc.dom.removeClosestAsk(this, '.event', 'this event')">✕</button>
       </menu>
     </article>
   </div>
@@ -568,10 +572,31 @@ the thing in front of them:
     <p class="event-when" editable="single-line">A date</p>
     <h3 class="event-title" editable="single-line">The name of it</h3>
     <div class="event-body" editable><p>What it is.</p></div>
-    <menu class="nc-gear nc-gear-row">…the same four buttons…</menu>
+    <menu class="nc-gear nc-gear-rail">…the same four buttons…</menu>
   </article>
 </template>
 ```
+
+**Use that rail on every repeating shape, and do not design another one.** It is
+the same strip the runtime draws on a block, in the same corner, with the same
+four icons in the same order: `↑` up, `↓` down, `⧉` duplicate, `✕` delete.
+`nc-gear-rail` does the whole of it, so a page carries no CSS for it: the strip
+sits in the top right of the item, stays faint until the pointer is on the item,
+and comes to full strength when it is. An owner who has learnt what the icons
+mean on an event has learnt what they mean on a post, a card and a person, and a
+page whose events say Duplicate while its team says Copy has taught them nothing
+twice.
+
+Every button carries a `title`, and the title names the kind of thing rather
+than saying "this item": "Delete this event", "Move this photo up". It is the
+only place the icon is ever explained, it is what a screen reader reads, and it
+is what somebody hovers when the picture is not obvious.
+
+The one control that is not an icon is **Add**, and that is deliberate. It sits
+at the end of the list rather than on any item, it is the thing a new owner will
+look for first, and a labelled `Add an event` button is what they will find. Use
+`nc-gear-row` for it, name the thing in the label, and never abbreviate it to a
+`+`.
 
 Two details in there are the ones that go wrong. `.event-list` holds events and
 nothing else, because `addFrom` appends: a container that also held the heading
@@ -688,13 +713,22 @@ signed-in owner who is editing:
 ```html
 <article class="card" data-status="active">
   <h3 editable="single-line">Fix Blossom sync</h3>
-  <menu class="nc-gear nc-gear-row">
-    <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-    <button type="button" onclick="nc.dom.moveClosest(this, -1, '.card')">Up</button>
-    <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+  <menu class="nc-gear nc-gear-rail">
+    <button type="button" title="Move this card up"
+            onclick="nc.dom.moveClosest(this, -1, '.card')">↑</button>
+    <button type="button" title="Move this card down"
+            onclick="nc.dom.moveClosest(this, 1, '.card')">↓</button>
+    <button type="button" title="Duplicate this card"
+            onclick="nc.dom.cloneClosest(this, '.card')">⧉</button>
+    <button type="button" title="Delete this card"
+            onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">✕</button>
   </menu>
 </article>
 ```
+
+Same rail as §8, because it is the same job. A card is a repeating shape like an
+event, and the person who learnt the icons on one should not have to learn them
+again on the other.
 
 **Do not put `clay="no-save"` on a gear.** That strips it from the save, so the
 pattern works exactly once and the published page has no controls. A gear is part
@@ -718,10 +752,17 @@ Point those at a container that holds **only** the items. `moveTo` appends, so a
 column whose element also contains a heading and an "Add" button would take the
 card after the button. Give the column an inner `.col-cards` and target that.
 
+A shape that moves between containers as well as within one puts those two
+buttons in the same rail rather than in a second menu beside it. Two strips on
+one card is two things to aim at, and the second one lands on top of the first.
+
 ```html
-<menu class="nc-gear nc-gear-row">
-  <button type="button" onclick="nc.dom.moveToClosest(this, '.card', '.col', -1)">&larr;</button>
-  <button type="button" onclick="nc.dom.moveToClosest(this, '.card', '.col', 1)">&rarr;</button>
+<menu class="nc-gear nc-gear-rail">
+  <button type="button" title="Move this card one column left"
+          onclick="nc.dom.moveToClosest(this, '.card', '.col', -1)">&larr;</button>
+  <button type="button" title="Move this card one column right"
+          onclick="nc.dom.moveToClosest(this, '.card', '.col', 1)">&rarr;</button>
+  …then up, down, duplicate and delete…
 </menu>
 ```
 
@@ -768,8 +809,9 @@ runtime's own state attributes on `<html>`. Everything else stays.
 `!important` and the reveal rule restores it the same way, because a page
 stylesheet loads after the shared one and a gear that lost that fight would show
 its controls to every reader. So `class="nc-gear chips"` will not get your
-`display: flex`. Use `nc-gear-row` for a row of buttons, or write your own rule
-against `html[nc\:owner-here="true"][nc\:editing="true"]`.
+`display: flex`. Use `nc-gear-rail` for the controls on a repeating item and
+`nc-gear-row` for a row of worded buttons, or write your own rule against
+`html[nc\:owner-here="true"][nc\:editing="true"]`.
 
 **Anything a script does for the current view alone must be undone before the
 save**, because the save serialises the DOM as it stands. `nc:no-persist` covers
