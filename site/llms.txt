@@ -1015,6 +1015,15 @@ would, with that language's punctuation and typography. Slovak and Czech take
 `„…"` quotation marks and a spaced en dash rather than an em dash, sentence-case
 headings, lowercase months, a decimal comma and a space before `%`.
 
+Those rules are the short list. The long one is
+[humanizer](https://github.com/jooray/humanizer), a skill that names the habits
+which mark prose as machine-written and says what to write instead: inflated
+symbolism, promotional adjectives, vague attribution, the rule of three, the
+sentence that says a thing is not merely X but Y. It has its own section for
+Slovak and Czech, where the giveaway is usually an English draft translated word
+by word. If you have it, run the page's words through it before you hand the
+page over.
+
 ---
 
 ## 14. Handing it over
