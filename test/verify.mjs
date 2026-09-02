@@ -288,15 +288,55 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     host.remove();
   }
 
-  // A document must never publish a manifest that omits a file it references.
-  // This is the failure that looks like the runtime is broken: the page loads,
-  // its script 404s, and nothing works.
+  // A toast is gone in under three seconds, which is not long enough to read a
+  // list of paths and cannot be copied to whoever can fix them.
+  {
+    const n = nc.notice("Two of them lead nowhere.", { title: "Saved.", detail: "/about\n/shop" });
+    t("a notice stays until it is dismissed",
+      document.body.contains(n) && n.textContent.includes("/shop"), n.textContent);
+    t("and is never part of the file", !nc.getHTML().includes("lead nowhere"));
+    n.querySelectorAll("button")[1].click();
+    t("closing it takes it away", !document.body.contains(n));
+  }
+
+  // A document must never publish a manifest that omits a file it *loads*. That
+  // is the failure that looks like the runtime is broken: the page loads, its
+  // script 404s, and nothing works. A page it merely *links to* is a different
+  // matter, and refusing to publish over one loses an afternoon's writing to
+  // protect a link.
   {
     const html = '<html><head></head><body><img src="/logo.png"><script src="/app-9f2a.js"><\/script></body></html>';
     const refs = nc._referencedPaths(html);
     t("§4.2 same-origin references are found", refs.includes("/logo.png") && refs.includes("/app-9f2a.js"), refs.join(","));
     const off = nc._referencedPaths('<html><body><img src="https://example.com/x.png"><a href="#top">t</a></body></html>');
     t("§4.2 external and fragment links are not paths", off.length === 0, off.join(","));
+
+    const mixed = '<html><head><link rel="stylesheet" href="/site.css">' +
+      '<link rel="alternate" hreflang="sk" href="/sk/"></head><body>' +
+      '<img src="/logo.png"><a href="/events/">Events</a><a href="/about">About</a>' +
+      '</body></html>';
+    const map = nc._referenceMap(mixed);
+    t("a stylesheet is something the page loads",
+      map.loads.has("/site.css") && map.loads.has("/logo.png"), [...map.loads].join(","));
+    t("a link, and rel=alternate, are somewhere to go",
+      map.links.has("/events/") && map.links.has("/about") && map.links.has("/sk/"), [...map.links].join(","));
+
+    const table = { "/index.html": "a", "/site.css": "b", "/logo.png": "c",
+                    "/events/index.html": "d", "/sk/index.html": "e" };
+    const miss = nc._missingRefs(mixed, table);
+    t("a directory link is answered by its index.html", !miss.links.includes("/events/"), miss.links.join(","));
+    t("a link nothing answers is reported, not refused",
+      miss.links.length === 1 && miss.links[0] === "/about" && !miss.engine.length, JSON.stringify(miss));
+    t("nothing the page loads is missing here", miss.assets.length === 0, miss.assets.join(","));
+
+    const noAsset = nc._missingRefs(mixed, { "/index.html": "a", "/site.css": "b" });
+    t("a picture the manifest forgot is an asset, not a link",
+      noAsset.assets.includes("/logo.png") && !noAsset.engine.length, JSON.stringify(noAsset));
+
+    const noEngine = nc._missingRefs(
+      '<html><head><script src="/nsite-clay-1f3a9c02.js"><\/script></head><body></body></html>', {});
+    t("losing the engine is the one that still refuses",
+      noEngine.engine.length === 1 && noEngine.engine[0] === "/nsite-clay-1f3a9c02.js", JSON.stringify(noEngine));
   }
 
   // --- settings live in the document ---------------------------------------

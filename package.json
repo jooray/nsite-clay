@@ -1,6 +1,6 @@
 {
   "name": "nsite-clay",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.",
   "license": "MIT-0",

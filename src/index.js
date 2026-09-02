@@ -24,9 +24,12 @@ import { Cms } from "./cms.js";
 import { Blocks } from "./blocks.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { qrSvg, qrElement } from "./qr.js";
-import { toast, field, modal, checkbox } from "./ui.js";
+import { toast, notice, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
+
+// The two files a page needs in order to still be editable after the save.
+const ENGINE = new Set(["/nsite-clay.js", "/nsite-clay-chrome.js"]);
 
 // Stamped in by build.mjs. Reading src/ directly is allowed by the package, and
 // an honest "unknown" beats a crash when nobody ran the build.
@@ -152,7 +155,8 @@ class NsiteClay extends EventTarget {
     // nc:autosave and nc:edit-gate are settings and stay. The rest is runtime
     // state that means nothing in a file.
     for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
-                     "nc:editable", "nc:outdated", "nc:editing", "nc:reading"]) clone.removeAttribute(a);
+                     "nc:editable", "nc:outdated", "nc:editing", "nc:reading",
+                     "nc:cms-rules", "nc:cms-open"]) clone.removeAttribute(a);
     for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
     // A feed's items and an opened video frame are fetched at view time. They
     // are not this document's content and must not be frozen into it.
@@ -197,29 +201,30 @@ class NsiteClay extends EventTarget {
     if (!tableOnly && hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
     this._set("saving");
     try {
-      const bytes = new TextEncoder().encode(html);
-      const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
-
-      const paths = { ...(await this._currentPaths()), ...extraPaths, [this.cfg.path]: hash };
+      const paths = { ...(await this._currentPaths()), ...extraPaths };
       // Paths the caller is retiring. An upgraded runtime would otherwise leave
       // its predecessor named in the table for the life of the site. Nothing is
       // destroyed by this: every kind-5128 snapshot still names the old hash and
       // the blob is still on Blossom, so an old version still restores. The
-      // reference check below is what makes it safe -- drop a path the document
-      // still points at and the save refuses rather than publishing a broken
-      // site -- and the document's own path can never be dropped at all.
+      // check below is what keeps it safe -- drop the engine out from under a
+      // document that still loads it and the save refuses -- and the document's
+      // own path can never be dropped at all.
       for (const p of dropPaths) if (p !== this.cfg.path) delete paths[p];
 
-      // Refuse to publish a document that references a file the manifest does
-      // not name. This is the failure that looks like the runtime is broken:
-      // the page loads, its script 404s, and nothing on it works.
-      const missing = this._referencedPaths(html).filter((p) => p !== this.cfg.path && !paths[p]);
-      if (missing.length) {
+      // Checked before the upload, so a save that cannot go through does not
+      // spend somebody's Blossom quota first.
+      const missing = this._missingRefs(html, paths);
+      if (missing.engine.length) {
         throw new Error(
-          `This document references ${missing.join(", ")}, which the manifest does not list. ` +
-          `Publishing would break the page. Deploy the whole directory with the CLI to rebuild ` +
-          `the path table.`);
+          `This page loads ${missing.engine.join(", ")}, which the manifest does not list. ` +
+          `Publishing it would leave a page that can no longer edit itself, and nothing in a ` +
+          `browser could put that back. Deploy the whole directory with the CLI to rebuild the ` +
+          `path table.`);
       }
+
+      const bytes = new TextEncoder().encode(html);
+      const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
+      paths[this.cfg.path] = hash;
 
       const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
       await publishToAny(this.pool, this.cfg.relays, manifest);
@@ -231,8 +236,8 @@ class NsiteClay extends EventTarget {
       }
       this._ownHash = hash;
       this._manifest = manifest;
-      this._set("saved", { hash, manifest, version });
-      return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths) };
+      this._set("saved", { hash, manifest, version, missing });
+      return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths), missing };
     } catch (err) {
       this._set("error", { error: String(err) });
       throw err;
@@ -260,17 +265,74 @@ class NsiteClay extends EventTarget {
     return merged;
   }
 
-  // Every same-origin thing the document points at. A save that omits one of
-  // these publishes a page that cannot load itself.
+  // Every same-origin thing the document points at.
   _referencedPaths(html) {
+    const { loads, links } = this._referenceMap(html);
+    return [...new Set([...loads, ...links])];
+  }
+
+  // The same references, split by what a missing one costs.
+  //
+  // A file the page *loads* is a hole in the page: a script that 404s takes the
+  // page's behaviour with it. A file the page *links to* is a dead link, and on
+  // a site being written one page at a time that is the ordinary state of an
+  // afternoon. The two are not the same problem and must not have the same
+  // answer.
+  _referenceMap(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const out = new Set();
-    for (const el of doc.querySelectorAll("[src], [href]")) {
-      const v = el.getAttribute("src") || el.getAttribute("href");
-      if (!v || !v.startsWith("/") || v.startsWith("//")) continue;
-      out.add(v.split(/[?#]/)[0]);
+    const loads = new Set(), links = new Set();
+    const add = (set, value) => {
+      if (!value) return;
+      // One srcset holds several URLs, each followed by its descriptor.
+      for (const candidate of String(value).split(",")) {
+        const url = candidate.trim().split(/\s+/)[0];
+        if (!url || !url.startsWith("/") || url.startsWith("//")) continue;
+        set.add(url.split(/[?#]/)[0]);
+      }
+    };
+    const LOADING_REL = /\b(stylesheet|icon|manifest|preload|prefetch|modulepreload)\b/i;
+    for (const el of doc.querySelectorAll("[src], [srcset], [href], form[action], object[data], video[poster]")) {
+      const tag = el.tagName.toLowerCase();
+      // A <link> is either, and only its rel says which: a stylesheet is
+      // fetched to draw the page, rel="alternate" is a page to go to.
+      const navigates = tag === "a" || tag === "area" || tag === "form" || tag === "base"
+        || (tag === "link" && !LOADING_REL.test(el.getAttribute("rel") || ""));
+      const set = navigates ? links : loads;
+      add(set, el.getAttribute("src"));
+      add(set, el.getAttribute("srcset"));
+      add(set, el.getAttribute("href"));
+      if (tag === "form") add(set, el.getAttribute("action"));
+      if (tag === "object") add(set, el.getAttribute("data"));
+      if (tag === "video") add(set, el.getAttribute("poster"));
     }
-    return [...out];
+    return { loads, links };
+  }
+
+  // What the manifest does not name. Three lists, because there are three
+  // different things to do about it: fix the engine before publishing, redeploy
+  // a missing asset, or write the page that a link is waiting for.
+  _missingRefs(html, paths) {
+    const have = new Set(Object.keys(paths));
+    have.add(this.cfg.path);
+    // A gateway resolves a directory the way any web server does, so a link to
+    // /blog/ is answered by /blog/index.html in the table. Without this every
+    // correctly deployed multi-page site would report itself broken.
+    const known = (p) => {
+      if (have.has(p)) return true;
+      if (p.endsWith("/")) return have.has(p + "index.html");
+      if (/\.[a-z0-9]+$/i.test(p.slice(p.lastIndexOf("/") + 1))) return false;
+      return have.has(p + "/index.html") || have.has(p + ".html");
+    };
+    const { loads, links } = this._referenceMap(html);
+    const assets = [...loads].filter((p) => !known(p));
+    // The one that cannot be undone from a browser: the page that would fix it
+    // is the page that no longer loads. The stylesheet is not in this list
+    // because a page without it is ugly, not lost.
+    return {
+      engine: assets.filter((p) => ENGINE.has(unstamp(p))),
+      assets: assets.filter((p) => !ENGINE.has(unstamp(p))),
+      links: [...links].filter((p) => !known(p)),
+    };
   }
 
   async currentManifest() {
@@ -620,6 +682,10 @@ nc.ready = (async () => {
   nc.media.armEmbeds();
   nc.feed.start();
   nc.blocks.start();
+  // A toolbar may carry the content form's button on a page that has no rules
+  // for it to draw, and a button whose only answer is "there is nothing here"
+  // is furniture. The shared stylesheet hides it unless this says otherwise.
+  if (nc.doc.querySelector("script[nc\\:cms]")) nc.doc.documentElement.setAttribute("nc:cms-rules", "true");
   nc.upgrade.start();
   nc._watchVersion();
   if (nc.cfg.owner) {
@@ -631,7 +697,7 @@ nc.ready = (async () => {
 })();
 
 Object.assign(nc, {
-  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
+  nip19, verifyEvent, sanitize, sanitizeAs, snapshot, hashText, fetchVerified, LocalSigner, toast, notice, parseVideoUrl, field, modal, checkbox, qrSvg, qrElement,
   VERSION, stamp, unstamp,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
   manifestPaths, manifestServers, aggregateHash, readFeedConfig, postUrl, addressOf,

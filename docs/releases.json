@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.2.1",
+    "released": "2026-09-02",
+    "notes": [
+      "A link to a page that is not in your site no longer stops you saving. The page is published, and a panel lists the addresses that lead nowhere and stays on the screen until you close it, with a button that copies the list. Until now one link to a page that did not exist yet meant nothing could be saved at all.",
+      "A link written as /shop/ is understood to mean the page at /shop/index.html, the way any web address works, so a site with more than one page stops reporting its own links as broken.",
+      "When a save fails, the reason stays on the screen until you dismiss it and can be selected and copied. It used to vanish after two seconds, which is not long enough to read a list of file names, let alone send one to whoever can fix it.",
+      "A page that carries no content form no longer shows an Edit content button that opens nothing."
+    ]
+  },
+  {
     "version": "0.2.0",
     "released": "2026-08-30",
     "notes": [

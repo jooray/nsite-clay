@@ -8,7 +8,8 @@
  *   data-nc-save      save the page
  *   data-nc-write     the Nostr post composer
  *   data-nc-blocks    the "add a block" palette
- *   data-nc-cms       the form generated from the page's nc:cms rules
+ *   data-nc-cms       the form generated from the page's nc:cms rules, hidden
+ *                     by the shared stylesheet on a page that has no rules
  *   data-nc-settings  autosave and the edit gate
  *   data-nc-history   versions, with restore
  *   data-nc-who       filled in with who you are
@@ -45,7 +46,12 @@
       needKey: "Pega una clave o usa la app de firma de arriba",
       checking: "comprobando…",
       unchanged: "No ha cambiado nada", saved: (n) => `Guardado, ${n} bytes`,
-      saveFailed: "No se pudo guardar: ",
+      saveFailed: "No se pudo guardar",
+      brokenTitle: "Guardado. Algunas direcciones de la página no llevan a ninguna parte.",
+      brokenBody: "La página está publicada y el resto funciona. Corrige estos enlaces, o sube los archivos que faltan, y guarda otra vez.",
+      brokenLinks: "Enlaces a páginas que no están en este sitio:",
+      brokenAssets: "Archivos que la página carga y no encuentra:",
+      copy: "Copiar", copied: "Copiado",
       history: "Historial de versiones",
       historyHint: "Se guarda cada versión. Al leer una se abre en una pestaña nueva; al restaurarla se archiva otra versión, así que no se pierde nada.",
       historyEmpty: "Todavía no hay nada guardado, o los relays no han respondido.",
@@ -71,7 +77,12 @@
       needKey: "Vlož kľúč alebo použi podpisovú aplikáciu vyššie",
       checking: "kontroluje sa…",
       unchanged: "Nič sa nezmenilo", saved: (n) => `Uložené, ${n} bajtov`,
-      saveFailed: "Nepodarilo sa uložiť: ",
+      saveFailed: "Nepodarilo sa uložiť",
+      brokenTitle: "Uložené. Niektoré adresy na stránke nikam nevedú.",
+      brokenBody: "Stránka je zverejnená a zvyšok funguje. Oprav tieto odkazy alebo nahraj chýbajúce súbory a ulož znova.",
+      brokenLinks: "Odkazy na stránky, ktoré na tomto webe nie sú:",
+      brokenAssets: "Súbory, ktoré stránka načítava a nenašla:",
+      copy: "Kopírovať", copied: "Skopírované",
       history: "História verzií",
       historyHint: "Každé uloženie zostáva. Čítanie otvorí verziu na novej karte, obnovenie založí ďalšiu verziu, takže sa nič nestratí.",
       historyEmpty: "Zatiaľ nie je nič uložené, alebo relaye neodpovedali.",
@@ -97,7 +108,12 @@
       needKey: "Vlož klíč nebo použij podpisovou aplikaci výše",
       checking: "kontroluje se…",
       unchanged: "Nic se nezměnilo", saved: (n) => `Uloženo, ${n} bajtů`,
-      saveFailed: "Nepodařilo se uložit: ",
+      saveFailed: "Nepodařilo se uložit",
+      brokenTitle: "Uloženo. Některé adresy na stránce nikam nevedou.",
+      brokenBody: "Stránka je zveřejněná a zbytek funguje. Oprav tyhle odkazy nebo nahraj chybějící soubory a ulož znovu.",
+      brokenLinks: "Odkazy na stránky, které na tomhle webu nejsou:",
+      brokenAssets: "Soubory, které stránka načítá a nenašla:",
+      copy: "Kopírovat", copied: "Zkopírováno",
       history: "Historie verzí",
       historyHint: "Každé uložení zůstává. Čtení otevře verzi na nové kartě, obnovení založí další verzi, takže se nic neztratí.",
       historyEmpty: "Zatím není nic uloženo, nebo relaye neodpověděly.",
@@ -123,7 +139,12 @@
     needKey: "Paste a key, or use a signer app above",
     checking: "checking…",
     unchanged: "Nothing has changed", saved: (n) => `Saved ${n} bytes`,
-    saveFailed: "Could not save: ",
+    saveFailed: "Could not save",
+    brokenTitle: "Saved. Some addresses on this page lead nowhere.",
+    brokenBody: "The page is published and the rest of it works. Fix these, or deploy the files that are missing, and save again.",
+    brokenLinks: "Links to pages that are not in this site:",
+    brokenAssets: "Files the page loads and cannot find:",
+    copy: "Copy", copied: "Copied",
     history: "Version history",
     historyHint: "Every save is kept. Reading one opens it in a new tab; restoring it files another version, so nothing is lost.",
     historyEmpty: "Nothing saved yet, or the relays have not answered.",
@@ -252,11 +273,46 @@
     if (how) who();
   });
 
+  // A save that failed, and a save that went through with a dead link in it,
+  // both leave the person something to do about it. A toast is gone before a
+  // list of fourteen paths has been read and cannot be copied into a message to
+  // whoever can fix them, so those get a panel that stays until it is dismissed.
+  // Listening on the status event rather than on the button means Ctrl+S and
+  // autosave report the same way.
+  let standing = null;
+  // A site whose three shared files were assembled by hand can have this script
+  // sitting on an engine older than nc.notice. A toast says less, and says it.
+  const draw = nc.notice || ((message, o) => nc.toast([o?.title, message].filter(Boolean).join(" ")));
+  const post = (message, opts) => {
+    standing?.remove();
+    standing = draw(message, {
+      labels: { copy: T.copy, copied: T.copied, close: T.close },
+      ...opts,
+    });
+  };
+
+  nc.addEventListener("nsiteclay:status", (e) => {
+    const d = e.detail || {};
+    if (d.status === "error" && d.error) {
+      post(String(d.error).replace(/^Error:\s*/, ""), { title: T.saveFailed, bad: true });
+      return;
+    }
+    // A skipped save reports nothing new, so whatever is on screen stays.
+    if (d.status !== "saved" || !d.missing) return;
+    const groups = [[T.brokenLinks, d.missing.links], [T.brokenAssets, d.missing.assets]]
+      .filter(([, list]) => list && list.length);
+    if (!groups.length) { standing?.remove(); standing = null; return; }
+    post(T.brokenBody, {
+      title: T.brokenTitle,
+      detail: groups.map(([label, list]) => [label, ...list.map((p) => "  " + p)].join("\n")).join("\n\n"),
+    });
+  });
+
   on("[data-nc-save]", async () => {
     try {
       const r = await nc.save();
       nc.toast(r.skipped ? T.unchanged : T.saved(r.bytes.toLocaleString(LOC)));
-    } catch (e) { nc.toast(T.saveFailed + e.message); }
+    } catch { /* the listener above has already put the reason on the screen */ }
   });
 
   on("[data-nc-write]", () => nc.compose.open().catch((e) => nc.toast(e.message)));

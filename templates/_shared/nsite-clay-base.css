@@ -86,6 +86,11 @@ html[nc\:status="saved"]  .nc-bar .nc-dot { background: var(--nc-ok); }
 html[nc\:status="error"]  .nc-bar .nc-dot { background: var(--nc-bad); }
 @keyframes nc-pulse { 50% { opacity: .3; } }
 
+/* The content form's button, on a page with no nc:cms rules for it to draw,
+   has nothing to open. The runtime stamps nc:cms-rules on <html> when the page
+   carries a rules block, so a toolbar can hold the button unconditionally. */
+html:not([nc\:cms-rules]) [data-nc-cms] { display: none !important; }
+
 /* Owner-only controls. The runtime stamps nc:owner-here on <html>. */
 .nc-owner-only { display: none; }
 html[nc\:owner-here="true"] .nc-owner-only { display: inline-flex; }

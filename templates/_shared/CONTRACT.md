@@ -50,6 +50,7 @@ authored markup and stays).
   <span class="nc-who" data-nc-who>read-only</span>
   <button data-nc-signin>Sign in</button>
   <button class="nc-owner-only" data-nc-write>Write</button>
+  <button class="nc-owner-only" data-nc-cms>Edit content</button>
   <button class="nc-owner-only" data-nc-settings>Settings</button>
   <button class="nc-owner-only" data-nc-history>History</button>
   <button class="nc-primary nc-owner-only" data-nc-save>Save</button>
@@ -62,6 +63,11 @@ authored markup and stays).
 
 `nsite-clay-chrome.js` wires those buttons. A template writes no sign-in code,
 no save handler and no version dialog of its own.
+
+`data-nc-cms` opens the form generated from the page's `nc:cms` rules. Leave the
+button in whether or not the page has any: the shared stylesheet hides it until
+there is a rules block to draw, so a page that grows one later gets the button
+without the markup changing.
 
 ## Editable regions
 

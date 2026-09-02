@@ -79,6 +79,37 @@ const CSS = `
   padding: .6rem .9rem; font: 14px var(--nc-chrome-font, ui-sans-serif, system-ui, sans-serif);
   box-shadow: var(--nc-shadow, 0 12px 34px -14px rgba(0,0,0,.8));
 }
+.nc-notice {
+  position: fixed; left: 1rem; bottom: 1rem; z-index: 2147483647;
+  width: min(32rem, calc(100vw - 2rem)); max-height: min(60vh, 30rem);
+  display: flex; flex-direction: column; gap: .5rem;
+  background: var(--nc-panel, #14121a); color: var(--nc-ink, #ece9f2);
+  border: 1px solid var(--nc-edge, #322c40);
+  border-left: 3px solid var(--nc-ink-dim, #9a92ad);
+  border-radius: var(--nc-radius, 10px); padding: .8rem .9rem;
+  font: 14px/1.5 var(--nc-chrome-font, ui-sans-serif, system-ui, sans-serif);
+  box-shadow: var(--nc-shadow, 0 12px 34px -14px rgba(0,0,0,.8));
+}
+.nc-notice.nc-bad { border-left-color: var(--nc-bad, #e79191); }
+.nc-notice b { font-size: .95rem; font-weight: 600; }
+.nc-notice p { margin: 0; font-size: .86rem; color: var(--nc-ink-dim, #9a92ad); }
+.nc-notice b, .nc-notice p, .nc-notice pre { user-select: text; -webkit-user-select: text; }
+.nc-notice pre {
+  margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: .5rem .6rem; border-radius: var(--nc-radius-sm, 8px);
+  border: 1px solid var(--nc-edge, #322c40); background: var(--nc-bg, #0e0c14);
+  font: .8rem/1.5 var(--nc-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+.nc-notice .nc-actions { display: flex; gap: .4rem; justify-content: flex-end; margin: 0; }
+.nc-notice button {
+  font: inherit; font-size: .82rem; padding: .3rem .7rem; cursor: pointer;
+  border-radius: var(--nc-radius-sm, 8px);
+  border: 1px solid var(--nc-edge, #322c40); background: var(--nc-bg, #0e0c14); color: inherit;
+}
+.nc-notice button:hover { border-color: var(--nc-accent, #6f5ad1); }
+@media (max-width: 720px) {
+  .nc-notice { left: .5rem; right: .5rem; width: auto; bottom: 4.4rem; max-height: 50vh; }
+}
 `;
 
 let injected = false;
@@ -100,6 +131,68 @@ export function toast(message, { doc = document, ms = 2600 } = {}) {
   el.textContent = message;
   doc.body.appendChild(el);
   setTimeout(() => el.remove(), ms);
+  return el;
+}
+
+// A toast is right for "saved". It is wrong for anything the reader has to act
+// on: three seconds is not long enough to read a list of fourteen paths, and a
+// message that has already gone cannot be copied into a message to whoever can
+// fix it. So this one stays until it is dismissed, its text selects like text,
+// and a button puts the whole thing on the clipboard.
+export function notice(message, { doc = document, title = "", detail = "", bad = false, labels = {} } = {}) {
+  styles(doc);
+  const L = { copy: "Copy", copied: "Copied", close: "Close", ...labels };
+  const el = doc.createElement("div");
+  el.className = "nc-notice" + (bad ? " nc-bad" : "");
+  el.setAttribute("nc:chrome", "");
+  el.setAttribute("role", "alert");
+
+  if (title) {
+    const h = doc.createElement("b");
+    h.textContent = title;
+    el.appendChild(h);
+  }
+  if (message) {
+    const p = doc.createElement("p");
+    p.textContent = message;
+    el.appendChild(p);
+  }
+  if (detail) {
+    const pre = doc.createElement("pre");
+    pre.textContent = detail;
+    el.appendChild(pre);
+  }
+
+  const actions = doc.createElement("div");
+  actions.className = "nc-actions";
+  const copy = doc.createElement("button");
+  copy.type = "button";
+  copy.textContent = L.copy;
+  copy.onclick = async () => {
+    const text = [title, message, detail].filter(Boolean).join("\n\n");
+    // A page served over plain HTTP, which a gateway on a custom domain is,
+    // has no navigator.clipboard at all. The old way still works there.
+    try { await doc.defaultView.navigator.clipboard.writeText(text); }
+    catch {
+      const ta = doc.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0";
+      doc.body.appendChild(ta);
+      ta.select();
+      try { doc.execCommand("copy"); } catch { /* nothing left to try */ }
+      ta.remove();
+    }
+    copy.textContent = L.copied;
+    setTimeout(() => (copy.textContent = L.copy), 1600);
+  };
+  const close = doc.createElement("button");
+  close.type = "button";
+  close.textContent = L.close;
+  close.onclick = () => el.remove();
+  actions.append(copy, close);
+  el.appendChild(actions);
+
+  doc.body.appendChild(el);
   return el;
 }
 

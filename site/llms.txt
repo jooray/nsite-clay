@@ -123,7 +123,7 @@ doing, not state. Serialisation captures attributes, so anything you put in
 
 ## 3. What you are actually building
 
-One `index.html`. It links two files from the site root and nothing else:
+One `index.html`. It links three files from the site root and nothing else:
 
 ```html
 <link rel="stylesheet" href="/nsite-clay-base.css">
@@ -137,6 +137,12 @@ commonest mistake; check the runtime reference before implementing anything.
 
 Never copy `nsite-clay.js` or `nsite-clay-base.css` into the site. They live at
 the root so one upgrade fixes every page.
+
+And the part that is easiest to leave out: the page has to be one they can *add*
+to, not only one they can retype. Every list on it needs a way to put another
+item in, every page needs the content form, and a page that grows needs a block
+library. That is §8, it is not optional, and it is the difference between a site
+somebody owns and a picture of one.
 
 ---
 
@@ -218,11 +224,90 @@ have and you do not.
 
 ## 4b. When they already have a page
 
-Sometimes nobody wants a template. They have a page: a hand-written one, an
+Sometimes nobody wants a template. They have a page: a hand written one, an
 export from a static site generator, a landing page somebody built them years
 ago. Do not rebuild it from a template and do not talk them out of the design
-they have. Convert it. It is four changes and none of them touch the markup you
-were given.
+they have. Convert it, and leave them something they can add to on their own.
+
+The design is the easy half. The half that decides whether this was worth doing
+is §8: a converted page where the owner can fix a typo but cannot add next
+month's event is a screenshot of their old site, not a site.
+
+### First, whether it can be converted at all
+
+Say so early rather than halfway through.
+
+- **A page a framework renders at runtime.** React, Vue, Svelte and anything
+  else that builds its DOM from JavaScript on load. A save serialises the
+  rendered DOM, so what gets published is a snapshot of one render, and on the
+  next load the framework re-renders over it and the edits are gone. These are
+  not candidates. Their build output usually is, if it is genuinely static HTML.
+- **Anything that redraws itself on a timer.** A carousel, a clock, a widget
+  that polls. Whatever it happens to be showing at the moment of the save is
+  what gets published. Fine for a page where that region is decoration; not fine
+  where it is the content.
+- **Assets on somebody else's server.** Fonts from a CDN, an analytics script,
+  an image hotlinked from elsewhere. They keep working, and they also mean the
+  page is only as durable as those hosts, which is the thing an nsite exists to
+  avoid. Download them into the directory you are going to deploy, or inline
+  them. Google Fonts in particular should be replaced with a system stack. The
+  analytics and the cookie banner that existed to declare it can both go.
+- **A `<script>` in the page** is saved verbatim and runs for every reader. That
+  is the point, and it is also worth reading before you publish somebody else's
+  file.
+
+### Second, how many pages
+
+The source is usually a site rather than a page: a home page, an about page, an
+index of events, one page per event, an index of posts, one page per post. Three
+ways to land that, and this is the decision that costs the most to undo.
+
+**One page.** Sections instead of routes, and the navigation becomes in-page
+anchors. Right more often than it looks: a small site's five pages are usually
+four paragraphs and two lists, and one document is one thing to edit, one save,
+and one place where everything is.
+
+**A page per page.** Each document is its own file with its own `nc:path`, its
+own toolbar and its own editing session. Choose it when the pages are genuinely
+separate and other people link to them. Then write all of them. A link to a page
+you did not build is a link to nothing, and the owner cannot make that page
+appear from inside the browser.
+
+**Posts on Nostr rather than in the file.** A blog is the case where the
+document is the wrong home for the content. Publish the articles as kind 30023
+events and let the page draw them with a feed widget (§10). Adding a post is then
+the composer that already exists, the posts appear in Habla and njump as well as
+on the page, and nothing has to be deployed to publish one. Bake copies into the
+page with `nc.compose.bake()` if it must read with scripting off.
+
+That last route is for writing that has a life of its own. The runtime draws
+notes, articles and pictures and nothing else, so a calendar of events, a list of
+staff, a price table and a room booking stay markup in the document, and §8 is
+how they become things the owner can add to.
+
+### If it is more than one document
+
+- **Every document declares its own `nc:path`**, naming exactly where it lives:
+  `/index.html`, `/coworking/index.html`, `/blog/index.html`. A page that
+  misreports it compares itself against somebody else's bytes and reloads
+  forever, and a page that omits it claims to be `/index.html` and overwrites
+  the home page on its first save.
+- **Link to a directory with the trailing slash**, `href="/coworking/"`. A
+  gateway resolves that to `/coworking/index.html` the way any web server does.
+  `/coworking` without the slash is a different path with nothing at it.
+- **Deploy the whole directory in one command.** A manifest is the entire path
+  table and the CLI builds it from the files on disk, so every page, every
+  picture and the three shared files land in one signed event. Deploying one
+  file at a time is what produces a site whose pages cannot see each other.
+- **A link to a page that does not exist does not stop a save.** The page
+  publishes, and the runtime lists the addresses that lead nowhere in a panel
+  that stays until it is dismissed, with a button that copies the list. Write
+  the pages, or fix the links, and save again. The one thing that still refuses
+  is a save that would leave the document unable to load `/nsite-clay.js` or
+  `/nsite-clay-chrome.js`, because the page that would repair that is the page
+  that no longer loads.
+
+### The conversion itself
 
 **One. Attributes on `<html>`.**
 
@@ -235,9 +320,8 @@ were given.
 
 `nc:owner` is the only required one. `nc:edit-gate="hash"` keeps the controls
 away from readers, and `nc:path` has to name where this document actually lives
-or the page will watch somebody else's manifest entry and reload itself forever
-(see §12). Relays and Blossom servers have working defaults; set `nc:relays` and
-`nc:servers` only if they have their own.
+(see above, and §12). Relays and Blossom servers have working defaults; set
+`nc:relays` and `nc:servers` only if they have their own.
 
 **Two. The three shared files, at the site root, deployed with the page.**
 
@@ -248,9 +332,7 @@ or the page will watch somebody else's manifest entry and reload itself forever
 ```
 
 Not from a CDN, and not pasted into the document. They are files in their site,
-uploaded to Blossom and named in their manifest like everything else. A save
-refuses to publish a document that references a path the manifest does not list,
-which is the error you will hit if you skip this.
+uploaded to Blossom and named in their manifest like everything else.
 
 The stylesheet is only needed for the runtime's own dialogs and rails. Their CSS
 is untouched by it; it defines variables and styles elements whose names all
@@ -260,48 +342,38 @@ start with `nc-`.
 [CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md)
 near the end of `<body>`. Without it there is no way to sign in or save from the
 page, and a person who cannot find the save button has not been given a
-self-editable site.
+self-editable site. Keep the `data-nc-cms` button in it: the shared stylesheet
+hides that one until the page has an `nc:cms` block, so it costs nothing on a
+page that does not yet have one and appears by itself when it does.
 
-**Four. `editable` on what should be editable.** That is §8, and it is the part
-that takes judgement rather than typing. Read the page and mark the headings,
-the paragraphs, the captions, the list rows, the button labels. Aim high: twenty
-or more on a content page. Anything whose element is inline, an `<a>` that is a
-button, a `<span>`, a `<cite>`, takes `editable="single-line"` rather than plain
-`editable`, because an inline element cannot legally hold a paragraph.
+**Four. `editable` on everything a person would change.** §8, layer one. On a
+converted page this is the bulk of the typing and none of the thinking: walk the
+document top to bottom and mark every heading, paragraph, caption, list row,
+button label, date, price and address. Twenty is a low count for a home page.
+Do not stop after the hero.
 
-That is the whole conversion. Everything from here on is optional.
+**Five. Every list becomes a list they can add to.** §8, layer two, and the step
+that separates a conversion from a screenshot. Whatever the source page repeats
+is a shape that needs Add, Duplicate, Delete and reorder: the events, the posts,
+the people, the links, the opening hours. You have the shapes in front of you,
+so there is nothing to invent.
 
-### Optionally, blocks
+**Six. The content form.** An `nc:cms` rules block covering the whole page, with
+a card list for every repeating shape. §8 again. Do this on every conversion
+rather than only on the ones that look like a CMS, because the person who
+inherits the page did not write it and will not know where to click.
 
-A converted page usually already contains its own block library, written by
-whoever built it: the sections that repeat are the shapes. Wrap the region that
-should grow in `nc:blocks`, give each existing section an `nc:block-type`, and
-lift one of each distinct shape into a `<template nc:block>` (§9b). Do not invent
-shapes and do not add CSS the page does not already use. A block added next
-March has to come out looking like the ones that are there today, and on a
-converted page you have the answer in front of you.
+**Seven. Blocks.** A converted page usually already contains its own library:
+the sections that repeat are the shapes. Wrap the region that should grow in
+`nc:blocks`, give each existing section an `nc:block-type`, and lift one of each
+distinct shape into a `<template nc:block>` (§9b). Do not invent shapes and do
+not add CSS the page does not already use. A block added next March has to come
+out looking like the ones that are there today, and on a converted page you have
+the answer in front of you.
 
-### What will not convert
-
-Say so early rather than halfway through.
-
-- **A page a framework renders at runtime.** React, Vue, Svelte and anything else
-  that builds its DOM from JavaScript on load. A save serialises the rendered
-  DOM, so what gets published is a snapshot of one render, and on the next load
-  the framework re-renders over it and the edits are gone. These are not
-  candidates. Their build output usually is, if it is genuinely static HTML.
-- **Anything that redraws itself on a timer.** A carousel, a clock, a widget that
-  polls. Whatever it happens to be showing at the moment of the save is what gets
-  published. Fine for a page where that region is decoration; not fine where it
-  is the content.
-- **Assets on somebody else's server.** Fonts from a CDN, an analytics script, an
-  image hotlinked from elsewhere. They keep working, and they also mean the page
-  is only as durable as those hosts, which is the thing an nsite exists to avoid.
-  Deploy them into the site, or inline them. Google Fonts in particular should be
-  replaced with a system stack.
-- **A `<script>` in the page** is saved verbatim and runs for every reader. That
-  is the point, and it is also worth reading before you publish somebody else's
-  file.
+**Eight. Deploy the whole directory** (§5), then open the published page with
+`#edit` and go down the list at the end of §8. Do that before handing anything
+over: the checks are all things the owner will try in their first five minutes.
 
 ### One thing worth knowing
 
@@ -344,6 +416,14 @@ box.
 
 The page lands at `https://<their npub>.nsite.lol/`. `--site=blog` makes a
 second, separate site under the same key.
+
+`deploy` takes a directory, not a file, and publishes the whole of it as one
+signed path table. That is how a site with more than one page has to go up: the
+manifest names every document, every picture and the three shared files at once,
+and a page whose sibling is not in the table has a link that leads nowhere. Lay
+the directory out the way the URLs read, `index.html` at the root and
+`coworking/index.html` for `/coworking/`, and give every document its own
+`nc:path`.
 
 You will not have their key, and should not ask for one. Two ways round it:
 build the directory, hand it over and let them run the one deploy command; or
@@ -415,7 +495,13 @@ unsaved work already warns them.
 
 ## 8. Making a page editable
 
-Two attributes cover most of it.
+The section people skim, and the one that decides whether what you built is a
+website or a picture of one. A page whose owner can fix a typo but cannot add
+next month's event comes back to you within a month, or dies quietly.
+
+Three layers. A page is finished when it has all three, and not before.
+
+### Layer one: the words
 
 - `editable` on a container: rich text, where Enter starts a paragraph and
   selecting text raises a toolbar with headings, lists, quotes, links, pictures,
@@ -423,14 +509,173 @@ Two attributes cover most of it.
 - `editable="single-line"` on a heading, a caption or a list row: no Enter, no
   block menu.
 
-Mark everything a person would plausibly want to change. A template nobody can
-edit without opening a text editor has missed the point. Aim for twenty or more
-editable regions on a content page.
+Use `single-line` for anything whose element is inline, an `<a>` that is a
+button, a `<span>`, a `<cite>`. Those cannot legally hold a paragraph, and the
+runtime relies on the token to keep one out.
+
+Mark everything a person would plausibly want to change, and read "everything"
+literally: every heading, every paragraph, every caption, the label on every
+button, the address in the footer, the line under the logo, the dates, the
+prices, the quotes, the names. Twenty editable regions is a low count for a
+content page. The question is not whether they would want to change a given
+line, it is whether there is a reason it must never change, and there rarely is.
 
 Form controls persist by default, because that is what "the document is the
 database" means: a checked box is still checked for the next visitor. Put
-`nc:no-persist` on a search box or a filter, where baking the last value into the
-published file would be wrong.
+`nc:no-persist` on a search box or a filter, where baking the last value into
+the published file would be wrong.
+
+### Layer two: the things there is more than one of
+
+Name every kind of thing on the page. An event, a post, a person, a photograph,
+a link, a price, an opening time. For each one, ask whether the owner can add
+another one next month with nobody's help. Where the answer is no, you have
+built a brochure with editable text, and the first thing they ask for will be
+the thing you left out.
+
+Every repeating shape gets four operations: add, duplicate, delete and reorder.
+Two mechanisms provide them, they cost a few lines each, and a page should have
+both, because they suit different people and different moments.
+
+**A gear on the item**, for the person looking at the page who wants to change
+the thing in front of them:
+
+```html
+<section class="events">
+  <h2 editable="single-line">What is coming up</h2>
+
+  <div class="event-list">
+    <article class="event">
+      <p class="event-when" editable="single-line">27 May, 19:00</p>
+      <h3 class="event-title" editable="single-line">Agentic organisations</h3>
+      <div class="event-body" editable><p>An evening about what happens when…</p></div>
+      <menu class="nc-gear nc-gear-row">
+        <button type="button" onclick="nc.dom.cloneClosest(this, '.event')">Duplicate</button>
+        <button type="button" onclick="nc.dom.moveClosest(this, -1, '.event')">Up</button>
+        <button type="button" onclick="nc.dom.moveClosest(this, 1, '.event')">Down</button>
+        <button type="button" onclick="nc.dom.removeClosestAsk(this, '.event', 'this event')">Delete</button>
+      </menu>
+    </article>
+  </div>
+
+  <menu class="nc-gear nc-gear-row">
+    <button type="button" onclick="nc.dom.addFrom('tpl-event', '.event-list')">Add an event</button>
+  </menu>
+</section>
+
+<template id="tpl-event">
+  <article class="event">
+    <p class="event-when" editable="single-line">A date</p>
+    <h3 class="event-title" editable="single-line">The name of it</h3>
+    <div class="event-body" editable><p>What it is.</p></div>
+    <menu class="nc-gear nc-gear-row">…the same four buttons…</menu>
+  </article>
+</template>
+```
+
+Two details in there are the ones that go wrong. `.event-list` holds events and
+nothing else, because `addFrom` appends: a container that also held the heading
+and the Add button would take the new event after the button. And the shape
+lives in a `<template>`, which renders nothing, is saved with the page, and
+gives the owner an empty event rather than a copy of last month's.
+
+Repeat this for every shape on the page. A page with events, posts and people
+has three of these, not one.
+
+**A card list in the content form**, for the person who would rather fill in
+fields than click into a page, which is most people who did not write it. That
+is the next part.
+
+### Layer three: the sections nobody thought of
+
+A block library, §9b. The owner adds whole sections in your design, months after
+you have gone. Ten of the twelve shipped templates carry one, and a converted
+page nearly always should.
+
+### The content form, and why every page should have one
+
+Editing in place suits whoever wrote the page. It does not suit the person who
+inherits it and wants to change the price, the date and the third paragraph
+without hunting for them, and it gives them nowhere at all to press "add". So
+describe the page's fields in a rules block and let the runtime generate a form:
+
+```html
+<script type="application/json" nc:cms>
+{
+  "title":  ".site-title",
+  "hero":   "img.hero@src",
+  "open":   ".status@data-open",
+  "tags":   ".tag[]",
+  "events": [".event", {
+    "date":  ".event-when",
+    "title": ".event-title",
+    "text":  ".event-body",
+    "link":  "a.event-link@href"
+  }],
+  "people": [".person", { "name": ".person-name", "role": ".person-role" }]
+}
+</script>
+```
+
+The button is already in the toolbar in
+[CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md):
+
+```html
+<button class="nc-owner-only" data-nc-cms>Edit content</button>
+```
+
+Leave it in whether or not the page has rules yet. The shared stylesheet hides
+it until there is an `nc:cms` block, so it appears by itself the day one is
+added.
+
+`nc.cms.open()` draws a panel down the right hand side with one control per
+field. Typing writes straight through to the element and marks the page unsaved;
+the panel itself is `nc:chrome`, so it is never part of the file. The rules are,
+because they are part of the page.
+
+The grammar:
+
+| Written as | Means |
+|---|---|
+| `".title"` | the element's text |
+| `"img.hero@src"`, `".x@data-y"` | an attribute, with a picture picker when it is an `<img src>` |
+| `".agree@checked"` | a checkbox, which persists like any other input |
+| `".tag[]"` | one field per matching element, with Add and Remove |
+| `[".post", { … }]` | a card per match, with Add, Duplicate, Remove and reorder |
+| `{ "author": { … } }` | a labelled group, purely for tidiness |
+
+The card list is the one that matters and the one to reach for by default. Every
+repeating shape on the page should appear as one, so the panel offers "Add
+events" beside the events and "Add people" beside the people. Add copies the
+last item, so a new event arrives in the page's own design with last month's
+words in it, ready to type over.
+
+For a list that can legitimately be emptied, keep one item as the shape to copy
+and mark it `nc:cms-template hidden`. It is never offered as content, and Add
+clones it rather than the last item. Give it an ordinary class as well, say
+`class="event event-shape"`, and point the gears at `.event:not(.event-shape)`,
+so reordering does not count a hidden element nobody can see.
+
+Write rules for the whole page rather than for the parts you found interesting.
+A field that is not in the rules is a field the owner has to go and find.
+
+### Before you hand it over
+
+Open the published page with `#edit`, sign in as the owner, and answer these
+without opening a text editor:
+
+- Can I change every word I can see?
+- Can I add a second one of every kind of thing on this page? The events, the
+  posts, the people, the links?
+- Can I delete one, and put them in a different order?
+- Can I add a section that is not on the page yet?
+- Can I change a picture, and put a new one in?
+- Does "Edit content" list everything on the page, and does Add work in every
+  list it shows?
+- Does Save go through, and does the page still look right after a reload?
+
+Every "no" is work that is not finished. These are the first five minutes of
+somebody's ownership of their own site.
 
 ---
 
@@ -492,49 +737,13 @@ the block and the rest of your page.
 markup you inserted some other way, before focusing it, or the new region will
 not be typeable.
 
-### A form for the page, when clicking into it is not enough
+### The controls, and where the rest of this lives
 
-Editing in place suits the person who wrote the page. It does not suit the
-person who inherits it and only wants to change the price, the date and the
-third paragraph without hunting for them. For that, describe the page's fields
-in a rules block and let the runtime generate a form:
-
-```html
-<script type="application/json" nc:cms>
-{
-  "title":  ".site-title",
-  "hero":   "img.hero@src",
-  "open":   ".status@data-open",
-  "tags":   ".tag[]",
-  "posts":  [".post", { "heading": ".post-title", "body": ".post-body" }]
-}
-</script>
-
-<button class="nc-owner-only" onclick="nc.cms.toggle()">Edit content</button>
-```
-
-`nc.cms.open()` draws a panel down the right-hand side with one control per
-field. Typing writes straight through to the element and marks the page unsaved;
-the panel itself is `nc:chrome`, so it is never part of the file. The rules are,
-because they are part of the page.
-
-The grammar is four things:
-
-| Written as | Means |
-|---|---|
-| `".title"` | the element's text |
-| `"img.hero@src"`, `".x@data-y"` | an attribute |
-| `".agree@checked"` | a checkbox, which persists like any other input |
-| `".tag[]"` | one field per matching element |
-| `[".post", { … }]` | a card per match, with Add, Duplicate, Remove and reorder |
-| `{ "author": { … } }` | a labelled group, purely for tidiness |
-
-For a list that can be emptied, keep one item as the shape to copy and mark it
-`nc:cms-template`. It is hidden, never offered as content, and "Add" clones it.
-Without one, "Add" copies the last item.
-
-This is worth reaching for when the page will outlive your involvement with it.
-A page you maintain yourself does not need it.
+A gear belongs to one card or one row. A block (§9b) is a whole section. The
+content form (§8) is the same page seen as fields, and it is where a repeating
+shape gets its Add button for whoever would rather not click into the page. Most
+pages want all three, and they mix freely; `templates/cms/index.html` uses them
+together.
 
 ### What an app here can and cannot do
 
@@ -751,7 +960,8 @@ Work in this order; it saves rewriting.
 2. **The content.** Real words. Mark everything editable.
 3. **The layout and type.** Your own rules, under the variables.
 4. **The feeds.** Restyle, do not rebuild.
-5. **The block library.** Last, because it copies the shapes you just settled.
+5. **The gears and the content form.** Every repeating shape gets both, §8.
+6. **The block library.** Last, because it copies the shapes you just settled.
 
 Images: a page that phones home is not a page they own, so no CDN, no third
 party fonts, no analytics. An SVG inline or as a `data:` URI costs one request
@@ -763,9 +973,16 @@ alongside the document.
 
 ## 12. Things that will bite you
 
-- **A save must not reference a file the manifest does not list.** The runtime
-  refuses to publish that and the error names the file. Deploy the whole
-  directory with the CLI rather than hand-editing the path table.
+- **A link to a page that is not in the site does not stop a save.** The page
+  publishes, and the runtime shows the addresses that lead nowhere in a panel
+  that stays until it is dismissed, with a button that copies the list. It is a
+  list of work, not a failure. What still refuses is a save that would leave the
+  document unable to load `/nsite-clay.js` or `/nsite-clay-chrome.js`, because
+  the page that would repair that is the page that no longer loads. Deploy the
+  whole directory with the CLI rather than hand-editing the path table.
+- **A directory link needs its trailing slash.** A gateway reads `/coworking/`
+  as `/coworking/index.html`, the way any web server does. `/coworking` is a
+  different path, and there is nothing at it.
 - **Every page needs its own `nc:path`.** A document defaults to `/index.html`,
   so a site with more than one editable page, an about page, a translation,
   anything, needs `nc:path="/about.html"` on each `<html>` or saving one of them
@@ -806,8 +1023,12 @@ Tell them, in this order:
 
 1. The address of their page.
 2. The same address with `#edit`, which is how they get the controls.
-3. Which key controls it, and that losing it means losing the ability to change
+3. How to add a thing, by name: "Edit content in the toolbar has an Add button
+   under Events", or "the Add an event button at the end of the list". Say it
+   about each kind of thing on the page. This is the question they will actually
+   have, and a page that can do it but never said so is a page that cannot.
+4. Which key controls it, and that losing it means losing the ability to change
    the page.
-4. That the page now updates itself and they will not need a terminal again.
+5. That the page now updates itself and they will not need a terminal again.
 
 That is the whole operating manual.
