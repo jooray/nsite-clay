@@ -70,6 +70,15 @@ const CSS = `
   background: var(--nc-bg, #0e0c14); font-size: .86rem; }
 .nc-ui .nc-list li b { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nc-ui .nc-list li time { color: var(--nc-ink-dim, #7e768f); font-size: .78rem; }
+/* Release notes are sentences, not names. The list above sets every row on one
+ * line and lets it scroll sideways, which is right for a date or a path and
+ * wrong for a paragraph: it arrives cut off mid-word with a horizontal
+ * scrollbar under it. These wrap instead, and the card scrolls if there are
+ * enough of them. */
+.nc-ui .nc-notes { margin: .2rem 0 0; padding: 0 0 0 1.2rem; list-style: disc; }
+.nc-ui .nc-notes li { margin: 0 0 .55rem; font-size: .89rem; line-height: 1.55; }
+.nc-ui .nc-notes li:last-child { margin-bottom: 0; }
+.nc-ui .nc-notes li::marker { color: var(--nc-ink-dim, #9a92ad); }
 .nc-ui .nc-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
   max-height: 15rem; overflow: auto; padding: .2rem; }
 .nc-ui .nc-grid button { padding: 0; border-radius: var(--nc-radius-sm, 9px); overflow: hidden; aspect-ratio: 1; background: var(--nc-bg, #0e0c14); }

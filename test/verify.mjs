@@ -781,6 +781,24 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       (await nc.upgrade.source()) === null);
     nc.cfg.runtimeOwner = keep;
   }
+  // A gateway can serve the copy of the page it cached before the upgrade was
+  // published. That copy still points at the old engine and would offer the
+  // same update again, so the browser that applied it has to recognise its own
+  // work rather than ask a second time.
+  {
+    const one = [{ canonical: "/nsite-clay.js", hash: "a".repeat(64) }];
+    const other = [{ canonical: "/nsite-clay.js", hash: "b".repeat(64) }];
+    nc.upgrade._forget();
+    t("an update nobody has taken is not mistaken for one already installed",
+      nc.upgrade._alreadyApplied(one) === false);
+    nc.upgrade._remember({ version: "9.9.9", files: one });
+    t("the update this browser installed is recognised on the way back",
+      nc.upgrade._alreadyApplied(one) === true);
+    t("a different build is still an update", nc.upgrade._alreadyApplied(other) === false);
+    nc.upgrade._forget();
+    t("and the record goes when the page is current again",
+      nc.upgrade._alreadyApplied(one) === false);
+  }
 
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));

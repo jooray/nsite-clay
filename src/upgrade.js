@@ -42,6 +42,19 @@ const NOTES = "/runtime.json";
 // CLI and the web publisher wears two.
 const STAMPED = /^(.*?)((?:-[0-9a-f]{8})*)(\.[a-z]+)$/;
 
+// Where this browser writes down what it has already installed. A gateway can
+// go on handing out the copy of the page it already has for minutes after the
+// manifest names a newer one, and that copy still points at the old engine, so
+// without this the page offers the very update the person has just applied and
+// there is no way for them to tell that anything worked.
+const APPLIED = "nsite-clay.upgraded";
+
+// "a and b", "a, b and c". Two file names read as a sentence, not as a list.
+function andList(items) {
+  if (items.length < 2) return items[0] || "";
+  return items.slice(0, -1).join(", ") + " and " + items[items.length - 1];
+}
+
 export function unstamp(path) {
   const m = STAMPED.exec(path);
   return m ? m[1] + m[3] : path;
@@ -112,7 +125,7 @@ export class Upgrade {
       if (mine[ref.path] === want) continue;     // we already serve those bytes
       files.push({ ...ref, hash: want });
     }
-    if (!files.length) return null;
+    if (!files.length) { this._forget(); return null; }
 
     return {
       running: this.nc.version,
@@ -121,7 +134,45 @@ export class Upgrade {
       notes: Array.isArray(notes?.notes) ? notes.notes : [],
       files,
       servers: src.servers,
+      // True when every file this plan would install is one this browser has
+      // already installed on this site. Then the site is current and the
+      // document in front of us is a stale copy, which is a different thing to
+      // say and a different thing to do about it.
+      stale: this._alreadyApplied(files),
     };
+  }
+
+  // ---- what this browser has already done ----------------------------------
+
+  _key() {
+    const c = this.nc.cfg;
+    return `${APPLIED}:${c.owner || ""}:${c.site || ""}:${c.path || ""}`;
+  }
+
+  // Kept for a day. Past that, a plan naming the same hashes is more likely to
+  // mean the owner restored an older version and wants the update again than a
+  // gateway still sitting on a copy from yesterday.
+  _applied() {
+    let rec = null;
+    try { rec = JSON.parse(localStorage.getItem(this._key()) || "null"); } catch { /* private mode */ }
+    if (!rec || !rec.hashes || Date.now() - rec.at > 24 * 3600 * 1000) return null;
+    return rec;
+  }
+
+  _remember(plan) {
+    const hashes = {};
+    for (const f of plan.files) hashes[f.canonical] = f.hash;
+    try { localStorage.setItem(this._key(), JSON.stringify({ at: Date.now(), version: plan.version, hashes })); }
+    catch { /* nothing is lost but the reminder */ }
+  }
+
+  _forget() {
+    try { localStorage.removeItem(this._key()); } catch { /* nothing to clear */ }
+  }
+
+  _alreadyApplied(files) {
+    const rec = this._applied();
+    return !!rec && files.every((f) => rec.hashes[f.canonical] === f.hash);
   }
 
   // ---- doing it ------------------------------------------------------------
@@ -154,28 +205,18 @@ export class Upgrade {
     }
 
     onProgress({ path: "the manifest", done, total: plan.files.length });
-    const out = await this.nc.save({ extraPaths, dropPaths });
+    // report: false, because this save is not one the person made about their
+    // own writing. A page with a link to a page they have not written yet would
+    // otherwise answer "Update" with a panel about broken links, which is true,
+    // unrelated, and not what they pressed.
+    const out = await this.nc.save({ extraPaths, dropPaths, report: false });
+    this._remember(plan);
     return { ...out, files: plan.files.length };
   }
 
   // ---- the offer -----------------------------------------------------------
 
   async promptFor(plan) {
-    const ul = (parent, label, items) => {
-      const l = this.doc.createElement("label");
-      l.textContent = label;
-      const list = this.doc.createElement("ul");
-      list.className = "nc-list";
-      for (const text of items) {
-        const li = this.doc.createElement("li");
-        const b = this.doc.createElement("b");
-        b.textContent = text;
-        li.appendChild(b);
-        list.appendChild(li);
-      }
-      parent.append(l, list);
-    };
-
     const ok = await modal({
       doc: this.doc,
       title: plan.version ? `nsite-clay ${plan.version} is available` : "A newer runtime is available",
@@ -183,14 +224,31 @@ export class Upgrade {
             `servers and republishes your manifest, so nothing of anybody else's ends up in the way.`,
       submitLabel: "Update",
       build: (body) => {
-        if (plan.notes.length) ul(body, "What changed", plan.notes.slice(0, 10));
-        ul(body, "Files", plan.files.map((f) => f.canonical));
+        // Release notes are prose. They went in the same boxed one-line list the
+        // version history uses, which cut every one of them off mid-word and put
+        // a sideways scrollbar under the lot. The thing the dialog exists to be
+        // read has to be the thing that reads.
+        if (plan.notes.length) {
+          const l = this.doc.createElement("label");
+          l.textContent = "What changed";
+          const list = this.doc.createElement("ul");
+          list.className = "nc-notes";
+          for (const text of plan.notes.slice(0, 10)) {
+            const li = this.doc.createElement("li");
+            li.textContent = text;
+            list.appendChild(li);
+          }
+          body.append(l, list);
+        }
+        // The file names were a second list of their own, which is a lot of
+        // furniture for two paths nobody needs to act on. They belong in the
+        // sentence that says what is about to happen.
         const note = this.doc.createElement("p");
         note.className = "nc-hint";
-        note.style.margin = "1rem 0 0";
-        note.textContent = "This replaces the engine, the toolbar script and the stylesheet. " +
-          "It does not touch your page: the blocks, the words and the design stay as they are. " +
-          "Version history keeps the old one, so this is reversible.";
+        note.style.margin = "1.2rem 0 0";
+        note.textContent = `This replaces ${andList(plan.files.map((f) => f.canonical))} and ` +
+          "nothing else. Your page is untouched: the blocks, the words and the design stay as " +
+          "they are, and version history keeps the old one, so this is reversible.";
         body.appendChild(note);
       },
       onSubmit: async (h) => {
@@ -199,7 +257,7 @@ export class Upgrade {
         return true;
       },
     });
-    if (ok) this.nc.reloadToLatest();
+    if (ok) this.installed(plan);
     return ok;
   }
 
@@ -218,6 +276,12 @@ export class Upgrade {
       toast(`This page is running the current runtime (${this.nc.version}).`, { doc: this.doc });
       return null;
     }
+    if (plan.stale) {
+      toast(`${plan.version ? "nsite-clay " + plan.version : "The update"} is already published on ` +
+            `your site. This copy of the page is an older one; reload to pick it up.`,
+            { doc: this.doc, ms: 6000 });
+      return null;
+    }
     return this.promptFor(plan);
   }
 
@@ -231,7 +295,10 @@ export class Upgrade {
       if (this._asked || !this.nc.isOwner || !this.nc.editRequested) return;
       if (!this.nc.cfg.runtimeOwner) return;
       this._asked = true;
-      this.check().then((plan) => { if (plan) this.notice(plan); }).catch(() => {});
+      this.check().then((plan) => {
+        if (!plan) return;
+        plan.stale ? this.staleNotice(plan) : this.notice(plan);
+      }).catch(() => {});
     };
     for (const ev of ["nsiteclay:login", "nsiteclay:edit-gate"]) this.nc.addEventListener(ev, look);
     look();
@@ -240,32 +307,75 @@ export class Upgrade {
   // Styled inline rather than from the stylesheet, because a page whose engine
   // is out of date has an out of date stylesheet too, and the one notice that
   // must be legible is this one.
-  notice(plan) {
+  bar(message, actions) {
     const bar = this.doc.createElement("div");
     bar.setAttribute("nc:chrome", "");          // never reaches a save
     bar.setAttribute("role", "status");
-    bar.style.cssText = "position:fixed;z-index:2147483646;left:50%;top:1rem;" +
+    // Above a dialog rather than beside it: the update can be taken from inside
+    // Settings, which stays open, and the bar that says what happened next has
+    // to be the thing on top.
+    bar.style.cssText = "position:fixed;z-index:2147483647;left:50%;top:1rem;" +
       "transform:translateX(-50%);display:flex;gap:.75rem;align-items:center;max-width:calc(100vw - 2rem);" +
       "font:14px/1.4 ui-sans-serif,system-ui,sans-serif;padding:.6rem .9rem;border-radius:10px;" +
       "background:#101418;color:#f4f6f7;box-shadow:0 8px 30px -10px rgba(0,0,0,.6)";
     const msg = this.doc.createElement("span");
-    msg.textContent = plan.version
-      ? `nsite-clay ${plan.version} is available. This page runs ${plan.running}.`
-      : "A newer nsite-clay runtime is available for this page.";
+    msg.textContent = message;
+    bar.appendChild(msg);
 
     const btnCss = "font:inherit;cursor:pointer;border:1px solid #4a5560;background:#1c2329;" +
       "color:inherit;border-radius:7px;padding:.25rem .7rem;white-space:nowrap";
-    const see = this.doc.createElement("button");
-    see.textContent = "See what changed";
-    see.style.cssText = btnCss;
-    see.onclick = () => { bar.remove(); this.promptFor(plan); };
-    const not = this.doc.createElement("button");
-    not.textContent = "Not now";
-    not.style.cssText = btnCss + ";border-color:transparent";
-    not.onclick = () => bar.remove();
+    actions.forEach(([label, fn], i) => {
+      const b = this.doc.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.style.cssText = btnCss + (i === actions.length - 1 ? ";border-color:transparent" : "");
+      b.onclick = () => fn(bar);
+      bar.appendChild(b);
+    });
 
-    bar.append(msg, see, not);
     this.doc.body.appendChild(bar);
     return bar;
+  }
+
+  notice(plan) {
+    return this.bar(
+      plan.version
+        ? `nsite-clay ${plan.version} is available. This page runs ${plan.running}.`
+        : "A newer nsite-clay runtime is available for this page.",
+      [
+        ["See what changed", (bar) => { bar.remove(); this.promptFor(plan); }],
+        ["Not now", (bar) => bar.remove()],
+      ],
+    );
+  }
+
+  // The update went through and the page is still running the old engine, which
+  // is what a reload is for. It is not done for them: a reload throws away
+  // whoever is signed in, and on a key pasted by hand that means pasting it
+  // again. Nothing is lost by waiting, so the choice is theirs.
+  installed(plan) {
+    return this.bar(
+      `${plan.version ? "nsite-clay " + plan.version : "The newer runtime"} is on your site. ` +
+      `Reload the page to start running it.`,
+      [
+        ["Reload", () => this.nc.reloadToLatest()],
+        ["Later", (bar) => bar.remove()],
+      ],
+    );
+  }
+
+  // Same button, different reason: this browser has already published the
+  // update, and what came back is a copy of the page from before it. Only a
+  // gateway can do that, and only for as long as it holds what it cached, so
+  // the honest thing is to say so rather than offer the update a second time.
+  staleNotice(plan) {
+    return this.bar(
+      `${plan.version ? "nsite-clay " + plan.version : "The newer runtime"} is already published on ` +
+      `your site. This is an older copy of the page; a gateway can serve one for a few minutes.`,
+      [
+        ["Reload", () => this.nc.reloadToLatest()],
+        ["Not now", (bar) => bar.remove()],
+      ],
+    );
   }
 }

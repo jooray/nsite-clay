@@ -31,6 +31,8 @@
       readOnly: "solo lectura", owner: "propietario · ",
       notOwner: "con sesión iniciada, no propietario",
       signIn: "Iniciar sesión", signOut: "Cerrar sesión",
+      addBlock: "Añadir un bloque", editContent: "Editar contenido",
+      write: "Escribir", settings: "Ajustes", historyBtn: "Historial", save: "Guardar",
       signInTitle: "Inicia sesión para editar",
       signInHint: "Solo la clave del propietario puede cambiar esta página. Los demás la ven tal como está.",
       useKey: "Usar esta clave",
@@ -62,6 +64,8 @@
       readOnly: "len na čítanie", owner: "vlastník · ",
       notOwner: "prihlásený, nie vlastník",
       signIn: "Prihlásiť sa", signOut: "Odhlásiť sa",
+      addBlock: "Pridať blok", editContent: "Upraviť obsah",
+      write: "Napísať", settings: "Nastavenia", historyBtn: "História", save: "Uložiť",
       signInTitle: "Prihlás sa a uprav stránku",
       signInHint: "Stránku môže zmeniť iba kľúč vlastníka. Ostatní ju vidia takú, aká je.",
       useKey: "Použiť tento kľúč",
@@ -93,6 +97,8 @@
       readOnly: "jen ke čtení", owner: "vlastník · ",
       notOwner: "přihlášený, ne vlastník",
       signIn: "Přihlásit se", signOut: "Odhlásit se",
+      addBlock: "Přidat blok", editContent: "Upravit obsah",
+      write: "Napsat", settings: "Nastavení", historyBtn: "Historie", save: "Uložit",
       signInTitle: "Přihlas se a uprav stránku",
       signInHint: "Stránku může změnit jen klíč vlastníka. Ostatní ji vidí takovou, jaká je.",
       useKey: "Použít tento klíč",
@@ -124,6 +130,8 @@
   const EN = {
     readOnly: "read-only", owner: "owner · ", notOwner: "signed in, not the owner",
     signIn: "Sign in", signOut: "Sign out",
+    addBlock: "Add a block", editContent: "Edit content",
+    write: "Write", settings: "Settings", historyBtn: "History", save: "Save",
     signInTitle: "Sign in to edit",
     signInHint: "Only the owner's key can change this page. Everyone else sees it as it is.",
     useKey: "Use this key",
@@ -167,6 +175,37 @@
   nc.addEventListener("nsiteclay:login", who);
   nc.addEventListener("nsiteclay:logout", who);
   who();
+
+  // The rest of the toolbar, in the page's language.
+  //
+  // A template ships these words in its markup, in English, and markup is the
+  // author's page: no upgrade rewrites it. So a translated page sat there with
+  // "vlastník" and "Odhlásiť sa" next to Write, Settings, History and Save. This
+  // script is upgraded, which makes it the only place a fix can reach a page
+  // that is already published.
+  //
+  // A label the author wrote themselves is left alone. Only wording a template
+  // shipped is replaced, which is why the known set below is every language's,
+  // not just this one's: it also makes the pass idempotent, and lets a page that
+  // changes its <html lang> relabel rather than freeze on the first language it
+  // was opened in. A button holding an element is left alone too, because
+  // textContent would take the icon inside it with the word.
+  const KNOWN = (key) =>
+    new Set([EN[key], ...Object.values(STRINGS).map((t) => t[key])].filter(Boolean));
+  const label = (sel, key) => {
+    const known = KNOWN(key);
+    for (const el of all(sel)) {
+      if (el.firstElementChild) continue;
+      const now = (el.textContent || "").trim();
+      if (now && !known.has(now)) continue;
+      if (now !== T[key]) el.textContent = T[key];
+    }
+  };
+  for (const [sel, key] of [
+    ["[data-nc-blocks]", "addBlock"], ["[data-nc-cms]", "editContent"],
+    ["[data-nc-write]", "write"], ["[data-nc-settings]", "settings"],
+    ["[data-nc-history]", "historyBtn"], ["[data-nc-save]", "save"],
+  ]) label(sel, key);
 
   // An extension first, because it needs no typing. A signer app is offered
   // next, because the key stays on the phone. Pasting a key is the fallback.

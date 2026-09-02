@@ -188,7 +188,13 @@ class NsiteClay extends EventTarget {
   }
 
   // One save = one blob upload, one replaceable manifest, one version snapshot.
-  async save({ extraPaths = {}, dropPaths = [], snapshotVersion = true } = {}) {
+  //
+  // `report` says whether this save is one the person made about their own
+  // writing. A save the runtime does for its own reasons -- taking an upgrade --
+  // keeps its dead links to itself: they were dead before it ran, they will be
+  // reported the next time the person saves, and a panel about them in answer to
+  // a button that said Update is a report about the wrong thing.
+  async save({ extraPaths = {}, dropPaths = [], snapshotVersion = true, report = true } = {}) {
     if (!this.signer) throw new Error("Not signed in");
     if (!this.isOwner) throw new Error("Only the site owner can save this document");
     const html = this.getHTML();
@@ -236,7 +242,7 @@ class NsiteClay extends EventTarget {
       }
       this._ownHash = hash;
       this._manifest = manifest;
-      this._set("saved", { hash, manifest, version, missing });
+      this._set("saved", { hash, manifest, version, missing: report ? missing : null });
       return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths), missing };
     } catch (err) {
       this._set("error", { error: String(err) });

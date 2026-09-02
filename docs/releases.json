@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.2.3",
+    "released": "2026-09-02",
+    "notes": [
+      "The list of what changed in an update is readable now. Every line arrived cut off mid-word with a sideways scrollbar under it, so the one thing this dialog exists to show you was the one thing you could not read.",
+      "Taking an update no longer reloads the page out from under you. It says the newer version is on your site and leaves the reload to you, so you stay signed in and whatever else was on the screen stays there.",
+      "A page you have already updated stops asking you to update it again. For a few minutes after you publish, a gateway can still hand out the copy of your page it had before, and that older copy would offer you the same update a second time. It now says the update is published and offers you a reload.",
+      "Updating no longer answers you with a list of dead links. Those are about your own pages, they were there before you pressed Update, and you will hear about them the next time you save.",
+      "The toolbar speaks the language of the page. On a Slovak, Czech or Spanish page, Write, Edit content, Settings, History and Save stayed in English beside the words that had been translated. A button you renamed yourself is left as you wrote it."
+    ]
+  },
+  {
     "version": "0.2.2",
     "released": "2026-09-02",
     "notes": [
