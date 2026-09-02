@@ -229,9 +229,19 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row {
  * nc.cms.open() draws a form for the page from the nc:cms rules block. It is
  * runtime chrome, so it is removed from the save and never reaches a reader.
  * Every one of these class names can be restyled by a document.
+ *
+ * The reset is the same one the dialogs carry: a document's own element rules
+ * reach the panel, which is an <aside> full of forms and buttons, so its layout
+ * is stated here rather than inherited. Nothing may be added above it, because
+ * the rules that follow win their ties by coming after.
  */
+.nc-cms * {
+  display: revert; position: static; float: none;
+  margin: revert; padding: revert;
+  width: revert; height: revert; max-width: none; max-height: none;
+}
 .nc-cms {
-  position: fixed; inset: 0 0 0 auto; width: min(23rem, 100%);
+  display: block; position: fixed; inset: 0 0 0 auto; width: min(23rem, 100%);
   background: var(--nc-panel); color: var(--nc-ink);
   border-left: 1px solid var(--nc-edge);
   z-index: 2147483000; overflow-y: auto; padding: 1rem;

@@ -351,7 +351,9 @@ export class Cms {
     const s = this.doc.createElement("style");
     s.setAttribute("nc:chrome", "");
     s.textContent = `
-.nc-cms { position: fixed; top: 0; right: 0; bottom: 0; width: min(23rem, 100%);
+.nc-cms * { display: revert; position: static; float: none; margin: revert;
+  padding: revert; width: revert; height: revert; max-width: none; max-height: none; }
+.nc-cms { display: block; position: fixed; top: 0; right: 0; bottom: 0; width: min(23rem, 100%);
   background: #14121b; color: #eee; border-left: 1px solid #332f3f; z-index: 2147483000;
   overflow-y: auto; padding: 1rem; font: 14px/1.5 system-ui, sans-serif; }
 .nc-cms header { display: flex; justify-content: space-between; align-items: center;

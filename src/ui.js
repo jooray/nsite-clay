@@ -7,13 +7,28 @@
 
 const CSS = `
 .nc-ui, .nc-ui * { box-sizing: border-box; }
+
+/* A page's stylesheet loads after this one and its element selectors reach
+ * anything with the same tag name, the dialogs drawn over the page included.
+ * A card is a <form>, so one page with \`form { display: flex }\` in it turned
+ * the update offer into four columns with its buttons pushed off the side of
+ * the screen, and the sign-in box with it. The chrome takes its type and its
+ * colours from the page deliberately. It must not take layout, so everything
+ * inside a chrome surface goes back to the browser's own default here and the
+ * rules below put back the layout that is wanted. They come after on purpose:
+ * a rule of equal weight has to win, so nothing may be added above this. */
+.nc-ui *, .nc-toast *, .nc-notice * {
+  display: revert; position: static; float: none;
+  margin: revert; padding: revert;
+  width: revert; height: revert; max-width: none; max-height: none;
+}
 .nc-ui {
   position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center;
   background: var(--nc-scrim, rgba(6,4,12,.62)); padding: 1rem;
   font: 15px/1.55 var(--nc-chrome-font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
 }
 .nc-ui-card {
-  width: min(38rem, 100%); max-height: min(90vh, 46rem); overflow: auto;
+  display: block; width: min(38rem, 100%); max-height: min(90vh, 46rem); overflow: auto;
   background: var(--nc-panel, #14121a); color: var(--nc-ink, #ece9f2);
   border: 1px solid var(--nc-edge, #322c40); border-radius: var(--nc-radius, 14px);
   padding: 1.25rem; box-shadow: var(--nc-shadow, 0 30px 80px -30px rgba(0,0,0,.8));
@@ -23,7 +38,8 @@ const CSS = `
 .nc-ui label { display: block; font-size: .78rem; color: var(--nc-ink-dim, #9a92ad); margin: .85rem 0 .3rem; }
 .nc-ui .nc-field { margin-top: .85rem; }
 .nc-ui .nc-field label { margin: 0 0 .3rem; }
-.nc-ui input[type=text], .nc-ui input[type=number], .nc-ui textarea, .nc-ui select {
+.nc-ui input[type=text], .nc-ui input[type=number], .nc-ui input[type=password],
+.nc-ui textarea, .nc-ui select {
   width: 100%; font: inherit; font-size: .9rem; padding: .55rem .65rem;
   border-radius: var(--nc-radius-sm, 8px);
   border: 1px solid var(--nc-edge, #322c40); background: var(--nc-bg, #0e0c14); color: inherit;
@@ -73,7 +89,7 @@ const CSS = `
 .nc-ui .nc-pick b { display: block; font-weight: 600; }
 .nc-ui .nc-pick small { color: var(--nc-ink-dim, #7e768f); }
 .nc-toast {
-  position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 2147483647;
+  display: block; position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 2147483647;
   background: var(--nc-panel, #14121a); color: var(--nc-ink, #ece9f2);
   border: 1px solid var(--nc-edge, #322c40); border-radius: var(--nc-radius, 10px);
   padding: .6rem .9rem; font: 14px var(--nc-chrome-font, ui-sans-serif, system-ui, sans-serif);

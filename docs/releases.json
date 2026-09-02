@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.2.2",
+    "released": "2026-09-02",
+    "notes": [
+      "The sign-in box, the settings, the version list and this update offer come out as boxes again on a page whose own stylesheet has a rule about forms. On one site this dialog arrived as four narrow columns with its buttons pushed off the side of the screen, which made it almost impossible to read and nearly impossible to press. The content panel had the same problem on a page that styles its asides.",
+      "The box you paste a key into is now as wide as the dialog around it, rather than the small default the browser picks."
+    ]
+  },
+  {
     "version": "0.2.1",
     "released": "2026-09-02",
     "notes": [

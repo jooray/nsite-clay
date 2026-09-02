@@ -288,6 +288,32 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     host.remove();
   }
 
+  // A document's own element rules reach the dialogs drawn over it. One page
+  // with `form { display: flex }` in it turned the update offer into four
+  // columns with the buttons off the side of the screen, because a card is a
+  // <form> that never said what it was.
+  {
+    const hostile = document.createElement("style");
+    hostile.textContent = "form { display: flex; max-width: 12rem; padding: 4rem; }" +
+      "aside { display: flex; } button { position: absolute; }";
+    document.head.appendChild(hostile);
+    nc.modal({ title: "t", submitLabel: "go", build: () => {}, onSubmit: () => null });
+    await new Promise((r) => setTimeout(r, 0));
+    const card = document.querySelector(".nc-ui-card");
+    const css = getComputedStyle(card);
+    t("a page cannot lay out a dialog", css.display === "block", css.display);
+    t("nor squeeze it", css.maxWidth === "none" && card.offsetWidth > 200,
+      `${css.maxWidth} ${card.offsetWidth}px`);
+    t("nor pad it", css.paddingTop === "20px", css.paddingTop);
+    const button = card.querySelector(".nc-primary");
+    t("nor take the buttons out of the flow",
+      getComputedStyle(button).position === "static", getComputedStyle(button).position);
+    t("and the row of them is still a row",
+      getComputedStyle(card.querySelector(".nc-actions")).display === "flex");
+    card.closest(".nc-ui").remove();
+    hostile.remove();
+  }
+
   // A toast is gone in under three seconds, which is not long enough to read a
   // list of paths and cannot be copied to whoever can fix them.
   {
