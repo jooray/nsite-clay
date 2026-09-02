@@ -225,25 +225,43 @@
       <article class="card">
         <h3 editable="single-line">Thursday</h3>
         <p editable>Sourdough, seeded rye, and the long-ferment baguette.</p>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this card earlier" aria-label="Move this card earlier"
+                  onclick="nc.dom.moveClosest(this, -1, '.card')">&larr;</button>
+          <button type="button" title="Move this card later" aria-label="Move this card later"
+                  onclick="nc.dom.moveClosest(this, 1, '.card')">&rarr;</button>
+          <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+                  onclick="nc.dom.cloneClosest(this, '.card')">&#x29c9;</button>
+          <button type="button" title="Delete this card" aria-label="Delete this card"
+                  onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">&#x2715;</button>
         </menu>
       </article>
       <article class="card">
         <h3 editable="single-line">Friday</h3>
         <p editable>Croissants from seven. They go quickly and we are not sorry about it.</p>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this card earlier" aria-label="Move this card earlier"
+                  onclick="nc.dom.moveClosest(this, -1, '.card')">&larr;</button>
+          <button type="button" title="Move this card later" aria-label="Move this card later"
+                  onclick="nc.dom.moveClosest(this, 1, '.card')">&rarr;</button>
+          <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+                  onclick="nc.dom.cloneClosest(this, '.card')">&#x29c9;</button>
+          <button type="button" title="Delete this card" aria-label="Delete this card"
+                  onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">&#x2715;</button>
         </menu>
       </article>
       <article class="card">
         <h3 editable="single-line">Saturday</h3>
         <p editable>Whatever the fruit market had, folded into something.</p>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this card earlier" aria-label="Move this card earlier"
+                  onclick="nc.dom.moveClosest(this, -1, '.card')">&larr;</button>
+          <button type="button" title="Move this card later" aria-label="Move this card later"
+                  onclick="nc.dom.moveClosest(this, 1, '.card')">&rarr;</button>
+          <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+                  onclick="nc.dom.cloneClosest(this, '.card')">&#x29c9;</button>
+          <button type="button" title="Delete this card" aria-label="Delete this card"
+                  onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">&#x2715;</button>
         </menu>
       </article>
     </div>
@@ -338,10 +356,17 @@
       <figure>
         <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23e3d7c8'/%3E%3C/svg%3E" alt="">
         <figcaption editable="single-line">Caption</figcaption>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.media.promptImage({ target: this.closest('figure').querySelector('img') })">Picture</button>
-          <button type="button" onclick="nc.dom.cloneClosest(this, 'figure')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, 'figure', 'this picture')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this picture earlier" aria-label="Move this picture earlier"
+                  onclick="nc.dom.moveClosest(this, -1, 'figure')">&larr;</button>
+          <button type="button" title="Move this picture later" aria-label="Move this picture later"
+                  onclick="nc.dom.moveClosest(this, 1, 'figure')">&rarr;</button>
+          <button type="button" title="Choose the picture" aria-label="Choose the picture"
+                  onclick="nc.media.promptImage({ target: this.closest('figure').querySelector('img') })">&#x2699;</button>
+          <button type="button" title="Duplicate this picture" aria-label="Duplicate this picture"
+                  onclick="nc.dom.cloneClosest(this, 'figure')">&#x29c9;</button>
+          <button type="button" title="Delete this picture" aria-label="Delete this picture"
+                  onclick="nc.dom.removeClosestAsk(this, 'figure', 'this picture')">&#x2715;</button>
         </menu>
       </figure>
     </div>
@@ -371,9 +396,15 @@
       <article class="card">
         <h3 editable="single-line">A card</h3>
         <p editable>What it says.</p>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this card earlier" aria-label="Move this card earlier"
+                  onclick="nc.dom.moveClosest(this, -1, '.card')">&larr;</button>
+          <button type="button" title="Move this card later" aria-label="Move this card later"
+                  onclick="nc.dom.moveClosest(this, 1, '.card')">&rarr;</button>
+          <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+                  onclick="nc.dom.cloneClosest(this, '.card')">&#x29c9;</button>
+          <button type="button" title="Delete this card" aria-label="Delete this card"
+                  onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">&#x2715;</button>
         </menu>
       </article>
     </div>

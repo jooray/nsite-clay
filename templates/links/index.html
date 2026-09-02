@@ -130,18 +130,6 @@
   html[nc\:editable="true"] .go { pointer-events: none; }
   html[nc\:editable="true"] .go [editable] { pointer-events: auto; }
 
-  .kill {
-    display: none; position: absolute; top: .55rem; right: -.2rem; opacity: 0;
-    font: 1rem/1 var(--nc-mono); padding: .2rem .45rem; cursor: pointer;
-    border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink-dim);
-    transition: opacity .12s;
-  }
-  .kill:hover { border-color: var(--nc-accent); color: var(--nc-accent); }
-  /* Out of the page entirely for a reader, out of the way until wanted for the
-     owner: a row's delete control should never be one stray tab away. */
-  html[nc\:editable="true"] .kill { display: block; }
-  html[nc\:editable="true"] li:hover .kill, html[nc\:editable="true"] .kill:focus-visible { opacity: 1; }
-
   .add {
     display: none; width: 100%; margin: 0; padding: 1.05rem 0 1.05rem 2.9rem;
     font: .72rem/1 var(--nc-mono); letter-spacing: .18em; text-transform: uppercase;
@@ -225,7 +213,16 @@
         </span>
         <span class="arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <button type="button" class="kill" title="Remove this row">&times;</button>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this row up" aria-label="Move this row up"
+                onclick="nc.dom.moveClosest(this, -1, 'li')">&uarr;</button>
+        <button type="button" title="Move this row down" aria-label="Move this row down"
+                onclick="nc.dom.moveClosest(this, 1, 'li')">&darr;</button>
+        <button type="button" title="Duplicate this row" aria-label="Duplicate this row"
+                onclick="nc.dom.cloneClosest(this, 'li')">&#x29c9;</button>
+        <button type="button" title="Delete this row" aria-label="Delete this row"
+                onclick="nc.dom.removeClosestAsk(this, 'li', 'this row')">&#x2715;</button>
+      </menu>
     </li>
     <li>
       <a class="go" href="https://example.com/podcast">
@@ -237,7 +234,16 @@
         </span>
         <span class="arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <button type="button" class="kill" title="Remove this row">&times;</button>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this row up" aria-label="Move this row up"
+                onclick="nc.dom.moveClosest(this, -1, 'li')">&uarr;</button>
+        <button type="button" title="Move this row down" aria-label="Move this row down"
+                onclick="nc.dom.moveClosest(this, 1, 'li')">&darr;</button>
+        <button type="button" title="Duplicate this row" aria-label="Duplicate this row"
+                onclick="nc.dom.cloneClosest(this, 'li')">&#x29c9;</button>
+        <button type="button" title="Delete this row" aria-label="Delete this row"
+                onclick="nc.dom.removeClosestAsk(this, 'li', 'this row')">&#x2715;</button>
+      </menu>
     </li>
     <li>
       <a class="go" href="https://github.com/example">
@@ -249,7 +255,16 @@
         </span>
         <span class="arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <button type="button" class="kill" title="Remove this row">&times;</button>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this row up" aria-label="Move this row up"
+                onclick="nc.dom.moveClosest(this, -1, 'li')">&uarr;</button>
+        <button type="button" title="Move this row down" aria-label="Move this row down"
+                onclick="nc.dom.moveClosest(this, 1, 'li')">&darr;</button>
+        <button type="button" title="Duplicate this row" aria-label="Duplicate this row"
+                onclick="nc.dom.cloneClosest(this, 'li')">&#x29c9;</button>
+        <button type="button" title="Delete this row" aria-label="Delete this row"
+                onclick="nc.dom.removeClosestAsk(this, 'li', 'this row')">&#x2715;</button>
+      </menu>
     </li>
     <li>
       <a class="go" href="https://example.com/mail">
@@ -261,7 +276,16 @@
         </span>
         <span class="arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <button type="button" class="kill" title="Remove this row">&times;</button>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this row up" aria-label="Move this row up"
+                onclick="nc.dom.moveClosest(this, -1, 'li')">&uarr;</button>
+        <button type="button" title="Move this row down" aria-label="Move this row down"
+                onclick="nc.dom.moveClosest(this, 1, 'li')">&darr;</button>
+        <button type="button" title="Duplicate this row" aria-label="Duplicate this row"
+                onclick="nc.dom.cloneClosest(this, 'li')">&#x29c9;</button>
+        <button type="button" title="Delete this row" aria-label="Delete this row"
+                onclick="nc.dom.removeClosestAsk(this, 'li', 'this row')">&#x2715;</button>
+      </menu>
     </li>
   </ul>
 
@@ -405,7 +429,16 @@
       '</span>' +
       '<span class="arrow" aria-hidden="true">→</span>' +
     '</a>' +
-    '<button type="button" class="kill" title="Remove this row">×</button>';
+    '<menu class="nc-gear nc-gear-rail">' +
+      '<button type="button" title="Move this row up" aria-label="Move this row up" ' +
+              'onclick="nc.dom.moveClosest(this, -1, \'li\')">↑</button>' +
+      '<button type="button" title="Move this row down" aria-label="Move this row down" ' +
+              'onclick="nc.dom.moveClosest(this, 1, \'li\')">↓</button>' +
+      '<button type="button" title="Duplicate this row" aria-label="Duplicate this row" ' +
+              'onclick="nc.dom.cloneClosest(this, \'li\')">⧉</button>' +
+      '<button type="button" title="Delete this row" aria-label="Delete this row" ' +
+              'onclick="nc.dom.removeClosestAsk(this, \'li\', \'this row\')">✕</button>' +
+    '</menu>';
 
   $("#add").onclick = () => {
     const li = document.createElement("li");
@@ -419,10 +452,6 @@
     const sel = getSelection();
     sel.removeAllRanges(); sel.addRange(r);
   };
-
-  list.addEventListener("click", (e) => {
-    if (e.target.classList?.contains("kill") && nc.isOwner) e.target.closest("li").remove();
-  });
 
   // The avatar is the one thing on the page that is not text, so it gets the
   // one dialog. Uploads go to the same Blossom servers the page itself is on.

@@ -128,26 +128,29 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-row {
 }
 .nc-gear button:hover { border-color: var(--nc-accent); }
 
-/* nc-gear-rail is the same strip of controls the runtime draws on a block,
- * available to the repeating shapes a page builds for itself: the events in a
- * list, the cards in a grid, the people on a team page. A page that invents its
- * own row of worded buttons for each of those teaches its owner a different
- * vocabulary per kind of thing; one rail, in the same corner, with the same
- * icons, is learnt once. Buttons carry a title, because an icon nobody can name
- * is not a control.
+/* nc-gear-rail is the strip of controls the runtime draws on a block, in the
+ * shape a page can use for the repeating shapes it builds itself: the events in
+ * a list, the cards in a grid, the people on a team page. A page that invents
+ * its own row of worded buttons for each of those teaches its owner a different
+ * vocabulary per kind of thing; one strip, in one place, with the same icons, is
+ * learnt once. Buttons carry a title and an aria-label, because an icon nobody
+ * can name is not a control.
  *
- * The item is given a positioning context from here rather than by the page, so
- * a shape only has to carry the rail. Nothing else about its layout changes:
- * position: relative on its own moves nothing. */
+ * It sits at the end of the item and hard against its right edge, and it takes
+ * its own room rather than floating over the corner the way the block rail does.
+ * A block is big and mostly empty at the top; an item is a card three lines
+ * long, where an overlay covers the words it is meant to help edit, and where
+ * whichever item ends up flush with the block's own corner would wear two strips
+ * of buttons on the same pixels. Room costs a line of height in edit mode and
+ * nothing at all to a reader. */
 html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-rail { display: flex !important; }
-html[nc\:owner-here="true"][nc\:editing="true"] :has(> .nc-gear-rail) { position: relative; }
-.nc-blk-rail, .nc-gear-rail {
-  position: absolute; top: .3rem; right: .3rem; z-index: 20;
-  gap: 2px; margin: 0; padding: 3px; list-style: none;
+.nc-gear-rail {
+  width: fit-content; margin: .55rem 0 0 auto; padding: 3px;
+  gap: 2px; list-style: none;
   background: var(--nc-panel); border: 1px solid var(--nc-edge);
   border-radius: var(--nc-radius-sm);
   box-shadow: var(--nc-shadow);
-  opacity: .35; transition: opacity .15s ease;
+  opacity: .4; transition: opacity .15s ease;
 }
 :hover > .nc-gear-rail, .nc-gear-rail:focus-within { opacity: 1; }
 .nc-gear-rail button {
@@ -327,7 +330,14 @@ html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add) {
 }
 html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add):hover { outline-color: var(--nc-accent); }
 
-.nc-blk-rail { display: flex; }
+.nc-blk-rail {
+  position: absolute; top: .3rem; right: .3rem; z-index: 20;
+  display: flex; gap: 2px; margin: 0; padding: 3px; list-style: none;
+  background: var(--nc-panel); border: 1px solid var(--nc-edge);
+  border-radius: var(--nc-radius-sm);
+  box-shadow: var(--nc-shadow);
+  opacity: .35; transition: opacity .15s ease;
+}
 /* Out of the way until wanted: a rail at full strength on every block turns a
  * page being edited into a page covered in buttons. */
 [nc\:blocks] > *:hover > .nc-blk-rail, .nc-blk-rail:focus-within { opacity: 1; }

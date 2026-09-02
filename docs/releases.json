@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.2.4",
+    "released": "2026-09-02",
+    "notes": [
+      "The things a page repeats, the events in a list or the cards in a row, can carry the same small strip of buttons the page's blocks already carry: move it, copy it, delete it, in one place with one meaning rather than a different row of words for each kind of thing. It comes with the stylesheet, so a page built from one of the newer templates has it and needs nothing set up. Nothing on a page already published changes, because the buttons it was built with are its own markup and no update rewrites those."
+    ]
+  },
+  {
     "version": "0.2.3",
     "released": "2026-09-02",
     "notes": [

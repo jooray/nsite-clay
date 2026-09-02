@@ -550,13 +550,13 @@ the thing in front of them:
       <h3 class="event-title" editable="single-line">Agentic organisations</h3>
       <div class="event-body" editable><p>An evening about what happens when…</p></div>
       <menu class="nc-gear nc-gear-rail">
-        <button type="button" title="Move this event up"
+        <button type="button" title="Move this event up" aria-label="Move this event up"
                 onclick="nc.dom.moveClosest(this, -1, '.event')">↑</button>
-        <button type="button" title="Move this event down"
+        <button type="button" title="Move this event down" aria-label="Move this event down"
                 onclick="nc.dom.moveClosest(this, 1, '.event')">↓</button>
-        <button type="button" title="Duplicate this event"
+        <button type="button" title="Duplicate this event" aria-label="Duplicate this event"
                 onclick="nc.dom.cloneClosest(this, '.event')">⧉</button>
-        <button type="button" title="Delete this event"
+        <button type="button" title="Delete this event" aria-label="Delete this event"
                 onclick="nc.dom.removeClosestAsk(this, '.event', 'this event')">✕</button>
       </menu>
     </article>
@@ -578,19 +578,30 @@ the thing in front of them:
 ```
 
 **Use that rail on every repeating shape, and do not design another one.** It is
-the same strip the runtime draws on a block, in the same corner, with the same
-four icons in the same order: `↑` up, `↓` down, `⧉` duplicate, `✕` delete.
-`nc-gear-rail` does the whole of it, so a page carries no CSS for it: the strip
-sits in the top right of the item, stays faint until the pointer is on the item,
-and comes to full strength when it is. An owner who has learnt what the icons
-mean on an event has learnt what they mean on a post, a card and a person, and a
-page whose events say Duplicate while its team says Copy has taught them nothing
-twice.
+the strip the runtime draws on a block, with the same four operations in the
+same order: move back, move on, `⧉` duplicate, `✕` delete. The two move buttons
+point the way the items run, so a stack of events takes `↑` and `↓` and a row or
+a wrapping grid of cards takes `←` and `→`. `nc-gear-rail` does the whole of it,
+so a page carries no CSS for it: put the `<menu>` last inside the item and the
+strip lands at the end of it, hard against the right edge, faint until the
+pointer is on the item. An owner who has learnt what the icons mean on an event
+has learnt what they mean on a post, a card and a person, and a page whose
+events say Duplicate while its team says Copy has taught them nothing twice.
 
-Every button carries a `title`, and the title names the kind of thing rather
-than saying "this item": "Delete this event", "Move this photo up". It is the
-only place the icon is ever explained, it is what a screen reader reads, and it
-is what somebody hovers when the picture is not obvious.
+It takes its own line rather than floating over the item's corner, which is what
+the block rail does. A block is big and mostly empty at the top; an item is a
+card three lines long, where a floating strip covers the words it is there to
+help edit, and where whichever item happens to end up flush with its block's
+corner would wear two sets of buttons on the same pixels. The line costs height
+in edit mode and nothing at all to a reader.
+
+Every button carries the same sentence twice, as `title` and as `aria-label`,
+and that sentence names the kind of thing rather than saying "this item":
+"Delete this event", "Move this picture earlier". Both are needed and neither is
+decoration. Without the `aria-label` a screen reader reads the character and
+announces "right arrow button"; without the `title` there is nothing to hover
+when the picture is not obvious. It is the only place the icon is ever
+explained.
 
 The one control that is not an icon is **Add**, and that is deliberate. It sits
 at the end of the list rather than on any item, it is the thing a new owner will
@@ -714,13 +725,13 @@ signed-in owner who is editing:
 <article class="card" data-status="active">
   <h3 editable="single-line">Fix Blossom sync</h3>
   <menu class="nc-gear nc-gear-rail">
-    <button type="button" title="Move this card up"
+    <button type="button" title="Move this card up" aria-label="Move this card up"
             onclick="nc.dom.moveClosest(this, -1, '.card')">↑</button>
-    <button type="button" title="Move this card down"
+    <button type="button" title="Move this card down" aria-label="Move this card down"
             onclick="nc.dom.moveClosest(this, 1, '.card')">↓</button>
-    <button type="button" title="Duplicate this card"
+    <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
             onclick="nc.dom.cloneClosest(this, '.card')">⧉</button>
-    <button type="button" title="Delete this card"
+    <button type="button" title="Delete this card" aria-label="Delete this card"
             onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">✕</button>
   </menu>
 </article>
@@ -759,8 +770,10 @@ one card is two things to aim at, and the second one lands on top of the first.
 ```html
 <menu class="nc-gear nc-gear-rail">
   <button type="button" title="Move this card one column left"
+          aria-label="Move this card one column left"
           onclick="nc.dom.moveToClosest(this, '.card', '.col', -1)">&larr;</button>
   <button type="button" title="Move this card one column right"
+          aria-label="Move this card one column right"
           onclick="nc.dom.moveToClosest(this, '.card', '.col', 1)">&rarr;</button>
   …then up, down, duplicate and delete…
 </menu>

@@ -109,12 +109,20 @@ persists is the way to have both.
 `nc-gear` sets visibility only; `nc-gear-row` adds the usual row layout, so a
 control shaped differently can lay itself out without out-specifying anything.
 
-For the controls on a repeating item, prefer `nc-gear-rail` over a row of worded
-buttons. It is the strip the runtime draws on a block: top right of the item,
-faint until the pointer is on it, `↑` `↓` `⧉` `✕` in that order, each with a
-`title` naming the kind of thing ("Delete this card"). One vocabulary across
-every shape a page repeats is one thing for an owner to learn rather than one
-per template.
+For the controls on a repeating item, use `nc-gear-rail` rather than a row of
+worded buttons. It is the strip the runtime draws on a block, put last inside
+the item: right edge, faint until the pointer is on the item, move back, move
+on, `⧉`, `✕` in that order, each with a `title` and an `aria-label` naming the
+kind of thing ("Delete this card"). The move buttons point the way the items
+run, `↑` `↓` down a stack and `←` `→` across a row or a wrapping grid. Unlike
+the block rail it takes its own line rather than floating over a corner, because
+an item is small enough that an overlay covers the words it is there to edit.
+
+Add stays a worded button in an `nc-gear-row` at the end of the list, because it
+is the thing a new owner looks for first and it is not on any item.
+
+One vocabulary across every shape a page repeats is one thing for an owner to
+learn rather than one per template.
 
 `nc.dom` arms new markup for editing and marks the page unsaved, so a control is
 one attribute rather than a closure. It calls `nc.editable.refresh()` for you;

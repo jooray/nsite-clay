@@ -344,9 +344,15 @@
       <div class="card block">
         <h3 editable="single-line">A card</h3>
         <div editable><p>What it says.</p></div>
-        <menu class="nc-gear nc-gear-row">
-          <button type="button" onclick="nc.dom.cloneClosest(this, '.card')">Duplicate</button>
-          <button type="button" onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">Delete</button>
+<menu class="nc-gear nc-gear-rail">
+          <button type="button" title="Move this card earlier" aria-label="Move this card earlier"
+                  onclick="nc.dom.moveClosest(this, -1, '.card')">&larr;</button>
+          <button type="button" title="Move this card later" aria-label="Move this card later"
+                  onclick="nc.dom.moveClosest(this, 1, '.card')">&rarr;</button>
+          <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+                  onclick="nc.dom.cloneClosest(this, '.card')">&#x29c9;</button>
+          <button type="button" title="Delete this card" aria-label="Delete this card"
+                  onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">&#x2715;</button>
         </menu>
       </div>
     </div>
