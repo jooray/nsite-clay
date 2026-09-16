@@ -222,11 +222,23 @@ async function upload(server, bytes, type, signer) {
 
 // ------------------------------------------------------------------ walking
 
-function walk(base, cur = base, out = []) {
+// Files that are never part of a static page, and that a published site can
+// never take back: a blob is content-addressed and the manifest naming it is
+// signed and public. A dotfile is already skipped below, which covers .env and
+// .ssh, but the same secret under a name the shell does not hide is not:
+// admin.macaroon, id_rsa, server.pem, env.backup all publish today.
+//
+// Refusing costs a user nothing except the surprise. Anyone who means to serve
+// one of these can rename it.
+const SECRET_FILE = /(^|\.)(env|envrc)(\.|$)|\.(pem|key|p12|pfx|macaroon|ppk)$|^id_(rsa|dsa|ecdsa|ed25519)$|^\.?npmrc$|(^|[-_.])nsec([-_.]|$)/i;
+
+function walk(base, cur = base, out = [], skipped = []) {
   for (const name of readdirSync(cur)) {
     if (name.startsWith(".")) continue;
     const p = join(cur, name);
-    statSync(p).isDirectory() ? walk(base, p, out) : out.push(p);
+    if (statSync(p).isDirectory()) { walk(base, p, out, skipped); continue; }
+    if (SECRET_FILE.test(name)) { skipped.push(relative(base, p).split("\\").join("/")); continue; }
+    out.push(p);
   }
   return out;
 }
@@ -314,7 +326,13 @@ async function cmdDeploy() {
 
   const fingerprint = !flags["no-fingerprint"];
   const isHtml = (f) => /\.html?$/i.test(f);
-  const files = walk(dir);
+  const skipped = [];
+  const files = walk(dir, dir, [], skipped);
+  if (skipped.length) {
+    console.log(`Not publishing ${skipped.length} file(s) that look like secrets:`);
+    for (const s of skipped) console.log(`  ${s}`);
+    console.log(`Rename one to publish it anyway.`);
+  }
   if (!files.length) die(`${dir} is empty`);
   const contents = new Map(files.map((f) => [f, readFileSync(f)]));
   const pathOf = (f) => "/" + relative(dir, f).split("\\").join("/");
