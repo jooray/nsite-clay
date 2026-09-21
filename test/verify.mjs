@@ -800,6 +800,28 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       nc.upgrade._alreadyApplied(one) === false);
   }
 
+  // Cropping must finish before upload, and cancelling must not mutate content.
+  {
+    const canvas = document.createElement("canvas"); canvas.width = 160; canvas.height = 80;
+    canvas.getContext("2d").fillRect(0, 0, 160, 80);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const waitCrop = async () => {
+      for (let i = 0; i < 100 && !document.querySelector(".qc-stage"); i++) await new Promise((r) => setTimeout(r, 20));
+    };
+    const pending = nc.media.crop(blob, { aspect: 1 });
+    await waitCrop();
+    t("the cropper uses the page's own dialog", !!document.querySelector(".nc-ui .qc-stage"));
+    t("crop controls and styles never reach the saved file", !nc.getHTML().includes("data-quickcrop"));
+    [...document.querySelectorAll(".nc-ui button")].find((b) => b.textContent === "Use this crop").click();
+    const result = await pending;
+    t("a square crop produces square image bytes", result.width === result.height && result.blob.size > 0);
+    t("crop output preserves PNG format", result.blob.type === "image/png");
+    const cancelled = nc.media.crop(blob);
+    await waitCrop();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    t("Escape cancels the crop without producing upload bytes", await cancelled === null);
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

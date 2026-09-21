@@ -10,6 +10,17 @@
 // off (the link goes to the video), and costs a reader nothing until they ask.
 import { modal, field, toast } from "./ui.js";
 import { uploadAll, list } from "./blossom.js";
+import quickcrop from "quickcrop";
+
+export function cropAspect(value) {
+  if (!value || value === "free") return null;
+  const parts = String(value).split(":").map(Number);
+  const ratio = parts.length === 2 ? parts[0] / parts[1] : parts[0];
+  if (parts.length > 2 || parts.some((n) => !Number.isFinite(n) || n <= 0) || !Number.isFinite(ratio)) {
+    throw new Error('Use a crop ratio such as "1:1", "16:9" or "free".');
+  }
+  return ratio;
+}
 
 const EXT = {
   "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp",
@@ -195,6 +206,31 @@ export class Media {
 
   // ---- the dialogs --------------------------------------------------------
 
+  // Keep the upstream crop stage, but host it in our own dialog so it inherits
+  // the page's controls, Escape stack and save exclusion.
+  crop(file, { aspect = null } = {}) {
+    const doc = this.doc;
+    return quickcrop(file, {
+      aspect, maxWidth: 2560, maxHeight: 2560,
+      labels: { confirm: "Use this crop" },
+      modal: {
+        fit: () => ({ width: Math.max(160, Math.min(740, doc.defaultView.innerWidth - 96)),
+          height: Math.max(120, Math.min(440, doc.defaultView.innerHeight - 260)) }),
+        open: ({ content, confirmLabel, onConfirm, onCancel }) => {
+          doc.querySelector("style[data-quickcrop]")?.setAttribute("nc:chrome", "");
+          let helpers;
+          modal({ doc, title: "Crop the image", wide: true,
+            hint: "Drag the corners to choose what stays in the picture.",
+            submitLabel: confirmLabel,
+            build: (body, h) => { helpers = h; body.append(content); },
+            onSubmit: () => { onConfirm(); },
+          }).then((result) => { if (result === null) onCancel(); });
+          return { close: () => helpers.close(true) };
+        },
+      },
+    });
+  }
+
   async promptImage({ target = null } = {}) {
     let url, alt, cap;
     const has = target?.tagName === "IMG";
@@ -214,16 +250,36 @@ export class Media {
         file.type = "file"; file.accept = "image/*"; file.hidden = true;
         body.append(drop, file);
 
+        const crop = field(body, { label: "Before uploading", value: target?.getAttribute("nc:crop") || "original",
+          options: [
+            { value: "original", label: "Keep the original" },
+            { value: "free", label: "Crop freely" },
+            { value: "1:1", label: "Square (1:1)" },
+            { value: "16:9", label: "Wide (16:9)" },
+            { value: "4:3", label: "Photo (4:3)" },
+          ] });
+        const declared = target?.getAttribute("nc:crop");
+        if (declared && ![...crop.options].some((o) => o.value === declared)) {
+          crop.add(new Option(declared, declared)); crop.value = declared;
+        }
+        let taking = false;
         const take = async (f) => {
-          if (!f) return;
-          h.status(`uploading ${(f.size / 1024).toFixed(0)} KB…`); h.busy(true);
+          if (!f || taking) return;
+          taking = true; h.busy(true);
           try {
+            if (crop.value !== "original") {
+              const result = await this.crop(f, { aspect: cropAspect(crop.value) });
+              if (!result || !body.isConnected) { h.status(""); return; }
+              f = result.blob;
+            }
+            h.status(`Uploading ${(f.size / 1024).toFixed(0)} KB…`);
             const r = await this.upload(f);
+            if (!body.isConnected) return;
             url.value = r.url;
             preview(r.url);
-            h.status("uploaded");
+            h.status("Uploaded");
           } catch (e) { h.status(e.message, true); }
-          finally { h.busy(false); }
+          finally { taking = false; file.value = ""; h.busy(false); }
         };
         drop.onclick = () => file.click();
         file.onchange = () => take(file.files?.[0]);

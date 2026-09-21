@@ -36,6 +36,12 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 
 Unknown `nc:*` attributes are ignored, so a document written for a later version still renders.
 
+An image can declare `nc:crop="1:1"`, `"16:9"`, `"4:3"` or `"free"` to select
+the initial crop mode in its image picker. This affects new file uploads only.
+`await nc.media.crop(file, { aspect: 1 })` returns quickcrop's `{ blob, width,
+height, dataURL }`, or `null` on cancellation. Crops are capped at 2560 pixels
+on either axis. The original file stays untouched.
+
 The runtime writes these back onto `<html>` for the document's own CSS and logic, and strips
 every one of them from anything it saves:
 

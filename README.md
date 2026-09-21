@@ -147,6 +147,9 @@ Three more buttons on the same toolbar.
 **Pictures.** Drag a file in, pick one you have uploaded before from a grid, or paste a URL.
 Uploads go to the same Blossom servers the document is stored on, so an image is
 content-addressed and its URL never has to change.
+Choose a crop before uploading a new file: free, square, wide or 4:3. The crop
+happens in your browser; only the accepted image is uploaded. Keep the original
+for SVGs or animated pictures you want to preserve.
 
 **Video.** A YouTube or Vimeo link becomes a click-to-play thumbnail rather than an iframe, so
 nothing third-party loads until a reader presses play and the thumbnail still works as a link
