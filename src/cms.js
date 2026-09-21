@@ -22,6 +22,7 @@
 // the page you are looking at is the state, and Save publishes it like any other
 // edit.
 import { toast } from "./ui.js";
+import { sanitizeAs } from "./sanitize.js";
 
 // ".post-title@data-x" -> { selector: ".post-title", attr: "data-x" }
 // A bare selector means the element's text.
@@ -40,6 +41,7 @@ const BOOL = new Set(["checked", "selected", "disabled", "hidden", "open"]);
 function readOne(el, attr) {
   if (!el) return "";
   if (!attr) return el.textContent.trim();
+  if (attr === "innerHTML") return sanitizeAs(el.localName, el.innerHTML, el.ownerDocument);
   if (BOOL.has(attr)) return attr in el ? !!el[attr] : el.hasAttribute(attr);
   if (attr === "value" && "value" in el) return el.value;
   return el.getAttribute(attr) ?? "";
@@ -48,6 +50,7 @@ function readOne(el, attr) {
 function writeOne(el, attr, value) {
   if (!el) return;
   if (!attr) { el.textContent = value; return; }
+  if (attr === "innerHTML") { el.innerHTML = sanitizeAs(el.localName, String(value), el.ownerDocument); return; }
   if (BOOL.has(attr)) {
     if (attr in el) el[attr] = !!value;
     value ? el.setAttribute(attr, "") : el.removeAttribute(attr);
@@ -55,6 +58,47 @@ function writeOne(el, attr, value) {
   }
   if (attr === "value" && "value" in el) { el.value = value; return; }
   value === "" ? el.removeAttribute(attr) : el.setAttribute(attr, value);
+}
+
+function validateValue(el, attr, value) {
+  if (!el) throw new Error("The field no longer exists on the page.");
+  if (/^(on|nc:)/i.test(attr || "") || ["srcdoc", "style"].includes(attr)) throw new Error("This attribute cannot be changed through the content form.");
+  if (BOOL.has(attr) && typeof value !== "boolean") throw new Error("Choose on or off for this field.");
+  if (!BOOL.has(attr) && !["string", "number"].includes(typeof value)) throw new Error("This field needs text or a number.");
+  if (["href", "src", "action", "formaction"].includes(attr) && value !== "") {
+    const protocol = new URL(String(value), el.ownerDocument.baseURI).protocol;
+    if (!["http:", "https:", "mailto:", "tel:"].includes(protocol)) throw new Error("Use a web address, email address or phone link.");
+  }
+}
+
+const LEAF = Symbol("content field");
+function bindings(spec, root) {
+  if (Array.isArray(spec)) {
+    return [...root.querySelectorAll(spec[0])].filter((el) => !el.hasAttribute("nc:cms-template"))
+      .map((el) => bindings(spec[1], el));
+  }
+  if (spec && typeof spec === "object") return Object.fromEntries(Object.entries(spec).map(([k, v]) => [k, bindings(v, root)]));
+  const list = String(spec).endsWith("[]");
+  const { selector, attr } = parseTarget(list ? spec.slice(0, -2) : spec);
+  if (list) return [...root.querySelectorAll(selector)].filter((el) => !el.hasAttribute("nc:cms-template")).map((el) => ({ [LEAF]: true, el, attr }));
+  return { [LEAF]: true, el: root.querySelector(selector), attr };
+}
+function extract(bound) {
+  if (bound[LEAF]) return readOne(bound.el, bound.attr);
+  if (Array.isArray(bound)) return bound.map(extract);
+  return Object.fromEntries(Object.entries(bound).map(([k, v]) => [k, extract(v)]));
+}
+function planWrites(bound, values, out) {
+  if (bound[LEAF]) { validateValue(bound.el, bound.attr, values); out.push([bound.el, bound.attr, values]); return; }
+  if (Array.isArray(bound)) {
+    if (!Array.isArray(values) || values.length !== bound.length) throw new Error("Use the list controls to add or remove items before updating their values.");
+    values.forEach((value, i) => planWrites(bound[i], value, out)); return;
+  }
+  if (!values || Array.isArray(values) || typeof values !== "object") throw new Error("A group needs an object of field values.");
+  for (const [key, value] of Object.entries(values)) {
+    if (!Object.hasOwn(bound, key)) throw new Error(`Unknown content field: ${key}`);
+    planWrites(bound[key], value, out);
+  }
 }
 
 export class Cms {
@@ -76,6 +120,35 @@ export class Cms {
   }
 
   get isOpen() { return !!this.panel?.isConnected; }
+
+  getData(name = "cms") {
+    const rules = this.rules(name);
+    if (!rules) throw new Error("This page has no content rules.");
+    return extract(bindings(rules, this.doc));
+  }
+
+  write(el, attr, value) {
+    if (!this.nc.isOwner) throw new Error("Only the owner can change this page.");
+    validateValue(el, attr, value);
+    if (attr && (attr === "value" || BOOL.has(attr)) && attr in el) {
+      this.nc.undo.recordValue(el, { prop: attr, oldValue: el[attr], newValue: value });
+    }
+    writeOne(el, attr, value);
+    this.nc.dirty = true;
+  }
+
+  setData(values, name = "cms") {
+    if (!this.nc.isOwner) throw new Error("Only the owner can change this page.");
+    const rules = this.rules(name);
+    if (!rules) throw new Error("This page has no content rules.");
+    const writes = [];
+    planWrites(bindings(rules, this.doc), values, writes);
+    this.nc.undo.commit("Update page content", () => { for (const args of writes) this.write(...args); });
+    this.nc.editable.refresh();
+    if (this.isOpen) this.open(this.name);
+    this.nc._emit("nsiteclay:cms", { values });
+    return this.getData(name);
+  }
 
   toggle(name) { return this.isOpen ? this.close() : this.open(name); }
 
@@ -159,7 +232,7 @@ export class Cms {
     const el = root.querySelector(selector);
     const wrap = this.doc.createElement("div");
     wrap.className = "nc-cms-field";
-    this.label(wrap, key);
+    const label = this.label(wrap, key);
 
     if (!el) {
       const miss = this.doc.createElement("p");
@@ -171,34 +244,65 @@ export class Cms {
     }
 
     const current = readOne(el, attr);
+    const type = el.getAttribute("nc:cms-type") || el.getAttribute("data-hcms-component") || "";
+    const rich = attr === "innerHTML";
     let input;
 
-    if (typeof current === "boolean") {
+    if (rich) {
+      input = this.doc.createElement("div");
+      input.setAttribute("editable", ""); input.setAttribute("role", "textbox");
+      input.setAttribute("aria-multiline", "true");
+      input.innerHTML = current; this.nc.editable.arm(input);
+      wrap.appendChild(input);
+    } else if (type === "select") {
+      input = this.doc.createElement("select");
+      const choices = JSON.parse(el.getAttribute("nc:cms-options") || el.getAttribute("data-hcms-options") || "[]");
+      if (!Array.isArray(choices) || !choices.length) throw new Error("A select field needs a JSON list in nc:cms-options.");
+      for (const choice of choices) {
+        const o = this.doc.createElement("option");
+        o.value = typeof choice === "object" ? choice.value : choice;
+        o.textContent = typeof choice === "object" ? choice.label : choice; input.append(o);
+      }
+      input.value = current; wrap.append(input);
+    } else if (typeof current === "boolean") {
       input = this.doc.createElement("input");
       input.type = "checkbox";
       input.checked = current;
       wrap.classList.add("nc-cms-check");
       wrap.prepend(input);
-    } else if (!attr && (String(current).length > 70 || /\n/.test(current))) {
+    } else if (type === "textarea" || (!attr && (String(current).length > 70 || /\n/.test(current)))) {
       input = this.doc.createElement("textarea");
       input.rows = Math.min(10, Math.max(3, String(current).split(/\n/).length + 1));
       input.value = current;
       wrap.appendChild(input);
     } else {
       input = this.doc.createElement("input");
-      input.type = "text";
+      input.type = ["number", "date", "time", "url", "email", "color"].includes(type) ? type : "text";
       input.value = current;
       wrap.appendChild(input);
     }
     input.className = "nc-input";
+    input.id = "nc-cms-" + Math.random().toString(36).slice(2);
+    label.htmlFor = input.id;
+    if (rich) { label.id = input.id + "-label"; input.setAttribute("aria-labelledby", label.id); }
+    for (const constraint of ["min", "max", "step", "required", "pattern", "maxlength"]) {
+      const value = el.getAttribute("nc:cms-" + constraint);
+      if (value !== null) input.setAttribute(constraint, value);
+    }
+    const error = this.doc.createElement("p"); error.className = "nc-cms-note"; error.setAttribute("role", "alert");
 
     const commit = () => {
-      writeOne(el, attr, input.type === "checkbox" ? input.checked : input.value);
-      this.nc.dirty = true;
-      this.nc._emit("nsiteclay:cms", { key, element: el });
+      input.setCustomValidity?.("");
+      if (input.checkValidity && !input.checkValidity()) { error.textContent = input.validationMessage; return; }
+      try {
+        this.write(el, attr, rich ? input.innerHTML : input.type === "checkbox" ? input.checked : input.value);
+        error.textContent = "";
+        this.nc._emit("nsiteclay:cms", { key, element: el });
+      } catch (e) { error.textContent = e.message; }
     };
     input.addEventListener("input", commit);
     input.addEventListener("change", commit);
+    wrap.append(error);
 
     // A picture field is worth a picker rather than a URL to paste by hand.
     if (attr === "src" && el.tagName === "IMG" && this.nc.media?.promptImage) {
@@ -361,7 +465,7 @@ export class Cms {
   gap: .5rem; margin-bottom: .5rem; }
 .nc-cms button { font: inherit; padding: .3rem .6rem; border-radius: 8px;
   border: 1px solid #423c52; background: #1e1a28; color: inherit; cursor: pointer; }
-.nc-cms input[type=text], .nc-cms textarea { width: 100%; box-sizing: border-box;
+.nc-cms input:not([type=checkbox]), .nc-cms textarea, .nc-cms select, .nc-cms [role=textbox] { width: 100%; box-sizing: border-box;
   font: inherit; padding: .4rem .55rem; border-radius: 8px; border: 1px solid #423c52;
   background: #0f0d15; color: inherit; }
 .nc-cms-field { margin: 0 0 .75rem; }

@@ -145,6 +145,11 @@ blocks. `⌘Z` / `Ctrl+Z` undoes a page edit; add Shift to redo it. Deleted bloc
 return with their event handlers intact. This history lasts for the current
 editing session; History still opens your published versions.
 
+The content form can use dropdowns, numbers, dates and rich text. Pages declare
+the field type next to the content, so a price can reject a negative number and
+a status can offer the choices the page actually uses. Scripts can read and
+update the same fields through `nc.cms.getData()` and `nc.cms.setData()`.
+
 ## Pictures, video and Nostr posts
 
 Three more buttons on the same toolbar.

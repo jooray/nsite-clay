@@ -831,6 +831,38 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("signing out clears document undo", !nc.undo.canUndo && !nc.undo.canRedo);
   }
 
+  {
+    await nc.login("nsec", { key: "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" });
+    const host = document.createElement("section");
+    host.innerHTML = `<span id="price" nc:cms-type="number" nc:cms-min="0">12</span>
+      <span id="stage" nc:cms-type="select" nc:cms-options='["draft","live"]'>draft</span>
+      <div id="rich"><p>Before</p></div><input id="boundvalue" value="before">`;
+    document.body.append(host);
+    const rules = document.createElement("script"); rules.type = "application/json"; rules.setAttribute("nc:cms", "typed");
+    rules.textContent = JSON.stringify({ price: "#price", stage: "#stage", body: "#rich@innerHTML", el: { value: "#boundvalue@value" } });
+    document.body.append(rules); nc.undo.clear();
+    const panel = nc.cms.open("typed");
+    const number = panel.querySelector('input[type="number"]');
+    number.value = "-1"; number.dispatchEvent(new Event("input", { bubbles: true }));
+    t("invalid numeric input leaves the page unchanged", host.querySelector("#price").textContent === "12");
+    number.value = "20"; number.dispatchEvent(new Event("input", { bubbles: true }));
+    t("declared number fields write valid values", nc.cms.getData("typed").price === "20");
+    const select = panel.querySelector("select"); select.value = "live"; select.dispatchEvent(new Event("change"));
+    t("select fields use the declared choices", nc.cms.getData("typed").stage === "live");
+    t("innerHTML fields use a rich text control", !!panel.querySelector('[role="textbox"][contenteditable="true"]'));
+    nc.cms.close(); nc.undo.clear();
+    nc.cms.setData({ body: '<p>After <b>bold</b><img src="https://example.org/a" onerror="alert(1)"></p>', el: { value: "after" } }, "typed");
+    t("the data API sanitises rich HTML", !host.querySelector("[onerror]") && host.querySelector("#rich b")?.textContent === "bold");
+    t("the data API handles group names such as el", nc.cms.getData("typed").el.value === "after");
+    nc.undo.undo();
+    t("one undo reverses HTML and property-only data writes", host.querySelector("#rich").textContent === "Before" && host.querySelector("#boundvalue").value === "before");
+    const failure = await err(() => nc.cms.setData({ price: "100", missing: "oops" }, "typed"));
+    t("the data API validates the whole change before writing", !!failure && host.querySelector("#price").textContent === "20");
+    t("CMS list data excludes template seeds", nc.cms.getData().posts.length === document.querySelectorAll('.post:not([nc\\:cms-template])').length);
+    host.remove(); rules.remove(); await nc.logout();
+    t("the data API refuses writes without the owner", /owner/i.test(await err(() => nc.cms.setData({ title: "not allowed" }))));
+  }
+
   // Cropping must finish before upload, and cancelling must not mutate content.
   {
     const canvas = document.createElement("canvas"); canvas.width = 160; canvas.height = 80;

@@ -288,12 +288,12 @@ html[nc\:owner-here="true"][nc\:editing="true"] .nc-gear-rail { display: flex !i
   color: inherit; cursor: pointer;
 }
 .nc-cms button:hover { border-color: var(--nc-accent); }
-.nc-cms input[type="text"], .nc-cms textarea {
+.nc-cms input:not([type="checkbox"]), .nc-cms textarea, .nc-cms select, .nc-cms [role="textbox"] {
   width: 100%; box-sizing: border-box; font: inherit; padding: .4rem .55rem;
   border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
   background: var(--nc-bg); color: inherit;
 }
-.nc-cms input:focus-visible, .nc-cms textarea:focus-visible {
+.nc-cms input:focus-visible, .nc-cms textarea:focus-visible, .nc-cms select:focus-visible, .nc-cms [role="textbox"]:focus-visible {
   outline: 2px solid var(--nc-accent); outline-offset: 1px;
 }
 .nc-cms-field { margin: 0 0 .75rem; }

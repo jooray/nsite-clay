@@ -55,6 +55,24 @@ html[nc\:owner-here="true"] .owner-only { display: block; }
 
 ## Members
 
+### Content fields and data
+
+The existing `nc:cms` rules accept `@innerHTML` for rich text. The content form
+shows an editable rich-text field and sanitises its output. Other fields can
+declare `nc:cms-type="select|number|date|time|url|email|color|textarea"` on the
+target element. A select uses `nc:cms-options='["draft","published"]'` or a
+list of `{ "value": "draft", "label": "Draft" }` objects. Native constraints
+use `nc:cms-min`, `nc:cms-max`, `nc:cms-step`, `nc:cms-required`,
+`nc:cms-pattern` and `nc:cms-maxlength`; invalid input leaves the page unchanged.
+
+`nc.cms.getData(name = "cms")` reads scalar fields, nested groups and lists.
+`nc.cms.setData(partialValues, name = "cms")` validates all targets before
+changing them, requires the owner, and records one undo step. Lists must match
+their current length; their existing Add and Remove controls change structure.
+Template seeds are excluded from data. No JSON sidecar is published automatically.
+
+### Undo
+
 `nc.undo.undo()` and `nc.undo.redo()` navigate the current editing session.
 `nc.undo.commit(label, fn)` groups a synchronous DOM change into one step;
 `nc.undo.flush()` ends a typing batch. `canUndo` and `canRedo` report availability.
