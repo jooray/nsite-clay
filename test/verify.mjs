@@ -800,6 +800,37 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       nc.upgrade._alreadyApplied(one) === false);
   }
 
+  // Structural undo must restore live nodes, not new HTML copies, and must not
+  // record the editor that happens to be open around them.
+  {
+    await nc.login("nsec", { key: "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" });
+    const item = document.createElement("button"); item.textContent = "Live node";
+    let clicks = 0; item.onclick = () => clicks++;
+    document.body.append(item); nc.undo.clear();
+    nc.undo.commit("Remove item", () => item.remove());
+    nc.undo.undo(); item.click();
+    t("undo restores the same node and its event handler", item.isConnected && clicks === 1);
+    nc.undo.redo();
+    t("redo removes it again", !item.isConnected);
+    nc.undo.undo(); nc.undo.clear();
+    nc.undo.commit("Change text", () => item.textContent = "Changed");
+    const chrome = document.createElement("div"); chrome.setAttribute("nc:chrome", "");
+    document.body.append(chrome); chrome.innerHTML = "<b>Editor only</b>";
+    item.setAttribute("nc:highlight", "true");
+    nc.undo.flush(); nc.undo.undo();
+    t("runtime chrome and highlight attributes do not swallow an undo step", item.textContent === "Live node" && chrome.isConnected);
+    t("undo leaves a redo step available", nc.undo.canRedo);
+    nc.undo.commit("New direction", () => item.textContent = "Different");
+    t("a new edit discards redo", !nc.undo.canRedo);
+    const field = document.createElement("input"); document.body.append(field);
+    const key = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+    field.dispatchEvent(key);
+    t("ordinary inputs keep their native text undo", !key.defaultPrevented);
+    field.remove(); chrome.remove(); item.remove();
+    await nc.logout();
+    t("signing out clears document undo", !nc.undo.canUndo && !nc.undo.canRedo);
+  }
+
   // Cropping must finish before upload, and cancelling must not mutate content.
   {
     const canvas = document.createElement("canvas"); canvas.width = 160; canvas.height = 80;

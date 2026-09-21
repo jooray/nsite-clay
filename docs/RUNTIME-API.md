@@ -55,6 +55,14 @@ html[nc\:owner-here="true"] .owner-only { display: block; }
 
 ## Members
 
+`nc.undo.undo()` and `nc.undo.redo()` navigate the current editing session.
+`nc.undo.commit(label, fn)` groups a synchronous DOM change into one step;
+`nc.undo.flush()` ends a typing batch. `canUndo` and `canRedo` report availability.
+Recording runs only while the owner is editing. Runtime chrome, fetched content
+and no-save regions are excluded. Plain form fields keep native typing undo;
+property-only changes made by scripts can call `nc.undo.recordValue(element,
+{ prop: "value", oldValue, newValue })`. History clears on sign-out or leaving edit mode.
+
 ```js
 await nc.ready                     // resolves to nc
 nc.cfg                             // the parsed configuration

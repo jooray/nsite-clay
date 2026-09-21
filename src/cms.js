@@ -96,6 +96,7 @@ export class Cms {
       return null;
     }
     this.close();
+    this.name = name;
     this.injectStyles();
 
     const panel = this.doc.createElement("aside");

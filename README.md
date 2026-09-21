@@ -140,6 +140,11 @@ stays behind as an inert marker; the `contenteditable` it implies, the toolbar, 
 browsers emit from editing commands are all stripped. Pasted markup goes through a sanitiser, so
 copying out of a word processor does not smuggle a stylesheet into your document.
 
+Undo and Redo on the page toolbar cover text edits, CMS fields and changes to
+blocks. `⌘Z` / `Ctrl+Z` undoes a page edit; add Shift to redo it. Deleted blocks
+return with their event handlers intact. This history lasts for the current
+editing session; History still opens your published versions.
+
 ## Pictures, video and Nostr posts
 
 Three more buttons on the same toolbar.

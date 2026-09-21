@@ -22,6 +22,7 @@ import { Settings } from "./settings.js";
 import { Dom, State } from "./dom.js";
 import { Cms } from "./cms.js";
 import { Blocks } from "./blocks.js";
+import { Undo } from "./undo.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
@@ -71,6 +72,7 @@ class NsiteClay extends EventTarget {
     this.state = new State(this);
     this.cms = new Cms(this);
     this.blocks = new Blocks(this);
+    this.undo = new Undo(this);
     this.upgrade = new Upgrade(this);
     this.version = VERSION;
     this.status = "idle";
@@ -197,6 +199,7 @@ class NsiteClay extends EventTarget {
   async save({ extraPaths = {}, dropPaths = [], snapshotVersion = true, report = true } = {}) {
     if (!this.signer) throw new Error("Not signed in");
     if (!this.isOwner) throw new Error("Only the site owner can save this document");
+    this.undo.flush();
     const html = this.getHTML();
     // A caller changing the path table -- swapping the runtime for a newer blob
     // at the same name -- can leave the document byte-identical, and the
@@ -688,6 +691,7 @@ nc.ready = (async () => {
   nc.media.armEmbeds();
   nc.feed.start();
   nc.blocks.start();
+  nc.undo.start();
   // A toolbar may carry the content form's button on a page that has no rules
   // for it to draw, and a button whose only answer is "there is nothing here"
   // is furniture. The shared stylesheet hides it unless this says otherwise.
