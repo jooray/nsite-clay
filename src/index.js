@@ -702,6 +702,7 @@ nc.ready = (async () => {
   nc.feed.start();
   nc.blocks.start();
   nc.undo.start();
+  nc.ai.start();
   nc.source.start();
   // A toolbar may carry the content form's button on a page that has no rules
   // for it to draw, and a button whose only answer is "there is nothing here"

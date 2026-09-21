@@ -1,6 +1,7 @@
 import { AiClient, aiEndpoint } from "./ai-client.js";
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
+import { installEditing, editDialog, propose, accept } from "./ai-edit.js";
 
 const WORDS = {
   settings: ["AI settings", "Ajustes de IA", "Nastavenia AI", "Nastavení AI"],
@@ -50,6 +51,11 @@ export class Ai {
     const lang = ["en", "es", "sk", "cs"].indexOf(this.doc.documentElement.lang.slice(0, 2));
     return WORDS[key]?.[Math.max(lang, 0)] || key;
   }
+
+  start() { installEditing(this); }
+  edit(target) { return editDialog(this, target); }
+  propose(target, prompt, options) { return propose(this, target, prompt, options); }
+  accept(proposal) { return accept(this, proposal); }
 
   async settings() {
     const client = this.client, say = (key) => this.say(key);

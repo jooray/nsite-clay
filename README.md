@@ -157,6 +157,10 @@ update the same fields through `nc.cms.getData()` and `nc.cms.setData()`.
 
 ## AI provider settings
 
+Click the text or block you want to change, then **Edit with AI**. Describe the
+change and review the preview. **Keep this change** applies it as one undo step;
+Save publishes it. Cancelling a request or a preview leaves the page alone.
+
 Open **Settings → AI settings** to choose a provider and model. The default is
 DeepSeek V4.1 Flash through `routstr.cypherpunk.today`, our Routstr node. Its
 fees help fund nsite-clay. Requests stay on that node unless you choose another.

@@ -900,6 +900,31 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
   }
 
+  {
+    await nc.login("nsec", { key: "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" });
+    const complete = nc.ai.client.complete;
+    let sent;
+    nc.ai.client.complete = async (messages) => { sent = messages; return '<h1 onclick="alert(1)">New heading<script>alert(1)</script></h1>'; };
+    const target = document.querySelector("#line"), before = target.textContent;
+    const proposal = await nc.ai.propose(target, "Make this heading shorter");
+    t("AI generation leaves the page unchanged until acceptance", target.textContent === before && proposal.element.textContent === "New heading");
+    t("the AI prompt contains only the chosen element", !JSON.stringify(sent).includes("sk-test-never-publish") && !JSON.stringify(sent).includes("nc:owner="));
+    t("AI output loses scripts and new event handlers", !proposal.element.querySelector("script") && !proposal.element.hasAttribute("onclick"));
+    nc.undo.clear(); const result = nc.ai.accept(proposal);
+    t("an accepted AI edit keeps the element's identity markers", result.id === "line" && result.hasAttribute("editable"));
+    nc.undo.undo();
+    t("one undo restores the original element after AI editing", document.querySelector("#line") === target && target.textContent === before);
+    const stale = await nc.ai.propose(target, "Change it again");
+    target.textContent = "A newer manual edit";
+    t("an AI result cannot overwrite a newer manual edit", /changed while/i.test(await err(() => nc.ai.accept(stale))));
+    target.textContent = before;
+    nc.ai.client.complete = async () => "<h1>Unfinished";
+    t("an unfinished AI element is refused", /unfinished/i.test(await err(() => nc.ai.propose(target, "Change"))));
+    nc.ai.client.complete = complete;
+    await nc.logout();
+    t("AI editing requires the owner", /owner/i.test(await err(() => nc.ai.propose(target, "Change"))));
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner

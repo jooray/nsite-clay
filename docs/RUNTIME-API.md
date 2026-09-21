@@ -107,6 +107,13 @@ of paid requests occurs. `complete(messages, { signal, onProgress, maxTokens })`
 streams text but only resolves for a complete response with `finish_reason: stop`.
 Raw stream fragments must never be applied to the live document.
 
+`await nc.ai.edit(element)` opens the prompt and preview flow. For a custom UI,
+`await nc.ai.propose(element, prompt, { signal })` returns a proposal and
+`nc.ai.accept(proposal)` applies it as one undo step. Both require the owner.
+Acceptance refuses a target changed since generation began. Only the selected
+element goes to the model. Scripts, live feeds and whole-document elements are
+excluded; use the publisher's page builder to create a whole page.
+
 ```js
 await nc.ready                     // resolves to nc
 nc.cfg                             // the parsed configuration
