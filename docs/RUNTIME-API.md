@@ -97,6 +97,16 @@ property-only changes made by scripts can call `nc.undo.recordValue(element,
 
 ### Common operations
 
+`nc.ai.settings()` opens provider, model and payment settings. `nc.ai.client`
+is the OpenAI-compatible client; its default base is
+`https://routstr.cypherpunk.today/v1` and its default model is
+`deepseek-v4-1-flash`. Settings and endpoint-bound credentials are browser-local.
+`models()`, `balance()`, `cashu(token)`, `invoice(sats)`, `invoiceStatus(invoice)`
+and `refund()` use that explicit endpoint. No node discovery or automatic retry
+of paid requests occurs. `complete(messages, { signal, onProgress, maxTokens })`
+streams text but only resolves for a complete response with `finish_reason: stop`.
+Raw stream fragments must never be applied to the live document.
+
 ```js
 await nc.ready                     // resolves to nc
 nc.cfg                             // the parsed configuration

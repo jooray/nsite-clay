@@ -155,6 +155,20 @@ the field type next to the content, so a price can reject a negative number and
 a status can offer the choices the page actually uses. Scripts can read and
 update the same fields through `nc.cms.getData()` and `nc.cms.setData()`.
 
+## AI provider settings
+
+Open **Settings → AI settings** to choose a provider and model. The default is
+DeepSeek V4.1 Flash through `routstr.cypherpunk.today`, our Routstr node. Its
+fees help fund nsite-clay. Requests stay on that node unless you choose another.
+
+Add credit with a Cashu token or a Lightning invoice. You can check the balance
+and withdraw what remains from the same dialog. Download your AI key to use the
+credit on another site or device. Your browser stores it separately from the page.
+
+You can also enter another Routstr node or bring a key for an OpenAI-compatible
+API. That endpoint must allow browser requests. Changing nodes keeps their keys
+separate; it does not send the old node's key to the new one.
+
 ## Pictures, video and Nostr posts
 
 Three more buttons on the same toolbar.

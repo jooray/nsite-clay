@@ -14,6 +14,7 @@ import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from 
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
+import { Ai } from "./ai-ui.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
 import { Editable } from "./editable.js";
 import { Media, parseVideoUrl } from "./media.js";
@@ -75,6 +76,7 @@ class NsiteClay extends EventTarget {
     this.blocks = new Blocks(this);
     this.undo = new Undo(this);
     this.source = new Source(this);
+    this.ai = new Ai(this);
     this.upgrade = new Upgrade(this);
     this.version = VERSION;
     this.status = "idle";
@@ -578,7 +580,8 @@ class NsiteClay extends EventTarget {
     });
     const DEBOUNCE = 2500, THROTTLE = 15000;
     let timer = null, last = 0;
-    const schedule = () => {
+    const schedule = (event) => {
+      if (event?.target?.closest?.("[nc\\:chrome]")) return;
       // Checked per keystroke rather than at boot, so turning it on in the
       // settings takes effect without a reload.
       if (!this.settings.autosave || !this.isOwner) return;
@@ -588,6 +591,7 @@ class NsiteClay extends EventTarget {
     };
     this.doc.addEventListener("input", schedule, true);
     this.addEventListener("nsiteclay:autosave-now", schedule);
+    this.addEventListener("nsiteclay:cms", schedule);
   }
 
   get dirty() { return this._dirty === true; }
@@ -600,6 +604,7 @@ class NsiteClay extends EventTarget {
     this.doc.addEventListener("input", (e) => {
       const el = e.target;
       if (!el || el.type === "password") return;
+      if (el.closest?.("[nc\\:chrome]")) return;
       if (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) this._dirty = true;
     }, true);
     this.addEventListener("nsiteclay:status", (e) => {

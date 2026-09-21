@@ -86,6 +86,9 @@ export class Settings {
           "Readers get the page with nothing to click. Add #edit to the address to bring the " +
           "controls back." });
         this.runtimeRow(body);
+        const ai = this.doc.createElement("button"); ai.type = "button";
+        ai.textContent = this.nc.ai.say("settings"); ai.onclick = () => this.nc.ai.settings();
+        body.append(ai);
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always" }),
     });

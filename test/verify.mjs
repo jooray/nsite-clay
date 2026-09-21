@@ -885,6 +885,21 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("Escape cancels the crop without producing upload bytes", await cancelled === null);
   }
 
+  {
+    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today", model: "deepseek-v4-1-flash", key: "sk-test-never-publish" });
+    const pending = nc.ai.settings();
+    const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
+    const endpoint = panel.querySelector('input[type="text"]');
+    nc.dirty = false;
+    endpoint.value = "https://other.example/v1";
+    endpoint.dispatchEvent(new Event("input", { bubbles: true }));
+    t("changing the AI endpoint clears the previous node's key", panel.querySelector('input[type="password"]').value === "");
+    t("AI settings fields do not mark the document dirty", !nc.dirty);
+    t("AI credentials never reach the saved document", !nc.getHTML().includes("sk-test-never-publish"));
+    panel.querySelector(".nc-cancel").click(); await pending;
+    nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner
