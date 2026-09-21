@@ -71,6 +71,20 @@ changing them, requires the owner, and records one undo step. Lists must match
 their current length; their existing Add and Remove controls change structure.
 Template seeds are excluded from data. No JSON sidecar is published automatically.
 
+### Source-preserving saves
+
+`nc.source.ready` settles after fetching and pairing the source HTML. A save
+before it settles uses the full serializer. `nc.source.text()` returns the
+source string, and `nc.source.locate(element)` returns `{ from, to, line,
+column }` or null for an unpaired element. Offsets are UTF-16 code units, not
+UTF-8 bytes. Pairings describe the loaded or last accepted source, not an
+unsaved replacement node.
+
+The renderer verifies every output against the cleaned save document. On a
+mismatch it uses the full serializer and emits `nsiteclay:save-reprinted` with a
+reason. `nc.source.reprints` counts those fallbacks. Blossom still stores the
+whole document after a change; this preserves author formatting, not storage quota.
+
 ### Undo
 
 `nc.undo.undo()` and `nc.undo.redo()` navigate the current editing session.
@@ -80,6 +94,8 @@ Recording runs only while the owner is editing. Runtime chrome, fetched content
 and no-save regions are excluded. Plain form fields keep native typing undo;
 property-only changes made by scripts can call `nc.undo.recordValue(element,
 { prop: "value", oldValue, newValue })`. History clears on sign-out or leaving edit mode.
+
+### Common operations
 
 ```js
 await nc.ready                     // resolves to nc

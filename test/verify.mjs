@@ -103,7 +103,7 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("nc:chrome is stripped", !plain.includes("runtime UI"));
   t('clay="no-save" is stripped', !plain.includes("never saved"));
   t("live form state is written into markup", plain.includes('value="changed"'));
-  t("the snapshot is a complete document", plain.startsWith("<!DOCTYPE html><html"));
+  t("the snapshot is a complete document", /^<!DOCTYPE html>\s*<html/i.test(plain));
 
   // --- editing ------------------------------------------------------------
   const prose = document.getElementById("prose");
@@ -893,6 +893,32 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
 
   return out;
 }, { evs: events, NSEC, HEX, PUB });
+
+await page.goto(`http://127.0.0.1:${port}/source.html`);
+results.push(...await page.evaluate(async () => {
+  await nc.ready; await nc.source.ready;
+  const original = nc.source.text(), out = [];
+  const t = (name, pass) => out.push({ name, pass });
+  t("an unchanged source-preserving save keeps every authored byte", nc.getHTML() === original);
+  const heading = document.querySelector("h1");
+  const range = nc.source.locate(heading);
+  t("source ranges locate Unicode text in the original string", !!range && original.slice(range.from, range.to).includes("café"));
+  heading.textContent = "Hello world";
+  const changed = nc.getHTML();
+  t("a text edit preserves quoting, comments and inline spaces elsewhere", changed === original.replace("Hello café", "Hello world"));
+  nc.source.adopt(changed);
+  t("accepted source can be saved again without churn", nc.getHTML() === changed);
+  nc.source.model.src = changed.replace("By ", "No ");
+  const rejected = nc.getHTML();
+  t("verification rejects a renderer that changes unrelated content", rejected.includes("By ") && nc.source.reprints === 1);
+  nc.source.model.src = changed;
+  const savedMap = nc.source.mapping;
+  nc.source.mapping = { get() { throw new Error("test broken mapping"); } };
+  const fallback = nc.getHTML();
+  t("a failed source renderer falls back without losing the edit", fallback.includes("Hello world") && nc.source.reprints === 2);
+  nc.source.mapping = savedMap;
+  return out;
+}));
 
 server.close();
 await browser.close();

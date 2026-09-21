@@ -53,11 +53,21 @@ function stripMarked(root, tokens) {
 
 // `transforms` run on the clone before stripping, so a document can reshape
 // what gets written before it is captured.
-export function snapshot(doc = document, { forSave = true, transforms = [] } = {}) {
+export function captureSnapshot(doc = document, { forSave = true, transforms = [] } = {}) {
   const clone = doc.documentElement.cloneNode(true);
+  const origins = new WeakMap();
+  const remember = (copy, live) => {
+    origins.set(copy, live);
+    const a = copy.localName === "template" ? copy.content.childNodes : copy.childNodes;
+    const b = live.localName === "template" ? live.content.childNodes : live.childNodes;
+    for (let i = 0; i < a.length; i++) remember(a[i], b[i]);
+  };
+  remember(clone, doc.documentElement);
   syncFormState(clone);
   for (const fn of transforms) fn(clone, doc);
   stripDebris(clone);
   stripMarked(clone, forSave ? ["no-snapshot", "no-save"] : ["no-snapshot"]);
-  return "<!DOCTYPE html>" + clone.outerHTML;
+  return { clone, original: (node) => origins.get(node), html: "<!DOCTYPE html>" + clone.outerHTML };
 }
+
+export function snapshot(doc = document, options = {}) { return captureSnapshot(doc, options).html; }

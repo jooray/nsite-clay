@@ -57,6 +57,11 @@ new version is uploaded to your Blossom servers, and one replaceable event is
 republished saying which Blossom hash `/` or `/about-us` now points to. Any
 nsite gateway renders it.
 
+Saving keeps the original HTML's formatting wherever it can. A small text edit
+does not have to rewrite every quote and space around it. The runtime checks
+that the saved markup still represents the page and falls back to a full
+serialization if it cannot preserve the source safely.
+
 ## Try it
 
 A live document is published under a throwaway key, and the key is public on purpose:

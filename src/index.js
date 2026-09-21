@@ -12,7 +12,8 @@ import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
 import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
 import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from "./blossom.js";
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
-import { snapshot } from "./snapshot.js";
+import { snapshot, captureSnapshot } from "./snapshot.js";
+import { Source } from "./source.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
 import { Editable } from "./editable.js";
 import { Media, parseVideoUrl } from "./media.js";
@@ -73,6 +74,7 @@ class NsiteClay extends EventTarget {
     this.cms = new Cms(this);
     this.blocks = new Blocks(this);
     this.undo = new Undo(this);
+    this.source = new Source(this);
     this.upgrade = new Upgrade(this);
     this.version = VERSION;
     this.status = "idle";
@@ -182,12 +184,14 @@ class NsiteClay extends EventTarget {
     for (const el of [...clone.querySelectorAll("[nc\\:highlight]")]) el.removeAttribute("nc:highlight");
   }
 
-  getHTML() {
-    return snapshot(this.doc, {
+  _capture() {
+    return captureSnapshot(this.doc, {
       forSave: true,
       transforms: [...this._transforms, (clone) => this._cleanClone(clone)],
     });
   }
+
+  getHTML() { return this.source.render(this._capture()); }
 
   // One save = one blob upload, one replaceable manifest, one version snapshot.
   //
@@ -244,6 +248,7 @@ class NsiteClay extends EventTarget {
         this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
       }
       this._ownHash = hash;
+      this.source.adopt(html);
       this._manifest = manifest;
       this._set("saved", { hash, manifest, version, missing: report ? missing : null });
       return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths), missing };
@@ -692,6 +697,7 @@ nc.ready = (async () => {
   nc.feed.start();
   nc.blocks.start();
   nc.undo.start();
+  nc.source.start();
   // A toolbar may carry the content form's button on a page that has no rules
   // for it to draw, and a button whose only answer is "there is nothing here"
   // is furniture. The shared stylesheet hides it unless this says otherwise.
