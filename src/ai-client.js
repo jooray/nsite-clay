@@ -45,31 +45,46 @@ export class AiClient {
     this.record(base).key = key.trim(); this.persist();
   }
 
+  // `timeout` is a clock on the whole exchange for a small JSON reply, which is
+  // right: the answer is one short object and a slow one is a broken one. For a
+  // stream it measures only how long the reply takes to start, because an answer
+  // still arriving is working, however long it runs. The caller watches for
+  // silence after that.
   async request(path, { session = this.session(), body, publicRequest = false, signal, timeout = 30000, raw = false } = {}) {
     const url = path.startsWith("/v2/") ? session.base.replace(/\/v1$/, "") + path : session.base + path;
     const headers = { Accept: raw ? "text/event-stream" : "application/json" };
     if (!publicRequest && session.key) headers.Authorization = `Bearer ${session.key}`;
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    let response;
+    const clock = new AbortController();
+    let late = false;
+    const timer = setTimeout(() => { late = true; clock.abort(); }, timeout);
+    const watched = signal ? AbortSignal.any([signal, clock.signal]) : clock.signal;
     try {
-      response = await fetch(url, { method: body === undefined ? "GET" : "POST", headers,
-        body: body === undefined ? undefined : JSON.stringify(body), credentials: "omit", redirect: "error",
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
-    } catch (e) {
-      if (signal?.aborted || e.name === "AbortError" || e.name === "TimeoutError") throw e;
-      throw new Error("Could not reach the AI endpoint. Check its address and browser CORS support.");
+      let response;
+      try {
+        response = await fetch(url, { method: body === undefined ? "GET" : "POST", headers,
+          body: body === undefined ? undefined : JSON.stringify(body), credentials: "omit", redirect: "error", signal: watched });
+      } catch (e) {
+        if (late && !signal?.aborted) throw new Error("The AI endpoint did not answer in time. Check its address, or try again.");
+        if (signal?.aborted || e.name === "AbortError" || e.name === "TimeoutError") throw e;
+        throw new Error("Could not reach the AI endpoint. Check its address and browser CORS support.");
+      }
+      if (!response.ok) {
+        let error;
+        try { error = await response.json(); } catch {}
+        const detail = error?.error?.message || error?.detail?.error?.message || error?.detail;
+        let message = typeof detail === "string" ? detail.slice(0, 500) : `AI endpoint returned HTTP ${response.status}.`;
+        if (session.key) message = message.replaceAll(session.key, "[key]");
+        if (response.status === 402) message = "Your AI credit is too low for this request. Add credit or choose a cheaper model.";
+        if (response.status === 401) message = "The AI endpoint did not accept this key. Check the key for this node.";
+        throw new Error(message);
+      }
+      return raw ? response : await response.json();
+    } finally {
+      // For a stream this fires once the headers are in, which is the point: the
+      // clock must not outlive the wait it was measuring and kill the body.
+      clearTimeout(timer);
     }
-    if (!response.ok) {
-      let error;
-      try { error = await response.json(); } catch {}
-      const detail = error?.error?.message || error?.detail?.error?.message || error?.detail;
-      let message = typeof detail === "string" ? detail.slice(0, 500) : `AI endpoint returned HTTP ${response.status}.`;
-      if (session.key) message = message.replaceAll(session.key, "[key]");
-      if (response.status === 402) message = "Your AI credit is too low for this request. Add credit or choose a cheaper model.";
-      if (response.status === 401) message = "The AI endpoint did not accept this key. Check the key for this node.";
-      throw new Error(message);
-    }
-    return raw ? response : response.json();
   }
 
   async models(session = this.session()) {
@@ -120,9 +135,33 @@ export class AiClient {
     return result;
   }
 
-  async complete(messages, { signal, onProgress = () => {}, maxTokens = 12000, session = this.session() } = {}) {
+  // Two watchdogs rather than one clock on the answer. A page built from a whole
+  // template can legitimately take minutes, and a reasoning model spends the
+  // first of them saying nothing the page will ever show; neither is a fault, and
+  // a single deadline kills both. What is broken is silence, so `firstReply`
+  // waits for the stream to start and `stall` waits for it to keep coming.
+  async complete(messages, { signal, onProgress = () => {}, maxTokens = 12000, session = this.session(),
+                             firstReply = 45000, stall = 90000 } = {}) {
     if (!session.key) throw new Error("Add AI credit or enter your API key in AI settings first.");
-    const response = await this.request("/chat/completions", { session, signal, raw: true, timeout: 180000,
+    const quiet = new AbortController();
+    let timer, stalled = false;
+    const alive = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { stalled = true; quiet.abort(); }, stall);
+    };
+    const watched = signal ? AbortSignal.any([signal, quiet.signal]) : quiet.signal;
+    try {
+      return await this._stream(messages, { session, maxTokens, onProgress, signal, watched, firstReply, alive });
+    } catch (e) {
+      if (stalled && !signal?.aborted) {
+        throw new Error("The AI endpoint stopped sending part-way through. Your page has not changed. Try again.");
+      }
+      throw e;
+    } finally { clearTimeout(timer); }
+  }
+
+  async _stream(messages, { session, maxTokens, onProgress, signal, watched, firstReply, alive }) {
+    const response = await this.request("/chat/completions", { session, signal: watched, raw: true, timeout: firstReply,
       body: { model: session.model, messages, max_tokens: maxTokens, stream: true } });
     let text = "", finish = null;
     const consume = (part) => {
@@ -136,6 +175,7 @@ export class AiClient {
       if (choice.finish_reason) finish = choice.finish_reason;
       onProgress(text);
     };
+    alive();
     if ((response.headers.get("content-type") || "").includes("application/json")) consume(await response.json());
     else {
       const reader = response.body.getReader(), decoder = new TextDecoder();
@@ -143,6 +183,7 @@ export class AiClient {
       try {
         while (true) {
           const { value, done } = await reader.read();
+          alive();
           buffer += decoder.decode(value, { stream: !done });
           if (buffer.length > 2000000) throw new Error("The AI endpoint returned an oversized stream event.");
           let boundary;

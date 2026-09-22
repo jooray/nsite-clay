@@ -405,6 +405,18 @@
   const STRINGS = {
     en: {},
     es: {
+      needKey: "Primero pega una clave.", passShort: "Usa al menos ocho caracteres.", newPassDone: "Guardado", copied: "Copiado",
+      qrOpen: "Abrir en tu app de firma", qrWait: "Esperando a la app de firma. Deja esta página abierta mientras lo apruebas.",
+      qrRetry: "Mostrar un código nuevo", qrMissed: "No llegó ninguna respuesta. Muestra un código nuevo e inténtalo otra vez.",
+      tplFailed: "No se pudo cargar la lista de plantillas: ", pathPreview: "Tu página estará en ",
+      occTitle: "Ya hay una página aquí", occOtherTitle: "Esta clave ya tiene un sitio",
+      occSub: "Al publicar reemplazarás lo que hay en esta ruta. Todo lo demás que esta clave haya publicado se queda donde está, y la versión anterior queda en el historial de la página.",
+      occOtherSub: "Tus otras páginas no se tocan. Esta se añade junto a ellas.",
+      occList: "Ya publicado: ", occLook: "Ver lo que hay ahora", occConfirm: "Reemplazar la página que hay ahí.",
+      pathBad: "Una ruta puede llevar letras, números, guiones y barras.", needConfirm: "Marca la casilla para confirmar que reemplazas esa página.",
+      logFetch: "Leyendo la plantilla y el runtime…", logReady: "Listo: ", logFiles: " archivos",
+      logUpload: "Subiendo a Blossom…", logUploaded: "Todos los archivos están en Blossom", logSent: "subidos", logReused: "ya estaban",
+      logManifest: "Publicando el manifiesto en los relays…", logPublished: "Manifiesto publicado, versión archivada",
       aiTitle: "Crea una página a partir de una descripción con IA", aiHint: "Empieza desde cero o elige una plantilla. La IA usa nuestro nodo Routstr Cypherpunk por defecto, con pagos en Cashu o Lightning. Puedes cambiar el nodo, modelo o clave API en los ajustes de IA.",
       aiStart: "Página inicial", aiScratch: "Empezar desde cero", aiDescribe: "¿Qué página quieres?", aiSettings: "Ajustes y saldo de IA", aiGenerate: "Generar vista previa", aiCancel: "Cancelar generación", aiReview: "Revisa la página antes de continuar. Puedes editar sus palabras y bloques después de publicarla.", aiUse: "Usar esta página", aiWorking: "Generando…", aiReady: "La vista previa está lista.", aiCancelled: "Generación cancelada.",
       crumb: "publicar", h1: "Publica un sitio",
@@ -455,6 +467,18 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      needKey: "Najprv vlož kľúč.", passShort: "Použi aspoň osem znakov.", newPassDone: "Uložené", copied: "Skopírované",
+      qrOpen: "Otvoriť v podpisovej aplikácii", qrWait: "Čaká sa na podpisovú aplikáciu. Nechaj túto stránku otvorenú, kým to schváliš.",
+      qrRetry: "Zobraziť nový kód", qrMissed: "Neprišla žiadna odpoveď. Zobraz nový kód a skús to znova.",
+      tplFailed: "Zoznam šablón sa nepodarilo načítať: ", pathPreview: "Tvoja stránka bude na ",
+      occTitle: "Tu už stránka je", occOtherTitle: "Tento kľúč už má stránku",
+      occSub: "Zverejnením nahradíš to, čo je na tejto ceste. Všetko ostatné, čo tento kľúč zverejnil, zostane tam, kde je, a stará verzia ostane v histórii stránky.",
+      occOtherSub: "Ostatných stránok sa to nedotkne. Táto pribudne vedľa nich.",
+      occList: "Už zverejnené: ", occLook: "Pozrieť, čo tam je teraz", occConfirm: "Nahradiť stránku, ktorá tam je.",
+      pathBad: "Cesta môže obsahovať písmená, čísla, pomlčky a lomky.", needConfirm: "Zaškrtni políčko a potvrď, že tú stránku nahrádzaš.",
+      logFetch: "Načítava sa šablóna a runtime…", logReady: "Pripravené: ", logFiles: " súborov",
+      logUpload: "Nahráva sa na Blossom…", logUploaded: "Všetky súbory sú na Blossome", logSent: "nahraných", logReused: "už tam bolo",
+      logManifest: "Manifest sa zverejňuje na relayoch…", logPublished: "Manifest zverejnený, verzia uložená",
       aiTitle: "Vytvor stránku na základe opisu s pomocou AI", aiHint: "Začni od nuly alebo si vyber šablónu. AI predvolene používa náš Routstr node Cypherpunk s platbou cez Cashu alebo Lightning. Node, model aj API kľúč môžeš zmeniť v nastaveniach AI.",
       aiStart: "Východisková stránka", aiScratch: "Začať od nuly", aiDescribe: "Akú stránku chceš?", aiSettings: "Nastavenia a kredit AI", aiGenerate: "Vytvoriť náhľad", aiCancel: "Zrušiť generovanie", aiReview: "Pred pokračovaním si stránku skontroluj. Text aj bloky môžeš upravovať po zverejnení.", aiUse: "Použiť túto stránku", aiWorking: "Generuje sa…", aiReady: "Náhľad je pripravený.", aiCancelled: "Generovanie zrušené.",
       crumb: "publikovať", h1: "Zverejni stránku",
@@ -505,6 +529,18 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      needKey: "Nejdřív vlož klíč.", passShort: "Použij aspoň osm znaků.", newPassDone: "Uloženo", copied: "Zkopírováno",
+      qrOpen: "Otevřít v podpisové aplikaci", qrWait: "Čeká se na podpisovou aplikaci. Nech tuhle stránku otevřenou, dokud to schválíš.",
+      qrRetry: "Zobrazit nový kód", qrMissed: "Nepřišla žádná odpověď. Zobraz nový kód a zkus to znovu.",
+      tplFailed: "Seznam šablon se nepodařilo načíst: ", pathPreview: "Tvoje stránka bude na ",
+      occTitle: "Tady už stránka je", occOtherTitle: "Tenhle klíč už má stránku",
+      occSub: "Zveřejněním nahradíš to, co je na téhle cestě. Všechno ostatní, co tenhle klíč zveřejnil, zůstane tam, kde je, a stará verze zůstane v historii stránky.",
+      occOtherSub: "Ostatních stránek se to nedotkne. Tahle přibude vedle nich.",
+      occList: "Už zveřejněné: ", occLook: "Podívat se, co tam je teď", occConfirm: "Nahradit stránku, která tam je.",
+      pathBad: "Cesta může obsahovat písmena, čísla, pomlčky a lomítka.", needConfirm: "Zaškrtni políčko a potvrď, že tu stránku nahrazuješ.",
+      logFetch: "Načítá se šablona a runtime…", logReady: "Připraveno: ", logFiles: " souborů",
+      logUpload: "Nahrává se na Blossom…", logUploaded: "Všechny soubory jsou na Blossomu", logSent: "nahraných", logReused: "už tam bylo",
+      logManifest: "Manifest se zveřejňuje na relayích…", logPublished: "Manifest zveřejněný, verze uložená",
       aiTitle: "Vytvoř stránku podle popisu s pomocí AI", aiHint: "Začni od nuly nebo si vyber šablonu. AI ve výchozím nastavení používá náš Routstr node Cypherpunk s platbou přes Cashu nebo Lightning. Node, model i API klíč můžeš změnit v nastavení AI.",
       aiStart: "Výchozí stránka", aiScratch: "Začít od nuly", aiDescribe: "Jakou stránku chceš?", aiSettings: "Nastavení a kredit AI", aiGenerate: "Vytvořit náhled", aiCancel: "Zrušit generování", aiReview: "Před pokračováním si stránku zkontroluj. Text i bloky můžeš upravovat po zveřejnění.", aiUse: "Použít tuto stránku", aiWorking: "Generuje se…", aiReady: "Náhled je připravený.", aiCancelled: "Generování zrušeno.",
       crumb: "publikovat", h1: "Zveřejni stránku",
@@ -841,7 +877,7 @@
       if (template) {
         const response = await fetch(`/t/${template.name}/index.html`, { signal: controller.signal });
         if (!response.ok) throw new Error(`${template.name}: ${response.status}`);
-        html = personalise(await response.text(), template.owner, nc.npub, "/index.html");
+        html = anonymise(await response.text(), template.owner);
       }
       const result = await nc.ai.buildPage($("#ai-description").value, { template: html, lang: LANG, signal: controller.signal,
         onProgress: (text) => { $("#ai-status").textContent = `${say("aiWorking", "Generating…")} ${text.length}`; } });
@@ -997,6 +1033,20 @@
   // Everything the template's own npub appears in becomes yours: nc:owner, the
   // feed that pulls the author's notes, the link to their profile. Replacing
   // only nc:owner would hand somebody a blog whose feed is another person's.
+  // The model is being asked about a design, not about who is publishing. It gets
+  // the template with the author's key taken out rather than with the reader's
+  // key written in: the publisher sets the owner itself once the page comes back,
+  // and the footer promises the description and the template, not the identity.
+  function anonymise(html, from) {
+    let out = html;
+    if (from) {
+      out = out.split(from).join("");
+      const hex = nc.toHex(from);
+      if (hex) out = out.split(hex).join("");
+    }
+    return out.replace(/nc:owner="[^"]*"/, 'nc:owner=""').replace(/\s*nc:site="[^"]*"/, "");
+  }
+
   function personalise(html, from, toNpub, docPath) {
     let out = html;
     if (from && from !== toNpub) {

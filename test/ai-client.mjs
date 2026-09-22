@@ -17,8 +17,28 @@ const server = createServer(async (req, res) => {
   if (req.url.endsWith("/lightning/invoice")) return res.end(JSON.stringify({ invoice_id: "invoice-1", bolt11: "lnbc1-test", amount_sats: body.amount_sats }));
   if (req.url.endsWith("/status")) return res.end(JSON.stringify({ status: payment, api_key: payment === "paid" ? "sk-paid" : null }));
   if (req.url.endsWith("/chat/completions")) {
-    if (body.messages[0].content === "payment-error") { res.statusCode = 402; return res.end("{}"); }
-    if (body.messages[0].content === "slow") { req.on("close", () => res.end()); return; }
+    const ask = body.messages[0].content;
+    if (ask === "payment-error") { res.statusCode = 402; return res.end("{}"); }
+    if (ask === "slow") { req.on("close", () => res.end()); return; }
+    const chunk = (t, stop = null) => `data: ${JSON.stringify({ choices: [{ index: 0, delta: t === null ? {} : { content: t }, finish_reason: stop }] })}\r\n\r\n`;
+    // Headers and a first token, then the endpoint goes quiet for good.
+    if (ask === "stall") {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.write(chunk("<p>half a"));
+      req.on("close", () => res.end());
+      return;
+    }
+    // Slow but never silent: longer in total than any one deadline would allow.
+    if (ask === "trickle") {
+      res.setHeader("Content-Type", "text/event-stream");
+      let n = 0;
+      const tick = setInterval(() => {
+        if (++n > 6) { clearInterval(tick); res.write(chunk(null, "stop")); res.write("data: [DONE]\r\n\r\n"); return res.end(); }
+        res.write(chunk("tick "));
+      }, 40);
+      req.on("close", () => clearInterval(tick));
+      return;
+    }
     res.setHeader("Content-Type", "text/event-stream");
     const content = `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "<p>café</p>" }, finish_reason: null }] })}\r\n\r\n` +
       `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: finish }] })}\r\n\r\ndata: [DONE]\r\n\r\n`;
@@ -69,10 +89,25 @@ try {
   await assert.rejects(client.complete([{ role: "user", content: "payment-error" }]), /credit is too low/);
   assert.equal(calls.length, count + 1, "paid requests must not retry automatically");
   await assert.rejects(client.complete([{ role: "user", content: "slow" }], { signal: AbortSignal.timeout(50) }));
+  // A reply that never starts is late; one that starts and stops is stalled; one
+  // that keeps coming is working, however long it takes in total.
+  await assert.rejects(client.complete([{ role: "user", content: "slow" }], { firstReply: 60 }),
+    /did not answer in time/);
+  await assert.rejects(client.complete([{ role: "user", content: "stall" }], { firstReply: 500, stall: 120 }),
+    /stopped sending part-way through/);
+  const began = Date.now();
+  const trickled = await client.complete([{ role: "user", content: "trickle" }], { firstReply: 500, stall: 120 });
+  assert.equal(trickled, "tick tick tick tick tick tick", "a stream slower than one deadline must still finish");
+  assert(Date.now() - began > 120, "the watchdog must measure the gaps, not the whole answer");
+  // Cancelling mid-stream is the owner's doing and keeps its own name.
+  const mine = new AbortController();
+  setTimeout(() => mine.abort(), 80);
+  await assert.rejects(client.complete([{ role: "user", content: "stall" }], { signal: mine.signal, firstReply: 500, stall: 5000 }),
+    (e) => e.name === "AbortError" || /abort/i.test(e.message));
   const refund = await client.refund();
   assert.equal(refund.token, "cashuA-refund");
   assert.equal(new AiClient(storage).record().refund.token, refund.token);
   assert.throws(() => client.configure({ mode: "routstr", base: "http://public.example", model: "x" }), /HTTPS/);
   assert.throws(() => client.configure({ mode: "byok", base: "https://user:secret@example.com/v1", model: "x" }), /credentials/);
-  console.log("AI client: defaults, endpoint-bound keys, Cashu, Lightning, refunds, streaming, cancellation and payment errors passed.");
+  console.log("AI client: defaults, endpoint-bound keys, Cashu, Lightning, refunds, streaming, start and stall watchdogs, cancellation and payment errors passed.");
 } finally { server.closeAllConnections(); await new Promise((r) => server.close(r)); }

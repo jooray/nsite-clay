@@ -921,8 +921,13 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("AI generation leaves the page unchanged until acceptance", target.textContent === before && proposal.element.textContent === "New heading");
     t("the AI prompt contains only the chosen element", !JSON.stringify(sent).includes("sk-test-never-publish") && !JSON.stringify(sent).includes("nc:owner="));
     t("AI output loses scripts and new event handlers", !proposal.element.querySelector("script") && !proposal.element.hasAttribute("onclick"));
+    t("editor machinery never reaches the model", !/contenteditable|nc:armed|nc:keep-editable|spellcheck/.test(proposal.before));
     nc.undo.clear(); const result = nc.ai.accept(proposal);
     t("an accepted AI edit keeps the element's identity markers", result.id === "line" && result.hasAttribute("editable"));
+    // The runtime switches spellcheck on to edit with. Carried through an AI edit
+    // it loses the marker that says who set it, and is published from then on.
+    t("an accepted AI edit does not publish the runtime's own attributes",
+      !/spellcheck|contenteditable|nc:armed/.test(nc.getHTML().match(/<h1[^>]*id="line"[^>]*>/)?.[0] || ""));
     nc.undo.undo();
     t("one undo restores the original element after AI editing", document.querySelector("#line") === target && target.textContent === before);
     const stale = await nc.ai.propose(target, "Change it again");

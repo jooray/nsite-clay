@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.3.1",
+    "released": "2026-09-22",
+    "notes": [
+      "When you ask AI for a new page, the page now starts with your own words. The AI sometimes wrote a sentence introducing itself at the top, left a stray line of punctuation behind it, and pushed the page's title out of place; all of that is gone.",
+      "On a page AI built for you, the facts in a table or a list can be changed. Opening hours, prices, a list of what to bring: these are now editable on the page and they appear in the content form, where before they were the one thing you could never correct.",
+      "A long answer from AI is no longer cut off. Pages that take a few minutes to write now finish, and an AI that has genuinely stopped replying is reported sooner, in a sentence that says what happened.",
+      "Keeping an AI edit no longer leaves an invisible mark in your saved file. It was harmless to read, but it built up with every edit and made the file look changed when it was not.",
+      "The publisher no longer tells the AI service who you are. It sends the description you wrote and the template you picked, and nothing else.",
+      "The publisher now speaks Spanish, Slovak and Czech the whole way through. The messages it shows while your site goes out, and the warning that a page already exists where you are publishing, used to appear in English whatever language you had chosen."
+    ]
+  },
+  {
     "version": "0.3.0",
     "released": "2026-09-22",
     "notes": [

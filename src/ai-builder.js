@@ -5,11 +5,19 @@ const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label
 const CHROME = `<div class="nc-bar nc-ui-chrome"><span class="nc-dot"></span><span class="nc-who" data-nc-who>read-only</span><button data-nc-signin>Sign in</button><button class="nc-owner-only" data-nc-write>Write</button><button class="nc-owner-only" data-nc-cms>Edit content</button><button class="nc-owner-only" data-nc-settings>Settings</button><button class="nc-owner-only" data-nc-history>History</button><button class="nc-primary nc-owner-only" data-nc-save>Save</button></div><p class="nc-edit-hint">add #edit to the URL to edit this page</p>`;
 
 export function preparePage(html, { owner, path = "/index.html", lang = "en" } = {}) {
+  // Models introduce themselves. A reply can open with a sentence about the page
+  // and a ```html fence before the document begins, and parsing the whole reply
+  // as a document puts all of that in the body: the chatter becomes the page's
+  // first words, and <title> and <style> are pushed out of the head behind it.
+  // So cut the document out of the reply rather than trusting the whole reply.
   const raw = unfence(html);
-  if (!/<html[\s>]/i.test(raw) || !/<\/html>\s*$/i.test(raw) || !/<body[\s>]/i.test(raw)) {
+  const from = raw.search(/<!DOCTYPE\s+html|<html[\s>]/i);
+  const to = raw.toLowerCase().lastIndexOf("</html>");
+  const page = from >= 0 && to > from ? raw.slice(from, to + "</html>".length) : "";
+  if (!page || !/<body[\s>]/i.test(page)) {
     throw new Error("The model did not return a complete HTML page. Try a shorter description.");
   }
-  const clean = DOMPurify.sanitize(raw, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "template"], ADD_ATTR: MARKERS,
+  const clean = DOMPurify.sanitize(page, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "template"], ADD_ATTR: MARKERS,
     FORBID_TAGS: ["script", "iframe", "object", "embed", "base", "form", "input", "button", "textarea", "select", "link", "meta"],
     FORBID_ATTR: ["srcdoc", "srcset", "ping", "formaction"], ALLOW_DATA_ATTR: false });
   const doc = new DOMParser().parseFromString(clean, "text/html");
@@ -37,11 +45,24 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en" } =
   const charset = doc.createElement("meta"); charset.setAttribute("charset", "utf-8"); doc.head.prepend(charset);
   const viewport = doc.createElement("meta"); viewport.name = "viewport"; viewport.content = "width=device-width, initial-scale=1"; doc.head.append(viewport);
   const css = doc.createElement("link"); css.rel = "stylesheet"; css.href = "/nsite-clay-base.css"; doc.head.append(css);
+  // Mark what carries words, then let the content form follow the marks. A model
+  // asked for a page about opening hours writes a table, and a list of what to
+  // bring as list items: left to headings and paragraphs, the page's most useful
+  // facts were the ones its owner could never change. Deriving the rules from
+  // whatever ends up editable also keeps the two in step, since the model marks
+  // some of this itself and used to end up editable on the page but missing from
+  // the form.
+  const ONE_LINE = /^(H[1-6]|TD|TH|DT|CAPTION)$/;
+  for (const el of doc.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,figcaption,li,td,th,dt,dd,caption")) {
+    // Document order, so an outer mark is already in place when its children are
+    // tested. Editable inside editable would arm the same words twice.
+    if (!el.textContent.trim() || el.parentElement?.closest("[editable]")) continue;
+    if (!el.hasAttribute("editable")) el.setAttribute("editable", ONE_LINE.test(el.tagName) ? "single-line" : "");
+  }
   const fields = {};
   let index = 0;
-  for (const el of doc.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,figcaption")) {
-    if (!el.textContent.trim()) continue;
-    if (!el.hasAttribute("editable")) el.setAttribute("editable", /^H\d$/.test(el.tagName) ? "single-line" : "");
+  for (const el of doc.body.querySelectorAll("[editable]")) {
+    if (!el.textContent.trim() || el.parentElement?.closest("[editable]")) continue;
     if (!el.id || doc.querySelectorAll(`#${CSS.escape(el.id)}`).length !== 1) {
       let id; do { id = `nc-content-${++index}`; } while (doc.getElementById(id));
       el.id = id;
@@ -76,7 +97,7 @@ export async function buildPage(ai, description, { template = "", lang = "en", s
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line" and prose editable. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch."}` },
   ], { signal, onProgress, maxTokens: 16000 });
   return preparePage(reply, { owner: ai.nc.npub, lang });

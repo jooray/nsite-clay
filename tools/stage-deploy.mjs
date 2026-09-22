@@ -80,6 +80,31 @@ for (const page of Object.keys(TITLES)) {
 }
 console.log(`staged ${made} translated page${made === 1 ? "" : "s"} into site/{${LANGS.join(",")}}/`);
 
+// A key the strings table does not carry falls back to the English in the
+// source, silently, in a page that is otherwise Slovak. Nobody notices until a
+// Slovak reader publishes something and reads the whole progress log in
+// English, so the build is the place to notice instead.
+{
+  const source = readFileSync(join("site", "deploy.html"), "utf8");
+  const wanted = new Set([...source.matchAll(/data-t="([^"]+)"/g)].map((m) => m[1]));
+  // say("key", "English fallback"); nc.ai.say() reads the runtime's own table.
+  for (const m of source.matchAll(/(?<![.\w])say\(\s*"([A-Za-z0-9_]+)"/g)) wanted.add(m[1]);
+  const table = source.slice(source.indexOf("const STRINGS = {"));
+  let missing = 0;
+  for (const lang of LANGS) {
+    const from = table.indexOf(`\n    ${lang}: {`);
+    const body = table.slice(from, table.indexOf("\n    },", from));
+    const has = new Set([...body.matchAll(/(?:^|[{,]\s*)([A-Za-z0-9_]+)\s*:\s*"/gm)].map((m) => m[1]));
+    const gaps = [...wanted].filter((k) => !has.has(k));
+    if (gaps.length) {
+      console.error(`stage-deploy: deploy.html ${lang} has no words for ${gaps.join(", ")}. ` +
+                    `Those readers get the English fallback.`);
+      missing += gaps.length;
+    }
+  }
+  if (missing) process.exitCode = 1;
+}
+
 // A page that misreports its own path reloads itself forever: it watches the
 // manifest entry for the path it claims, compares that hash against the bytes it
 // was served, and never matches. Cheap to check, and invisible until somebody

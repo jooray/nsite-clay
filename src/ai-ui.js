@@ -32,6 +32,10 @@ const WORDS = {
   invoice: ["Lightning invoice", "Factura Lightning", "Lightning faktúra", "Lightning faktura"],
   openWallet: ["Open Lightning wallet", "Abrir cartera Lightning", "Otvoriť Lightning peňaženku", "Otevřít Lightning peněženku"],
   close: ["Close", "Cerrar", "Zavrieť", "Zavřít"],
+  copy: ["Copy", "Copiar", "Skopírovať", "Zkopírovat"],
+  copied: ["Copied", "Copiado", "Skopírované", "Zkopírováno"],
+  needKey: ["Add credit or enter a key first.", "Añade saldo o introduce una clave primero.", "Najprv pridaj kredit alebo vlož kľúč.", "Nejdřív přidej kredit nebo vlož klíč."],
+  expired: ["This invoice has expired. Close it and create a new one.", "Esta factura ha caducado. Ciérrala y crea una nueva.", "Faktúra vypršala. Zavri ju a vytvor novú.", "Faktura vypršela. Zavři ji a vytvoř novou."],
   working: ["Working…", "Procesando…", "Pracuje sa…", "Pracuje se…"],
   rates: ["sats per 1,000 tokens: input / output", "sats por 1.000 tokens: entrada / salida", "sats za 1 000 tokenov: vstup / výstup", "sats za 1 000 tokenů: vstup / výstup"],
   generate: ["Generate preview", "Generar vista previa", "Vytvoriť náhľad", "Vytvořit náhled"],
@@ -87,7 +91,7 @@ export class Ai {
             const controls = [...body.querySelectorAll("input, select, button")].map((el) => [el, el.disabled]);
             controls.forEach(([el]) => { el.disabled = true; });
             h.busy(true); h.status(say("working"));
-            try { await fn(); h.status(""); } catch (e) { h.status(e.message, true); }
+            try { h.status((await fn()) || ""); } catch (e) { h.status(e.message, true); }
             finally { working = false; controls.forEach(([el, disabled]) => { el.disabled = disabled; }); h.busy(false); }
           };
           return b;
@@ -104,7 +108,7 @@ export class Ai {
         });
         const note = this.doc.createElement("p"); note.className = "nc-hint"; note.textContent = say("local"); body.append(note);
         button(body, "backup", () => {
-          const s = apply(); if (!s.key) throw new Error("Add credit or enter a key first.");
+          const s = apply(); if (!s.key) throw new Error(say("needKey"));
           const url = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }));
           const a = this.doc.createElement("a"); a.href = url; a.download = "nsite-clay-ai-key.json"; a.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -121,18 +125,20 @@ export class Ai {
         button(payments, "lightning", async () => {
           const s = apply();
           const invoice = client.record(s.base).invoice || await client.invoice(Number(amount.value), s);
-          await this.showInvoice(invoice, s); key.value = client.record(s.base).key || "";
+          const paid = await this.showInvoice(invoice, s); key.value = client.record(s.base).key || "";
           if (key.value) await showBalance();
+          return paid ? say("paid") : "";
         });
         const token = field(payments, { label: say("cashu"), type: "password", value: client.record().deposit || "" });
         button(payments, "deposit", async () => {
           const s = apply(); await client.cashu(token.value, s); token.value = "";
-          key.value = client.record(s.base).key || ""; await showBalance();
+          key.value = client.record(s.base).key || ""; await showBalance(); return say("paid");
         });
         const refundDisplay = (result) => notice(result?.token ? say("refundHint") : result?.status || "", {
           doc: this.doc, title: say("refund"), detail: result?.token || JSON.stringify(result),
+          labels: { copy: say("copy"), copied: say("copied"), close: say("close") },
         });
-        button(payments, "refund", async () => refundDisplay(await client.refund(apply())));
+        button(payments, "refund", async () => { refundDisplay(await client.refund(apply())); });
         button(payments, "lastRefund", () => { const result = client.record(session().base).refund; if (result) refundDisplay(result); });
         const changed = () => {
           try { key.value = client.record(aiEndpoint(base.value, mode.value)).key || ""; } catch { key.value = ""; }
@@ -157,7 +163,7 @@ export class Ai {
         if (out.status === "paid") { helpers.close(true); return; }
         if (out.status === "expired") {
           delete this.client.record(session.base).invoice; this.client.persist();
-          helpers.status("This invoice has expired. Close it and create a new one.", true); return;
+          helpers.status(this.say("expired"), true); return;
         }
         helpers.status(this.say("wait"));
         timer = setTimeout(check, 3000);

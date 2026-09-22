@@ -8,6 +8,12 @@ function cleanElement(nc, element) {
   const copy = element.cloneNode(true);
   nc._cleanClone(copy);
   for (const el of [copy, ...copy.querySelectorAll("*")]) {
+    // _cleanClone pairs these off for every descendant but cannot reach the root
+    // it was handed. The spellcheck the runtime switched on leaves with the marker
+    // that claims it, exactly as a save does; an authored spellcheck has no marker
+    // and stays. Left in, the model echoes it back, the element is accepted
+    // without the marker, and the attribute is published from then on.
+    if (el.hasAttribute("nc:spellcheck")) el.removeAttribute("spellcheck");
     for (const a of ["contenteditable", "nc:armed", "nc:keep-editable", "nc:highlight", "nc:spellcheck"]) el.removeAttribute(a);
     if (el.matches('input[type="password"], input[type="file"]')) el.removeAttribute("value");
   }
