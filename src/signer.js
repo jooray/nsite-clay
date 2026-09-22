@@ -3,6 +3,7 @@
 // rest of the runtime needs: `pubkey` and `sign(template)`.
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from "nostr-tools";
 import * as nip49 from "nostr-tools/nip49";
+import { v2 as nip44 } from "nostr-tools/nip44";
 import { BunkerSigner, createAccount, createNostrConnectURI, parseBunkerInput } from "nostr-tools/nip46";
 
 // Ask only for what the runtime actually signs. Every entry costs characters in
@@ -16,6 +17,10 @@ const DEFAULT_PERMS = [
   "sign_event:24242",
   "sign_event:10002", "sign_event:10063",
   "sign_event:1", "sign_event:30023",
+  // The owner's own AI key and wallet seed live on their relays, encrypted to
+  // themselves. Asked for here rather than at the moment of use, because the
+  // moment of use is halfway through a payment.
+  "sign_event:30078", "nip44_encrypt", "nip44_decrypt",
 ];
 
 export class Nip07Signer {
@@ -27,6 +32,14 @@ export class Nip07Signer {
     return this.pubkey;
   }
   async sign(template) { return window.nostr.signEvent(template); }
+  async nip44Encrypt(pubkey, plaintext) {
+    if (!window.nostr?.nip44) throw new Error("This extension cannot encrypt. Use a signer that supports NIP-44.");
+    return window.nostr.nip44.encrypt(pubkey, plaintext);
+  }
+  async nip44Decrypt(pubkey, ciphertext) {
+    if (!window.nostr?.nip44) throw new Error("This extension cannot decrypt. Use a signer that supports NIP-44.");
+    return window.nostr.nip44.decrypt(pubkey, ciphertext);
+  }
   async close() {}
 }
 
@@ -83,6 +96,12 @@ export class LocalSigner {
 
   async connect() { return this.pubkey; }
   async sign(template) { return finalizeEvent(template, this.sec); }
+  async nip44Encrypt(pubkey, plaintext) {
+    return nip44.encrypt(plaintext, nip44.utils.getConversationKey(this.sec, pubkey));
+  }
+  async nip44Decrypt(pubkey, ciphertext) {
+    return nip44.decrypt(ciphertext, nip44.utils.getConversationKey(this.sec, pubkey));
+  }
   async close() { this.sec = null; }
 }
 
@@ -152,6 +171,11 @@ export class Nip46Signer {
 
   async connect() { return this.pubkey; }
   async sign(template) { return this.bunker.signEvent(template); }
+  // Amber and nsec.app answer these; an older or stricter signer may not, and the
+  // caller falls back to keeping the secret in this browser alone rather than
+  // failing the thing the owner was actually doing.
+  async nip44Encrypt(pubkey, plaintext) { return this.bunker.nip44Encrypt(pubkey, plaintext); }
+  async nip44Decrypt(pubkey, ciphertext) { return this.bunker.nip44Decrypt(pubkey, ciphertext); }
   async close() { try { await this.bunker.close(); } catch {} }
 }
 

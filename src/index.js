@@ -14,6 +14,7 @@ import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from 
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
+import { Vault } from "./vault.js";
 import { Ai } from "./ai-ui.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
 import { Editable } from "./editable.js";
@@ -76,6 +77,7 @@ class NsiteClay extends EventTarget {
     this.blocks = new Blocks(this);
     this.undo = new Undo(this);
     this.source = new Source(this);
+    this.vault = new Vault(this);
     this.ai = new Ai(this);
     this.upgrade = new Upgrade(this);
     this.version = VERSION;
