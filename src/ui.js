@@ -60,7 +60,7 @@ const CSS = `
 .nc-ui button.nc-primary:hover { filter: brightness(1.1); }
 .nc-ui button[disabled] { opacity: .5; cursor: not-allowed; }
 .nc-ui .nc-status { font-size: .82rem; color: var(--nc-ink-dim, #9a92ad); margin-right: auto; align-self: center; }
-.nc-ui .nc-status.nc-bad { color: var(--nc-bad, #e79191); }
+.nc-ui .nc-status.nc-bad, .nc-ui .nc-hint.nc-bad { color: var(--nc-bad, #e79191); }
 .nc-ui .nc-tabs { display: flex; gap: .3rem; margin: 0 0 .9rem; }
 .nc-ui .nc-tabs button { flex: 0 0 auto; font-size: .84rem; padding: .38rem .8rem; }
 .nc-ui .nc-tabs button[aria-selected=true] { background: var(--nc-accent, #6f5ad1); border-color: transparent; color: var(--nc-accent-ink, #fff); }

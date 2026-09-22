@@ -937,6 +937,47 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     nc.ai.client.complete = async () => "<h1>Unfinished";
     t("an unfinished AI element is refused", /unfinished/i.test(await err(() => nc.ai.propose(target, "Change"))));
     nc.ai.client.complete = complete;
+
+    // The dialog has to say there is no credit before somebody writes a prompt and
+    // waits, and the preview has to show what is there now as well as what would
+    // replace it.
+    {
+      const key = nc.ai.client.session().key;
+      nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
+      nc.ai.edit(target);
+      await new Promise((r) => setTimeout(r, 30));
+      const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
+      t("an owner with no AI credit is told before writing a prompt",
+        /credit/i.test(panel.querySelector(".nc-hint.nc-bad")?.textContent || ""));
+      t("and the settings button is the one offered", !!panel.querySelector("button.nc-primary"));
+      t("while Generate is not pressable yet", panel.querySelector("button[type=submit]").disabled);
+      panel.querySelector(".nc-cancel").click();
+
+      nc.ai.client.configure({ ...nc.ai.client.config, key: key || "sk-test-never-publish" });
+      const complete2 = nc.ai.client.complete;
+      nc.ai.client.complete = async () => "<h1>A shorter heading</h1>";
+
+      // Drive the real dialog: type a prompt, generate, and look at what the preview
+      // modal actually puts on screen.
+      const finished = nc.ai.edit(target);
+      await new Promise((r) => setTimeout(r, 30));
+      const ask = [...document.querySelectorAll(".nc-ui")].at(-1);
+      ask.querySelector("textarea").value = "shorter";
+      ask.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      await new Promise((r) => setTimeout(r, 120));
+      const preview = [...document.querySelectorAll(".nc-ui")].at(-1);
+      const frames = [...preview.querySelectorAll("iframe")];
+      t("the preview shows what is there now as well as what would replace it", frames.length === 2);
+      t("the old wording is in the first frame", frames[0]?.srcdoc.includes(before));
+      t("and the new wording in the second", frames[1]?.srcdoc.includes("A shorter heading"));
+      t("each frame says which is which", [...preview.querySelectorAll(".nc-hint")].length >= 2);
+      preview.querySelector(".nc-cancel").click();
+      await finished;
+      nc.ai.client.complete = complete2;
+      t("cancelling the preview leaves the page alone", document.querySelector("#line") === target);
+      nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
+    }
+
     await nc.logout();
     t("AI editing requires the owner", /owner/i.test(await err(() => nc.ai.propose(target, "Change"))));
   }

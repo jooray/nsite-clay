@@ -44,6 +44,10 @@ const WORDS = {
   keep: ["Keep this change", "Aceptar este cambio", "Prijať zmenu", "Přijmout změnu"],
   preview: ["Preview", "Vista previa", "Náhľad", "Náhled"],
   generating: ["Generating…", "Generando…", "Generuje sa…", "Generuje se…"],
+  thinking: ["Thinking…", "Pensando…", "Rozmýšľa…", "Rozmýšlí…"],
+  noCredit: ["No AI credit on this endpoint yet. Open AI settings to add some, or to use your own API key.", "Todavía no hay saldo de IA en este servidor. Abre los ajustes de IA para añadirlo o para usar tu propia clave API.", "Na tomto serveri zatiaľ nemáš AI kredit. Otvor nastavenia AI a pridaj si ho, alebo použi vlastný API kľúč.", "Na tomhle serveru zatím nemáš AI kredit. Otevři nastavení AI a přidej si ho, nebo použij vlastní API klíč."],
+  before: ["Now", "Ahora", "Teraz", "Teď"],
+  after: ["After this change", "Después del cambio", "Po zmene", "Po změně"],
   review: ["Review the result before keeping it. Save the page when you are ready to publish.", "Revisa el resultado antes de aceptarlo. Guarda la página cuando quieras publicarlo.", "Pred prijatím si výsledok skontroluj. Keď ho chceš zverejniť, ulož stránku.", "Před přijetím si výsledek zkontroluj. Až ho chceš zveřejnit, ulož stránku."],
 };
 

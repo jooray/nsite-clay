@@ -8,7 +8,10 @@
       "A long answer from AI is no longer cut off. Pages that take a few minutes to write now finish, and an AI that has genuinely stopped replying is reported sooner, in a sentence that says what happened.",
       "Keeping an AI edit no longer leaves an invisible mark in your saved file. It was harmless to read, but it built up with every edit and made the file look changed when it was not.",
       "The publisher no longer tells the AI service who you are. It sends the description you wrote and the template you picked, and nothing else.",
-      "The publisher now speaks Spanish, Slovak and Czech the whole way through. The messages it shows while your site goes out, and the warning that a page already exists where you are publishing, used to appear in English whatever language you had chosen."
+      "The publisher now speaks Spanish, Slovak and Czech the whole way through. The messages it shows while your site goes out, and the warning that a page already exists where you are publishing, used to appear in English whatever language you had chosen.",
+      "AI says it has no credit before you write anything, rather than after you have described the page you wanted and waited for it.",
+      "The counter moves while AI is thinking. Some models spend the first minute working out what to write before writing a word, and a counter sitting at zero for that long looked broken.",
+      "When AI offers to change something, you see what is on the page now next to what would replace it. Deciding whether the new wording is better should not be a memory test."
     ]
   },
   {

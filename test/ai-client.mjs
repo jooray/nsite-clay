@@ -29,6 +29,15 @@ const server = createServer(async (req, res) => {
       return;
     }
     // Slow but never silent: longer in total than any one deadline would allow.
+    // A reasoning model: a long silence on `content`, and reasoning all the while.
+    if (ask === "thinky") {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { reasoning_content: "hmm ".repeat(25) }, finish_reason: null }] })}\r\n\r\n`);
+      res.write(chunk("<p>done</p>"));
+      res.write(chunk(null, "stop"));
+      res.write("data: [DONE]\r\n\r\n");
+      return res.end();
+    }
     if (ask === "trickle") {
       res.setHeader("Content-Type", "text/event-stream");
       let n = 0;
@@ -104,6 +113,14 @@ try {
   setTimeout(() => mine.abort(), 80);
   await assert.rejects(client.complete([{ role: "user", content: "stall" }], { signal: mine.signal, firstReply: 500, stall: 5000 }),
     (e) => e.name === "AbortError" || /abort/i.test(e.message));
+  // A counter frozen at zero while a reasoning model thinks looks like a broken one.
+  const seen = [];
+  assert.equal(await client.complete([{ role: "user", content: "thinky" }],
+    { onProgress: (t, info) => seen.push([t.length, info?.thinking || 0]) }), "<p>done</p>");
+  assert(seen.some(([text, thinking]) => text === 0 && thinking > 0),
+    "reasoning must show progress before any page text exists");
+  assert.equal(seen.at(-1)[0], "<p>done</p>".length, "and the text is still what is returned");
+
   const refund = await client.refund();
   assert.equal(refund.token, "cashuA-refund");
   assert.equal(new AiClient(storage).record().refund.token, refund.token);

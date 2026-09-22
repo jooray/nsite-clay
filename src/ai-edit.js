@@ -83,26 +83,50 @@ export async function editDialog(ai, target) {
   let prompt, controller;
   const proposal = await modal({ doc: ai.doc, title: ai.say("edit"), submitLabel: ai.say("generate"),
     hint: `${target.localName}: ${target.textContent.trim().slice(0, 100)}`,
-    build: (body) => {
+    build: (body, h) => {
       prompt = field(body, { label: ai.say("describe"), rows: 4 });
       const provider = ai.doc.createElement("p"); provider.className = "nc-hint";
-      const show = () => provider.textContent = `${ai.client.config.model} · ${new URL(ai.client.config.base).host}`;
-      show(); body.append(provider);
       const settings = ai.doc.createElement("button"); settings.type = "button"; settings.textContent = ai.say("settings");
+      // Say it before the work, not after. Without this the first time anybody
+      // presses the button they write a prompt, wait, and are then told they needed
+      // credit all along.
+      const show = () => {
+        const session = ai.client.session();
+        provider.textContent = session.key
+          ? `${session.model} · ${new URL(session.base).host}`
+          : ai.say("noCredit");
+        provider.classList.toggle("nc-bad", !session.key);
+        settings.classList.toggle("nc-primary", !session.key);
+        // Generate is not an option yet, and leaving it pressable only buys a round
+        // trip that ends in the sentence already on screen.
+        h.busy(!session.key);
+      };
+      show(); body.append(provider);
       settings.onclick = async () => { await ai.settings(); show(); }; body.append(settings);
     },
     onSubmit: async (h) => {
       controller = new AbortController();
-      return propose(ai, target, prompt.value, { signal: controller.signal, onProgress: (text) => h.status(`${ai.say("generating")} ${text.length}`) });
+      return propose(ai, target, prompt.value, { signal: controller.signal,
+        onProgress: (text, info) => h.status(text.length
+          ? `${ai.say("generating")} ${text.length}`
+          : `${ai.say("thinking")} ${info?.thinking || 0}`) });
     },
   }).finally(() => controller?.abort());
   if (!proposal) return null;
   return modal({ doc: ai.doc, title: ai.say("preview"), hint: ai.say("review"), submitLabel: ai.say("keep"), wide: true,
     build: (body) => {
-      const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = ai.say("preview");
-      frame.style.cssText = "display:block;width:100%;height:22rem;border:1px solid var(--nc-edge);background:white";
       const styles = [...ai.doc.querySelectorAll('style:not([nc\\:chrome]), link[rel="stylesheet"]')].map((el) => el.outerHTML).join("");
-      frame.srcdoc = previewHTML(`<html><head>${styles}</head><body>${proposal.element.outerHTML}</body></html>`); body.append(frame);
+      // Both, and labelled. Deciding whether a rewrite is better than what is there
+      // is not a memory test, and the old wording is gone from the screen the moment
+      // the dialog opens over it.
+      for (const [label, html] of [[ai.say("before"), proposal.before], [ai.say("after"), proposal.element.outerHTML]]) {
+        const caption = ai.doc.createElement("p"); caption.className = "nc-hint";
+        caption.style.cssText = "margin:.6rem 0 .3rem"; caption.textContent = label; body.append(caption);
+        const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = label;
+        frame.style.cssText = "display:block;width:100%;height:11rem;border:1px solid var(--nc-edge);background:white";
+        frame.srcdoc = previewHTML(`<html><head>${styles}</head><body>${html}</body></html>`);
+        body.append(frame);
+      }
     },
     onSubmit: () => accept(ai, proposal),
   });

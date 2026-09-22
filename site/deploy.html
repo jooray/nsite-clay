@@ -860,8 +860,23 @@
   // AI produces an in-memory draft. Only Use this page hands it to the ordinary
   // publishing path; tokens, keys and prompts never enter the generated HTML.
   let generation = null, generated = null, generatedTemplate = null;
-  const showProvider = () => { $("#ai-provider").textContent = `${nc.ai.client.config.model} · ${new URL(nc.ai.client.config.base).host}`; };
+  // Say it before the work. Without this somebody writes a description, waits, and
+  // is only then told they needed credit all along.
+  const showProvider = () => {
+    const s = nc.ai.client.session();
+    const el = $("#ai-provider");
+    el.textContent = s.key
+      ? `${s.model} · ${new URL(s.base).host}`
+      : nc.ai.say("noCredit");
+    el.classList.toggle("bad", !s.key);
+    $("#ai-generate").disabled = !s.key;
+    $("#ai-settings").classList.toggle("primary", !s.key);
+  };
   showProvider();
+  // Recomputed whenever the section is opened, because credit can be added in the
+  // settings dialog, on another tab, or on a previous visit, and a line drawn once
+  // at load is a line that is wrong by the time anybody reads it.
+  $("#ai-builder").addEventListener("toggle", () => { if ($("#ai-builder").open) showProvider(); });
   $("#ai-preview").title = nc.ai.say("preview");
   $("#ai-settings").onclick = async () => { await nc.ai.settings(); showProvider(); };
   $("#ai-cancel").onclick = () => generation?.abort();
@@ -880,7 +895,13 @@
         html = anonymise(await response.text(), template.owner);
       }
       const result = await nc.ai.buildPage($("#ai-description").value, { template: html, lang: LANG, signal: controller.signal,
-        onProgress: (text) => { $("#ai-status").textContent = `${say("aiWorking", "Generating…")} ${text.length}`; } });
+        onProgress: (text, info) => {
+          // A reasoning model writes nothing the page will ever show for the first
+          // minute, so count that too rather than showing a frozen zero.
+          $("#ai-status").textContent = text.length
+            ? `${say("aiWorking", "Generating…")} ${text.length}`
+            : `${nc.ai.say("thinking")} ${info?.thinking || 0}`;
+        } });
       if (controller.signal.aborted) return;
       generated = result; generatedTemplate = template;
       $("#ai-preview").srcdoc = nc.ai.previewHTML(result);
@@ -889,7 +910,8 @@
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
       generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
-      for (const id of ["ai-generate", "ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
+      for (const id of ["ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
+      showProvider();   // re-enables Generate only if there is still a key to use
     }
   };
   $("#ai-use").onclick = () => {

@@ -163,7 +163,7 @@ export class AiClient {
   async _stream(messages, { session, maxTokens, onProgress, signal, watched, firstReply, alive }) {
     const response = await this.request("/chat/completions", { session, signal: watched, raw: true, timeout: firstReply,
       body: { model: session.model, messages, max_tokens: maxTokens, stream: true } });
-    let text = "", finish = null;
+    let text = "", thinking = 0, finish = null;
     const consume = (part) => {
       if (part.error) throw new Error(part.error.message || "The AI request failed.");
       const choice = part.choices?.find((c) => c.index === 0) || part.choices?.[0];
@@ -171,9 +171,16 @@ export class AiClient {
       if (choice.delta?.refusal || choice.message?.refusal) throw new Error("The model declined this request.");
       const fragment = choice.delta?.content ?? choice.message?.content ?? "";
       if (typeof fragment === "string") text += fragment;
+      // A reasoning model spends its first minute here, writing nothing the page will
+      // ever show. The words are none of the page's business and are dropped, but
+      // their arrival is the only sign of life there is, and a counter frozen at 0
+      // for a minute looks exactly like a counter that is broken.
+      const reasoning = choice.delta?.reasoning_content ?? choice.delta?.reasoning
+        ?? choice.message?.reasoning_content ?? "";
+      if (typeof reasoning === "string") thinking += reasoning.length;
       if (text.length > 1000000) throw new Error("The generated page is too large. Ask for a smaller page.");
       if (choice.finish_reason) finish = choice.finish_reason;
-      onProgress(text);
+      onProgress(text, { thinking });
     };
     alive();
     if ((response.headers.get("content-type") || "").includes("application/json")) consume(await response.json());
