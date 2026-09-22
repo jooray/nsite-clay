@@ -315,10 +315,11 @@
           placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
         <p class="note" id="ai-provider"></p>
         <div class="row">
-          <button type="button" id="ai-settings" data-t="aiSettings">AI settings and credit</button>
+          <button type="button" class="primary" id="ai-buy" data-t="aiBuy">Simple setup, 2000 sats</button>
           <button type="button" class="primary" id="ai-generate" data-t="aiGenerate">Generate preview</button>
           <button type="button" id="ai-cancel" hidden data-t="aiCancel">Cancel generation</button>
         </div>
+        <p class="note"><a href="#" id="ai-settings" data-t="aiAdvanced">Advanced setup, or my own API key</a></p>
         <p class="note" id="ai-status" role="status"></p>
         <div id="ai-result" hidden>
           <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
@@ -404,6 +405,7 @@
 </footer>
 
 <script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-wallet.js"></script>
 <script>
 /* The publisher.
  *
@@ -419,6 +421,17 @@
   const STRINGS = {
     en: {},
     es: {
+      aiBuy: "Configuración simple, 2000 sats",
+      aiAdvanced: "Configuración avanzada, o mi propia clave API",
+      buyTitle: "Configurar la IA",
+      buySplit1: "1000 sats apoyan a nsite-clay",
+      buySplit2: "1000 sats pasan a ser tu saldo de IA",
+      buyOwn: "El saldo es tuyo. Dura mucho, y puedes recuperar lo que no gastes.",
+      buyPay: "Escanea esto con cualquier cartera Lightning",
+      buyWaiting: "Esperando tu pago…",
+      buyWorking: "Configurando…",
+      buyDone: "Listo. Tu saldo de IA está configurado y guardado en tus relays de Nostr.",
+      buyNoSigner: "Inicia sesión con una clave que este navegador pueda usar para cifrar, para que tu saldo se guarde y se pueda recuperar.",
       aiOr: "O empieza por una de estas y escribe encima.",
       aiPlaceholder: "Quiero una web para mi cafetería. Tema marrón, servimos flat white de especialidad y hacemos encuentros de Nostr los martes a las 20:00. La dirección es 123 Satoshi Way, 12345 Asunción, Paraguay. Explica que trabajamos café de especialidad. Una sola página, sencilla, con tres fotos. Moderna y con estilo",
       needKey: "Primero pega una clave.", passShort: "Usa al menos ocho caracteres.", newPassDone: "Guardado", copied: "Copiado",
@@ -483,6 +496,17 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      aiBuy: "Jednoduché nastavenie, 2000 satov",
+      aiAdvanced: "Pokročilé nastavenie, alebo vlastný API kľúč",
+      buyTitle: "Nastaviť AI",
+      buySplit1: "1000 satov podporí nsite-clay",
+      buySplit2: "1000 satov sa stane tvojím AI kreditom",
+      buyOwn: "Kredit je tvoj. Vydrží dlho, a čo neminieš, vieš si vziať späť.",
+      buyPay: "Naskenuj to hocijakou Lightning peňaženkou",
+      buyWaiting: "Čaká sa na tvoju platbu…",
+      buyWorking: "Nastavuje sa…",
+      buyDone: "Hotovo. AI kredit je nastavený a uložený na tvojich Nostr relayoch.",
+      buyNoSigner: "Prihlás sa kľúčom, ktorým vie tento prehliadač šifrovať, aby sa kredit dal uložiť a vrátiť.",
       aiOr: "Alebo začni niektorou z týchto a píš do nej.",
       aiPlaceholder: "Chcem stránku pre svoju kaviareň. Hnedá téma, robíme hipsterske flat white a každý utorok o 20:00 máme Nostr stretnutie. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguaj. Vysvetli, že robíme špeciálnu kávu. Jednoduchá jednostránka s troma fotkami. Moderné a svíže",
       needKey: "Najprv vlož kľúč.", passShort: "Použi aspoň osem znakov.", newPassDone: "Uložené", copied: "Skopírované",
@@ -547,6 +571,17 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      aiBuy: "Jednoduché nastavení, 2000 satů",
+      aiAdvanced: "Pokročilé nastavení, nebo vlastní API klíč",
+      buyTitle: "Nastavit AI",
+      buySplit1: "1000 satů podpoří nsite-clay",
+      buySplit2: "1000 satů se stane tvým AI kreditem",
+      buyOwn: "Kredit je tvůj. Vydrží dlouho, a co neutratíš, si můžeš vzít zpět.",
+      buyPay: "Naskenuj to jakoukoli Lightning peněženkou",
+      buyWaiting: "Čeká se na tvoji platbu…",
+      buyWorking: "Nastavuje se…",
+      buyDone: "Hotovo. AI kredit je nastavený a uložený na tvých Nostr relayích.",
+      buyNoSigner: "Přihlas se klíčem, kterým umí tenhle prohlížeč šifrovat, aby se kredit dal uložit a vrátit.",
       aiOr: "Nebo začni některou z těchto a piš do ní.",
       aiPlaceholder: "Chci stránku pro svoji kavárnu. Hnědé téma, děláme hipsterská flat white a každé úterý ve 20:00 máme Nostr setkání. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguay. Vysvětli, že děláme výběrovou kávu. Jednoduchá jednostránka se třemi fotkami. Moderní a svěží",
       needKey: "Nejdřív vlož klíč.", passShort: "Použij aspoň osm znaků.", newPassDone: "Uloženo", copied: "Zkopírováno",
@@ -901,7 +936,97 @@
   showProvider();
 
   $("#ai-preview").title = nc.ai.say("preview");
-  $("#ai-settings").onclick = async () => { await nc.ai.settings(); showProvider(); };
+  $("#ai-settings").onclick = async (e) => { e.preventDefault(); await nc.ai.settings(); showProvider(); };
+
+  // Simple setup: one invoice, split in this browser, both halves delivered.
+  //
+  // Nothing is held. The wallet mints the denominations both halves will need,
+  // so the split is a partition rather than a second round trip to the mint, and
+  // every token that has not reached its destination is written to the vault
+  // before the next step, so a closed tab costs a retry and never the money.
+  $("#ai-buy").onclick = async () => {
+    const say2 = (k, f) => say(k, f);
+    if (!nc.vault?.usable) { $("#ai-status").textContent = say2("buyNoSigner", "Sign in with a key this browser can encrypt with."); return; }
+    if (!window.NsiteClayWallet) { $("#ai-status").textContent = "The wallet could not be loaded."; return; }
+    const wallet = new window.NsiteClayWallet.Wallet(nc);
+    const node = nc.ai.client.config.base;
+    const busy = (on) => { for (const id of ["ai-buy", "ai-generate", "ai-settings"]) $("#" + id).disabled = on; };
+    busy(true);
+    try {
+      $("#ai-status").textContent = say2("buyWorking", "Setting it up…");
+      const [best] = await wallet.mints(node);
+      const quote = await wallet.invoice(best.mint, 2000);
+      await payDialog(quote, best, wallet, node);
+    } catch (e) {
+      $("#ai-status").textContent = e.message;
+    } finally { busy(false); showProvider(); }
+  };
+
+  async function payDialog(quote, best, wallet, node) {
+    let done = false, timer;
+    await nc.modal({
+      title: say("buyTitle", "Set up AI"), submitLabel: nc.ai.say("check"), noCancel: false,
+      build: (body, h) => {
+        const split = document.createElement("ul");
+        split.className = "note";
+        for (const line of [say("buySplit1", "1000 sats support nsite-clay"), say("buySplit2", "1000 sats become your AI credit")]) {
+          const li = document.createElement("li"); li.textContent = line; split.append(li);
+        }
+        body.append(split);
+        const own = document.createElement("p"); own.className = "note";
+        own.textContent = say("buyOwn", "The credit is yours."); body.append(own);
+        const qr = nc.qrElement(quote.request.toUpperCase(), { size: 260 });
+        qr.style.cssText = "display:block;width:min(260px,100%);height:auto;margin:1rem auto;background:#fff";
+        body.append(qr);
+        const cap = document.createElement("p"); cap.className = "note"; cap.style.textAlign = "center";
+        cap.textContent = say("buyPay", "Scan this with any Lightning wallet"); body.append(cap);
+        const link = document.createElement("a"); link.href = "lightning:" + quote.request;
+        link.textContent = nc.ai.say("openWallet"); body.append(link);
+
+        const poll = async () => {
+          if (done) return;
+          try {
+            if (await wallet.paid(best.mint, quote.quote)) {
+              done = true;
+              h.status(say("buyWorking", "Setting it up…"));
+              await deliver(wallet, best, quote, node, h);
+              h.close(true);
+              return;
+            }
+            h.status(say("buyWaiting", "Waiting for your payment…"));
+          } catch (e) { h.status(e.message, true); }
+          timer = setTimeout(poll, 3000);
+        };
+        timer = setTimeout(poll, 800);
+      },
+      onSubmit: async () => { /* the poll above is what finishes this */ },
+    }).finally(() => { done = true; clearTimeout(timer); });
+  }
+
+  // Mint, split, and hand both halves over. Each token is parked in the vault
+  // until its destination has taken it, so nothing is lost to a closed tab.
+  async function deliver(wallet, best, quote, node, h) {
+    const [creditToken, giftToken] = await wallet.mint(best.mint, best.id, quote.quote, [1000, 1000]);
+    await nc.vault.save({ pending: { credit: creditToken, gift: giftToken, node } });
+
+    const out = await nc.ai.client.cashu(creditToken, { ...nc.ai.client.session(), base: node });
+    const key = nc.ai.client.session().key;
+    await nc.vault.save({ ai: { ...(await nc.vault.load())?.ai, [node]: key }, pending: { gift: giftToken } });
+
+    // The donation is last on purpose: the thing somebody paid for comes first.
+    try {
+      await fetch(DONATION_SINK, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: giftToken, project: "nsite-clay" }),
+      });
+      await nc.vault.save({ pending: null });
+    } catch { /* kept in the vault, retried next time */ }
+
+    $("#ai-status").textContent = say("buyDone", "Ready.");
+    return out;
+  }
+
+  const DONATION_SINK = "https://cypherpunk.today/donation-sink/donation-sink.php";
   $("#ai-cancel").onclick = () => generation?.abort();
   $("#ai-generate").onclick = async () => {
     const controller = new AbortController(); generation = controller;
