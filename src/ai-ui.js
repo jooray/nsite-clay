@@ -61,7 +61,7 @@ const WORDS = {
   preview: ["Preview", "Vista previa", "Náhľad", "Náhled"],
   generating: ["Generating…", "Generando…", "Generuje sa…", "Generuje se…"],
   thinking: ["Thinking…", "Pensando…", "Rozmýšľa…", "Rozmýšlí…"],
-  noCredit: ["You have no AI credit here yet. Add some to edit this page with AI, or use an API key of your own.", "Todavía no tienes saldo de IA aquí. Añade saldo para editar esta página con IA, o usa una clave API propia.", "Zatiaľ tu nemáš AI kredit. Pridaj si ho, ak chceš túto stránku upravovať s AI, alebo použi vlastný API kľúč.", "Zatím tu nemáš AI kredit. Přidej si ho, pokud chceš tuhle stránku upravovat s AI, nebo použij vlastní API klíč."],
+  noCredit: ["You have no AI credit here yet. Add some, or use an API key of your own.", "Todavía no tienes saldo de IA aquí. Añade saldo o usa una clave API propia.", "Zatiaľ tu nemáš AI kredit. Pridaj si ho, alebo použi vlastný API kľúč.", "Zatím tu nemáš AI kredit. Přidej si ho, nebo použij vlastní API klíč."],
   addCredit: ["Add AI credit", "Añadir saldo de IA", "Pridať AI kredit", "Přidat AI kredit"],
   looking: ["Looking for your credit on your relays…", "Buscando tu saldo en tus relays…", "Hľadám tvoj kredit na tvojich relayoch…", "Hledám tvůj kredit na tvých relayích…"],
   adopted: ["Found the credit you bought. It is ready here.", "Encontramos el saldo que compraste. Ya está listo aquí.", "Našiel sa kredit, ktorý si kúpil. Je pripravený aj tu.", "Našel se kredit, který sis koupil. Je připravený i tady."],
