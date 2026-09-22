@@ -17,7 +17,10 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.once("listening", r));
 const browser = await chromium.launch({ channel: "chrome" });
 try {
-  for (const [lang, template] of [["en", ""], ["en", "cms"], ["es", ""], ["sk", ""], ["cs", ""]]) {
+  // The second English pass exercises the refine path: a preview that is almost
+  // right, changed by saying what is wrong with it rather than describing the
+  // whole page again.
+  for (const [lang, refine] of [["en", false], ["en", true], ["es", false], ["sk", false], ["cs", false]]) {
     const page = await browser.newPage();
     page.on("pageerror", (e) => errors.push(e.message));
     await page.routeWebSocket("**", (ws) => ws.close());
@@ -43,25 +46,42 @@ try {
     // Describing the page is a route of its own now, not something to unfold, so
     // it has to be on screen the moment this step is.
     assert(await page.isVisible("#ai-builder"), "the AI builder is not visible without being opened");
-    assert.equal(await page.textContent("#ai-builder h3"), { en: "Create a page from a description with AI", es: "Crea una página a partir de una descripción con IA", sk: "Vytvor stránku na základe opisu s pomocou AI", cs: "Vytvoř stránku podle popisu s pomocí AI" }[lang]);
+    assert.equal(await page.textContent("#ai-builder h3"), { en: "Describe it, and AI builds it", es: "Descríbela y la IA la construye", sk: "Opíš ju a AI ju postaví", cs: "Popiš ji a AI ji postaví" }[lang]);
+    // Two routes, each with its own heading, so neither explanation can be read
+    // as the other's. The templates are the second one and say so above the grid.
+    assert.equal(await page.locator("#step-2 .route h3, .step[data-step=\"2\"] .route h3").count(), 2);
     // And the box says what a good description looks like, in the reader's language.
     const placeholder = await page.getAttribute("#ai-description", "placeholder");
     assert(placeholder && placeholder.length > 80, `placeholder is ${JSON.stringify(placeholder)}`);
     assert.equal(/coffee shop|cafeter|kaviare|kav\u00e1rnu/.test(placeholder), true,
       `placeholder not translated for ${lang}: ${placeholder.slice(0, 60)}`);
-    await page.selectOption("#ai-template", template);
     await page.fill("#ai-description", "A page for a community bike workshop. Use the supplied Saturday information.");
     await page.click("#ai-generate");
     await page.waitForSelector("#ai-result:not([hidden])");
     assert.equal(await page.evaluate(() => window.published), undefined);
     assert.equal(requests.at(-1).model, "deepseek-v4-1-flash");
-    assert.equal(requests.at(-1).messages[1].content.includes("Starting page"), !!template);
+    assert.equal(requests.at(-1).messages[1].content.includes("Starting page"), false);
     assert(!JSON.stringify(requests.at(-1)).includes("sk-browser-test"));
     // Nobody needs to know who is publishing in order to adapt a design, and the
     // footer only promises the description and the template.
     const identities = await page.evaluate(() => [nc.npub, nc.pubkey].filter(Boolean));
     for (const id of identities) assert(!JSON.stringify(requests.at(-1)).includes(id), `the prompt carried ${id}`);
     assert.equal(await page.getAttribute("#ai-preview", "sandbox"), "");
+    // What to do with a preview you do not like. Both answers are on screen:
+    // change the description, or say what is wrong with the page itself.
+    assert(await page.isVisible("#ai-again"), "there is no way back to the description");
+    assert(await page.isVisible("#ai-refine"), "there is no way to ask for a change");
+    if (refine) {
+      const asked = requests.length;
+      await page.fill("#ai-change", "Put the opening hours at the top.");
+      await page.click("#ai-refine");
+      await page.waitForFunction(() => document.querySelector("#ai-change").value === "");
+      assert.equal(requests.length, asked + 1, "the change was not sent");
+      const sent = requests.at(-1).messages[1].content;
+      assert(sent.includes("Put the opening hours at the top."), "the instruction was not sent");
+      assert(sent.includes("A bike workshop"), "the page being changed was not sent with it");
+      assert(!/sk-browser-test/.test(JSON.stringify(requests.at(-1))));
+    }
     await page.click("#ai-use");
     await page.fill("#path", "/workshop/");
     await page.click("#where-go");
@@ -110,5 +130,5 @@ try {
     await page.close();
   }
   assert.deepEqual(errors, []);
-  console.log("Publisher AI: scratch and template flows preview before publishing, preserve ownership/path, and ship all editable runtime assets.");
+  console.log("Publisher AI: describing and refining preview before publishing, preserve ownership/path, and ship all editable runtime assets.");
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }

@@ -217,15 +217,16 @@
   </p>
 
   <h1 data-t="h1">Publish a site</h1>
-  <p class="lede" data-t="lede">Pick a template, sign in with your Nostr key, and it is online. The page
-  you publish edits itself afterwards, so this is the only time you need this wizard.</p>
+  <p class="lede" data-t="lede">Sign in with your Nostr key, describe the page you want or start from a
+  finished one, and it is online. The page you publish edits itself afterwards, so this is the only time
+  you need this wizard.</p>
 
   <noscript><p data-t="noscript">This publisher runs entirely in your browser, so it needs JavaScript.
   Without it you can still publish from a terminal with <code>npx nsite-clay deploy</code>.</p></noscript>
 
   <ol class="steps" id="steps">
     <li data-step="1"><span class="n">1</span><span data-t="s1">Sign in</span></li>
-    <li data-step="2"><span class="n">2</span><span data-t="s2">Template</span></li>
+    <li data-step="2"><span class="n">2</span><span data-t="s2">Your page</span></li>
     <li data-step="3"><span class="n">3</span><span data-t="s3">Address</span></li>
     <li data-step="4"><span class="n">4</span><span data-t="s4">Publish</span></li>
   </ol>
@@ -298,18 +299,16 @@
   <!-- ---- 2. template --------------------------------------------------- -->
   <section class="step" data-step="2">
     <div class="card">
-      <h2 data-t="tplTitle">Pick a starting point</h2>
-      <p class="sub" data-t="tplSub">Every one of these is a finished page you can type over. The first one
-      is built out of blocks you add and rearrange, which is the easiest place to begin.</p>
-      <!-- Describing the page you want is the shortest way to a site you would
-           keep, so it is the first thing on this step rather than something to
-           unfold. The twelve templates stay below for anybody who would rather
-           start from a finished page. -->
-      <section class="ai-builder" id="ai-builder" nc:no-persist>
-        <h3 data-t="aiTitle">Create a page from a description with AI</h3>
-        <p class="note" data-t="aiHint">Start from scratch or choose a template below. AI uses our Cypherpunk Routstr node by default, paid with Cashu or Lightning. You can change the node, model or API key in AI settings.</p>
-        <label class="f" for="ai-template" data-t="aiStart">Starting page</label>
-        <select id="ai-template" class="nc-input"><option value="" data-t="aiScratch">Start from scratch</option></select>
+      <h2 data-t="tplTitle">How do you want to start?</h2>
+      <p class="sub" data-t="tplSub">Two ways. Describe the page you want and have it built, or take a
+      finished one and type over it. Either way the page is yours afterwards and edits itself.</p>
+      <!-- Two routes, drawn as two routes. Each carries its own heading and its
+           own description, so neither one's explanation can be read as the
+           other's. That is the mistake this replaced: the sentence describing
+           the twelve templates sat above the AI form and appeared to describe it. -->
+      <section class="route" id="ai-builder" nc:no-persist>
+        <h3 data-t="aiTitle">Describe it, and AI builds it</h3>
+        <p class="note" data-t="aiHint">Write what the page is for and what should be on it. Paid with Lightning or Cashu, and the page is ordinary HTML you can keep editing afterwards.</p>
         <label class="f" for="ai-description" data-t="aiDescribe">What page do you want?</label>
         <textarea id="ai-description" rows="5" nc:no-persist data-t-placeholder="aiPlaceholder"
           placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
@@ -324,11 +323,28 @@
         <div id="ai-result" hidden>
           <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
           <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
-          <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
+          <!-- Three ways on, drawn as three, because a preview with one button
+               and no way back reads as a decision somebody is not allowed to
+               make. Keeping it, changing one thing about it, or going back to
+               the description are all things people want here. -->
+          <div class="row">
+            <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
+            <button type="button" id="ai-again" data-t="aiAgain">Change the description</button>
+          </div>
+          <label class="f" for="ai-change" data-t="aiChangeLabel">Or tell AI what to change about this page</label>
+          <textarea id="ai-change" rows="2" nc:no-persist data-t-placeholder="aiChangePlaceholder"
+            placeholder="Make it darker, drop the photos, and put the opening hours at the top"></textarea>
+          <div class="row">
+            <button type="button" id="ai-refine" data-t="aiRefine">Make that change</button>
+          </div>
         </div>
       </section>
-      <p class="sub or-pick" data-t="aiOr">Or start from one of these and type over it.</p>
-      <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
+      <section class="route">
+        <h3 data-t="aiOr">Start from a finished page</h3>
+        <p class="note" data-t="tplPick">Every one of these is a whole page you can type over. The first is built
+        out of blocks you add and rearrange, which is the easiest place to begin. Free, and no AI involved.</p>
+        <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
+      </section>
       <div class="row end">
         <button id="tpl-back" data-t="back">Back</button>
       </div>
@@ -421,6 +437,19 @@
   const STRINGS = {
     en: {},
     es: {
+      aiAgain: "Cambiar la descripción",
+      aiChangeLabel: "O dile a la IA qué cambiar en esta página",
+      aiChangePlaceholder: "Ponla más oscura, quita las fotos y sube el horario arriba",
+      aiRefine: "Hacer ese cambio",
+      aiChangeEmpty: "Di qué debería ser distinto.",
+      aiChanging: "Haciendo ese cambio…",
+      aiChanged: "Cambiado. Vuelve a mirarlo abajo.",
+      aiEditDescription: "Cambia la descripción y genera una vista previa nueva.",
+      buyDonating: "Enviando la mitad que apoya a nsite-clay…",
+      buySaving: "Guardando tu clave en tus relays de Nostr…",
+      buyCrediting: "Añadiendo tu saldo de IA…",
+      buyMinting: "Pago recibido. Recogiendo tus monedas…",
+      tplPick: "Cada una es una página entera sobre la que puedes escribir. La primera se arma con bloques que añades y reordenas, que es lo más fácil para empezar. Gratis, y sin IA.",
       aiBuy: "Configuración simple, 2000 sats",
       aiAdvanced: "Configuración avanzada, o mi propia clave API",
       buyTitle: "Configurar la IA",
@@ -432,7 +461,7 @@
       buyWorking: "Configurando…",
       buyDone: "Listo. Tu saldo de IA está configurado y guardado en tus relays de Nostr.",
       buyNoSigner: "Inicia sesión con una clave que este navegador pueda usar para cifrar, para que tu saldo se guarde y se pueda recuperar.",
-      aiOr: "O empieza por una de estas y escribe encima.",
+      aiOr: "Empieza por una página ya hecha",
       aiPlaceholder: "Quiero una web para mi cafetería. Tema marrón, servimos flat white de especialidad y hacemos encuentros de Nostr los martes a las 20:00. La dirección es 123 Satoshi Way, 12345 Asunción, Paraguay. Explica que trabajamos café de especialidad. Una sola página, sencilla, con tres fotos. Moderna y con estilo",
       needKey: "Primero pega una clave.", passShort: "Usa al menos ocho caracteres.", newPassDone: "Guardado", copied: "Copiado",
       qrOpen: "Abrir en tu app de firma", qrWait: "Esperando a la app de firma. Deja esta página abierta mientras lo apruebas.",
@@ -446,12 +475,12 @@
       logFetch: "Leyendo la plantilla y el runtime…", logReady: "Listo: ", logFiles: " archivos",
       logUpload: "Subiendo a Blossom…", logUploaded: "Todos los archivos están en Blossom", logSent: "subidos", logReused: "ya estaban",
       logManifest: "Publicando el manifiesto en los relays…", logPublished: "Manifiesto publicado, versión archivada",
-      aiTitle: "Crea una página a partir de una descripción con IA", aiHint: "Empieza desde cero o elige una plantilla. La IA usa nuestro nodo Routstr Cypherpunk por defecto, con pagos en Cashu o Lightning. Puedes cambiar el nodo, modelo o clave API en los ajustes de IA.",
+      aiTitle: "Descríbela y la IA la construye", aiHint: "Escribe para qué es la página y qué debe llevar. Se paga con Lightning o Cashu, y el resultado es HTML normal que puedes seguir editando.",
       aiStart: "Página inicial", aiScratch: "Empezar desde cero", aiDescribe: "¿Qué página quieres?", aiSettings: "Ajustes y saldo de IA", aiGenerate: "Generar vista previa", aiCancel: "Cancelar generación", aiReview: "Revisa la página antes de continuar. Puedes editar sus palabras y bloques después de publicarla.", aiUse: "Usar esta página", aiWorking: "Generando…", aiReady: "La vista previa está lista.", aiCancelled: "Generación cancelada.",
       crumb: "publicar", h1: "Publica un sitio",
-      lede: "Elige una plantilla, inicia sesión con tu clave de Nostr y ya está en línea. La página que publicas se edita a sí misma después, así que este asistente solo se usa una vez.",
+      lede: "Entra con tu clave de Nostr, describe la página que quieres o empieza por una ya hecha, y está en línea. La página que publicas se edita sola después, así que esta es la única vez que necesitas este asistente.",
       noscript: "Este publicador funciona entero en tu navegador, así que necesita JavaScript. Sin él todavía puedes publicar desde una terminal con npx nsite-clay deploy.",
-      s1: "Entrar", s2: "Plantilla", s3: "Dirección", s4: "Publicar",
+      s1: "Entrar", s2: "Tu página", s3: "Dirección", s4: "Publicar",
       signinTitle: "¿Quién publica?",
       signinSub: "Un sitio pertenece a una clave, no a una cuenta. La clave que entre aquí será la única que pueda cambiar la página después.",
       wayExt: "Extensión del navegador", wayExtSub: "Alby, nos2x y las demás. No hay que escribir nada.",
@@ -467,8 +496,8 @@
       newPassNote: "El archivo se cifra con esta contraseña usando NIP-49. Perder la contraseña es perder la clave, igual que perder la clave misma.",
       newPassGo: "Escribir el archivo", newConfirm: "He guardado esta clave en un sitio seguro.",
       newGo: "Continuar",
-      tplTitle: "Elige un punto de partida",
-      tplSub: "Todas son páginas terminadas sobre las que puedes escribir. La primera se construye con bloques que añades y reordenas, y es la más fácil para empezar.",
+      tplTitle: "¿Cómo quieres empezar?",
+      tplSub: "Dos caminos. Describe la página que quieres y deja que se construya, o toma una ya hecha y escribe encima. En ambos casos la página es tuya después y se edita sola.",
       tplLoading: "cargando plantillas…", back: "Atrás", next: "Siguiente",
       whereTitle: "¿Dónde va a vivir?",
       whereSub: "Tu sitio está en tu npub en cualquier pasarela nsite. Esto es la ruta dentro de él. Deja una sola barra para la portada.",
@@ -496,6 +525,19 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      aiAgain: "Zmeniť opis",
+      aiChangeLabel: "Alebo povedz AI, čo má na tejto stránke zmeniť",
+      aiChangePlaceholder: "Sprav to tmavšie, vyhoď fotky a otváracie hodiny daj hore",
+      aiRefine: "Urobiť tú zmenu",
+      aiChangeEmpty: "Povedz, čo má byť inak.",
+      aiChanging: "Robím tú zmenu…",
+      aiChanged: "Zmenené. Pozri sa na to nižšie znova.",
+      aiEditDescription: "Zmeň opis a vytvor nový náhľad.",
+      buyDonating: "Posielam polovicu, ktorá podporí nsite-clay…",
+      buySaving: "Ukladám kľúč na tvoje Nostr relaye…",
+      buyCrediting: "Pridávam tvoj AI kredit…",
+      buyMinting: "Platba prišla. Vyberám tvoje mince…",
+      tplPick: "Každá z nich je celá stránka, do ktorej vieš písať. Prvá sa skladá z blokov, ktoré pridávaš a presúvaš, a to je najľahší začiatok. Zadarmo a bez AI.",
       aiBuy: "Jednoduché nastavenie, 2000 satov",
       aiAdvanced: "Pokročilé nastavenie, alebo vlastný API kľúč",
       buyTitle: "Nastaviť AI",
@@ -507,7 +549,7 @@
       buyWorking: "Nastavuje sa…",
       buyDone: "Hotovo. AI kredit je nastavený a uložený na tvojich Nostr relayoch.",
       buyNoSigner: "Prihlás sa kľúčom, ktorým vie tento prehliadač šifrovať, aby sa kredit dal uložiť a vrátiť.",
-      aiOr: "Alebo začni niektorou z týchto a píš do nej.",
+      aiOr: "Začni hotovou stránkou",
       aiPlaceholder: "Chcem stránku pre svoju kaviareň. Hnedá téma, robíme hipsterske flat white a každý utorok o 20:00 máme Nostr stretnutie. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguaj. Vysvetli, že robíme špeciálnu kávu. Jednoduchá jednostránka s troma fotkami. Moderné a svíže",
       needKey: "Najprv vlož kľúč.", passShort: "Použi aspoň osem znakov.", newPassDone: "Uložené", copied: "Skopírované",
       qrOpen: "Otvoriť v podpisovej aplikácii", qrWait: "Čaká sa na podpisovú aplikáciu. Nechaj túto stránku otvorenú, kým to schváliš.",
@@ -521,12 +563,12 @@
       logFetch: "Načítava sa šablóna a runtime…", logReady: "Pripravené: ", logFiles: " súborov",
       logUpload: "Nahráva sa na Blossom…", logUploaded: "Všetky súbory sú na Blossome", logSent: "nahraných", logReused: "už tam bolo",
       logManifest: "Manifest sa zverejňuje na relayoch…", logPublished: "Manifest zverejnený, verzia uložená",
-      aiTitle: "Vytvor stránku na základe opisu s pomocou AI", aiHint: "Začni od nuly alebo si vyber šablónu. AI predvolene používa náš Routstr node Cypherpunk s platbou cez Cashu alebo Lightning. Node, model aj API kľúč môžeš zmeniť v nastaveniach AI.",
+      aiTitle: "Opíš ju a AI ju postaví", aiHint: "Napíš, na čo tá stránka je a čo na nej má byť. Platí sa cez Lightning alebo Cashu, a výsledok je obyčajné HTML, ktoré vieš ďalej upravovať.",
       aiStart: "Východisková stránka", aiScratch: "Začať od nuly", aiDescribe: "Akú stránku chceš?", aiSettings: "Nastavenia a kredit AI", aiGenerate: "Vytvoriť náhľad", aiCancel: "Zrušiť generovanie", aiReview: "Pred pokračovaním si stránku skontroluj. Text aj bloky môžeš upravovať po zverejnení.", aiUse: "Použiť túto stránku", aiWorking: "Generuje sa…", aiReady: "Náhľad je pripravený.", aiCancelled: "Generovanie zrušené.",
       crumb: "publikovať", h1: "Zverejni stránku",
-      lede: "Vyber si šablónu, prihlás sa svojím nostr kľúčom a je online. Stránka, ktorú zverejníš, sa potom upravuje sama, takže tohto sprievodcu potrebuješ iba raz.",
+      lede: "Prihlás sa svojím Nostr kľúčom, opíš stránku, akú chceš, alebo začni hotovou, a je online. Stránka, ktorú zverejníš, sa potom upravuje sama, takže tohto sprievodcu potrebuješ len raz.",
       noscript: "Tento publikátor beží celý v prehliadači, takže potrebuje JavaScript. Aj bez neho vieš zverejniť z terminálu cez npx nsite-clay deploy.",
-      s1: "Prihlásenie", s2: "Šablóna", s3: "Adresa", s4: "Zverejnenie",
+      s1: "Prihlásenie", s2: "Tvoja stránka", s3: "Adresa", s4: "Zverejnenie",
       signinTitle: "Kto zverejňuje?",
       signinSub: "Stránka patrí kľúču, nie účtu. Kľúč, ktorý sa tu prihlási, bude jediný, ktorý ju potom vie zmeniť.",
       wayExt: "Rozšírenie prehliadača", wayExtSub: "Alby, nos2x a ďalšie. Nič netreba písať.",
@@ -542,8 +584,8 @@
       newPassNote: "Súbor sa zašifruje týmto heslom cez NIP-49. Stratiť heslo znamená stratiť kľúč, rovnako ako stratiť samotný kľúč.",
       newPassGo: "Zapísať súbor", newConfirm: "Kľúč mám uložený na bezpečnom mieste.",
       newGo: "Pokračovať",
-      tplTitle: "Vyber si, odkiaľ začneš",
-      tplSub: "Každá z nich je hotová stránka, ktorú vieš prepísať. Prvá sa skladá z blokov, ktoré pridávaš a presúvaš, a je najjednoduchší začiatok.",
+      tplTitle: "Ako chceš začať?",
+      tplSub: "Dve cesty. Opíš stránku, akú chceš, a nechaj ju postaviť, alebo si vezmi hotovú a píš do nej. Tak či tak je stránka potom tvoja a upravuje sa sama.",
       tplLoading: "načítavajú sa šablóny…", back: "Späť", next: "Ďalej",
       whereTitle: "Kde má bývať?",
       whereSub: "Tvoja stránka je na tvojom npube na ktorejkoľvek nsite bráne. Toto je cesta vnútri nej. Pre titulnú stránku nechaj jednu lomku.",
@@ -571,6 +613,19 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      aiAgain: "Změnit popis",
+      aiChangeLabel: "Nebo řekni AI, co má na téhle stránce změnit",
+      aiChangePlaceholder: "Udělej to tmavší, vyhoď fotky a otevírací dobu dej nahoru",
+      aiRefine: "Udělat tu změnu",
+      aiChangeEmpty: "Řekni, co má být jinak.",
+      aiChanging: "Dělám tu změnu…",
+      aiChanged: "Změněno. Podívej se na to níž znovu.",
+      aiEditDescription: "Změň popis a vytvoř nový náhled.",
+      buyDonating: "Posílám polovinu, která podpoří nsite-clay…",
+      buySaving: "Ukládám klíč na tvoje Nostr relaye…",
+      buyCrediting: "Přidávám tvůj AI kredit…",
+      buyMinting: "Platba dorazila. Vybírám tvoje mince…",
+      tplPick: "Každá z nich je celá stránka, do které umíš psát. První se skládá z bloků, které přidáváš a přesouváš, a to je nejlehčí začátek. Zdarma a bez AI.",
       aiBuy: "Jednoduché nastavení, 2000 satů",
       aiAdvanced: "Pokročilé nastavení, nebo vlastní API klíč",
       buyTitle: "Nastavit AI",
@@ -582,7 +637,7 @@
       buyWorking: "Nastavuje se…",
       buyDone: "Hotovo. AI kredit je nastavený a uložený na tvých Nostr relayích.",
       buyNoSigner: "Přihlas se klíčem, kterým umí tenhle prohlížeč šifrovat, aby se kredit dal uložit a vrátit.",
-      aiOr: "Nebo začni některou z těchto a piš do ní.",
+      aiOr: "Začni hotovou stránkou",
       aiPlaceholder: "Chci stránku pro svoji kavárnu. Hnědé téma, děláme hipsterská flat white a každé úterý ve 20:00 máme Nostr setkání. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguay. Vysvětli, že děláme výběrovou kávu. Jednoduchá jednostránka se třemi fotkami. Moderní a svěží",
       needKey: "Nejdřív vlož klíč.", passShort: "Použij aspoň osm znaků.", newPassDone: "Uloženo", copied: "Zkopírováno",
       qrOpen: "Otevřít v podpisové aplikaci", qrWait: "Čeká se na podpisovou aplikaci. Nech tuhle stránku otevřenou, dokud to schválíš.",
@@ -596,12 +651,12 @@
       logFetch: "Načítá se šablona a runtime…", logReady: "Připraveno: ", logFiles: " souborů",
       logUpload: "Nahrává se na Blossom…", logUploaded: "Všechny soubory jsou na Blossomu", logSent: "nahraných", logReused: "už tam bylo",
       logManifest: "Manifest se zveřejňuje na relayích…", logPublished: "Manifest zveřejněný, verze uložená",
-      aiTitle: "Vytvoř stránku podle popisu s pomocí AI", aiHint: "Začni od nuly nebo si vyber šablonu. AI ve výchozím nastavení používá náš Routstr node Cypherpunk s platbou přes Cashu nebo Lightning. Node, model i API klíč můžeš změnit v nastavení AI.",
+      aiTitle: "Popiš ji a AI ji postaví", aiHint: "Napiš, na co ta stránka je a co na ní má být. Platí se přes Lightning nebo Cashu, a výsledek je obyčejné HTML, které umíš dál upravovat.",
       aiStart: "Výchozí stránka", aiScratch: "Začít od nuly", aiDescribe: "Jakou stránku chceš?", aiSettings: "Nastavení a kredit AI", aiGenerate: "Vytvořit náhled", aiCancel: "Zrušit generování", aiReview: "Před pokračováním si stránku zkontroluj. Text i bloky můžeš upravovat po zveřejnění.", aiUse: "Použít tuto stránku", aiWorking: "Generuje se…", aiReady: "Náhled je připravený.", aiCancelled: "Generování zrušeno.",
       crumb: "publikovat", h1: "Zveřejni stránku",
-      lede: "Vyber si šablonu, přihlas se svým nostr klíčem a je online. Stránka, kterou zveřejníš, se pak upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
+      lede: "Přihlas se svým Nostr klíčem, popiš stránku, jakou chceš, nebo začni hotovou, a je online. Stránka, kterou zveřejníš, se potom upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
       noscript: "Tenhle publikátor běží celý v prohlížeči, takže potřebuje JavaScript. I bez něj můžeš zveřejnit z terminálu přes npx nsite-clay deploy.",
-      s1: "Přihlášení", s2: "Šablona", s3: "Adresa", s4: "Zveřejnění",
+      s1: "Přihlášení", s2: "Tvoje stránka", s3: "Adresa", s4: "Zveřejnění",
       signinTitle: "Kdo zveřejňuje?",
       signinSub: "Stránka patří klíči, ne účtu. Klíč, který se tu přihlásí, bude jediný, který ji pak umí změnit.",
       wayExt: "Rozšíření prohlížeče", wayExtSub: "Alby, nos2x a další. Nic se nemusí psát.",
@@ -617,8 +672,8 @@
       newPassNote: "Soubor se zašifruje tímhle heslem přes NIP-49. Ztratit heslo znamená ztratit klíč, stejně jako ztratit klíč samotný.",
       newPassGo: "Zapsat soubor", newConfirm: "Klíč mám uložený na bezpečném místě.",
       newGo: "Pokračovat",
-      tplTitle: "Vyber si, odkud začneš",
-      tplSub: "Každá z nich je hotová stránka, kterou můžeš přepsat. První se skládá z bloků, které přidáváš a přesouváš, a je nejjednodušší začátek.",
+      tplTitle: "Jak chceš začít?",
+      tplSub: "Dvě cesty. Popiš stránku, jakou chceš, a nech ji postavit, nebo si vezmi hotovou a piš do ní. Tak či tak je stránka potom tvoje a upravuje se sama.",
       tplLoading: "načítají se šablony…", back: "Zpět", next: "Dál",
       whereTitle: "Kde má bydlet?",
       whereSub: "Tvoje stránka je na tvém npubu na kterékoli nsite bráně. Tohle je cesta uvnitř ní. Pro titulní stránku nech jedno lomítko.",
@@ -911,8 +966,6 @@
         checkPath();
       };
       host.appendChild(card);
-      const option = document.createElement("option"); option.value = t.name; option.textContent = title.textContent;
-      $("#ai-template").append(option);
     }
   }
 
@@ -926,12 +979,12 @@
   const showProvider = () => {
     const s = nc.ai.client.session();
     const el = $("#ai-provider");
-    el.textContent = s.key
-      ? `${s.model} · ${new URL(s.base).host}`
-      : nc.ai.say("noCredit");
+    el.textContent = s.key ? `${s.model} · ${new URL(s.base).host}` : nc.ai.say("noCredit");
     el.classList.toggle("bad", !s.key);
+    // One button at a time. Offering Simple setup to somebody who has just paid
+    // asks them to decide whether they paid, which they should not have to.
+    $("#ai-buy").hidden = !!s.key;
     $("#ai-generate").disabled = !s.key;
-    $("#ai-settings").classList.toggle("primary", !s.key);
   };
   showProvider();
 
@@ -960,6 +1013,7 @@
     } catch (e) {
       $("#ai-status").textContent = e.message;
     } finally { busy(false); showProvider(); }
+    if (nc.ai.client.session().key && $("#ai-description").value.trim()) $("#ai-generate").click();
   };
 
   async function payDialog(quote, best, wallet, node) {
@@ -1005,15 +1059,26 @@
 
   // Mint, split, and hand both halves over. Each token is parked in the vault
   // until its destination has taken it, so nothing is lost to a closed tab.
+  //
+  // Every step says what it is doing. This takes several seconds across four
+  // machines, and a single unchanging "Setting it up" is indistinguishable from
+  // a hang to the one person who has just handed over money.
   async function deliver(wallet, best, quote, node, h) {
+    const step = (k, fallback) => { const m = say(k, fallback); h.status(m); $("#ai-status").textContent = m; };
+
+    step("buyMinting", "Payment received. Collecting your coins…");
     const [creditToken, giftToken] = await wallet.mint(best.mint, best.id, quote.quote, [1000, 1000]);
     await nc.vault.save({ pending: { credit: creditToken, gift: giftToken, node } });
 
+    step("buyCrediting", "Adding your AI credit…");
     const out = await nc.ai.client.cashu(creditToken, { ...nc.ai.client.session(), base: node });
     const key = nc.ai.client.session().key;
+
+    step("buySaving", "Saving your key to your Nostr relays…");
     await nc.vault.save({ ai: { ...(await nc.vault.load())?.ai, [node]: key }, pending: { gift: giftToken } });
 
     // The donation is last on purpose: the thing somebody paid for comes first.
+    step("buyDonating", "Sending the half that supports nsite-clay…");
     try {
       await fetch(DONATION_SINK, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1022,7 +1087,7 @@
       await nc.vault.save({ pending: null });
     } catch { /* kept in the vault, retried next time */ }
 
-    $("#ai-status").textContent = say("buyDone", "Ready.");
+    step("buyDone", "Ready.");
     return out;
   }
 
@@ -1030,9 +1095,9 @@
   $("#ai-cancel").onclick = () => generation?.abort();
   $("#ai-generate").onclick = async () => {
     const controller = new AbortController(); generation = controller;
-    const template = state.catalogue.find((t) => t.name === $("#ai-template").value) || null;
+    const template = null;   // this screen describes a page; templates are the other route
     $("#ai-result").hidden = true; generated = null;
-    for (const id of ["ai-generate", "ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = true;
+    for (const id of ["ai-generate", "ai-buy", "ai-settings", "ai-description", "tpl-back"]) $("#" + id).disabled = true;
     $("#tpls").inert = true; $("#ai-cancel").hidden = false;
     $("#ai-status").textContent = say("aiWorking", "Generating…");
     try {
@@ -1058,10 +1123,52 @@
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
       generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
-      for (const id of ["ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
+      for (const id of ["ai-settings", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
       showProvider();   // re-enables Generate only if there is still a key to use
     }
   };
+  // Changing one thing about a page that is almost right, rather than throwing it
+  // away and describing it again from nothing. It is the cheaper of the two as
+  // well: the model is given the page and one instruction.
+  $("#ai-refine").onclick = async () => {
+    if (!generated) return;
+    const instruction = $("#ai-change").value.trim();
+    if (!instruction) { $("#ai-change").focus(); $("#ai-status").textContent = say("aiChangeEmpty", "Say what should be different about it."); return; }
+    const controller = new AbortController(); generation = controller;
+    for (const id of ["ai-generate", "ai-buy", "ai-settings", "ai-description", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = true;
+    $("#tpls").inert = true; $("#ai-cancel").hidden = false;
+    $("#ai-status").textContent = say("aiChanging", "Making that change…");
+    try {
+      const result = await nc.ai.refinePage(generated, instruction, { lang: LANG, signal: controller.signal,
+        onProgress: (text, info) => {
+          $("#ai-status").textContent = text.length
+            ? `${say("aiChanging", "Making that change…")} ${text.length}`
+            : `${nc.ai.say("thinking")} ${info?.thinking || 0}`;
+        } });
+      if (controller.signal.aborted) return;
+      generated = result;
+      $("#ai-preview").srcdoc = nc.ai.previewHTML(result);
+      $("#ai-change").value = "";
+      $("#ai-status").textContent = say("aiChanged", "Changed. Check it again below.");
+    } catch (e) {
+      $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
+    } finally {
+      generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
+      for (const id of ["ai-settings", "ai-description", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = false;
+      showProvider();
+    }
+  };
+
+  // Back to the description, with what they wrote still in it. The preview goes,
+  // because leaving a page on screen that the next press will replace is the
+  // reason somebody has to guess which button they are supposed to use.
+  $("#ai-again").onclick = () => {
+    $("#ai-result").hidden = true; generated = null;
+    $("#ai-status").textContent = say("aiEditDescription", "Change the description and generate a new preview.");
+    $("#ai-description").focus();
+    $("#ai-description").scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
   $("#ai-use").onclick = () => {
     if (!generated) return;
     state.generated = generated;
@@ -1301,7 +1408,8 @@
       });
 
       let html = state.generated
-        ? nc.ai.preparePage(tplHtml, { owner: nc.npub, path: docPath, lang: LANG })
+        ? nc.ai.preparePage(tplHtml, { owner: nc.npub, path: docPath, lang: LANG,
+            relays: lines($("#adv-relays")), servers: lines($("#adv-servers")) })
         : personalise(tplHtml, t.owner, nc.npub, docPath);
       for (const [from, to] of renames.sort((a, b) => b[0].length - a[0].length)) {
         html = html.split(from).join(to);

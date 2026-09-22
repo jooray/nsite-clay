@@ -322,13 +322,21 @@ how they become things the owner can add to.
 <html lang="en"
       nc:owner="npub1…"
       nc:edit-gate="hash"
-      nc:path="/index.html">
+      nc:path="/index.html"
+      nc:source="/nsite-clay-source.js">
 ```
 
 `nc:owner` is the only required one. `nc:edit-gate="hash"` keeps the controls
 away from readers, and `nc:path` has to name where this document actually lives
 (see above, and §12). Relays and Blossom servers have working defaults; set
 `nc:relays` and `nc:servers` only if they have their own.
+
+`nc:source` names the file that keeps their formatting when they save. It is a
+third of the runtime and a reader has no use for it, so it is named in an
+attribute rather than loaded by a tag: the page fetches it only when its owner
+signs in to edit. Deploy the file with the page, name it here, and a visitor
+never downloads it. Leave the attribute off and the page still saves; it just
+reprints the file rather than preserving how it was written.
 
 **Two. The three shared files, at the site root, deployed with the page.**
 

@@ -1,8 +1,8 @@
 import { AiClient, aiEndpoint } from "./ai-client.js";
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
-import { installEditing, editDialog, propose, accept } from "./ai-edit.js";
-import { buildPage, preparePage } from "./ai-builder.js";
+import { installEditing, editDialog, propose, proposePage, accept } from "./ai-edit.js";
+import { buildPage, refinePage, applyPage, preparePage } from "./ai-builder.js";
 import { previewHTML } from "./ai-edit.js";
 
 const WORDS = {
@@ -50,12 +50,21 @@ const WORDS = {
   rates: ["sats per 1,000 tokens: input / output", "sats por 1.000 tokens: entrada / salida", "sats za 1 000 tokenov: vstup / výstup", "sats za 1 000 tokenů: vstup / výstup"],
   generate: ["Generate preview", "Generar vista previa", "Vytvoriť náhľad", "Vytvořit náhled"],
   edit: ["Edit with AI", "Editar con IA", "Upraviť s AI", "Upravit s AI"],
+  editHint: ["Say what should change. By default this rewrites the whole page, so you can change the design, add a section, or reword everything at once.", "Di qué quieres cambiar. Por defecto esto reescribe la página entera, así que puedes cambiar el diseño, añadir una sección o reescribirlo todo de una vez.", "Povedz, čo sa má zmeniť. Predvolene sa prepíše celá stránka, takže vieš zmeniť dizajn, pridať sekciu alebo preformulovať všetko naraz.", "Řekni, co se má změnit. Ve výchozím nastavení se přepíše celá stránka, takže umíš změnit design, přidat sekci nebo přeformulovat všechno naráz."],
+  scope: ["What should AI change?", "¿Qué debe cambiar la IA?", "Čo má AI zmeniť?", "Co má AI změnit?"],
+  scopePage: ["The whole page", "La página entera", "Celú stránku", "Celou stránku"],
+  scopeElement: ["Only what I clicked", "Solo lo que he pulsado", "Len to, na čo som klikol", "Jen to, na co jsem klikl"],
+  editPlaceholder: ["Make it darker and warmer, add a section about our roasting, and move the photos above the opening hours", "Ponla más oscura y cálida, añade una sección sobre nuestro tueste y mueve las fotos encima del horario", "Sprav to tmavšie a teplejšie, pridaj sekciu o našom pražení a fotky daj nad otváracie hodiny", "Udělej to tmavší a teplejší, přidej sekci o našem pražení a fotky dej nad otevírací dobu"],
+  reviewPage: ["This replaces the whole page. Nothing is published until you press Save, and undo brings the old page back.", "Esto sustituye la página entera. No se publica nada hasta que pulses Guardar, y deshacer recupera la página anterior.", "Toto nahradí celú stránku. Kým nestlačíš Uložiť, nič sa nezverejní, a späť vráti starú stránku.", "Tohle nahradí celou stránku. Dokud nestiskneš Uložit, nic se nezveřejní, a zpět vrátí starou stránku."],
   describe: ["What should change?", "¿Qué quieres cambiar?", "Čo sa má zmeniť?", "Co se má změnit?"],
   keep: ["Keep this change", "Aceptar este cambio", "Prijať zmenu", "Přijmout změnu"],
   preview: ["Preview", "Vista previa", "Náhľad", "Náhled"],
   generating: ["Generating…", "Generando…", "Generuje sa…", "Generuje se…"],
   thinking: ["Thinking…", "Pensando…", "Rozmýšľa…", "Rozmýšlí…"],
-  noCredit: ["No AI credit on this endpoint yet. Open AI settings to add some, or to use your own API key.", "Todavía no hay saldo de IA en este servidor. Abre los ajustes de IA para añadirlo o para usar tu propia clave API.", "Na tomto serveri zatiaľ nemáš AI kredit. Otvor nastavenia AI a pridaj si ho, alebo použi vlastný API kľúč.", "Na tomhle serveru zatím nemáš AI kredit. Otevři nastavení AI a přidej si ho, nebo použij vlastní API klíč."],
+  noCredit: ["You have no AI credit here yet. Add some to edit this page with AI, or use an API key of your own.", "Todavía no tienes saldo de IA aquí. Añade saldo para editar esta página con IA, o usa una clave API propia.", "Zatiaľ tu nemáš AI kredit. Pridaj si ho, ak chceš túto stránku upravovať s AI, alebo použi vlastný API kľúč.", "Zatím tu nemáš AI kredit. Přidej si ho, pokud chceš tuhle stránku upravovat s AI, nebo použij vlastní API klíč."],
+  addCredit: ["Add AI credit", "Añadir saldo de IA", "Pridať AI kredit", "Přidat AI kredit"],
+  looking: ["Looking for your credit on your relays…", "Buscando tu saldo en tus relays…", "Hľadám tvoj kredit na tvojich relayoch…", "Hledám tvůj kredit na tvých relayích…"],
+  adopted: ["Found the credit you bought. It is ready here.", "Encontramos el saldo que compraste. Ya está listo aquí.", "Našiel sa kredit, ktorý si kúpil. Je pripravený aj tu.", "Našel se kredit, který sis koupil. Je připravený i tady."],
   before: ["Now", "Ahora", "Teraz", "Teď"],
   after: ["After this change", "Después del cambio", "Po zmene", "Po změně"],
   review: ["Review the result before keeping it. Save the page when you are ready to publish.", "Revisa el resultado antes de aceptarlo. Guarda la página cuando quieras publicarlo.", "Pred prijatím si výsledok skontroluj. Keď ho chceš zverejniť, ulož stránku.", "Před přijetím si výsledek zkontroluj. Až ho chceš zveřejnit, ulož stránku."],
@@ -75,8 +84,50 @@ export class Ai {
   start() { installEditing(this); }
   edit(target) { return editDialog(this, target); }
   propose(target, prompt, options) { return propose(this, target, prompt, options); }
+  proposePage(prompt, options) { return proposePage(this, prompt, options); }
+  applyPage(html) { return applyPage(this, html); }
   accept(proposal) { return accept(this, proposal); }
   buildPage(description, options) { return buildPage(this, description, options); }
+  refinePage(page, instruction, options) { return refinePage(this, page, instruction, options); }
+
+  /**
+   * Bring the credit somebody already paid for into whatever browser they are in.
+   *
+   * The credit is bought in the publisher and spent in the published page, and
+   * those are two different origins: nothing one of them puts in localStorage is
+   * visible to the other. The key itself is on the owner's own relays, encrypted
+   * to the owner's own key, and the owner is signed in here or this dialog would
+   * not be open. So fetch it rather than telling them they have no credit when
+   * they plainly do, which is what used to happen the first time anybody opened
+   * the page they had just paid to have built.
+   *
+   * Returns true when a key is now in hand. Every failure is quiet and leaves
+   * things exactly as they were: this runs before somebody asked for anything.
+   */
+  async adopt() {
+    if (this.client.session().key) return true;
+    const vault = this.nc.vault;
+    if (!vault?.usable) return false;
+    let data;
+    try { data = await vault.load({ force: true }); } catch { return false; }
+    const stored = data?.ai;
+    if (!stored || typeof stored !== "object") return false;
+    const here = this.client.session().base;
+    if (typeof stored[here] === "string" && stored[here].trim()) {
+      try { this.client.setKey(stored[here], here); return true; } catch { return false; }
+    }
+    // The credit may sit on a node this browser is not pointed at, because the
+    // node is chosen per browser and the credit is not. One stored node is not
+    // ambiguous, so follow it; several would be a guess, and guessing which node
+    // to spend somebody's money at is not this function's business.
+    const others = Object.entries(stored).filter(([, k]) => typeof k === "string" && k.trim());
+    if (others.length !== 1) return false;
+    const [base, key] = others[0];
+    try {
+      this.client.configure({ ...this.client.config, base, key });
+      return true;
+    } catch { return false; }
+  }
   preparePage(html, options) { return preparePage(html, options); }
   previewHTML(html) { return previewHTML(html); }
 

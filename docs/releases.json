@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.3.4",
+    "released": "2026-09-23",
+    "notes": [
+      "Edit with AI now means the whole page. Ask for a darker design, a new section, the photos moved, or all three at once, and you get a preview of the whole page next to the one you have before anything changes. It used to quietly rewrite whichever paragraph you had last clicked, which was both a surprise and the smaller half of what people wanted. That paragraph is still there as a choice in the box, next to the page.",
+      "Nothing a rewrite does is published until you press Save, and one undo brings the old page back, exactly as with any other edit.",
+      "The credit you paid for now follows you to your own page. It is bought in the publisher and spent in the page, and those are two different addresses as far as a browser is concerned, so the page used to tell you that you had no credit while your money sat there untouched. It now looks on your own relays, where the key was saved, and finds it.",
+      "A preview you are not happy with is no longer a dead end. You can say what should be different about it and get that change without describing the page again from nothing, or go back to your description and edit what you wrote. Both are on the screen next to Use this page.",
+      "The screen where a new page begins now shows its two routes as two routes. Describing a page for AI to build and starting from a finished page each carry their own heading and their own explanation, so the sentence about the twelve free templates can no longer be read as a description of the AI form above it.",
+      "After you pay for Simple setup, the button with the price on it goes away and the page starts building what you described, instead of offering to sell you the same thing again."
+    ]
+  },
+  {
     "version": "0.3.3",
     "released": "2026-09-23",
     "notes": [

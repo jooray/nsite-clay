@@ -966,6 +966,14 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       const finished = nc.ai.edit(target);
       await new Promise((r) => setTimeout(r, 30));
       const ask = [...document.querySelectorAll(".nc-ui")].at(-1);
+      // The button on the toolbar means the page, which is what people who press
+      // a button labelled "Edit with AI" mean. One element is offered next to it
+      // and has to be chosen.
+      const scope = ask.querySelector("select");
+      t("a whole-page edit is what the button offers first", scope?.value === "page");
+      t("and the element that was clicked is the other choice",
+        [...scope.options].some((o) => o.value === "element" && o.textContent.includes(before.trim().slice(0, 20))));
+      scope.value = "element";
       ask.querySelector("textarea").value = "shorter";
       ask.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
       await new Promise((r) => setTimeout(r, 120));
@@ -977,8 +985,43 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       t("each frame says which is which", [...preview.querySelectorAll(".nc-hint")].length >= 2);
       preview.querySelector(".nc-cancel").click();
       await finished;
-      nc.ai.client.complete = complete2;
       t("cancelling the preview leaves the page alone", document.querySelector("#line") === target);
+
+      // The whole page, which is the default and the thing the toolbar button is
+      // about. The model returns a document; the runtime has to take its markup
+      // and its styles and leave its own toolbar and scripts exactly where they
+      // are, because they are what is running this.
+      {
+        const styleCount = document.head.querySelectorAll("style:not([nc\\:chrome])").length;
+        const bar = document.querySelector(".nc-bar");
+        nc.ai.client.complete = async () => `<!DOCTYPE html><html><head><title>Rebuilt</title>` +
+          `<style>body{background:#123456}</style></head><body><main nc:blocks>` +
+          `<h1 editable="single-line">A rebuilt page</h1><p editable>With new words on it.</p>` +
+          `</main></body></html>`;
+        const done = nc.ai.edit(target);
+        await new Promise((r) => setTimeout(r, 30));
+        const ask2 = [...document.querySelectorAll(".nc-ui")].at(-1);
+        ask2.querySelector("textarea").value = "rebuild it";
+        ask2.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 150));
+        const preview2 = [...document.querySelectorAll(".nc-ui")].at(-1);
+        const frames2 = [...preview2.querySelectorAll("iframe")];
+        t("a whole-page preview shows the page now and the page after", frames2.length === 2);
+        t("and the second frame is the rewritten page", frames2[1]?.srcdoc.includes("A rebuilt page"));
+        t("while the page itself is untouched until it is kept", !document.body.textContent.includes("A rebuilt page"));
+        preview2.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await done;
+        t("keeping it puts the new markup in the live document", !!document.querySelector("main [editable]") &&
+          document.body.textContent.includes("A rebuilt page"));
+        t("its styles come with it", [...document.head.querySelectorAll("style")].some((el) => el.textContent.includes("#123456")));
+        t("the authored styles it replaced are gone", document.head.querySelectorAll("style:not([nc\\:chrome])").length <= styleCount + 1);
+        t("the toolbar that was running this is still the same element", document.querySelector(".nc-bar") === bar);
+        t("the runtime scripts are still in the document", !!document.querySelector('script[src*="nsite-clay"]'));
+        t("and the page is unsaved rather than published", nc.dirty === true);
+        t("undo brings the old page back", (() => { nc.undo.undo(); return !document.body.textContent.includes("A rebuilt page"); })());
+        nc.undo.redo();
+      }
+      nc.ai.client.complete = complete2;
       nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
     }
 

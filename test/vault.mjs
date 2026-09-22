@@ -75,6 +75,32 @@ t("a second device starts with nothing in this browser", read.localStorageHadNot
 t("and reads the AI key back off the relays", read.v?.ai?.["https://routstr.cypherpunk.today/v1"] === "sk-secret-abc");
 t("and the wallet seed with it", read.v?.wallet?.seed === "seed-words-here");
 
+// --- the credit follows the owner into their own page ------------------------
+//
+// The bug this covers: credit is bought in the publisher and spent in the
+// published page, which is a different origin, so nothing the publisher put in
+// localStorage is visible here. Somebody who had just paid opened their own page
+// and was told they had no credit.
+const adopted = await two.evaluate(async () => {
+  const beforeAdopt = nc.ai.client.session().key;
+  const found = await nc.ai.adopt();
+  return { beforeAdopt, found, afterAdopt: nc.ai.client.session().key };
+});
+t("a page in a fresh browser starts with no key", !adopted.beforeAdopt);
+t("and finds the credit its owner paid for", adopted.found === true && adopted.afterAdopt === "sk-secret-abc");
+
+const dialog = await two.evaluate(async () => {
+  nc.ai.edit(null);
+  await new Promise((r) => setTimeout(r, 200));
+  const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
+  const text = panel.querySelector(".nc-hint.nc-bad")?.textContent || "";
+  const out = { bad: text, submitDisabled: panel.querySelector("button[type=submit]").disabled };
+  panel.querySelector(".nc-cancel").click();
+  return out;
+});
+t("so the edit dialog does not claim there is none", !/credit/i.test(dialog.bad), dialog.bad);
+t("and generating is offered rather than blocked", dialog.submitDisabled === false);
+
 // --- what a stranger sees ----------------------------------------------------
 const seen = await two.evaluate(async () => {
   const ev = await nc.pool.get(["ws://127.0.0.1:4869"], { kinds: [30078], authors: [nc.pubkey], "#d": ["nsite-clay"], limit: 1 });
