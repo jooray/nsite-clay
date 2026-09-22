@@ -132,9 +132,22 @@ export class AiClient {
     }
     return out;
   }
-  async refund(session = this.session()) {
+  /**
+   * Take the unspent credit back.
+   *
+   * With a Lightning address the node pays it there and the whole thing is over.
+   * Without one it hands back a Cashu token, which is correct and is also a long
+   * string somebody has to know what to do with, so the address is offered first.
+   */
+  async refund(session = this.session(), lightningAddress = "") {
     this.routstr(session);
-    const result = await this.request("/balance/refund", { session, body: {}, timeout: 120000 });
+    const to = String(lightningAddress || "").trim();
+    if (to && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      throw new Error("That does not look like a Lightning address. It looks like name@example.com.");
+    }
+    const result = await this.request("/balance/refund", {
+      session, body: to ? { lightning_address: to } : {}, timeout: 120000,
+    });
     this.record(session.base).refund = result; this.persist();
     return result;
   }

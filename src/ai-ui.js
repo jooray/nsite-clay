@@ -17,8 +17,16 @@ const WORDS = {
   keyHintRoutstr: ["Leave this empty. A Routstr node issues the key when you pay, below. Paste one only to reuse credit you already bought on another device.", "Déjalo vacío. El nodo Routstr emite la clave cuando pagas, más abajo. Pega una solo para reutilizar saldo que ya compraste en otro dispositivo.", "Nechaj prázdne. Routstr node kľúč vydá, keď nižšie zaplatíš. Vlož ho sem len vtedy, ak chceš použiť kredit, ktorý si už kúpil na inom zariadení.", "Nech prázdné. Routstr node klíč vydá, až níže zaplatíš. Vlož ho sem jen tehdy, pokud chceš použít kredit, který sis už koupil na jiném zařízení."],
   model: ["Model ID", "ID del modelo", "ID modelu", "ID modelu"],
   models: ["Load models", "Cargar modelos", "Načítať modely", "Načíst modely"],
-  local: ["This browser stores your AI key separately from the page. Download a copy to reuse your credit on another site or device.", "Este navegador guarda tu clave de IA fuera de la página. Descarga una copia para usar tu saldo en otro sitio o dispositivo.", "Prehliadač ukladá AI kľúč oddelene od stránky. Stiahni si kópiu, ak chceš kredit použiť na inom webe alebo zariadení.", "Prohlížeč ukládá AI klíč odděleně od stránky. Stáhni si kopii, pokud chceš kredit použít na jiném webu nebo zařízení."],
-  backup: ["Download AI key", "Descargar clave de IA", "Stiahnuť AI kľúč", "Stáhnout AI klíč"],
+  local: ["Your AI key is kept out of the page. Save it to your own Nostr relays, encrypted to your key, and any device you can sign with gets it back.", "Tu clave de IA se guarda fuera de la página. Guárdala en tus propios relays de Nostr, cifrada con tu clave, y la recuperas en cualquier dispositivo con el que puedas firmar.", "AI kľúč sa neukladá do stránky. Ulož si ho na vlastné Nostr relaye, zašifrovaný tvojím kľúčom, a dostaneš ho späť na každom zariadení, ktorým vieš podpisovať.", "AI klíč se neukládá do stránky. Ulož si ho na vlastní Nostr relaye, zašifrovaný tvým klíčem, a dostaneš ho zpět na každém zařízení, kterým umíš podepisovat."],
+  backup: ["Save to my Nostr relays", "Guardar en mis relays de Nostr", "Uložiť na moje Nostr relaye", "Uložit na moje Nostr relaye"],
+  download: ["Download a copy instead", "Descargar una copia", "Stiahnuť kópiu", "Stáhnout kopii"],
+  restore: ["Restore from my relays", "Restaurar desde mis relays", "Obnoviť z mojich relayov", "Obnovit z mých relayů"],
+  saved: ["Saved to your relays, encrypted to your key.", "Guardado en tus relays, cifrado con tu clave.", "Uložené na tvoje relaye, zašifrované tvojím kľúčom.", "Uloženo na tvoje relaye, zašifrované tvým klíčem."],
+  restored: ["Restored from your relays.", "Restaurado desde tus relays.", "Obnovené z tvojich relayov.", "Obnoveno z tvých relayů."],
+  nothingStored: ["Nothing is stored on your relays yet.", "Todavía no hay nada en tus relays.", "Na tvojich relayoch zatiaľ nič nie je.", "Na tvých relayích zatím nic není."],
+  noVault: ["This signer cannot encrypt, so the key stays in this browser. Download a copy to keep it.", "Este firmante no puede cifrar, así que la clave se queda en este navegador. Descarga una copia para conservarla.", "Tento signer nevie šifrovať, takže kľúč zostáva v tomto prehliadači. Stiahni si kópiu, ak si ho chceš nechať.", "Tenhle signer neumí šifrovat, takže klíč zůstává v tomhle prohlížeči. Stáhni si kopii, pokud si ho chceš nechat."],
+  payTo: ["Lightning address (optional)", "Dirección Lightning (opcional)", "Lightning adresa (nepovinné)", "Lightning adresa (nepovinné)"],
+  payToHint: ["Give one and the node pays your credit there. Leave it empty and you get a Cashu token to paste into a wallet.", "Si la indicas, el nodo te envía ahí el saldo. Si la dejas vacía, recibes un token Cashu para pegar en una cartera.", "Ak ju zadáš, node ti kredit pošle tam. Ak ju necháš prázdnu, dostaneš Cashu token na vloženie do peňaženky.", "Když ji zadáš, node ti kredit pošle tam. Když ji necháš prázdnou, dostaneš Cashu token na vložení do peněženky."],
   forget: ["Forget this key", "Olvidar esta clave", "Zabudnúť tento kľúč", "Zapomenout tento klíč"],
   balance: ["Check balance", "Consultar saldo", "Zistiť zostatok", "Zjistit zůstatek"],
   amount: ["Credit to add (sats)", "Saldo que añadir (sats)", "Pridať kredit (sats)", "Přidat kredit (sats)"],
@@ -119,13 +127,34 @@ export class Ai {
           price();
         });
         const note = this.doc.createElement("p"); note.className = "nc-hint"; note.textContent = say("local"); body.append(note);
-        button(body, "backup", () => {
+        // The credit somebody paid for should not depend on one browser's storage,
+        // and a downloaded file is a chore people do not do and cannot do on a
+        // phone. It goes to their own relays, encrypted to their own key.
+        const vault = this.nc.vault;
+        button(body, "backup", async () => {
+          const s = apply(); if (!s.key) throw new Error(say("needKey"));
+          if (!vault?.usable) throw new Error(say("noVault"));
+          const ok = await vault.save({ ai: { ...(await vault.load())?.ai, [s.base]: s.key } });
+          if (!ok) throw new Error("No relay accepted it. Your key is still in this browser.");
+          return say("saved");
+        });
+        button(body, "restore", async () => {
+          if (!vault?.usable) throw new Error(say("noVault"));
+          const data = await vault.load({ force: true });
+          if (data === null) throw new Error("The stored copy could not be read.");
+          const found = data.ai?.[aiEndpoint(base.value, mode.value)];
+          if (!found) throw new Error(say("nothingStored"));
+          key.value = found; apply(); gate();
+          return say("restored");
+        });
+        // Kept, demoted: relays can be unreachable and some signers cannot encrypt.
+        button(body, "download", () => {
           const s = apply(); if (!s.key) throw new Error(say("needKey"));
           const url = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }));
           const a = this.doc.createElement("a"); a.href = url; a.download = "nsite-clay-ai-key.json"; a.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
-        button(body, "forget", () => { key.value = ""; apply(); });
+        button(body, "forget", () => { key.value = ""; apply(); gate(); });
         const payments = this.doc.createElement("div"); body.append(payments);
         const showBalance = async () => {
           const result = await client.balance(apply());
@@ -150,7 +179,10 @@ export class Ai {
           doc: this.doc, title: say("refund"), detail: result?.token || JSON.stringify(result),
           labels: { copy: say("copy"), copied: say("copied"), close: say("close") },
         });
-        button(payments, "refund", async () => { refundDisplay(await client.refund(apply())); });
+        const payTo = field(payments, { label: say("payTo"), value: "", placeholder: "name@example.com" });
+        const payToHint = this.doc.createElement("p"); payToHint.className = "nc-hint";
+        payToHint.textContent = say("payToHint"); (payTo.closest(".nc-field") || payTo).after(payToHint);
+        button(payments, "refund", async () => { refundDisplay(await client.refund(apply(), payTo.value)); });
         button(payments, "lastRefund", () => { const result = client.record(session().base).refund; if (result) refundDisplay(result); });
         // Asking a node about a balance that does not exist yet is how you get a
         // raw 422 on screen. Until there is a key, the only thing on offer is
@@ -162,7 +194,7 @@ export class Ai {
           keyHint.textContent = routstr ? say("keyHintRoutstr") : "";
           const label = key.labels && key.labels[0];
           if (label) label.textContent = say(routstr ? "keyRoutstr" : "key");
-          for (const name of ["balance", "refund", "lastRefund", "backup", "forget"]) {
+          for (const name of ["balance", "refund", "lastRefund", "backup", "download", "forget"]) {
             const b = body.querySelector(`[data-nc-ai-btn="${name}"]`);
             if (b) b.disabled = !has;
           }
