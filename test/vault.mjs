@@ -64,14 +64,13 @@ const two = await browser.newPage();
 two.on("pageerror", (e) => out.push(["pageerror(2)", false, e.message]));
 await two.goto("http://127.0.0.1:4801/#edit");
 await two.evaluate(async () => { await nc.ready; });
+// Read before signing in: signing in is what goes and fetches the credit, so
+// after it this browser is supposed to have something.
+const localStorageHadNothing = await two.evaluate(() => !window.localStorage.getItem("nsite-clay.ai"));
 await two.evaluate((n) => nc.login("nsec", { key: n }), NSEC);
 await two.waitForTimeout(400);
-const read = await two.evaluate(async () => {
-  const localStorageHadNothing = !window.localStorage.getItem("nsite-clay.ai");
-  const v = await nc.vault.load();
-  return { localStorageHadNothing, v };
-});
-t("a second device starts with nothing in this browser", read.localStorageHadNothing === true);
+const read = await two.evaluate(async () => ({ v: await nc.vault.load() }));
+t("a second device starts with nothing in this browser", localStorageHadNothing === true);
 t("and reads the AI key back off the relays", read.v?.ai?.["https://routstr.cypherpunk.today/v1"] === "sk-secret-abc");
 t("and the wallet seed with it", read.v?.wallet?.seed === "seed-words-here");
 
@@ -82,12 +81,16 @@ t("and the wallet seed with it", read.v?.wallet?.seed === "seed-words-here");
 // localStorage is visible here. Somebody who had just paid opened their own page
 // and was told they had no credit.
 const adopted = await two.evaluate(async () => {
-  const beforeAdopt = nc.ai.client.session().key;
   const found = await nc.ai.adopt();
-  return { beforeAdopt, found, afterAdopt: nc.ai.client.session().key };
+  return { found, key: nc.ai.client.session().key,
+    kept: JSON.parse(window.localStorage.getItem("nsite-clay.ai") || "{}") };
 });
-t("a page in a fresh browser starts with no key", !adopted.beforeAdopt);
-t("and finds the credit its owner paid for", adopted.found === true && adopted.afterAdopt === "sk-secret-abc");
+t("signing in is enough to find the credit its owner paid for",
+  adopted.found === true && adopted.key === "sk-secret-abc");
+// One relay round trip per browser, not one per edit.
+t("and this browser keeps it from then on",
+  adopted.kept?.nodes?.["https://routstr.cypherpunk.today/v1"]?.key === "sk-secret-abc",
+  JSON.stringify(adopted.kept).slice(0, 120));
 
 const dialog = await two.evaluate(async () => {
   nc.ai.edit(null);

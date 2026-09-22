@@ -121,8 +121,15 @@ try {
     p.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
   });
   await live.waitForSelector(".nc-ui iframe", { timeout: 30000 });
-  const frames = await live.evaluate(() => [...[...document.querySelectorAll(".nc-ui")].at(-1).querySelectorAll("iframe")].length);
-  t("the whole page is previewed against the page as it is", frames === 2);
+  const preview = await live.evaluate(() => {
+    const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    const card = p.querySelector(".nc-ui-card"), actions = p.querySelector(".nc-actions");
+    return { frames: p.querySelectorAll("iframe").length,
+      shows: (p.querySelector("iframe")?.srcdoc || "").includes("Lamplight repairs"),
+      keepVisible: actions.getBoundingClientRect().bottom <= card.getBoundingClientRect().bottom + 1 };
+  });
+  t("the rewritten page is previewed on its own", preview.frames === 1 && preview.shows);
+  t("and the button that keeps it is on screen", preview.keepVisible);
   t("and nothing on the page has changed yet",
     !(await live.evaluate(() => document.body.textContent.includes("Lamplight repairs"))));
 

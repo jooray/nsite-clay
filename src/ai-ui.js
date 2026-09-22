@@ -96,16 +96,28 @@ export class Ai {
    * The credit is bought in the publisher and spent in the published page, and
    * those are two different origins: nothing one of them puts in localStorage is
    * visible to the other. The key itself is on the owner's own relays, encrypted
-   * to the owner's own key, and the owner is signed in here or this dialog would
-   * not be open. So fetch it rather than telling them they have no credit when
-   * they plainly do, which is what used to happen the first time anybody opened
-   * the page they had just paid to have built.
+   * to the owner's own key, and the owner is signed in or this would not be
+   * running. So fetch it rather than telling them they have no credit when they
+   * plainly do, which is what used to happen the first time anybody opened the
+   * page they had just paid to have built.
+   *
+   * Once found it is written to this browser's storage like any other key, so
+   * this costs one relay round trip per browser rather than one per edit.
    *
    * Returns true when a key is now in hand. Every failure is quiet and leaves
    * things exactly as they were: this runs before somebody asked for anything.
    */
-  async adopt() {
-    if (this.client.session().key) return true;
+  adopt() {
+    if (this.client.session().key) return Promise.resolve(true);
+    // Signing in, opening the toolbar and opening the dialog can all ask within
+    // a second of each other. One lookup answers all three, and a different key
+    // signing in is a different question.
+    const who = this.nc.pubkey || "";
+    if (this._adoptedFor !== who) { this._adoptedFor = who; this._adopting = this._adopt(); }
+    return this._adopting;
+  }
+
+  async _adopt() {
     const vault = this.nc.vault;
     if (!vault?.usable) return false;
     let data;
@@ -113,9 +125,7 @@ export class Ai {
     const stored = data?.ai;
     if (!stored || typeof stored !== "object") return false;
     const here = this.client.session().base;
-    if (typeof stored[here] === "string" && stored[here].trim()) {
-      try { this.client.setKey(stored[here], here); return true; } catch { return false; }
-    }
+    if (typeof stored[here] === "string" && stored[here].trim()) return this.take(stored[here], here);
     // The credit may sit on a node this browser is not pointed at, because the
     // node is chosen per browser and the credit is not. One stored node is not
     // ambiguous, so follow it; several would be a guess, and guessing which node
@@ -123,16 +133,31 @@ export class Ai {
     const others = Object.entries(stored).filter(([, k]) => typeof k === "string" && k.trim());
     if (others.length !== 1) return false;
     const [base, key] = others[0];
-    try {
-      this.client.configure({ ...this.client.config, base, key });
-      return true;
-    } catch { return false; }
+    try { this.client.configure({ ...this.client.config, base, key }); return true; }
+    catch { return false; }
+  }
+
+  /**
+   * Hold a key, and keep it if this browser lets us.
+   *
+   * Storage can be switched off or full. That is a reason not to have it next
+   * time, never a reason not to have it now: the key is in the session either
+   * way and the edit somebody is in the middle of goes ahead.
+   */
+  take(key, base) {
+    try { this.client.setKey(key, base); }
+    catch { this.client.record(base).key = String(key).trim(); }
+    return !!this.client.session().key;
   }
   preparePage(html, options) { return preparePage(html, options); }
   previewHTML(html) { return previewHTML(html); }
 
   async settings() {
     const client = this.client, say = (key) => this.say(key);
+    // Before the box is drawn, so the key field holds the key they already own
+    // rather than being empty next to a button called "Restore from my relays".
+    // Bounded by the vault's own timeouts, and a failure just leaves it empty.
+    if (this.nc.isOwner) await this.adopt().catch(() => false);
     let mode, base, key, model;
     await modal({ doc: this.doc, title: say("settings"), hint: say("hint"), submitLabel: say("apply"),
       build: (body, h) => {

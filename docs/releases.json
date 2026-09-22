@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.3.5",
+    "released": "2026-09-23",
+    "notes": [
+      "Taking an update no longer leaves you pressing Reload. The page waits for your gateway to start serving the new copy, which takes anything from seconds to a minute, and then reloads into it by itself. You can stop it if you would rather stay where you are, and it never does this over unsaved work.",
+      "Your AI credit is now found the moment you sign in to edit, rather than when you open the box that spends it. Before, the first thing you saw was a line saying you had no credit, corrected a second later, which is how a page holding your money reads as a page that is not.",
+      "Once found, the credit stays in this browser, so looking for it on your relays happens once here rather than before every edit.",
+      "The settings box now opens with the key you already own in it, instead of an empty field next to a button offering to fetch it.",
+      "Signing in with a remote signer now asks for everything it will need while you are pairing, including permission to read your own encrypted notes back. Without that, the signer asked again later, in the middle of something else.",
+      "The preview of a rewritten page shows the new page only. The page you have is behind the dialog already, and showing it twice pushed the button that accepts the change off the bottom of the screen. Dialogs now keep their buttons in view however tall the thing inside them is."
+    ]
+  },
+  {
     "version": "0.3.4",
     "released": "2026-09-23",
     "notes": [

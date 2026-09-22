@@ -231,6 +231,7 @@ export class Upgrade {
   // ---- the offer -----------------------------------------------------------
 
   async promptFor(plan) {
+    let saved;
     const ok = await modal({
       doc: this.doc,
       title: plan.version ? `nsite-clay ${plan.version} is available` : "A newer runtime is available",
@@ -266,12 +267,12 @@ export class Upgrade {
         body.appendChild(note);
       },
       onSubmit: async (h) => {
-        await this.apply(plan, ({ path, done, total }) =>
+        saved = await this.apply(plan, ({ path, done, total }) =>
           h.status(`Updating ${path} (${Math.min(done + 1, total)}/${total})…`));
         return true;
       },
     });
-    if (ok) this.installed(plan);
+    if (ok) this.installed(plan, saved?.hash);
     return ok;
   }
 
@@ -363,19 +364,48 @@ export class Upgrade {
     );
   }
 
-  // The update went through and the page is still running the old engine, which
-  // is what a reload is for. It is not done for them: a reload throws away
-  // whoever is signed in, and on a key pasted by hand that means pasting it
-  // again. Nothing is lost by waiting, so the choice is theirs.
-  installed(plan) {
-    return this.bar(
-      `${plan.version ? "nsite-clay " + plan.version : "The newer runtime"} is on your site. ` +
-      `Reload the page to start running it.`,
-      [
-        ["Reload", () => this.nc.reloadToLatest()],
+  /**
+   * The update went through and this page is still running the old engine.
+   *
+   * It reloads itself, but not at once: the bytes have to reach a gateway
+   * first, and a reload before they do hands back the copy being replaced. That
+   * is what made this a button somebody pressed twice. So it waits for its own
+   * address to serve what was just saved, and goes then.
+   *
+   * A reload does cost the sign-in, since no signer survives one, so it says so
+   * and can be stopped. It is never done over unsaved work.
+   */
+  installed(plan, hash) {
+    const name = plan.version ? "nsite-clay " + plan.version : "The newer runtime";
+    if (!hash || this.nc.dirty) {
+      return this.bar(`${name} is on your site. Reload the page to start running it.`, [
+        ["Reload", () => this.nc.reloadToLatest(hash)],
         ["Later", (bar) => bar.remove()],
+      ]);
+    }
+    const stop = new AbortController();
+    const bar = this.bar(
+      `${name} is on your site. This page will reload into it as soon as your gateway has it, ` +
+      `and you can sign in again after that.`,
+      [
+        ["Reload now", () => this.nc.reloadToLatest(hash)],
+        ["Stay on this page", (b) => { stop.abort(); b.remove(); }],
       ],
     );
+    const line = bar.firstChild;
+    this.nc.reloadWhenServed(hash, {
+      signal: stop.signal,
+      // A wait with nothing moving in it is the thing that reads as a freeze,
+      // and this one is somebody else's cache, so it can be a minute.
+      onStatus: ({ waited }) => {
+        if (waited > 8) line.textContent = `${name} is on your site. Waiting for your gateway to serve it (${waited}s).`;
+      },
+    }).then((reloaded) => {
+      if (reloaded || stop.signal.aborted) return;
+      line.textContent = `${name} is on your site, but your gateway is still serving the old copy. ` +
+        `Reload whenever you like; it will arrive.`;
+    }).catch(() => {});
+    return bar;
   }
 
   // Same button, different reason: this browser has already published the

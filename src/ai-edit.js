@@ -140,11 +140,12 @@ export async function editDialog(ai, target) {
       };
       show(); body.append(provider);
       settings.onclick = async () => { await ai.settings(); show(); }; body.append(settings);
-      // The credit was bought in the publisher, which is a different origin, so
-      // nothing it stored is visible here. It is on the owner's relays and the
-      // owner is signed in, so fetch it rather than announcing they have none.
+      // Usually already answered, because signing in started it. When it has
+      // not, say what is being waited for rather than announcing they have no
+      // credit and correcting it a second later.
       if (!ai.client.session().key) {
         provider.textContent = ai.say("looking");
+        provider.classList.remove("nc-bad");
         h.busy(true);
         ai.adopt().then((found) => {
           show();
@@ -169,18 +170,24 @@ export async function editDialog(ai, target) {
     submitLabel: ai.say("keep"), wide: true,
     build: (body) => {
       const styles = [...ai.doc.querySelectorAll('style:not([nc\\:chrome]), link[rel="stylesheet"]')].map((el) => el.outerHTML).join("");
-      // Both, and labelled. Deciding whether a rewrite is better than what is there
-      // is not a memory test, and the old wording is gone from the screen the moment
-      // the dialog opens over it.
+      // One element, two frames: deciding whether a rewritten paragraph is better
+      // than the one there is a comparison, and the old wording is gone from the
+      // screen the moment the dialog opens over it.
+      //
+      // A whole page, one frame: the page as it is fills the screen behind this
+      // dialog, so showing it again buys nothing and costs the room the new one
+      // needs.
       const pairs = whole
-        ? [[ai.say("before"), proposal.before], [ai.say("after"), proposal.page]]
+        ? [["", proposal.page]]
         : [[ai.say("before"), `<html><head>${styles}</head><body>${proposal.before}</body></html>`],
            [ai.say("after"), `<html><head>${styles}</head><body>${proposal.element.outerHTML}</body></html>`]];
       for (const [label, html] of pairs) {
-        const caption = ai.doc.createElement("p"); caption.className = "nc-hint";
-        caption.style.cssText = "margin:.6rem 0 .3rem"; caption.textContent = label; body.append(caption);
-        const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = label;
-        frame.style.cssText = `display:block;width:100%;height:${whole ? "20rem" : "11rem"};border:1px solid var(--nc-edge);background:white`;
+        if (label) {
+          const caption = ai.doc.createElement("p"); caption.className = "nc-hint";
+          caption.style.cssText = "margin:.6rem 0 .3rem"; caption.textContent = label; body.append(caption);
+        }
+        const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = label || ai.say("after");
+        frame.style.cssText = `display:block;width:100%;height:${whole ? "60vh" : "11rem"};border:1px solid var(--nc-edge);background:white`;
         frame.srcdoc = previewHTML(html);
         body.append(frame);
       }
@@ -196,6 +203,11 @@ export function installEditing(ai) {
   });
   const sync = () => {
     if (!ai.nc.isOwner || !ai.nc.editRequested) { ai.button?.remove(); ai.button = null; ai.target = null; return; }
+    // The moment somebody who owns this page asks to edit it, go and find the
+    // credit they paid for. Doing it when the dialog opens meant the first thing
+    // they saw was a sentence saying they had none, corrected a second later,
+    // which is how a page that has their money reads as a page that does not.
+    ai.adopt().catch(() => {});
     const bar = ai.doc.querySelector(".nc-bar");
     if (!bar || ai.button?.isConnected) return;
     const b = ai.doc.createElement("button"); b.type = "button"; b.setAttribute("nc:chrome", "");

@@ -124,10 +124,27 @@ export class Nip46Signer {
     // fromBunker, not the constructor: the constructor's second argument is
     // options, so the bunker pointer would never be set.
     const bunker = BunkerSigner.fromBunker(sec, parsed);
+    // Ask for everything at pairing, including the decryption this needs to read
+    // the owner's own AI key back off their relays. nostr-tools' connect() sends
+    // an empty permission list, so the signer grants nothing and prompts again
+    // later, halfway through something else. NIP-46 puts the list in the third
+    // parameter, so send the request with it.
+    //
     // "already connected" means the bunker still holds a session for this
     // secret, which is the outcome we wanted anyway.
-    try { await bunker.connect(); }
-    catch (e) { if (!/already connected/i.test(String(e?.message ?? e))) throw e; }
+    const connect = async (perms) => {
+      const params = [parsed.pubkey, parsed.secret || ""];
+      if (perms) params.push(perms);
+      await bunker.sendRequest("connect", params);
+    };
+    try { await connect(DEFAULT_PERMS.join(",")); }
+    catch (e) {
+      if (/already connected/i.test(String(e?.message ?? e))) { /* nothing to ask for */ }
+      // A signer that refuses the request with a permission list is not a signer
+      // that refuses to connect. Ask for nothing rather than leaving them
+      // unable to sign in at all; it will prompt when each one is first used.
+      else { try { await connect(null); } catch (e2) { if (!/already connected/i.test(String(e2?.message ?? e2))) throw e2; } }
+    }
     const signer = new Nip46Signer(bunker, sec);
     // NIP-46: event.pubkey on the transport is the remote-signer key, never the
     // user's identity. The user pubkey only comes from get_public_key.

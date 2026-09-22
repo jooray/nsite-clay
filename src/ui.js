@@ -28,11 +28,17 @@ const CSS = `
   font: 15px/1.55 var(--nc-chrome-font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
 }
 .nc-ui-card {
-  display: block; width: min(38rem, 100%); max-height: min(90vh, 46rem); overflow: auto;
+  /* A column so the body is the only part that scrolls. The card used to scroll
+     as a whole, which put the buttons that finish the dialog below the fold of
+     anything tall, and a preview is tall by nature: people saw a page and no way
+     to accept it. */
+  display: flex; flex-direction: column; width: min(38rem, 100%); max-height: min(90vh, 46rem);
   background: var(--nc-panel, #14121a); color: var(--nc-ink, #ece9f2);
   border: 1px solid var(--nc-edge, #322c40); border-radius: var(--nc-radius, 14px);
   padding: 1.25rem; box-shadow: var(--nc-shadow, 0 30px 80px -30px rgba(0,0,0,.8));
 }
+.nc-ui-card > .nc-body { overflow: auto; min-height: 0; flex: 1 1 auto; }
+.nc-ui-card > h3, .nc-ui-card > p.nc-hint, .nc-ui-card > .nc-actions { flex: 0 0 auto; }
 .nc-ui-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
 .nc-ui-card p.nc-hint { margin: 0 0 1rem; color: var(--nc-ink-dim, #9a92ad); font-size: .86rem; }
 .nc-ui label { display: block; font-size: .78rem; color: var(--nc-ink-dim, #9a92ad); margin: .85rem 0 .3rem; }
@@ -49,7 +55,7 @@ const CSS = `
 .nc-ui .nc-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
 .nc-ui .nc-row > .nc-field { flex: 1 1 8rem; }
 .nc-ui .nc-field label { margin-top: 0; }
-.nc-ui .nc-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.2rem; flex-wrap: wrap; }
+.nc-ui .nc-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.2rem; flex-wrap: wrap; align-items: center; }
 .nc-ui button {
   font: inherit; font-size: .88rem; padding: .5rem .95rem; cursor: pointer;
   border-radius: var(--nc-radius-sm, 8px);

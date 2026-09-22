@@ -305,7 +305,11 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     await new Promise((r) => setTimeout(r, 0));
     const card = document.querySelector(".nc-ui-card");
     const css = getComputedStyle(card);
-    t("a page cannot lay out a dialog", css.display === "block", css.display);
+    // The card lays itself out as a column so its buttons stay below the part
+    // that scrolls. What matters here is that this is the card's own layout and
+    // not whatever the page said a <form> should be.
+    t("a page cannot lay out a dialog", css.display === "flex" && css.flexDirection === "column",
+      `${css.display} ${css.flexDirection}`);
     t("nor squeeze it", css.maxWidth === "none" && card.offsetWidth > 200,
       `${css.maxWidth} ${card.offsetWidth}px`);
     t("nor pad it", css.paddingTop === "20px", css.paddingTop);
@@ -1006,8 +1010,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
         await new Promise((r) => setTimeout(r, 150));
         const preview2 = [...document.querySelectorAll(".nc-ui")].at(-1);
         const frames2 = [...preview2.querySelectorAll("iframe")];
-        t("a whole-page preview shows the page now and the page after", frames2.length === 2);
-        t("and the second frame is the rewritten page", frames2[1]?.srcdoc.includes("A rebuilt page"));
+        // One frame, not two: the page as it is fills the screen behind the dialog.
+        t("a whole-page preview shows the rewritten page", frames2.length === 1);
+        t("and it is the rewritten page", frames2[0]?.srcdoc.includes("A rebuilt page"));
+        // The dialog is tall, so the button that accepts it has to stay on screen.
+        t("with the button that keeps it still reachable", (() => {
+          const card = preview2.querySelector(".nc-ui-card");
+          const actions = card.querySelector(".nc-actions");
+          return getComputedStyle(card).flexDirection === "column" &&
+            getComputedStyle(card.querySelector(".nc-body")).overflowY === "auto" &&
+            actions.getBoundingClientRect().bottom <= card.getBoundingClientRect().bottom + 1;
+        })());
         t("while the page itself is untouched until it is kept", !document.body.textContent.includes("A rebuilt page"));
         preview2.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
         await done;
@@ -1038,6 +1051,41 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     // Without it loaded, a save is the full serialisation this did before the split.
     t("a save without the serialiser still produces the document",
       /^<!DOCTYPE html>/i.test(nc.getHTML()) && nc.getHTML().includes("</html>"));
+  }
+
+  // --- reloading into an upgrade ------------------------------------------
+  //
+  // Taking an upgrade leaves this tab running the old engine, and the bytes that
+  // replace it have to reach a gateway before a reload is worth anything. This
+  // used to be a button pressed twice: once too early, once when it worked.
+  {
+    const realFetch = window.fetch, realReload = nc.reloadToLatest.bind(nc);
+    const seen = [];
+    let reloaded = null, asked = 0;
+    nc.reloadToLatest = (h) => { reloaded = h; };
+    const want = nc.hashText("<html>new</html>");
+
+    // Still the old copy: no reload, however many times it is asked.
+    window.fetch = async (u) => { asked++; seen.push(String(u)); return { ok: true, text: async () => "<html>old</html>" }; };
+    const gaveUp = await nc.reloadWhenServed(want, { waitMs: 3000 });
+    t("a gateway still serving the old copy is not reloaded into", reloaded === null && gaveUp === false);
+    t("and it was asked more than once", asked >= 2, String(asked));
+    t("each time at a fresh URL", new Set(seen).size === seen.length);
+
+    // The moment it serves what was saved.
+    let turn = 0;
+    window.fetch = async () => ({ ok: true, text: async () => (turn++ < 1 ? "<html>old</html>" : "<html>new</html>") });
+    const went = await nc.reloadWhenServed(want, { waitMs: 30000 });
+    t("the page reloads itself once the gateway has the new copy", went === true && reloaded === want);
+
+    // Somebody who said to stay is left alone.
+    reloaded = null;
+    const stop = new AbortController(); stop.abort();
+    t("and never against the wishes of somebody who cancelled",
+      (await nc.reloadWhenServed(want, { signal: stop.signal })) === false && reloaded === null);
+    t("nor with nothing to compare against", (await nc.reloadWhenServed("", {})) === false && reloaded === null);
+
+    window.fetch = realFetch; nc.reloadToLatest = realReload;
   }
 
   // --- saving guards ------------------------------------------------------

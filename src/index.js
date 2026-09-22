@@ -538,6 +538,43 @@ class NsiteClay extends EventTarget {
     this._offerReload(latest);
   }
 
+  /**
+   * Wait until this page's own address serves `hash`, then reload into it.
+   *
+   * A save puts new bytes on Blossom and a new manifest on the relays, and the
+   * gateway in front of them catches up when it catches up. Reloading before it
+   * does hands back the bytes we are trying to replace, which is why taking an
+   * upgrade used to end in a button somebody had to press, then press again.
+   *
+   * So ask, with a widening gap, until the answer is the document we saved.
+   * `onStatus` is told each time so the wait can be visible rather than silent.
+   * Returns true when it reloaded, false when it gave up; either way nothing is
+   * lost, because the bytes are published whatever this page does next.
+   */
+  async reloadWhenServed(hash, { onStatus = () => {}, signal, waitMs = 180000 } = {}) {
+    if (!hash) return false;
+    const until = Date.now() + waitMs;
+    for (let attempt = 0; Date.now() < until; attempt++) {
+      if (signal?.aborted) return false;
+      // Growing, because a gateway that is not ready at two seconds is not
+      // usually ready at four, and forty requests help nobody.
+      const gap = Math.min(2000 * Math.pow(1.4, attempt), 15000);
+      await new Promise((r) => setTimeout(r, gap));
+      if (signal?.aborted) return false;
+      onStatus({ attempt, waited: Math.round((waitMs - (until - Date.now())) / 1000) });
+      let served;
+      try {
+        const url = new URL(this.doc.location.href);
+        url.searchParams.set("v", String(Date.now()));
+        const res = await fetch(url.toString(), { cache: "reload" });
+        if (!res.ok) continue;
+        served = hashText(await res.text());
+      } catch { continue; }
+      if (served === hash) { this.reloadToLatest(hash); return true; }
+    }
+    return false;
+  }
+
   // Reload through a fresh URL rather than location.reload(): the document and
   // its assets are served with a cache lifetime, and a plain reload is entitled
   // to hand back the very bytes we are trying to replace.
