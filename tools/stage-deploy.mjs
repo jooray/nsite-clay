@@ -13,7 +13,7 @@
 // with real prose in them. Only the screenshots are shared, and they are staged
 // here because they come out of tools/publish-walkthrough.mjs at twice the size
 // any page needs.
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -100,6 +100,24 @@ console.log(`staged ${made} translated page${made === 1 ? "" : "s"} into site/{$
       console.error(`stage-deploy: deploy.html ${lang} has no words for ${gaps.join(", ")}. ` +
                     `Those readers get the English fallback.`);
       missing += gaps.length;
+    }
+  }
+  if (missing) process.exitCode = 1;
+}
+
+// A page that names a script the site does not carry looks fine until somebody
+// presses the button that needs it. deploy.html referenced /nsite-clay-wallet.js
+// for a whole release before anyone noticed site:build was not copying it, and a
+// test server that mapped every /nsite-clay*.js straight into dist/ hid it.
+{
+  const pages = readdirSync("site").filter((f) => f.endsWith(".html"));
+  let missing = 0;
+  for (const page of pages) {
+    const html = readFileSync(join("site", page), "utf8");
+    for (const [, src] of html.matchAll(/<script[^>]+src="(\/[^"]+\.js)"/g)) {
+      if (existsSync(join("site", src))) continue;
+      console.error(`stage-deploy: ${page} loads ${src}, which site/ does not have.`);
+      missing++;
     }
   }
   if (missing) process.exitCode = 1;
