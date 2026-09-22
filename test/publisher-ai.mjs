@@ -40,8 +40,15 @@ try {
     await page.fill("#key", "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y");
     await page.click("#key-go");
     await page.waitForSelector("#tpls .tpl");
-    await page.click("#ai-builder summary");
-    assert.equal(await page.textContent("#ai-builder summary"), { en: "Create a page from a description with AI", es: "Crea una página a partir de una descripción con IA", sk: "Vytvor stránku na základe opisu s pomocou AI", cs: "Vytvoř stránku podle popisu s pomocí AI" }[lang]);
+    // Describing the page is a route of its own now, not something to unfold, so
+    // it has to be on screen the moment this step is.
+    assert(await page.isVisible("#ai-builder"), "the AI builder is not visible without being opened");
+    assert.equal(await page.textContent("#ai-builder h3"), { en: "Create a page from a description with AI", es: "Crea una página a partir de una descripción con IA", sk: "Vytvor stránku na základe opisu s pomocou AI", cs: "Vytvoř stránku podle popisu s pomocí AI" }[lang]);
+    // And the box says what a good description looks like, in the reader's language.
+    const placeholder = await page.getAttribute("#ai-description", "placeholder");
+    assert(placeholder && placeholder.length > 80, `placeholder is ${JSON.stringify(placeholder)}`);
+    assert.equal(/coffee shop|cafeter|kaviare|kav\u00e1rnu/.test(placeholder), true,
+      `placeholder not translated for ${lang}: ${placeholder.slice(0, 60)}`);
     await page.selectOption("#ai-template", template);
     await page.fill("#ai-description", "A page for a community bike workshop. Use the supplied Saturday information.");
     await page.click("#ai-generate");

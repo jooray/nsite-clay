@@ -13,6 +13,8 @@ const WORDS = {
   byok: ["My own API key", "Mi propia clave API", "Vlastný API kľúč", "Vlastní API klíč"],
   endpoint: ["API base URL", "URL base de la API", "Základná URL API", "Základní URL API"],
   key: ["API key for this endpoint", "Clave API de este servidor", "API kľúč pre tento server", "API klíč pro tento server"],
+  keyRoutstr: ["Node key (you get one by adding credit)", "Clave del nodo (la obtienes al añadir saldo)", "Kľúč nodu (dostaneš ho, keď pridáš kredit)", "Klíč nodu (dostaneš ho, když přidáš kredit)"],
+  keyHintRoutstr: ["Leave this empty. A Routstr node issues the key when you pay, below. Paste one only to reuse credit you already bought on another device.", "Déjalo vacío. El nodo Routstr emite la clave cuando pagas, más abajo. Pega una solo para reutilizar saldo que ya compraste en otro dispositivo.", "Nechaj prázdne. Routstr node kľúč vydá, keď nižšie zaplatíš. Vlož ho sem len vtedy, ak chceš použiť kredit, ktorý si už kúpil na inom zariadení.", "Nech prázdné. Routstr node klíč vydá, až níže zaplatíš. Vlož ho sem jen tehdy, pokud chceš použít kredit, který sis už koupil na jiném zařízení."],
   model: ["Model ID", "ID del modelo", "ID modelu", "ID modelu"],
   models: ["Load models", "Cargar modelos", "Načítať modely", "Načíst modely"],
   local: ["This browser stores your AI key separately from the page. Download a copy to reuse your credit on another site or device.", "Este navegador guarda tu clave de IA fuera de la página. Descarga una copia para usar tu saldo en otro sitio o dispositivo.", "Prehliadač ukladá AI kľúč oddelene od stránky. Stiahni si kópiu, ak chceš kredit použiť na inom webe alebo zariadení.", "Prohlížeč ukládá AI klíč odděleně od stránky. Stáhni si kopii, pokud chceš kredit použít na jiném webu nebo zařízení."],
@@ -80,6 +82,11 @@ export class Ai {
           { value: "routstr", label: "Routstr (Cashu / Lightning)" }, { value: "byok", label: say("byok") }] });
         base = field(body, { label: say("endpoint"), value: current.base });
         key = field(body, { label: say("key"), type: "password", value: current.key });
+        // With Routstr this field is an output, not a question: the node issues the
+        // key when you pay. Saying so is the difference between an empty box you are
+        // expected to fill and an empty box that is empty on purpose.
+        const keyHint = this.doc.createElement("p"); keyHint.className = "nc-hint";
+        (key.closest(".nc-field") || key).after(keyHint);
         model = field(body, { label: say("model"), value: current.model });
         const options = this.doc.createElement("datalist"); options.id = model.id + "-models";
         model.setAttribute("list", options.id); body.append(options);
@@ -88,7 +95,8 @@ export class Ai {
         const session = () => ({ mode: mode.value, base: aiEndpoint(base.value, mode.value), key: key.value.trim(), model: model.value.trim() });
         const apply = () => client.configure(session());
         const button = (parent, name, fn) => {
-          const b = this.doc.createElement("button"); b.type = "button"; b.textContent = say(name); parent.append(b);
+          const b = this.doc.createElement("button"); b.type = "button"; b.textContent = say(name);
+          b.dataset.ncAiBtn = name; parent.append(b);
           b.onclick = async () => {
             if (working) return;
             working = true;
@@ -144,13 +152,29 @@ export class Ai {
         });
         button(payments, "refund", async () => { refundDisplay(await client.refund(apply())); });
         button(payments, "lastRefund", () => { const result = client.record(session().base).refund; if (result) refundDisplay(result); });
+        // Asking a node about a balance that does not exist yet is how you get a
+        // raw 422 on screen. Until there is a key, the only thing on offer is
+        // buying one.
+        const gate = () => {
+          const routstr = mode.value === "routstr";
+          const has = !!key.value.trim();
+          payments.hidden = !routstr;
+          keyHint.textContent = routstr ? say("keyHintRoutstr") : "";
+          const label = key.labels && key.labels[0];
+          if (label) label.textContent = say(routstr ? "keyRoutstr" : "key");
+          for (const name of ["balance", "refund", "lastRefund", "backup", "forget"]) {
+            const b = body.querySelector(`[data-nc-ai-btn="${name}"]`);
+            if (b) b.disabled = !has;
+          }
+        };
         const changed = () => {
           try { key.value = client.record(aiEndpoint(base.value, mode.value)).key || ""; } catch { key.value = ""; }
           models = []; options.replaceChildren(); rates.textContent = ""; balance.textContent = ""; token.value = "";
-          payments.hidden = mode.value !== "routstr";
+          gate();
         };
         base.addEventListener("input", changed); mode.addEventListener("change", changed);
-        payments.hidden = mode.value !== "routstr";
+        key.addEventListener("input", gate);
+        gate();
       },
       onSubmit: () => client.configure({ mode: mode.value, base: base.value, key: key.value, model: model.value }),
     });

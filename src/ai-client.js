@@ -77,6 +77,10 @@ export class AiClient {
         if (session.key) message = message.replaceAll(session.key, "[key]");
         if (response.status === 402) message = "Your AI credit is too low for this request. Add credit or choose a cheaper model.";
         if (response.status === 401) message = "The AI endpoint did not accept this key. Check the key for this node.";
+        // A Routstr node answers 422 to a balance question asked with no key. The
+        // node is right and the question was wrong: there is nothing to ask about
+        // until credit has been added, and "HTTP 422" says none of that.
+        if (!session.key) message = "There is no key for this node yet. Add credit below and the node issues one.";
         throw new Error(message);
       }
       return raw ? response : await response.json();

@@ -119,6 +119,14 @@
   input:focus, textarea:focus { outline: 2px solid var(--nc-accent); outline-offset: 1px; }
 
   .note { font-size: .86rem; color: var(--nc-ink-dim); margin: .6rem 0 0; }
+  /* The paid route, and the one most people should take, so it looks like a
+     thing rather than a disclosure triangle. */
+  .ai-builder { display: block; margin: 1.2rem 0 0; padding: 1.1rem 1.2rem 1.2rem;
+    border: 1px solid var(--nc-accent); border-radius: var(--nc-radius);
+    background: color-mix(in srgb, var(--nc-accent) 9%, transparent); }
+  .ai-builder h3 { margin: 0; font-size: 1.05rem; }
+  .ai-builder textarea { min-height: 7.5rem; }
+  .or-pick { margin: 1.4rem 0 .2rem; }
   .warn { border-color: #7a4a2a; background: #2a1710; }
   .warn h2 { color: #F0B48A; }
   .good { border-color: #2c5f45; background: #10231a; }
@@ -293,13 +301,18 @@
       <h2 data-t="tplTitle">Pick a starting point</h2>
       <p class="sub" data-t="tplSub">Every one of these is a finished page you can type over. The first one
       is built out of blocks you add and rearrange, which is the easiest place to begin.</p>
-      <details class="adv" id="ai-builder" nc:no-persist>
-        <summary data-t="aiTitle">Create a page from a description with AI</summary>
+      <!-- Describing the page you want is the shortest way to a site you would
+           keep, so it is the first thing on this step rather than something to
+           unfold. The twelve templates stay below for anybody who would rather
+           start from a finished page. -->
+      <section class="ai-builder" id="ai-builder" nc:no-persist>
+        <h3 data-t="aiTitle">Create a page from a description with AI</h3>
         <p class="note" data-t="aiHint">Start from scratch or choose a template below. AI uses our Cypherpunk Routstr node by default, paid with Cashu or Lightning. You can change the node, model or API key in AI settings.</p>
         <label class="f" for="ai-template" data-t="aiStart">Starting page</label>
         <select id="ai-template" class="nc-input"><option value="" data-t="aiScratch">Start from scratch</option></select>
         <label class="f" for="ai-description" data-t="aiDescribe">What page do you want?</label>
-        <textarea id="ai-description" rows="5" nc:no-persist></textarea>
+        <textarea id="ai-description" rows="5" nc:no-persist data-t-placeholder="aiPlaceholder"
+          placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
         <p class="note" id="ai-provider"></p>
         <div class="row">
           <button type="button" id="ai-settings" data-t="aiSettings">AI settings and credit</button>
@@ -312,7 +325,8 @@
           <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
           <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
         </div>
-      </details>
+      </section>
+      <p class="sub or-pick" data-t="aiOr">Or start from one of these and type over it.</p>
       <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
       <div class="row end">
         <button id="tpl-back" data-t="back">Back</button>
@@ -405,6 +419,8 @@
   const STRINGS = {
     en: {},
     es: {
+      aiOr: "O empieza por una de estas y escribe encima.",
+      aiPlaceholder: "Quiero una web para mi cafetería. Tema marrón, servimos flat white de especialidad y hacemos encuentros de Nostr los martes a las 20:00. La dirección es 123 Satoshi Way, 12345 Asunción, Paraguay. Explica que trabajamos café de especialidad. Una sola página, sencilla, con tres fotos. Moderna y con estilo",
       needKey: "Primero pega una clave.", passShort: "Usa al menos ocho caracteres.", newPassDone: "Guardado", copied: "Copiado",
       qrOpen: "Abrir en tu app de firma", qrWait: "Esperando a la app de firma. Deja esta página abierta mientras lo apruebas.",
       qrRetry: "Mostrar un código nuevo", qrMissed: "No llegó ninguna respuesta. Muestra un código nuevo e inténtalo otra vez.",
@@ -467,6 +483,8 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      aiOr: "Alebo začni niektorou z týchto a píš do nej.",
+      aiPlaceholder: "Chcem stránku pre svoju kaviareň. Hnedá téma, robíme hipsterske flat white a každý utorok o 20:00 máme Nostr stretnutie. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguaj. Vysvetli, že robíme špeciálnu kávu. Jednoduchá jednostránka s troma fotkami. Moderné a svíže",
       needKey: "Najprv vlož kľúč.", passShort: "Použi aspoň osem znakov.", newPassDone: "Uložené", copied: "Skopírované",
       qrOpen: "Otvoriť v podpisovej aplikácii", qrWait: "Čaká sa na podpisovú aplikáciu. Nechaj túto stránku otvorenú, kým to schváliš.",
       qrRetry: "Zobraziť nový kód", qrMissed: "Neprišla žiadna odpoveď. Zobraz nový kód a skús to znova.",
@@ -529,6 +547,8 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      aiOr: "Nebo začni některou z těchto a piš do ní.",
+      aiPlaceholder: "Chci stránku pro svoji kavárnu. Hnědé téma, děláme hipsterská flat white a každé úterý ve 20:00 máme Nostr setkání. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguay. Vysvětli, že děláme výběrovou kávu. Jednoduchá jednostránka se třemi fotkami. Moderní a svěží",
       needKey: "Nejdřív vlož klíč.", passShort: "Použij aspoň osm znaků.", newPassDone: "Uloženo", copied: "Zkopírováno",
       qrOpen: "Otevřít v podpisové aplikaci", qrWait: "Čeká se na podpisovou aplikaci. Nech tuhle stránku otevřenou, dokud to schválíš.",
       qrRetry: "Zobrazit nový kód", qrMissed: "Nepřišla žádná odpověď. Zobraz nový kód a zkus to znovu.",
@@ -597,6 +617,11 @@
     const s = T[el.dataset.t];
     if (s) el.textContent = s;
   }
+  // A placeholder is text a reader reads, so it is translated like any other.
+  for (const el of document.querySelectorAll("[data-t-placeholder]")) {
+    const s = T[el.dataset.tPlaceholder];
+    if (s) el.placeholder = s;
+  }
   const say = (key, fallback) => T[key] || fallback;
 
   const $ = (s) => document.querySelector(s);
@@ -608,6 +633,7 @@
   // people start over in a new tab to change one choice.
   function step(n) {
     state.reached = Math.max(state.reached, n);
+    if (n === 2 && typeof showProvider === "function") showProvider();
     for (const s of document.querySelectorAll("section.step")) {
       s.toggleAttribute("data-on", Number(s.dataset.step) === n);
     }
@@ -873,10 +899,7 @@
     $("#ai-settings").classList.toggle("primary", !s.key);
   };
   showProvider();
-  // Recomputed whenever the section is opened, because credit can be added in the
-  // settings dialog, on another tab, or on a previous visit, and a line drawn once
-  // at load is a line that is wrong by the time anybody reads it.
-  $("#ai-builder").addEventListener("toggle", () => { if ($("#ai-builder").open) showProvider(); });
+
   $("#ai-preview").title = nc.ai.say("preview");
   $("#ai-settings").onclick = async () => { await nc.ai.settings(); showProvider(); };
   $("#ai-cancel").onclick = () => generation?.abort();
