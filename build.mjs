@@ -18,6 +18,10 @@ for (const [outfile, format, globalName, entry] of [
   ["dist/nsite-clay.js", "iife", "NsiteClayBundle", "src/index.js"],
   ["dist/nsite-clay.esm.js", "esm", undefined, "src/index.js"],
   ["dist/nsite-clay-source.js", "iife", "NsiteClaySource", "src/vendor/clay-source/source-map.js"],
+  // The Cashu wallet is a publisher feature: somebody buying credit needs it,
+  // a reader of a published page never does. Inlined it would cost every reader
+  // 9.8 KB gzipped; here it costs 23 KB once, to the one person who is paying.
+  ["dist/nsite-clay-wallet.js", "iife", "NsiteClayWallet", "src/wallet-entry.js"],
 ]) {
   await esbuild.build({
     entryPoints: [entry],
