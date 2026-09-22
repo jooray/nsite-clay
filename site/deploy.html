@@ -111,7 +111,7 @@
 
   label.f { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
             color: var(--nc-ink-dim); margin: 0 0 .35rem; }
-  input[type=text], input[type=password], textarea {
+  input[type=text], input[type=password], textarea, select {
     width: 100%; font: inherit; font-size: .93rem; padding: .6rem .7rem;
     border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
     background: var(--nc-bg); color: inherit;
@@ -293,6 +293,26 @@
       <h2 data-t="tplTitle">Pick a starting point</h2>
       <p class="sub" data-t="tplSub">Every one of these is a finished page you can type over. The first one
       is built out of blocks you add and rearrange, which is the easiest place to begin.</p>
+      <details class="adv" id="ai-builder" nc:no-persist>
+        <summary data-t="aiTitle">Create a page from a description with AI</summary>
+        <p class="note" data-t="aiHint">Start from scratch or choose a template below. AI uses our Cypherpunk Routstr node by default, paid with Cashu or Lightning. You can change the node, model or API key in AI settings.</p>
+        <label class="f" for="ai-template" data-t="aiStart">Starting page</label>
+        <select id="ai-template" class="nc-input"><option value="" data-t="aiScratch">Start from scratch</option></select>
+        <label class="f" for="ai-description" data-t="aiDescribe">What page do you want?</label>
+        <textarea id="ai-description" rows="5" nc:no-persist></textarea>
+        <p class="note" id="ai-provider"></p>
+        <div class="row">
+          <button type="button" id="ai-settings" data-t="aiSettings">AI settings and credit</button>
+          <button type="button" class="primary" id="ai-generate" data-t="aiGenerate">Generate preview</button>
+          <button type="button" id="ai-cancel" hidden data-t="aiCancel">Cancel generation</button>
+        </div>
+        <p class="note" id="ai-status" role="status"></p>
+        <div id="ai-result" hidden>
+          <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
+          <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
+          <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
+        </div>
+      </details>
       <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
       <div class="row end">
         <button id="tpl-back" data-t="back">Back</button>
@@ -365,8 +385,7 @@
   <div class="wrap">
     <p><a href="/">nsite-clay</a> · <a href="/templates.html" data-t="fTemplates">Templates</a> ·
        <a href="/guide.html" data-t="fGuide">Guide</a> · <a href="/llms.txt">llms.txt</a></p>
-    <p data-t="fNote">This wizard runs in your browser. There is no server behind it, nothing is
-    recorded, and your key reaches the page only if you paste one in.</p>
+    <p data-t="fNote">Publishing runs in your browser. Optional AI generation sends your description and chosen template to the AI provider you select. Your Nostr signing key stays separate.</p>
   </div>
 </footer>
 
@@ -386,6 +405,8 @@
   const STRINGS = {
     en: {},
     es: {
+      aiTitle: "Crea una página a partir de una descripción con IA", aiHint: "Empieza desde cero o elige una plantilla. La IA usa nuestro nodo Routstr Cypherpunk por defecto, con pagos en Cashu o Lightning. Puedes cambiar el nodo, modelo o clave API en los ajustes de IA.",
+      aiStart: "Página inicial", aiScratch: "Empezar desde cero", aiDescribe: "¿Qué página quieres?", aiSettings: "Ajustes y saldo de IA", aiGenerate: "Generar vista previa", aiCancel: "Cancelar generación", aiReview: "Revisa la página antes de continuar. Puedes editar sus palabras y bloques después de publicarla.", aiUse: "Usar esta página", aiWorking: "Generando…", aiReady: "La vista previa está lista.", aiCancelled: "Generación cancelada.",
       crumb: "publicar", h1: "Publica un sitio",
       lede: "Elige una plantilla, inicia sesión con tu clave de Nostr y ya está en línea. La página que publicas se edita a sí misma después, así que este asistente solo se usa una vez.",
       noscript: "Este publicador funciona entero en tu navegador, así que necesita JavaScript. Sin él todavía puedes publicar desde una terminal con npx nsite-clay deploy.",
@@ -431,9 +452,11 @@
       doneOpen: "Abrir y empezar a editar", doneView: "Solo verlo", doneGuide: "Leer la guía",
       doneSlow: "Una pasarela puede tardar un minuto en ver un sitio recién creado. Si aún no está, espera un momento y recarga.",
       fTemplates: "Plantillas", fGuide: "Guía", fDocs: "Documentación",
-      fNote: "Este asistente funciona en tu navegador. No tiene servidor, no guarda registros y nunca ve tu clave salvo que la pegues aquí.",
+      fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      aiTitle: "Vytvor stránku na základe opisu s pomocou AI", aiHint: "Začni od nuly alebo si vyber šablónu. AI predvolene používa náš Routstr node Cypherpunk s platbou cez Cashu alebo Lightning. Node, model aj API kľúč môžeš zmeniť v nastaveniach AI.",
+      aiStart: "Východisková stránka", aiScratch: "Začať od nuly", aiDescribe: "Akú stránku chceš?", aiSettings: "Nastavenia a kredit AI", aiGenerate: "Vytvoriť náhľad", aiCancel: "Zrušiť generovanie", aiReview: "Pred pokračovaním si stránku skontroluj. Text aj bloky môžeš upravovať po zverejnení.", aiUse: "Použiť túto stránku", aiWorking: "Generuje sa…", aiReady: "Náhľad je pripravený.", aiCancelled: "Generovanie zrušené.",
       crumb: "publikovať", h1: "Zverejni stránku",
       lede: "Vyber si šablónu, prihlás sa svojím nostr kľúčom a je online. Stránka, ktorú zverejníš, sa potom upravuje sama, takže tohto sprievodcu potrebuješ iba raz.",
       noscript: "Tento publikátor beží celý v prehliadači, takže potrebuje JavaScript. Aj bez neho vieš zverejniť z terminálu cez npx nsite-clay deploy.",
@@ -479,9 +502,11 @@
       doneOpen: "Otvoriť a začať upravovať", doneView: "Len sa pozrieť", doneGuide: "Prečítať návod",
       doneSlow: "Bráne môže chvíľu trvať, kým si všimne úplne novú stránku. Ak tam ešte nie je, chvíľu počkaj a obnov.",
       fTemplates: "Šablóny", fGuide: "Návod", fDocs: "Dokumentácia",
-      fNote: "Tento sprievodca beží v prehliadači. Nemá server, nič si nezapisuje a tvoj kľúč nikdy nevidí, pokiaľ ho sem sám nevložíš.",
+      fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      aiTitle: "Vytvoř stránku podle popisu s pomocí AI", aiHint: "Začni od nuly nebo si vyber šablonu. AI ve výchozím nastavení používá náš Routstr node Cypherpunk s platbou přes Cashu nebo Lightning. Node, model i API klíč můžeš změnit v nastavení AI.",
+      aiStart: "Výchozí stránka", aiScratch: "Začít od nuly", aiDescribe: "Jakou stránku chceš?", aiSettings: "Nastavení a kredit AI", aiGenerate: "Vytvořit náhled", aiCancel: "Zrušit generování", aiReview: "Před pokračováním si stránku zkontroluj. Text i bloky můžeš upravovat po zveřejnění.", aiUse: "Použít tuto stránku", aiWorking: "Generuje se…", aiReady: "Náhled je připravený.", aiCancelled: "Generování zrušeno.",
       crumb: "publikovat", h1: "Zveřejni stránku",
       lede: "Vyber si šablonu, přihlas se svým nostr klíčem a je online. Stránka, kterou zveřejníš, se pak upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
       noscript: "Tenhle publikátor běží celý v prohlížeči, takže potřebuje JavaScript. I bez něj můžeš zveřejnit z terminálu přes npx nsite-clay deploy.",
@@ -527,7 +552,7 @@
       doneOpen: "Otevřít a začít upravovat", doneView: "Jen se podívat", doneGuide: "Přečíst návod",
       doneSlow: "Bráně může chvíli trvat, než si všimne úplně nové stránky. Pokud tam ještě není, chvíli počkej a obnov.",
       fTemplates: "Šablony", fGuide: "Návod", fDocs: "Dokumentace",
-      fNote: "Tenhle průvodce běží v prohlížeči. Nemá server, nic si nezapisuje a tvůj klíč nikdy nevidí, pokud ho sem sám nevložíš.",
+      fNote: "Publikování běží v prohlížeči. Pokud použiješ AI, popis a vybraná šablona odejdou k poskytovateli, kterého zvolíš. Podpisový klíč Nostr zůstává oddělený.",
     },
   };
   const LANG = (document.documentElement.lang || "en").slice(0, 2).toLowerCase();
@@ -782,16 +807,61 @@
       // Picking one is the decision. Asking for a second click on Next to
       // confirm a choice already made is a step that does nothing.
       card.onclick = () => {
+        state.generated = null;
         state.template = t;
         for (const c of host.querySelectorAll(".tpl")) c.setAttribute("aria-pressed", String(c === card));
         step(3);
         checkPath();
       };
       host.appendChild(card);
+      const option = document.createElement("option"); option.value = t.name; option.textContent = title.textContent;
+      $("#ai-template").append(option);
     }
   }
 
   $("#tpl-back").onclick = () => step(1);
+
+  // AI produces an in-memory draft. Only Use this page hands it to the ordinary
+  // publishing path; tokens, keys and prompts never enter the generated HTML.
+  let generation = null, generated = null, generatedTemplate = null;
+  const showProvider = () => { $("#ai-provider").textContent = `${nc.ai.client.config.model} · ${new URL(nc.ai.client.config.base).host}`; };
+  showProvider();
+  $("#ai-preview").title = nc.ai.say("preview");
+  $("#ai-settings").onclick = async () => { await nc.ai.settings(); showProvider(); };
+  $("#ai-cancel").onclick = () => generation?.abort();
+  $("#ai-generate").onclick = async () => {
+    const controller = new AbortController(); generation = controller;
+    const template = state.catalogue.find((t) => t.name === $("#ai-template").value) || null;
+    $("#ai-result").hidden = true; generated = null;
+    for (const id of ["ai-generate", "ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = true;
+    $("#tpls").inert = true; $("#ai-cancel").hidden = false;
+    $("#ai-status").textContent = say("aiWorking", "Generating…");
+    try {
+      let html = "";
+      if (template) {
+        const response = await fetch(`/t/${template.name}/index.html`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`${template.name}: ${response.status}`);
+        html = personalise(await response.text(), template.owner, nc.npub, "/index.html");
+      }
+      const result = await nc.ai.buildPage($("#ai-description").value, { template: html, lang: LANG, signal: controller.signal,
+        onProgress: (text) => { $("#ai-status").textContent = `${say("aiWorking", "Generating…")} ${text.length}`; } });
+      if (controller.signal.aborted) return;
+      generated = result; generatedTemplate = template;
+      $("#ai-preview").srcdoc = nc.ai.previewHTML(result);
+      $("#ai-result").hidden = false; $("#ai-status").textContent = say("aiReady", "The preview is ready.");
+    } catch (e) {
+      $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
+    } finally {
+      generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
+      for (const id of ["ai-generate", "ai-settings", "ai-template", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
+    }
+  };
+  $("#ai-use").onclick = () => {
+    if (!generated) return;
+    state.generated = generated;
+    state.template = generatedTemplate || { name: "ai", owner: nc.npub, files: [] };
+    step(3); checkPath();
+  };
 
   // ---- 3. where ----------------------------------------------------------
 
@@ -966,7 +1036,7 @@
         ["/nsite-clay-chrome.js", "text/javascript"],
       ];
       const [tplHtml, ...sharedText] = await Promise.all([
-        fetch(`/t/${t.name}/index.html`, { cache: "no-cache" }).then((r) => {
+        state.generated ? Promise.resolve(state.generated) : fetch(`/t/${t.name}/index.html`, { cache: "no-cache" }).then((r) => {
           if (!r.ok) throw new Error(`${t.name}: ${r.status}`);
           return r.text();
         }),
@@ -1003,10 +1073,13 @@
         const [path, type] = shared[i];
         const stamped = nc.stamp(path, nc.hashText(text));
         renames.push([path, stamped]);
+        if (nc.unstamp(path) !== path) renames.push([nc.unstamp(path), stamped]);
         files.push({ path: stamped, bytes: enc.encode(text), type });
       });
 
-      let html = personalise(tplHtml, t.owner, nc.npub, docPath);
+      let html = state.generated
+        ? nc.ai.preparePage(tplHtml, { owner: nc.npub, path: docPath, lang: LANG })
+        : personalise(tplHtml, t.owner, nc.npub, docPath);
       for (const [from, to] of renames.sort((a, b) => b[0].length - a[0].length)) {
         html = html.split(from).join(to);
       }

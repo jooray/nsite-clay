@@ -2,6 +2,8 @@ import { AiClient, aiEndpoint } from "./ai-client.js";
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
 import { installEditing, editDialog, propose, accept } from "./ai-edit.js";
+import { buildPage, preparePage } from "./ai-builder.js";
+import { previewHTML } from "./ai-edit.js";
 
 const WORDS = {
   settings: ["AI settings", "Ajustes de IA", "Nastavenia AI", "Nastavení AI"],
@@ -56,6 +58,9 @@ export class Ai {
   edit(target) { return editDialog(this, target); }
   propose(target, prompt, options) { return propose(this, target, prompt, options); }
   accept(proposal) { return accept(this, proposal); }
+  buildPage(description, options) { return buildPage(this, description, options); }
+  preparePage(html, options) { return preparePage(html, options); }
+  previewHTML(html) { return previewHTML(html); }
 
   async settings() {
     const client = this.client, say = (key) => this.say(key);

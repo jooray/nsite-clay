@@ -874,6 +874,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     const pending = nc.media.crop(blob, { aspect: 1 });
     await waitCrop();
     t("the cropper uses the page's own dialog", !!document.querySelector(".nc-ui .qc-stage"));
+    {
+      const stage = document.querySelector(".qc-stage");
+      const box = stage.querySelector(".qc-box").getBoundingClientRect();
+      const pic = stage.querySelector("img").getBoundingClientRect();
+      t("the crop box sits over the image, not below it",
+        box.top >= pic.top - 1 && box.bottom <= pic.bottom + 1 &&
+        box.left >= pic.left - 1 && box.right <= pic.right + 1,
+        JSON.stringify({ box: [box.top, box.bottom], img: [pic.top, pic.bottom] }));
+      t("quickcrop keeps its own positioning inside the dialog",
+        getComputedStyle(stage.querySelector(".qc-box")).position === "absolute");
+    }
     t("crop controls and styles never reach the saved file", !nc.getHTML().includes("data-quickcrop"));
     [...document.querySelectorAll(".nc-ui button")].find((b) => b.textContent === "Use this crop").click();
     const result = await pending;

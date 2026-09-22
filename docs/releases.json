@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.3.0",
+    "released": "2026-09-22",
+    "notes": [
+      "You can now ask AI for a page. In the publisher, open the AI section, describe what you want and look at the result before anything is published; you can start from nothing or from a template. AI runs through our own Routstr node by default and is paid with Cashu or Lightning, and its settings let you choose another node or model, or your own API key.",
+      "On a page you already have, click the words or the block you want changed and choose Edit with AI. The result appears as a preview and nothing changes until you keep it. Undo takes an accepted change back, and Save publishes it.",
+      "Undo and Redo now sit on the editing bar, so a block you deleted by mistake comes back with its buttons still working. The history lasts for the editing session; your published versions stay in History as before.",
+      "Choosing a picture has a crop step now. Pick free, square, wide or 4:3 before the file is uploaded, and only the crop you accept is stored.",
+      "The content form learns new field types from the page itself: a date picker, a dropdown, a number field, and a field where you can write with links, lists and bold text. A page that has not been told about them looks exactly as it did.",
+      "Saving keeps more of your file as you wrote it. A small change no longer rewrites the punctuation and spacing of the whole document when it does not have to, so the file stays recognisable in a text editor. When that cannot be done safely, the save falls back to exactly what it did before."
+    ]
+  },
+  {
     "version": "0.2.4",
     "released": "2026-09-02",
     "notes": [

@@ -135,6 +135,13 @@ Your job is the markup, the styling and the words. Sign-in, saving, versions,
 media upload, feeds and the post composer already exist. Writing your own is the
 commonest mistake; check the runtime reference before implementing anything.
 
+The runtime also draws the AI controls on pages that ask for them: a toolbar
+button that rewrites the element the owner clicked, behind a preview they accept
+or discard, and a settings dialog for the provider. An owner can add a crop step
+to a picture upload, and content fields can be given types (`nc:cms-type`) and
+rich text (`@innerHTML`). Nothing AI writes reaches a page without the owner
+keeping it; you never wire that up yourself.
+
 Never copy `nsite-clay.js` or `nsite-clay-base.css` into the site. They live at
 the root so one upgrade fixes every page.
 

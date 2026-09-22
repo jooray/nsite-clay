@@ -80,6 +80,10 @@ people's leftovers.
 
 Open **[the publisher](https://nsite-clay.cypherpunk.today/deploy.html)**,
 pick a template, sign in with your key or make one on the spot, and it is online.
+You can also open **Create a page from a description with AI** in the template step. Start from
+scratch or pick a template for AI to adapt, describe the page, and check the
+preview before continuing. The generated page has editable text, a content form
+and blocks you can add later. The publisher supplies its owner and runtime files.
 It runs entirely in the browser: it fetches the template and the runtime from the
 site it is published on, uploads them to your Blossom servers, and signs the
 manifest with your key. There is no server in the loop and nothing to install.

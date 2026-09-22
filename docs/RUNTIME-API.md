@@ -114,6 +114,15 @@ Acceptance refuses a target changed since generation began. Only the selected
 element goes to the model. Scripts, live feeds and whole-document elements are
 excluded; use the publisher's page builder to create a whole page.
 
+`await nc.ai.buildPage(description, { template, lang, signal, onProgress })`
+generates a static document. Omit `template` to start from scratch.
+`nc.ai.preparePage(html, { owner, path, lang })` sanitises a completed document,
+assigns the publisher's ownership/path, and supplies runtime references, toolbar,
+editable regions, CMS rules and a fallback block library. It removes generated
+scripts and forms. `nc.ai.previewHTML(html)` adds a restrictive CSP for display
+in an iframe with an empty `sandbox` attribute. Preparing or previewing never
+publishes anything.
+
 ```js
 await nc.ready                     // resolves to nc
 nc.cfg                             // the parsed configuration

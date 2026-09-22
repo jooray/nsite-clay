@@ -32,3 +32,6 @@ site/cs/deploy.html
 
 # machine-specific notes, true only for this checkout
 CLAUDE.md.local
+
+# Local browser review evidence
+.impeccable/review/

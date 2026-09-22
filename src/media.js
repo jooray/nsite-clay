@@ -217,7 +217,8 @@ export class Media {
         fit: () => ({ width: Math.max(160, Math.min(740, doc.defaultView.innerWidth - 96)),
           height: Math.max(120, Math.min(440, doc.defaultView.innerHeight - 260)) }),
         open: ({ content, confirmLabel, onConfirm, onCancel }) => {
-          doc.querySelector("style[data-quickcrop]")?.setAttribute("nc:chrome", "");
+          const qc = doc.querySelector("style[data-quickcrop]");
+          qc?.setAttribute("nc:chrome", "");
           let helpers;
           modal({ doc, title: "Crop the image", wide: true,
             hint: "Drag the corners to choose what stays in the picture.",
@@ -225,6 +226,11 @@ export class Media {
             build: (body, h) => { helpers = h; body.append(content); },
             onSubmit: () => { onConfirm(); },
           }).then((result) => { if (result === null) onCancel(); });
+          // A dialog resets position to static on every descendant, and that
+          // reset was written after quickcrop's stylesheet, which put the crop
+          // box in the flow below the image instead of over it. Last place
+          // wins, so quickcrop's own rules go last.
+          if (qc) doc.head.append(qc);
           return { close: () => helpers.close(true) };
         },
       },
