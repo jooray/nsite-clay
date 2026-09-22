@@ -41,6 +41,9 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en" } =
   doc.documentElement.setAttribute("nc:owner", owner || "");
   doc.documentElement.setAttribute("nc:path", path);
   doc.documentElement.setAttribute("nc:edit-gate", "hash");
+  // Fetched only when somebody edits, so it costs a reader nothing, but the
+  // publisher stamps this path like any other and ships the file with the page.
+  doc.documentElement.setAttribute("nc:source", "/nsite-clay-source.js");
   if (!doc.title.trim()) doc.title = doc.querySelector("h1")?.textContent || "My page";
   const charset = doc.createElement("meta"); charset.setAttribute("charset", "utf-8"); doc.head.prepend(charset);
   const viewport = doc.createElement("meta"); viewport.name = "viewport"; viewport.content = "width=device-width, initial-scale=1"; doc.head.append(viewport);

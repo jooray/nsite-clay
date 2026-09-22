@@ -24,11 +24,15 @@ import { manifestPaths, manifestServers } from "./manifest.js";
 import { fetchVerified, uploadAll } from "./blossom.js";
 import { modal, toast } from "./ui.js";
 
-// The three files every template links from the site root.
+// The shared files every template names from the site root. The last is not a
+// script tag but the file nc:source points at: the serialiser is a third of the
+// runtime and is fetched only when a page is edited, so it is named in an
+// attribute rather than loaded by the document.
 const SHARED = [
   { canonical: "/nsite-clay.js", type: "text/javascript" },
   { canonical: "/nsite-clay-base.css", type: "text/css" },
   { canonical: "/nsite-clay-chrome.js", type: "text/javascript" },
+  { canonical: "/nsite-clay-source.js", type: "text/javascript", attribute: "nc:source" },
 ];
 
 // Where the human-readable half of the offer comes from. The hashes never do:
@@ -84,7 +88,17 @@ export class Upgrade {
       if (!url.startsWith("/") || url.startsWith("//")) continue;
       const path = url.split(/[?#]/)[0];
       const kind = SHARED.find((s) => s.canonical === unstamp(path));
-      if (kind) out.push({ el, attr, path, ...kind });
+      if (kind && !kind.attribute) out.push({ el, attr, path, ...kind });
+    }
+    // Files named by an attribute rather than by a tag. A page published before
+    // the serialiser was split out names none, and saying so with the canonical
+    // path is what lets this upgrade install it and point the page at it, rather
+    // than leaving that page on full serialisation for ever.
+    for (const kind of SHARED.filter((s) => s.attribute)) {
+      const declared = this.doc.documentElement.getAttribute(kind.attribute) || "";
+      const path = declared.startsWith("/") && !declared.startsWith("//")
+        ? declared.split(/[?#]/)[0] : kind.canonical;
+      out.push({ el: this.doc.documentElement, attr: kind.attribute, path, ...kind });
     }
     return out;
   }

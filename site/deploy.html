@@ -20,7 +20,7 @@
       nc:path="/deploy.html"
       nc:edit-gate="hash"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1106,6 +1106,9 @@
         ["/nsite-clay.js", "text/javascript"],
         ["/nsite-clay-base.css", "text/css"],
         ["/nsite-clay-chrome.js", "text/javascript"],
+        // Named by nc:source and fetched only when the page is edited, but it has
+        // to be published with the page or the first save has nothing to load.
+        ["/nsite-clay-source.js", "text/javascript"],
       ];
       const [tplHtml, ...sharedText] = await Promise.all([
         state.generated ? Promise.resolve(state.generated) : fetch(`/t/${t.name}/index.html`, { cache: "no-cache" }).then((r) => {

@@ -19,7 +19,7 @@ const server = createServer((req, res) => {
   // wizard sat on "Uploading… 1/4" for as long as anyone would watch it.
   if (req.url.startsWith("/hang")) return;
   const name = req.url === "/" ? "conformance.html" : req.url.split("?")[0].replace(/^\//, "");
-  const p = name === "nsite-clay.js" ? join(HERE, "..", "dist", "nsite-clay.js") : join(DIR, name);
+  const p = /^nsite-clay(-source)?\.js$/.test(name) ? join(HERE, "..", "dist", name) : join(DIR, name);
   let body;
   try { body = readFileSync(p); } catch { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { "Content-Type": extname(p) === ".js" ? "text/javascript" : "text/html" });
@@ -56,6 +56,10 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   const out = [];
   const t = (name, pass, detail = "") => out.push({ name, pass, detail });
   const err = async (fn) => { try { await fn(); return null; } catch (e) { return e.message; } };
+  // Measured here, before anything in this file asks to edit: the serialiser and
+  // its parser are a third of the runtime and a reader must not pay for them.
+  const serialiserAtLoad = performance.getEntriesByType("resource")
+    .filter((e) => e.name.includes("nsite-clay-source")).length;
 
   // --- configuration lives in the document --------------------------------
   t("config is read from <html>", nc.cfg.site === "conf" && nc.cfg.path === "/index.html");
@@ -982,6 +986,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("AI editing requires the owner", /owner/i.test(await err(() => nc.ai.propose(target, "Change"))));
   }
 
+  // The serialiser and its parser are a third of the runtime, and a reader has no
+  // use for them. This page names the file and never enters edit mode, so the
+  // only honest number of requests for it is zero.
+  {
+    t("a reader never fetches the serialiser", serialiserAtLoad === 0);
+    t("and the page still knows where it would be", nc.source.url() === "/nsite-clay-source.js");
+    // Without it loaded, a save is the full serialisation this did before the split.
+    t("a save without the serialiser still produces the document",
+      /^<!DOCTYPE html>/i.test(nc.getHTML()) && nc.getHTML().includes("</html>"));
+  }
+
   // --- saving guards ------------------------------------------------------
   t("a save without a signer is refused", /signed in/i.test(await err(() => nc.save())));
   await nc.login("nsec", { key: NSEC });   // a writer, but not this site's owner
@@ -993,9 +1008,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
 
 await page.goto(`http://127.0.0.1:${port}/source.html`);
 results.push(...await page.evaluate(async () => {
-  await nc.ready; await nc.source.ready;
+  await nc.ready;
+  const out0 = performance.getEntriesByType("resource").filter((e) => e.name.includes("nsite-clay-source")).length;
+  // Nobody is signed in yet, so nobody can save, so it has not been fetched.
+  await nc.login("nsec", { key: "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" });
+  await nc.source.ready;
   const original = nc.source.text(), out = [];
   const t = (name, pass) => out.push({ name, pass });
+  // The other half of the bargain: the owner signing in to edit does fetch it, once.
+  t("the serialiser waits for somebody who can actually save", out0 === 0);
+  t("and is then fetched exactly once",
+    performance.getEntriesByType("resource").filter((e) => e.name.includes("nsite-clay-source")).length === 1);
   t("an unchanged source-preserving save keeps every authored byte", nc.getHTML() === original);
   const heading = document.querySelector("h1");
   const range = nc.source.locate(heading);

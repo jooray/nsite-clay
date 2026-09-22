@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.2",
+    "released": "2026-09-22",
+    "notes": [
+      "Your pages load faster for everyone who is only reading them. The part that keeps your file's own formatting when you save needs an HTML parser, and that parser was a third of everything a visitor had to download before your page appeared. It now waits until you sign in to edit, so a reader never downloads it at all and the rest arrives sooner.",
+      "Nothing about saving changes. When you edit, it is fetched in the background while you work, and your save keeps your formatting exactly as before. On the rare occasion it cannot be reached, the page still saves; it just rewrites the formatting, which is what it did before this feature existed."
+    ]
+  },
+  {
     "version": "0.3.1",
     "released": "2026-09-22",
     "notes": [

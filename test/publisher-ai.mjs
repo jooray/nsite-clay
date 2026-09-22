@@ -67,6 +67,7 @@ try {
         editable: doc.querySelector("h1").hasAttribute("editable"),
         cms: !!doc.querySelector("script[nc\\:cms]"), blocks: !!doc.querySelector("template[nc\\:block]"),
         toolbar: !!doc.querySelector("[data-nc-save]"),
+        source: doc.documentElement.getAttribute("nc:source"),
         cells: [...doc.querySelectorAll("td,th,li,caption")].map((el) => [el.id, el.hasAttribute("editable")]),
         rules: Object.values(JSON.parse(doc.querySelector("script[nc\\:cms]")?.textContent || "{}")),
         runtime: [...doc.querySelectorAll("script[src],link[href]")].map((el) => el.getAttribute("src") || el.getAttribute("href")),
@@ -86,6 +87,13 @@ try {
       assert(result.rules.some((r) => r.startsWith(`#${id}`)), `${id} is editable but missing from the content form`);
     }
     assert(result.runtime.every((p) => result.paths.includes(p)));
+    // The serialiser is fetched only when the page is edited, so it is named in an
+    // attribute rather than loaded by a tag. It still has to be published with the
+    // page, and it still has to be the stamped path, or the first save finds nothing.
+    assert(result.source && result.paths.includes(result.source),
+      `nc:source is ${result.source}, which was not published`);
+    assert(/^\/nsite-clay-source-[0-9a-f]{8}\.js$/.test(result.source),
+      `nc:source is not a stamped path: ${result.source}`);
     assert(!/window.bad|javascript:|nc:ai-key|sk-browser-test|nc:owner="wrong"/.test(result.html));
     // The model's own commentary is not the page's first paragraph, and the
     // document it wrapped in a fence still has its head.

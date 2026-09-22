@@ -206,6 +206,11 @@ class NsiteClay extends EventTarget {
     if (!this.signer) throw new Error("Not signed in");
     if (!this.isOwner) throw new Error("Only the site owner can save this document");
     this.undo.flush();
+    // Started when editing began, so by now it has almost always finished. Waiting
+    // here is what makes the difference between a save that keeps the author's
+    // formatting and one that reprints the file, and it is bounded by the fetch's
+    // own timeout.
+    await this.source.ready?.catch(() => {});
     const html = this.getHTML();
     // A caller changing the path table -- swapping the runtime for a newer blob
     // at the same name -- can leave the document byte-identical, and the
@@ -703,7 +708,18 @@ nc.ready = (async () => {
   nc.blocks.start();
   nc.undo.start();
   nc.ai.start();
-  nc.source.start();
+  // Not at load. The serialiser and its parser are a third of the runtime and
+  // only somebody about to save has any use for them, so the fetch waits until
+  // this page is being edited. A reader never pays for it.
+  //
+  // The trigger is the owner in edit mode, which is exactly who can save. The
+  // gate alone is not enough: it defaults to "always", so a page that never set
+  // nc:edit-gate would hand the parser to every reader it has.
+  {
+    const wake = () => { if (nc.isOwner && nc.editRequested) nc.source.start(); };
+    for (const e of ["nsiteclay:login", "nsiteclay:edit-gate"]) nc.addEventListener(e, wake);
+    wake();
+  }
   // A toolbar may carry the content form's button on a page that has no rules
   // for it to draw, and a button whose only answer is "there is nothing here"
   // is furniture. The shared stylesheet hides it unless this says otherwise.
