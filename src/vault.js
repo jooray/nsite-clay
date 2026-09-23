@@ -59,7 +59,7 @@ export class Vault {
       const plain = await this.nc.signer.nip44Decrypt(this.nc.pubkey, event.content);
       const data = JSON.parse(plain);
       if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-      this.at = event.created_at;
+      this.at = Math.max(this.at || 0, event.created_at);
       return (this.loaded = data);
     } catch {
       // Readable event, unreadable contents: a different key wrote it, or the
@@ -79,16 +79,22 @@ export class Vault {
     if (!this.usable || !this.nc.pubkey) return false;
     const current = await this.load({ force: true });
     if (current === null) throw new Error("The stored copy could not be read, so it was not overwritten.");
-    const next = { ...current, ...patch, v: 1, updated: Math.floor(Date.now() / 1000) };
+    // A replaceable event does not replace one with the same created_at: NIP-01
+    // breaks that tie by event id, so the newer write is dropped on a coin flip
+    // and says it succeeded. Several writes inside one second is not a corner
+    // case here, it is what buying credit does, so each one gets a later second
+    // than the last whatever the clock says.
+    const at = Math.max(Math.floor(Date.now() / 1000), (this.at || 0) + 1);
+    const next = { ...current, ...patch, v: 1, updated: at };
     const content = await this.nc.signer.nip44Encrypt(this.nc.pubkey, JSON.stringify(next));
     const event = await this.nc.signer.sign({
-      kind: KIND, created_at: Math.floor(Date.now() / 1000),
+      kind: KIND, created_at: at,
       tags: [["d", TAG]], content,
     });
     const relays = this.relays();
     const results = await Promise.allSettled(this.nc.pool.publish(relays, event));
     const ok = results.some((r) => r.status === "fulfilled");
-    if (ok) this.loaded = next;
+    if (ok) { this.loaded = next; this.at = at; }
     return ok;
   }
 

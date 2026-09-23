@@ -138,6 +138,25 @@ export class Ai {
   }
 
   /**
+   * Put the key for `base` on the owner's own relays, encrypted to them.
+   *
+   * Called after anything that hands one back, because a key that exists in one
+   * browser and nowhere else is a key somebody loses by clearing their history.
+   * Quiet on failure: they have the credit either way, and the button in the
+   * settings box does the same thing with a message when it matters.
+   */
+  async keepOnRelays(base = this.client.config.base) {
+    const vault = this.nc.vault;
+    const key = this.client.record(base).key;
+    if (!key || !vault?.usable) return false;
+    try {
+      const current = await vault.load();
+      if (current?.ai?.[base] === key) return true;
+      return await vault.save({ ai: { ...(current?.ai || {}), [base]: key } });
+    } catch { return false; }
+  }
+
+  /**
    * Hold a key, and keep it if this browser lets us.
    *
    * Storage can be switched off or full. That is a reason not to have it next
@@ -243,13 +262,14 @@ export class Ai {
           const s = apply();
           const invoice = client.record(s.base).invoice || await client.invoice(Number(amount.value), s);
           const paid = await this.showInvoice(invoice, s); key.value = client.record(s.base).key || "";
-          if (key.value) await showBalance();
+          if (key.value) { await this.keepOnRelays(s.base); await showBalance(); }
           return paid ? say("paid") : "";
         });
         const token = field(payments, { label: say("cashu"), type: "password", value: client.record().deposit || "" });
         button(payments, "deposit", async () => {
           const s = apply(); await client.cashu(token.value, s); token.value = "";
-          key.value = client.record(s.base).key || ""; await showBalance(); return say("paid");
+          key.value = client.record(s.base).key || "";
+          await this.keepOnRelays(s.base); await showBalance(); return say("paid");
         });
         const refundDisplay = (result) => notice(result?.token ? say("refundHint") : result?.status || "", {
           doc: this.doc, title: say("refund"), detail: result?.token || JSON.stringify(result),

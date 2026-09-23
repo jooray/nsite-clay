@@ -121,6 +121,41 @@ const merged = await two.evaluate(async () => {
 });
 t("a second device merges instead of erasing the first", merged?.ai?.["https://routstr.cypherpunk.today/v1"] === "sk-secret-abc" && merged?.note === "written by the second device");
 
+// --- a key bought inside a page is backed up without being asked -------------
+//
+// The gap this covers: buying credit from inside a published page put the key
+// in that browser and nowhere else, so the next device found nothing and the
+// owner had to know about a button called "Save to my Nostr relays".
+const kept = await two.evaluate(async () => {
+  const base = nc.ai.client.session().base;
+  nc.ai.client.setKey("sk-bought-in-the-page", base);
+  const ok = await nc.ai.keepOnRelays(base);
+  nc.vault.forget();
+  const back = await nc.vault.load({ force: true });
+  return { ok, stored: back?.ai?.[base], seed: back?.wallet?.seed };
+});
+t("a key bought in a page reaches the owner's relays by itself", kept.ok === true && kept.stored === "sk-bought-in-the-page");
+t("and nothing else in the vault is disturbed", kept.seed === "seed-words-here");
+
+// --- several writes in one second ------------------------------------------
+//
+// A replaceable event does not replace one with the same created_at, and buying
+// credit writes three times in a row. Whichever of them lost the tie used to
+// say it had succeeded.
+const rapid = await two.evaluate(async () => {
+  const oks = [];
+  for (const patch of [{ pending: { credit: "a" } }, { pending: { credit: "b" } }, { pending: null, marker: "last" }]) {
+    oks.push(await nc.vault.save(patch));
+  }
+  nc.vault.forget();
+  const back = await nc.vault.load({ force: true });
+  return { oks, marker: back?.marker, pending: back?.pending, seed: back?.wallet?.seed };
+});
+t("three writes inside a second all land", rapid.oks.every(Boolean));
+t("and the last one is the one that survives", rapid.marker === "last" && rapid.pending === null,
+  JSON.stringify(rapid).slice(0, 120));
+t("with everything written before them still there", rapid.seed === "seed-words-here");
+
 for (const [name, pass, detail] of out) console.log(`  ${pass ? "ok  " : "FAIL"} ${name}${detail ? "   (" + detail + ")" : ""}`);
 console.log(`\n${out.filter((r) => r[1]).length}/${out.length} passed`);
 await browser.close(); srv.close(); devnet.kill();
