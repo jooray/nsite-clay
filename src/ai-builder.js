@@ -126,13 +126,26 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
   return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
 }
 
+/**
+ * Room for the model to write in, sized from the work rather than fixed.
+ *
+ * A rewrite has to contain the whole page, so a cap chosen for a short one cuts
+ * a long one off mid-tag and the whole answer is wasted. Reasoning counts
+ * against the same budget on most models and can be longer than the page, so
+ * the headroom is generous. It costs nothing to ask for: what is not written is
+ * not billed, and the node releases the rest of its reservation.
+ */
+function room(chars, floor = 32000) {
+  return Math.min(96000, Math.max(floor, Math.ceil(chars / 2) + 24000));
+}
+
 export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress } = {}) {
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
   const reply = await ai.client.complete([
     { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch."}` },
-  ], { signal, onProgress, maxTokens: 16000 });
+  ], { signal, onProgress, maxTokens: room(description.length + template.length) });
   return preparePage(reply, { owner: ai.nc.npub, lang, relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
 
@@ -152,7 +165,8 @@ export async function refinePage(ai, page, instruction, { lang = "en", signal, o
   const reply = await ai.client.complete([
     { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
-  ], { signal, onProgress, maxTokens: 16000 });
+    // The answer has to hold the whole page again, so the page is what sizes it.
+  ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });
   return preparePage(reply, { owner: ai.nc.npub, lang,
     relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }

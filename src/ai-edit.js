@@ -98,9 +98,20 @@ export async function proposePage(ai, prompt, options = {}) {
   if (!prompt.trim()) throw new Error("Describe the change you want.");
   await nc.source.ready?.catch(() => {});
   const before = nc.getHTML();
-  const page = await ai.refinePage(before, prompt, {
-    lang: nc.doc.documentElement.lang.slice(0, 2) || "en", ...options,
-  });
+  let page;
+  try {
+    page = await ai.refinePage(before, prompt, {
+      lang: nc.doc.documentElement.lang.slice(0, 2) || "en", ...options,
+    });
+  } catch (e) {
+    // "Ask for less" is not advice unless it says how. A whole-page rewrite has
+    // exactly one smaller version of itself, and it is reachable from this same
+    // button once something on the page has been clicked.
+    if (/ran out of room/i.test(e.message)) {
+      throw new Error(`${e.message} ${ai.say("tooBig")}`);
+    }
+    throw e;
+  }
   return { page, before };
 }
 

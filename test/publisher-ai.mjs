@@ -60,6 +60,9 @@ try {
     await page.waitForSelector("#ai-result:not([hidden])");
     assert.equal(await page.evaluate(() => window.published), undefined);
     assert.equal(requests.at(-1).model, "deepseek-v4-1-flash");
+    // Room to write, sized from the work. A page has to come back whole, and a
+    // cap picked for a short one cuts a long one off mid-tag.
+    assert(requests.at(-1).max_tokens >= 32000, `max_tokens is ${requests.at(-1).max_tokens}`);
     assert.equal(requests.at(-1).messages[1].content.includes("Starting page"), false);
     assert(!JSON.stringify(requests.at(-1)).includes("sk-browser-test"));
     // Nobody needs to know who is publishing in order to adapt a design, and the
@@ -80,6 +83,8 @@ try {
       const sent = requests.at(-1).messages[1].content;
       assert(sent.includes("Put the opening hours at the top."), "the instruction was not sent");
       assert(sent.includes("A bike workshop"), "the page being changed was not sent with it");
+      // The page it is rewriting is what sizes the answer it is allowed to give.
+      assert(requests.at(-1).max_tokens >= 32000, `max_tokens is ${requests.at(-1).max_tokens}`);
       assert(!/sk-browser-test/.test(JSON.stringify(requests.at(-1))));
     }
     await page.click("#ai-use");

@@ -1,4 +1,4 @@
-/* nsite-clay 0.3.8 - a single HTML file that edits and republishes itself. MIT-0.
+/* nsite-clay 0.3.9 - a single HTML file that edits and republishes itself. MIT-0.
 parse5
 Copyright (c) 2013-2019 Ivan Nikulin (ifaaan@gmail.com, https://github.com/inikulin)
 

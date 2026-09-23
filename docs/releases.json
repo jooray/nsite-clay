@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.9",
+    "released": "2026-09-23",
+    "notes": [
+      "A rewrite of a longer page no longer stops half way. The model was given a fixed amount of room to write in, chosen when pages were shorter, and a page bigger than that was cut off mid-sentence and thrown away. The room is now worked out from the page being rewritten, so a long page gets a long answer. It costs nothing extra: you pay for what is written, not for what was allowed.",
+      "When something does stop a reply early, the message now says which thing. Running out of room, a provider blocking the reply, and a connection that ended without finishing all used to share one sentence whose advice, try a smaller change, was right for only one of them.",
+      "And if a page really is too long to rewrite whole, the message says what to do instead: click the part you want changed, press Edit with AI again, and pick it in the box."
+    ]
+  },
+  {
     "version": "0.3.8",
     "released": "2026-09-23",
     "notes": [

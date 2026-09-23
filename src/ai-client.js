@@ -222,7 +222,19 @@ export class AiClient {
       } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
     }
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
-    if (finish !== "stop" || !text.trim()) throw new Error("The model did not finish its reply. Your page has not changed. Try a smaller change.");
+    // Say which of these happened. They used to share one sentence, and its
+    // advice, "try a smaller change", is right for exactly one of them: a
+    // filtered reply is not too long, and a cut-off stream is not the person's
+    // fault at all. Somebody told to ask for less when the cap is the problem
+    // asks for less and hits the same cap.
+    if (finish === "length") {
+      throw new Error(`The model ran out of room ${(text.length / 1000).toFixed(1)}k characters in, before it finished. ` +
+        "Your page has not changed. Change one part of the page rather than all of it, or pick a model with more room to write.");
+    }
+    if (finish === "content_filter") throw new Error("The model's provider blocked this reply. Your page has not changed.");
+    if (finish && finish !== "stop") throw new Error(`The model stopped early (${finish}). Your page has not changed.`);
+    if (!text.trim()) throw new Error("The model sent nothing back. Your page has not changed. Try again.");
+    if (finish !== "stop") throw new Error("The reply ended without finishing. Your page has not changed. Try again.");
     return text.trim();
   }
 }

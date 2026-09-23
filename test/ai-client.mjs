@@ -92,8 +92,20 @@ try {
   split = true;
   assert.equal(await client.complete([{ role: "user", content: "hello" }]), "<p>café</p>");
   assert.equal(calls.at(-1).body.model, AI_DEFAULTS.model);
+  // Each way a reply can end badly says which one it was. One sentence for all
+  // of them told somebody whose page was cut off by the token cap to ask for
+  // less, which gets them the same cap, and told somebody whose provider
+  // blocked the reply the same thing, which is simply wrong.
   finish = "length";
-  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /did not finish/);
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /ran out of room/);
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /has not changed/);
+  finish = "content_filter";
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /blocked this reply/);
+  finish = "tool_calls";
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /stopped early \(tool_calls\)/);
+  finish = null;
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /ended without finishing/);
+  finish = "stop";
   const count = calls.length;
   await assert.rejects(client.complete([{ role: "user", content: "payment-error" }]), /credit is too low/);
   assert.equal(calls.length, count + 1, "paid requests must not retry automatically");
