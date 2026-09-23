@@ -14,6 +14,20 @@ export function aiEndpoint(value, mode = "routstr") {
   return base;
 }
 
+// Caps to try, largest first, and never larger than what was asked for. The
+// rungs are the common ceilings: 32k, 16k, and 4k for the smallest models.
+function ladder(maxTokens) {
+  const rungs = [maxTokens, 32000, 16000, 8000, 4096].filter((n) => n <= maxTokens);
+  return [...new Set(rungs)];
+}
+
+// An endpoint refusing the size of the answer, rather than anything else.
+// Matched on the message because there is no status code that means this: a
+// 400 covers every malformed request there is.
+function overLimit(error) {
+  return /max_tokens|max_completion_tokens|maximum.{0,20}tokens|output.{0,20}too (large|long)/i.test(error?.message || "");
+}
+
 export class AiClient {
   constructor(storage = null) {
     this.storage = storage;
@@ -168,7 +182,22 @@ export class AiClient {
     };
     const watched = signal ? AbortSignal.any([signal, quiet.signal]) : quiet.signal;
     try {
-      return await this._stream(messages, { session, maxTokens, onProgress, signal, watched, firstReply, alive });
+      // Ask for plenty of room and come down if the endpoint says that is more
+      // than it allows. Models differ by two orders of magnitude in how much
+      // they will write, a request that asks for more than the limit is refused
+      // outright rather than trimmed, and there is no way to know a stranger's
+      // limit without asking. Nothing is spent on a refusal, and only what is
+      // written is ever billed, so the cost of starting high is zero.
+      let last;
+      for (const cap of ladder(maxTokens)) {
+        try {
+          return await this._stream(messages, { session, maxTokens: cap, onProgress, signal, watched, firstReply, alive });
+        } catch (e) {
+          if (signal?.aborted || stalled || !overLimit(e)) throw e;
+          last = e;
+        }
+      }
+      throw last;
     } catch (e) {
       if (stalled && !signal?.aborted) {
         throw new Error("The AI endpoint stopped sending part-way through. Your page has not changed. Try again.");
@@ -227,14 +256,28 @@ export class AiClient {
     // filtered reply is not too long, and a cut-off stream is not the person's
     // fault at all. Somebody told to ask for less when the cap is the problem
     // asks for less and hits the same cap.
+    // The fact, and no advice. What to do about a reply that ran out of room
+    // depends entirely on what was being asked for, and only the caller knows:
+    // "change one part instead of all of it" is good counsel for a rewrite and
+    // nonsense for a page that does not exist yet. `reason` is what they match
+    // on, since a message is for reading.
     if (finish === "length") {
-      throw new Error(`The model ran out of room ${(text.length / 1000).toFixed(1)}k characters in, before it finished. ` +
-        "Your page has not changed. Change one part of the page rather than all of it, or pick a model with more room to write.");
+      throw Object.assign(
+        new Error(`The model ran out of room ${(text.length / 1000).toFixed(1)}k characters in, before it finished. Nothing has changed.`),
+        { reason: "length" });
     }
-    if (finish === "content_filter") throw new Error("The model's provider blocked this reply. Your page has not changed.");
-    if (finish && finish !== "stop") throw new Error(`The model stopped early (${finish}). Your page has not changed.`);
-    if (!text.trim()) throw new Error("The model sent nothing back. Your page has not changed. Try again.");
-    if (finish !== "stop") throw new Error("The reply ended without finishing. Your page has not changed. Try again.");
+    if (finish === "content_filter") {
+      throw Object.assign(new Error("The model's provider blocked this reply. Nothing has changed."), { reason: "filtered" });
+    }
+    if (finish && finish !== "stop") {
+      throw Object.assign(new Error(`The model stopped early (${finish}). Nothing has changed.`), { reason: finish });
+    }
+    if (!text.trim()) {
+      throw Object.assign(new Error("The model sent nothing back. Nothing has changed. Try again."), { reason: "empty" });
+    }
+    if (finish !== "stop") {
+      throw Object.assign(new Error("The reply ended without finishing. Nothing has changed. Try again."), { reason: "cut" });
+    }
     return text.trim();
   }
 }

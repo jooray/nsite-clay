@@ -1070,22 +1070,32 @@
     const [creditToken, giftToken] = await wallet.mint(best.mint, best.id, quote.quote, [1000, 1000]);
     await nc.vault.save({ pending: { credit: creditToken, gift: giftToken, node } });
 
+    // Both halves leave at once. They have nothing to do with each other: one is
+    // a topup at the node, the other a POST to the donation sink, and each is a
+    // second or two of somebody else's server. Run in turn they were two waits
+    // one after the other, and the person watching is waiting for exactly one of
+    // them. Started here, the donation is nearly always finished by the time the
+    // credit is, and the wait is the longer of the two rather than the sum.
+    //
+    // Nothing is risked by starting it early. Both tokens are in the vault on
+    // the line above, so a tab that dies here loses neither.
+    const donation = fetch(DONATION_SINK, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: giftToken, project: "nsite-clay" }),
+    }).then((r) => r.ok, () => false);
+
     step("buyCrediting", "Adding your AI credit…");
     const out = await nc.ai.client.cashu(creditToken, { ...nc.ai.client.session(), base: node });
     const key = nc.ai.client.session().key;
 
+    // The vault writes stay in order, whatever the network did. Two saves at
+    // once race to replace the same event and one of them loses.
     step("buySaving", "Saving your key to your Nostr relays…");
     await nc.vault.save({ ai: { ...(await nc.vault.load())?.ai, [node]: key }, pending: { gift: giftToken } });
 
-    // The donation is last on purpose: the thing somebody paid for comes first.
     step("buyDonating", "Sending the half that supports nsite-clay…");
-    try {
-      await fetch(DONATION_SINK, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: giftToken, project: "nsite-clay" }),
-      });
-      await nc.vault.save({ pending: null });
-    } catch { /* kept in the vault, retried next time */ }
+    if (await donation) await nc.vault.save({ pending: null });
+    // A donation that did not arrive stays in the vault and goes next time.
 
     step("buyDone", "Ready.");
     return out;

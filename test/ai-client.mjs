@@ -19,6 +19,12 @@ const server = createServer(async (req, res) => {
   if (req.url.endsWith("/chat/completions")) {
     const ask = body.messages[0].content;
     if (ask === "payment-error") { res.statusCode = 402; return res.end("{}"); }
+    // An endpoint that refuses anything above 16k, the way a small model does:
+    // the request is rejected outright rather than trimmed to what it allows.
+    if (ask === "small-model" && body.max_tokens > 16000) {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: { message: `max_tokens must be at most 16000, got ${body.max_tokens}` } }));
+    }
     if (ask === "slow") { req.on("close", () => res.end()); return; }
     const chunk = (t, stop = null) => `data: ${JSON.stringify({ choices: [{ index: 0, delta: t === null ? {} : { content: t }, finish_reason: stop }] })}\r\n\r\n`;
     // Headers and a first token, then the endpoint goes quiet for good.
@@ -98,14 +104,26 @@ try {
   // blocked the reply the same thing, which is simply wrong.
   finish = "length";
   await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /ran out of room/);
-  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /has not changed/);
+  // The fact, and no advice: what to do depends on what was being asked for,
+  // and only the caller knows that. They match on `reason`, not on the words.
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), (e) => e.reason === "length");
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), (e) => !/smaller|fewer|simpler|one part/i.test(e.message));
   finish = "content_filter";
-  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /blocked this reply/);
+  await assert.rejects(client.complete([{ role: "user", content: "hello" }]), (e) => /blocked this reply/.test(e.message) && e.reason === "filtered");
   finish = "tool_calls";
   await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /stopped early \(tool_calls\)/);
   finish = null;
   await assert.rejects(client.complete([{ role: "user", content: "hello" }]), /ended without finishing/);
   finish = "stop";
+  // Models differ by two orders of magnitude in how much they will write, and a
+  // request above the limit is refused rather than trimmed. So ask high and
+  // come down, rather than asking low and cutting every long answer off.
+  {
+    const before = calls.length;
+    assert.equal(await client.complete([{ role: "user", content: "small-model" }], { maxTokens: 96000 }), "<p>café</p>");
+    const tried = calls.slice(before).map((c) => c.body.max_tokens);
+    assert.deepEqual(tried, [96000, 32000, 16000], `tried ${tried}`);
+  }
   const count = calls.length;
   await assert.rejects(client.complete([{ role: "user", content: "payment-error" }]), /credit is too low/);
   assert.equal(calls.length, count + 1, "paid requests must not retry automatically");

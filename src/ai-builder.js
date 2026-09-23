@@ -127,17 +127,25 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
 }
 
 /**
- * Room for the model to write in, sized from the work rather than fixed.
+ * Room for the model to write in.
  *
- * A rewrite has to contain the whole page, so a cap chosen for a short one cuts
- * a long one off mid-tag and the whole answer is wasted. Reasoning counts
- * against the same budget on most models and can be longer than the page, so
- * the headroom is generous. It costs nothing to ask for: what is not written is
- * not billed, and the node releases the rest of its reservation.
+ * Generating a page has nothing to size this from: the request is two sentences
+ * and the answer is a whole document, so it asks for the ceiling and the client
+ * comes down if an endpoint says that is more than it allows. Rewriting does
+ * have something to go on, since the answer has to hold the page it was given,
+ * and the floor is still generous because reasoning counts against the same
+ * budget on most models and is often longer than the page.
+ *
+ * Asking high is free. Only what is written is billed, and the node releases
+ * the rest of its reservation.
  */
+const ROOM_MAX = 96000;
 function room(chars, floor = 32000) {
-  return Math.min(96000, Math.max(floor, Math.ceil(chars / 2) + 24000));
+  return Math.min(ROOM_MAX, Math.max(floor, Math.ceil(chars / 2) + 24000));
 }
+
+/** A reply cut off by the cap, whatever the endpoint called it. */
+export const ranOut = (e) => e?.reason === "length";
 
 export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress } = {}) {
   if (!description.trim()) throw new Error("Describe the page you want to build.");
@@ -145,7 +153,13 @@ export async function buildPage(ai, description, { template = "", lang = "en", s
   const reply = await ai.client.complete([
     { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch."}` },
-  ], { signal, onProgress, maxTokens: room(description.length + template.length) });
+  ], { signal, onProgress, maxTokens: ROOM_MAX }).catch((e) => {
+    // Nothing here predicts the size of the answer, so there is no cap to
+    // raise: what is left is a smaller page. Saying "change one part of it"
+    // would be advice about a page that does not exist yet.
+    if (ranOut(e)) throw new Error(`${e.message} Ask for a simpler page, or one with fewer sections.`);
+    throw e;
+  });
   return preparePage(reply, { owner: ai.nc.npub, lang, relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
 

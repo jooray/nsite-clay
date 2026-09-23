@@ -60,9 +60,10 @@ try {
     await page.waitForSelector("#ai-result:not([hidden])");
     assert.equal(await page.evaluate(() => window.published), undefined);
     assert.equal(requests.at(-1).model, "deepseek-v4-1-flash");
-    // Room to write, sized from the work. A page has to come back whole, and a
-    // cap picked for a short one cuts a long one off mid-tag.
-    assert(requests.at(-1).max_tokens >= 32000, `max_tokens is ${requests.at(-1).max_tokens}`);
+    // Nothing about a description predicts how long the page will be, so
+    // generating asks for the ceiling; the client comes down if an endpoint
+    // says that is more than it allows.
+    assert.equal(requests.at(-1).max_tokens, 96000, `max_tokens is ${requests.at(-1).max_tokens}`);
     assert.equal(requests.at(-1).messages[1].content.includes("Starting page"), false);
     assert(!JSON.stringify(requests.at(-1)).includes("sk-browser-test"));
     // Nobody needs to know who is publishing in order to adapt a design, and the

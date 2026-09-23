@@ -1,11 +1,11 @@
 [
   {
-    "version": "0.3.9",
+    "version": "0.3.10",
     "released": "2026-09-23",
     "notes": [
-      "A rewrite of a longer page no longer stops half way. The model was given a fixed amount of room to write in, chosen when pages were shorter, and a page bigger than that was cut off mid-sentence and thrown away. The room is now worked out from the page being rewritten, so a long page gets a long answer. It costs nothing extra: you pay for what is written, not for what was allowed.",
-      "When something does stop a reply early, the message now says which thing. Running out of room, a provider blocking the reply, and a connection that ended without finishing all used to share one sentence whose advice, try a smaller change, was right for only one of them.",
-      "And if a page really is too long to rewrite whole, the message says what to do instead: click the part you want changed, press Edit with AI again, and pick it in the box."
+      "Asking AI to build a page no longer stops half way through writing it. The model was given a fixed amount of room, and nothing about a description tells you how long the page will turn out, so a page that ran past it was cut off mid-sentence and thrown away. It now asks for as much room as there is, and steps down only if the model it is talking to says that is more than it allows.",
+      "When a reply does stop early, the message says which thing stopped it and what to do about that particular thing. One sentence used to cover every case and told you to try a smaller change, which is no help at all when you were asking for a page to be built in the first place.",
+      "Setting up Simple setup is quicker. Your AI credit and the half that supports nsite-clay are two errands at two different places, and they were run one after the other while you waited for the first. They now go at once, so the wait is the longer of the two rather than both added together. Neither can be lost: both halves are written down before either is sent."
     ]
   },
   {

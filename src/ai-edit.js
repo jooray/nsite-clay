@@ -42,7 +42,12 @@ export async function propose(ai, target, prompt, options = {}) {
   const reply = await ai.client.complete([
     { role: "system", content: `Edit one static HTML element. Return exactly one complete ${target.localName} element, with no Markdown fences or explanation. Preserve its classes and meaning unless the user asks to change them. Use static semantic markup. Do not add scripts, forms, event handlers or styles. ${AI_WRITING}` },
     { role: "user", content: `${prompt}\n\nElement to edit:\n${before}` },
-  ], options);
+  ], options).catch((e) => {
+    // Here it really is the size of the change, because the element is small
+    // and what makes the answer long is what was asked of it.
+    if (e?.reason === "length") throw new Error(`${e.message} Ask for a smaller change to this part of the page.`);
+    throw e;
+  });
   const raw = unfence(reply);
   if (!["IMG", "HR", "BR"].includes(target.tagName) && !new RegExp(`</${target.localName}>\\s*$`, "i").test(raw)) {
     throw new Error("The model returned an unfinished element. Try a smaller change.");
@@ -107,9 +112,7 @@ export async function proposePage(ai, prompt, options = {}) {
     // "Ask for less" is not advice unless it says how. A whole-page rewrite has
     // exactly one smaller version of itself, and it is reachable from this same
     // button once something on the page has been clicked.
-    if (/ran out of room/i.test(e.message)) {
-      throw new Error(`${e.message} ${ai.say("tooBig")}`);
-    }
+    if (e?.reason === "length") throw new Error(`${e.message} ${ai.say("tooBig")}`);
     throw e;
   }
   return { page, before };
