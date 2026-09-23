@@ -437,6 +437,7 @@
   const STRINGS = {
     en: {},
     es: {
+      copyFail: "No se pudo copiar. Selecciona la clave de arriba y cópiala.",
       aiAgain: "Cambiar la descripción",
       aiChangeLabel: "O dile a la IA qué cambiar en esta página",
       aiChangePlaceholder: "Ponla más oscura, quita las fotos y sube el horario arriba",
@@ -525,6 +526,7 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      copyFail: "Nepodarilo sa skopírovať. Označ kľúč vyššie a skopíruj ho.",
       aiAgain: "Zmeniť opis",
       aiChangeLabel: "Alebo povedz AI, čo má na tejto stránke zmeniť",
       aiChangePlaceholder: "Sprav to tmavšie, vyhoď fotky a otváracie hodiny daj hore",
@@ -613,6 +615,7 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      copyFail: "Nepodařilo se zkopírovat. Označ klíč výše a zkopíruj ho.",
       aiAgain: "Změnit popis",
       aiChangeLabel: "Nebo řekni AI, co má na téhle stránce změnit",
       aiChangePlaceholder: "Udělej to tmavší, vyhoď fotky a otevírací dobu dej nahoru",
@@ -872,9 +875,35 @@
     }
     $("#newkey-nsec").textContent = fresh.nsec;
   };
+  // Copying the one thing nobody can ever get back, so it has to say what
+  // happened and then let go.
+  //
+  // It used to say "Copied" and mean nothing by it: the label was set whether
+  // or not the write had worked, there was no second way to try, and it never
+  // changed back, so the button looked broken and pressing it again looked like
+  // pressing a dead button. Now: a real fallback for the browsers that have no
+  // clipboard API, the truth when neither works, and the label returns.
+  let copyTimer;
   $("#newkey-copy").onclick = async () => {
-    try { await navigator.clipboard.writeText(fresh.nsec); $("#newkey-copy").textContent = say("copied", "Copied"); }
-    catch { /* a browser that refuses the clipboard still shows the key on screen */ }
+    const button = $("#newkey-copy");
+    clearTimeout(copyTimer);
+    let ok = false;
+    try { await navigator.clipboard.writeText(fresh.nsec); ok = true; }
+    catch {
+      // A page served over plain HTTP, which a gateway on a custom domain can
+      // be, has no navigator.clipboard at all. The old way still works there.
+      const ta = document.createElement("textarea");
+      ta.value = fresh.nsec;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      ta.remove();
+    }
+    // The key is on screen either way, so a failure is an instruction rather
+    // than a dead end.
+    button.textContent = ok ? say("copied", "Copied") : say("copyFail", "Could not copy. Select the key above and copy it.");
+    copyTimer = setTimeout(() => { button.textContent = say("copy", "Copy"); }, 3000);
   };
   $("#newkey-file").onclick = () => { $("#encwrap").hidden = false; $("#encpass").focus(); };
   $("#encgo").onclick = () => {
