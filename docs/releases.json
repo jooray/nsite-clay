@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.13",
+    "released": "2026-09-23",
+    "notes": [
+      "Asking AI to change your page no longer deletes the photographs you uploaded. It was told to write pages with their pictures missing, which is right when it is building a page it has no photographs for, and wrong when it is rewriting one where you have already put them in. Your pictures now come back with the page, matched up even when the rewrite changes everything written around them.",
+      "The preview of a rewritten page no longer has the toolbar's own words printed under it, and it now loads your page's stylesheet, so what you are shown is what you will get."
+    ]
+  },
+  {
     "version": "0.3.12",
     "released": "2026-09-23",
     "notes": [

@@ -170,7 +170,7 @@ export class Ai {
     return !!this.client.session().key;
   }
   preparePage(html, options) { return preparePage(html, options); }
-  previewHTML(html) { return previewHTML(html); }
+  previewHTML(html, options) { return previewHTML(html, { base: this.doc.baseURI, ...options }); }
 
   async settings() {
     const client = this.client, say = (key) => this.say(key);

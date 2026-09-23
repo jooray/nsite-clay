@@ -4,7 +4,7 @@ import { AI_WRITING, unfence } from "./ai-edit.js";
 const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop"];
 const CHROME = `<div class="nc-bar nc-ui-chrome"><span class="nc-dot"></span><span class="nc-who" data-nc-who>read-only</span><button data-nc-signin>Sign in</button><button class="nc-owner-only" data-nc-write>Write</button><button class="nc-owner-only" data-nc-cms>Edit content</button><button class="nc-owner-only" data-nc-settings>Settings</button><button class="nc-owner-only" data-nc-history>History</button><button class="nc-primary nc-owner-only" data-nc-save>Save</button></div><p class="nc-edit-hint">add #edit to the URL to edit this page</p>`;
 
-export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [] } = {}) {
+export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [], previous = "" } = {}) {
   // Models introduce themselves. A reply can open with a sentence about the page
   // and a ```html fence before the document begins, and parsing the whole reply
   // as a document puts all of that in the body: the chatter becomes the page's
@@ -88,6 +88,10 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
     const label = el.textContent.trim().slice(0, 45);
     fields[`${Object.keys(fields).length + 1}. ${label}`] = `#${CSS.escape(el.id)}${el.children.length ? "@innerHTML" : ""}`;
   }
+  // Photographs the owner already uploaded, before ids are handed out, so the
+  // ones that come back keep the id they went in with.
+  if (previous) keepPictures(previous, doc);
+
   // Pictures, which are content too. The content form draws a picker for an
   // img@src rule, with upload, cropping and the files already on this site, so
   // an image that is in the rules is an image its owner can change. One that is
@@ -166,6 +170,44 @@ export async function buildPage(ai, description, { template = "", lang = "en", s
 const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML.`;
 
 /**
+ * Give a rewritten page back the photographs its owner had already uploaded.
+ *
+ * The model is asked for pages with their pictures missing, because it has no
+ * files and inventing URLs produces links to somebody else's server. That is
+ * right for a new page and destructive on a rewrite: a page whose owner has
+ * uploaded three photographs comes back with three empty frames, and the
+ * pictures are gone from a document they were the most expensive part of.
+ *
+ * So the sources are carried across here rather than being trusted to survive a
+ * round trip through a language model. Matched by id first, then by the words
+ * describing the picture, then by position, because a rewrite that changes a
+ * page from coffee to yerba maté changes the descriptions with everything else
+ * and position is all that is left. Nothing is ever guessed onto an image the
+ * model gave a source of its own.
+ */
+function keepPictures(previous, doc) {
+  const had = [...new DOMParser().parseFromString(previous, "text/html").body.querySelectorAll("img")]
+    .filter((el) => (el.getAttribute("src") || "").trim());
+  if (!had.length) return;
+  const fresh = [...doc.body.querySelectorAll("img")].filter((el) => !el.closest("template"));
+  const used = new Set();
+  const give = (el, from) => {
+    if (!from || used.has(from)) return false;
+    used.add(from);
+    el.setAttribute("src", from.getAttribute("src"));
+    return true;
+  };
+  const empty = () => fresh.filter((el) => !(el.getAttribute("src") || "").trim());
+  for (const el of empty()) give(el, el.id && had.find((o) => o.id === el.id && !used.has(o)));
+  for (const el of empty()) {
+    const alt = (el.getAttribute("alt") || "").trim();
+    if (alt) give(el, had.find((o) => !used.has(o) && (o.getAttribute("alt") || "").trim() === alt));
+  }
+  const spare = had.filter((o) => !used.has(o));
+  for (const el of empty()) { if (spare.length) give(el, spare.shift()); }
+}
+
+/**
  * Change a page that was just built, without starting again from the description.
  *
  * The answer to "I like it, but the photos should go" used to be to rewrite the
@@ -177,11 +219,11 @@ export async function refinePage(ai, page, instruction, { lang = "en", signal, o
   if (!instruction.trim()) throw new Error("Say what should be different.");
   if (instruction.length > 20000 || page.length > 300000) throw new Error("Use a shorter instruction or a smaller page.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
     // The answer has to hold the whole page again, so the page is what sizes it.
   ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });
-  return preparePage(reply, { owner: ai.nc.npub, lang,
+  return preparePage(reply, { owner: ai.nc.npub, lang, previous: page,
     relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
 

@@ -871,6 +871,56 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("the data API refuses writes without the owner", /owner/i.test(await err(() => nc.cms.setData({ title: "not allowed" }))));
   }
 
+  // A rewrite must not throw away the photographs somebody uploaded. The model
+  // is asked for pages with their pictures missing, which is right for a new
+  // page and destructive on a rewrite, and a language model is not a safe place
+  // to keep a URL anyway.
+  {
+    const before = `<!DOCTYPE html><html><body><main>` +
+      `<img id="nc-picture-1" alt="The shop from the street" src="https://cdn.example/aaa.png">` +
+      `<img id="nc-picture-2" alt="A flat white" src="https://cdn.example/bbb.png">` +
+      `<img id="nc-picture-3" alt="Nobody has uploaded this one">` +
+      `<p>Words.</p></main></body></html>`;
+    // What a rewrite comes back as: the same pictures, described differently,
+    // with the sources dropped and one of the ids lost.
+    const after = `<!DOCTYPE html><html><body><main>` +
+      `<img id="nc-picture-1" alt="The shop counter, rows of guampas">` +
+      `<img alt="A cup of terere">` +
+      `<img alt="Still nothing here">` +
+      `<p>Different words.</p></main></body></html>`;
+    const out = nc.ai.preparePage(after, { owner: nc.npub, path: "/index.html", previous: before });
+    const pics = [...new DOMParser().parseFromString(out, "text/html").body.querySelectorAll("img")]
+      .map((el) => el.getAttribute("src") || "");
+    t("a photograph survives a rewrite by its id", pics[0] === "https://cdn.example/aaa.png", pics[0]);
+    t("and one whose description changed survives by its place", pics[1] === "https://cdn.example/bbb.png", pics[1]);
+    t("while an empty frame stays empty", pics[2] === "", pics[2]);
+    t("and every picture is still editable afterwards",
+      Object.values(JSON.parse(new DOMParser().parseFromString(out, "text/html")
+        .querySelector("script[nc\\:cms]").textContent)).filter((v) => String(v).endsWith("@src")).length === 3);
+
+    // Building a page from nothing has no previous page and invents no sources.
+    const built = nc.ai.preparePage(after, { owner: nc.npub, path: "/index.html" });
+    t("a page built from a description keeps its frames empty",
+      [...new DOMParser().parseFromString(built, "text/html").body.querySelectorAll("img")]
+        .every((el) => !el.getAttribute("src")));
+  }
+
+  // The toolbar is not part of the page a preview is previewing. Its stylesheet
+  // is a root-relative link that resolves to nothing inside a srcdoc, so left in
+  // it renders as a row of words under the page.
+  {
+    const page = `<!DOCTYPE html><html><head><link rel="stylesheet" href="/nsite-clay-base.css"></head><body>` +
+      `<main><p>The page itself.</p><img src="/photo.png" alt="x"></main>` +
+      `<div class="nc-bar nc-ui-chrome"><button data-nc-save>Save</button></div>` +
+      `<p class="nc-edit-hint">add #edit to the URL to edit this page</p></body></html>`;
+    const preview = nc.ai.previewHTML(page);
+    t("a preview does not show the toolbar as words", !/Save|add #edit/.test(preview), preview.slice(-120));
+    t("and keeps the page itself", preview.includes("The page itself."));
+    t("its stylesheet is resolved against where the page lives",
+      /href="http:\/\/[^"]*\/nsite-clay-base\.css"/.test(preview), (preview.match(/href="[^"]*"/) || [])[0]);
+    t("and so are its pictures", /src="http:\/\/[^"]*\/photo\.png"/.test(preview));
+  }
+
   // A picture is changed by clicking it, like every other piece of content.
   // Reaching it only through a button called "Edit content" meant somebody
   // clicking the empty photo frame on their own page concluded that pictures

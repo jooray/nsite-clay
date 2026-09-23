@@ -21,9 +21,26 @@ function cleanElement(nc, element) {
   return copy.outerHTML;
 }
 
-export function previewHTML(html) {
+export function previewHTML(html, { base = "" } = {}) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   doc.querySelectorAll("script, iframe, object, embed, base, meta[http-equiv], form").forEach((el) => el.remove());
+  // The toolbar is not part of the page being previewed. Unstyled, which it is
+  // here because its stylesheet is a root-relative link that resolves to
+  // nothing inside a srcdoc, it renders as a row of words at the bottom of the
+  // preview: "read-only Sign in Write Edit content Settings History Save".
+  doc.querySelectorAll('[nc\\:chrome], .nc-ui-chrome, .nc-edit-hint').forEach((el) => el.remove());
+  // And the rest of the page's own links are root-relative for the same reason,
+  // so they are resolved against wherever this document actually lives. Without
+  // it the preview is missing the stylesheet the real page will have.
+  if (base) {
+    for (const el of doc.querySelectorAll("link[href], img[src], source[src], source[srcset]")) {
+      for (const name of ["href", "src", "srcset"]) {
+        const value = el.getAttribute(name);
+        if (!value || /^(https?:|data:|blob:|#)/i.test(value)) continue;
+        try { el.setAttribute(name, new URL(value, base).href); } catch { /* leave it be */ }
+      }
+    }
+  }
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
   policy.content = "default-src 'none'; style-src 'unsafe-inline' https: http:; img-src https: http: data:; font-src https: http:; form-action 'none'; base-uri 'none'";
   doc.head.prepend(policy);
@@ -202,7 +219,7 @@ export async function editDialog(ai, target) {
         }
         const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = label || ai.say("after");
         frame.style.cssText = `display:block;width:100%;height:${whole ? "60vh" : "11rem"};border:1px solid var(--nc-edge);background:white`;
-        frame.srcdoc = previewHTML(html);
+        frame.srcdoc = previewHTML(html, { base: ai.doc.baseURI });
         body.append(frame);
       }
     },
