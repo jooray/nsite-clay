@@ -871,6 +871,54 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("the data API refuses writes without the owner", /owner/i.test(await err(() => nc.cms.setData({ title: "not allowed" }))));
   }
 
+  // A picture is changed by clicking it, like every other piece of content.
+  // Reaching it only through a button called "Edit content" meant somebody
+  // clicking the empty photo frame on their own page concluded that pictures
+  // could not be changed at all.
+  {
+    const host = document.createElement("div");
+    const shot = document.createElement("img"); shot.alt = "A photo of the shop";
+    const chrome = document.createElement("div"); chrome.setAttribute("nc:chrome", "");
+    const barPic = document.createElement("img"); chrome.append(barPic);
+    const stencil = document.createElement("template");
+    stencil.innerHTML = '<img alt="a block\'s own picture">';
+    const feed = document.createElement("div"); feed.setAttribute("nc:feed", "notes");
+    const feedPic = document.createElement("img"); feed.append(feedPic);
+    host.append(shot, chrome, stencil, feed);
+    document.body.append(host);
+
+    t("a picture in the document is one somebody can change", nc.media.pickable(shot));
+    t("one the runtime drew is not", !nc.media.pickable(barPic));
+    t("nor one inside a block the owner has not added yet",
+      !nc.media.pickable(stencil.content.querySelector("img")) || stencil.content.querySelector("img").ownerDocument !== document);
+    t("nor one somebody else posted into a feed", !nc.media.pickable(feedPic));
+
+    // Clicking it opens the picker, and only while its owner is editing.
+    let opened = 0;
+    const real = nc.media.promptImage.bind(nc.media);
+    nc.media.promptImage = async ({ target }) => { opened++; return target === shot ? { url: "x" } : null; };
+    // isOwner is a getter on the prototype; put it back exactly as it was, or
+    // every test after this one runs as somebody who owns nothing.
+    const owner = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(nc), "isOwner");
+    Object.defineProperty(nc, "isOwner", { value: false, configurable: true });
+    shot.click();
+    await new Promise((r) => setTimeout(r, 10));
+    t("a reader clicking a picture opens nothing", opened === 0);
+    Object.defineProperty(nc, "isOwner", { value: true, configurable: true });
+    shot.click();
+    await new Promise((r) => setTimeout(r, 10));
+    t("the owner clicking one opens the picker", opened === 1);
+    barPic.click();
+    await new Promise((r) => setTimeout(r, 10));
+    t("and clicking the toolbar still does not", opened === 1);
+
+    nc.media.promptImage = real;
+    delete nc.isOwner;
+    t("and the stand-in is gone again afterwards",
+      !!owner && Object.getOwnPropertyDescriptor(nc, "isOwner") === undefined);
+    host.remove();
+  }
+
   // The shape a picture is cropped to is the shape of the hole it is going
   // into, and the page knows that without anybody being asked.
   {

@@ -465,3 +465,22 @@ img:not([src]), img[src=""] {
 img[nc\:crop="16:9"]:not([src]) { aspect-ratio: 16 / 9; min-height: 0; }
 img[nc\:crop="4:3"]:not([src])  { aspect-ratio: 4 / 3;  min-height: 0; }
 img[nc\:crop="1:1"]:not([src])  { aspect-ratio: 1 / 1;  min-height: 0; }
+
+/* A picture says it can be clicked, while its owner is editing.
+ *
+ * Everything else on the page is changed by clicking it and typing. Without
+ * this, a picture is the one thing that looks like content and behaves like
+ * furniture, and somebody clicking an empty photo frame on their own page
+ * concludes the picture cannot be changed at all. */
+html[nc\:owner-here="true"][nc\:editing="true"] img { cursor: pointer; }
+html[nc\:owner-here="true"][nc\:editing="true"] img:hover {
+  outline: 2px solid var(--nc-accent, #7c5cff); outline-offset: 2px;
+}
+/* Not these: chrome is not content, a feed's pictures belong to whoever posted
+ * them, and the block library is a stencil rather than a section. */
+html[nc\:owner-here="true"][nc\:editing="true"] [nc\:chrome] img,
+html[nc\:owner-here="true"][nc\:editing="true"] .nc-ui-chrome img,
+html[nc\:owner-here="true"][nc\:editing="true"] [nc\:feed] img,
+html[nc\:owner-here="true"][nc\:editing="true"] [nc\:video] img {
+  cursor: default; outline: 0;
+}

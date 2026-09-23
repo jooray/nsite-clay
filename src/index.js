@@ -743,6 +743,7 @@ nc.ready = (async () => {
   nc.applyEditGate();
   window.addEventListener("hashchange", () => nc.applyEditGate());
   nc.media.armEmbeds();
+  nc.media.armPictures();
   nc.feed.start();
   nc.blocks.start();
   nc.undo.start();

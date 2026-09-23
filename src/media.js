@@ -233,6 +233,40 @@ export class Media {
   // ---- reader side --------------------------------------------------------
 
   // Swap a facade for the real player, but only once a reader has clicked it.
+  /**
+   * A picture is changed by clicking it, like everything else on the page.
+   *
+   * Every other piece of content works that way: click the words, type over
+   * them. Pictures were the exception, reachable only through a button called
+   * "Edit content" that says nothing about pictures, so somebody looking at an
+   * empty photo frame on their own page clicked it, nothing happened, and the
+   * honest conclusion was that the picture could not be changed. The content
+   * form still lists them, and this is the same picker from the other side.
+   *
+   * Only for the owner, only while editing, and only for pictures that are the
+   * document's own: chrome, live feeds and the inert block library are not
+   * content and must not be swapped by a stray click.
+   */
+  armPictures() {
+    if (this._pictures) return;
+    this._pictures = true;
+    this.doc.addEventListener("click", async (e) => {
+      if (!this.nc.isOwner || !this.nc.editRequested) return;
+      const img = e.target?.closest?.("img");
+      if (!img || !this.pickable(img)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const picked = await this.promptImage({ target: img }).catch((err) => { this.nc.toast(err.message); return null; });
+      if (picked) this.nc.dirty = true;
+    }, true);
+  }
+
+  /** Whether this picture is the document's own content. */
+  pickable(img) {
+    return !!img && img.ownerDocument === this.doc &&
+      !img.closest('[nc\\:chrome], .nc-ui-chrome, [nc\\:feed], [nc\\:video], template');
+  }
+
   // Runs in view mode too, which is the whole point.
   armEmbeds() {
     if (this._armed) return;
