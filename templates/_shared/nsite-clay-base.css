@@ -444,3 +444,24 @@ html[nc\:blocks-on="true"] [nc\:blocks] > *:not(.nc-blk-add):hover { outline-col
 
 /* The page behind does not scroll while a post is open. */
 html[nc\:reading="true"] body { overflow: hidden; }
+
+/* An image with no file behind it yet.
+ *
+ * A page built from a description asks for photographs its author has none of,
+ * so it ships <img alt="what belongs here"> and waits. With no src that box is
+ * nothing at all: no shape in the layout, nothing to see, and nothing anybody
+ * could guess is meant to become a picture. Drawn as a frame with its own
+ * description in it, the page reads as finished-but-for-the-photos, and the
+ * content form has a row called Picture next to it. */
+img:not([src]), img[src=""] {
+  display: grid; place-items: center; box-sizing: border-box;
+  width: 100%; min-height: 12rem; padding: 1.5rem; text-align: center;
+  color: var(--nc-ink-dim, #6b6478); font-size: .82rem; line-height: 1.5;
+  background:
+    repeating-linear-gradient(45deg, rgba(128,128,128,.06) 0 10px, transparent 10px 20px),
+    var(--nc-panel-2, rgba(128, 128, 128, .07));
+  border: 1px dashed var(--nc-edge, rgba(128, 128, 128, .45)); border-radius: var(--nc-radius-sm, 8px);
+}
+img[nc\:crop="16:9"]:not([src]) { aspect-ratio: 16 / 9; min-height: 0; }
+img[nc\:crop="4:3"]:not([src])  { aspect-ratio: 4 / 3;  min-height: 0; }
+img[nc\:crop="1:1"]:not([src])  { aspect-ratio: 1 / 1;  min-height: 0; }

@@ -88,6 +88,21 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
     const label = el.textContent.trim().slice(0, 45);
     fields[`${Object.keys(fields).length + 1}. ${label}`] = `#${CSS.escape(el.id)}${el.children.length ? "@innerHTML" : ""}`;
   }
+  // Pictures, which are content too. The content form draws a picker for an
+  // img@src rule, with upload, cropping and the files already on this site, so
+  // an image that is in the rules is an image its owner can change. One that is
+  // not is a hole in the page they cannot fill: the model is asked for pictures
+  // it has no files for, writes <img> with a description and no source, and
+  // without this the only way to supply one was to know HTML.
+  for (const el of doc.body.querySelectorAll("img")) {
+    if (el.closest("template")) continue;
+    if (!el.id || doc.querySelectorAll(`#${CSS.escape(el.id)}`).length !== 1) {
+      let id; do { id = `nc-picture-${++index}`; } while (doc.getElementById(id));
+      el.id = id;
+    }
+    const label = (el.getAttribute("alt") || "").trim().slice(0, 45);
+    fields[`${Object.keys(fields).length + 1}. ${label ? "Picture: " + label : "Picture"}`] = `#${CSS.escape(el.id)}@src`;
+  }
   if (!Object.keys(fields).length) throw new Error("The generated page has no text to edit. Describe the content you want on it.");
   if (!doc.querySelector("[nc\\:blocks]")) {
     let main = doc.querySelector("main");
@@ -115,13 +130,13 @@ export async function buildPage(ai, description, { template = "", lang = "en", s
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch."}` },
   ], { signal, onProgress, maxTokens: 16000 });
   return preparePage(reply, { owner: ai.nc.npub, lang, relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
 
-const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML.`;
+const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML.`;
 
 /**
  * Change a page that was just built, without starting again from the description.

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.7",
+    "released": "2026-09-23",
+    "notes": [
+      "Pictures on a page built by AI can now be changed. Every image gets a row in the content form with a Choose a picture button, which uploads a file from your computer or your phone, crops it to the shape the layout wants first, and can also use a picture already on your site. Before, the page had places for photographs and no way to put one in without editing HTML.",
+      "A page is asked for with its photographs missing rather than invented. An image with no file behind it now draws itself as a dashed frame with a description of what belongs there, so the layout is right from the start, the gap is obviously a gap, and the content form has the row that fills it. Nothing is ever pointed at a stock photo service that could disappear.",
+      "If you already have a page with pictures that cannot be changed, ask the AI to change anything on it and the picture rows appear with the rest."
+    ]
+  },
+  {
     "version": "0.3.6",
     "released": "2026-09-23",
     "notes": [

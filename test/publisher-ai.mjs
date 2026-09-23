@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 
 // What a model actually sends: a sentence about itself, a fence, then the page.
 const preamble = 'Here is a complete static HTML page for the workshop. It covers opening hours and contact details.\n```html\n';
-const html = '<!DOCTYPE html><html nc:owner="wrong" nc:path="/wrong" nc:ai-key="secret"><head><title>Bike workshop</title><style>body{font-family:system-ui;margin:2rem}main{max-width:60rem}h1{color:#345}</style></head><body><main><section><h1>A bike workshop</h1><p>Bring your bike on Saturday.</p><table><caption>Opening hours</caption><tr><th>Saturday</th><td>10 to 16</td></tr></table><ul><li>Bring your own spare parts</li></ul><a href="javascript:alert(1)">Bad link</a></section></main><script>window.bad=true</script></body></html>';
+const html = '<!DOCTYPE html><html nc:owner="wrong" nc:path="/wrong" nc:ai-key="secret"><head><title>Bike workshop</title><style>body{font-family:system-ui;margin:2rem}main{max-width:60rem}h1{color:#345}</style></head><body><main><section><h1>A bike workshop</h1><p>Bring your bike on Saturday.</p><table><caption>Opening hours</caption><tr><th>Saturday</th><td>10 to 16</td></tr></table><img nc:crop="16:9" alt="The workshop bench on a Saturday"><ul><li>Bring your own spare parts</li></ul><a href="javascript:alert(1)">Bad link</a></section></main><script>window.bad=true</script></body></html>';
 const requests = [], errors = [];
 const server = createServer((req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
@@ -96,6 +96,7 @@ try {
         toolbar: !!doc.querySelector("[data-nc-save]"),
         source: doc.documentElement.getAttribute("nc:source"),
         cells: [...doc.querySelectorAll("td,th,li,caption")].map((el) => [el.id, el.hasAttribute("editable")]),
+        pictures: [...doc.querySelectorAll("img")].map((el) => [el.id, el.getAttribute("alt"), el.hasAttribute("src")]),
         rules: Object.values(JSON.parse(doc.querySelector("script[nc\\:cms]")?.textContent || "{}")),
         runtime: [...doc.querySelectorAll("script[src],link[href]")].map((el) => el.getAttribute("src") || el.getAttribute("href")),
         headTitle: !!doc.querySelector("head > title"),
@@ -112,6 +113,16 @@ try {
     for (const [id, editable] of result.cells) {
       assert(editable, "a table cell or list item with words in it is not editable");
       assert(result.rules.some((r) => r.startsWith(`#${id}`)), `${id} is editable but missing from the content form`);
+    }
+    // A picture the model asked for and has no file for. It has to be changeable
+    // from the content form, or the owner has a hole in their page and no way to
+    // fill it; and it must not be pointed at somebody else's server.
+    const shown = result.pictures.filter(([, , src]) => !src);
+    assert(shown.length >= 1, "the generated page lost its picture");
+    for (const [id, alt] of shown) {
+      assert(id, "a picture has no id, so no rule can name it");
+      assert(alt, "a picture has no description of what belongs there");
+      assert(result.rules.some((r) => r === `#${id}@src`), `${id} has no picture field in the content form`);
     }
     assert(result.runtime.every((p) => result.paths.includes(p)));
     // The serialiser is fetched only when the page is edited, so it is named in an

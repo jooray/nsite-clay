@@ -689,7 +689,7 @@ The grammar:
 | Written as | Means |
 |---|---|
 | `".title"` | the element's text |
-| `"img.hero@src"`, `".x@data-y"` | an attribute, with a picture picker when it is an `<img src>` |
+| `"img.hero@src"`, `".x@data-y"` | an attribute; an `<img src>` gets the picture picker, with upload, cropping and the files already on the site |
 | `".agree@checked"` | a checkbox, which persists like any other input |
 | `".tag[]"` | one field per matching element, with Add and Remove |
 | `[".post", { … }]` | a card per match, with Add, Duplicate, Remove and reorder |
@@ -706,6 +706,36 @@ and mark it `nc:cms-template hidden`. It is never offered as content, and Add
 clones it rather than the last item. Give it an ordinary class as well, say
 `class="event event-shape"`, and point the gears at `.event:not(.event-shape)`,
 so reordering does not count a hidden element nobody can see.
+
+### Every picture on the page needs a rule
+
+An `img@src` rule is not an extra: it is the only way the owner can change a
+picture. The rule turns into a "Choose a picture" button that uploads a file to
+their own Blossom servers, offers the files already on their site, crops to a
+shape before uploading, and takes a pasted URL. Without the rule they need HTML.
+
+So write one for every `<img>` that is content, not only the hero:
+
+```html
+<img id="shop-front" nc:crop="16:9" alt="The shop from the street">
+```
+
+```json
+{ "photo": "#shop-front@src" }
+```
+
+`nc:crop` names the shape the layout wants, `"16:9"`, `"4:3"` or `"1:1"`, and
+the picker offers that crop first, so a picture somebody uploads from a phone
+arrives the right shape instead of stretching the page.
+
+**Build the page with pictures missing rather than with pictures invented.** You
+are usually writing a page for a business whose photographs you do not have.
+Write the `<img>` with the wanted picture described in `alt` and no `src` at
+all, and the shared stylesheet draws a dashed frame with that description in it:
+the layout is correct, the gap is obviously a gap, and the content form already
+has a row for filling it. Never point an `<img>` at a stock photo service, a
+placeholder service or a URL you have guessed; those are links to somebody
+else's server that break, and the owner ends up with a page they cannot fix.
 
 Write rules for the whole page rather than for the parts you found interesting.
 A field that is not in the rules is a field the owner has to go and find.
