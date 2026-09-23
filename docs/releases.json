@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.8",
+    "released": "2026-09-23",
+    "notes": [
+      "Choosing a picture now crops it to the shape of the space it is going into, without being asked. The page knows how wide and how tall that space is, so the frame starts as the right shape and a photograph from a phone stops stretching the layout or being chopped about by the browser.",
+      "The shape can be changed in the crop window itself, with the photograph in front of you. It used to be a dropdown you filled in before choosing a file, which is the one moment nobody can judge it, and changing your mind meant starting again."
+    ]
+  },
+  {
     "version": "0.3.7",
     "released": "2026-09-23",
     "notes": [

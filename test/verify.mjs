@@ -871,6 +871,27 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("the data API refuses writes without the owner", /owner/i.test(await err(() => nc.cms.setData({ title: "not allowed" }))));
   }
 
+  // The shape a picture is cropped to is the shape of the hole it is going
+  // into, and the page knows that without anybody being asked.
+  {
+    const host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:-9999px;top:0;width:320px";
+    const wide = document.createElement("img"); wide.style.cssText = "display:block;width:320px;height:180px";
+    const square = document.createElement("img"); square.style.cssText = "display:block;width:200px;height:200px";
+    const odd = document.createElement("img"); odd.style.cssText = "display:block;width:300px;height:100px";
+    const declared = document.createElement("img"); declared.setAttribute("nc:crop", "4:3");
+    declared.style.cssText = "display:block;width:320px;height:180px";
+    const tiny = document.createElement("img"); tiny.style.cssText = "display:block;width:4px;height:4px";
+    host.append(wide, square, odd, declared, tiny); document.body.append(host);
+    t("a 16 by 9 space is recognised as 16:9", nc.media.shapeOf(wide) === "16:9", nc.media.shapeOf(wide));
+    t("a square space as 1:1", nc.media.shapeOf(square) === "1:1");
+    t("an author's own nc:crop wins over the measurement", nc.media.shapeOf(declared) === "4:3");
+    t("an unusual shape is still given exactly", nc.media.shapeOf(odd) === "3:1", nc.media.shapeOf(odd));
+    t("and something too small to have a shape has none", nc.media.shapeOf(tiny) === null);
+    t("as does a picture being inserted rather than replaced", nc.media.shapeOf(null) === null);
+    host.remove();
+  }
+
   // Cropping must finish before upload, and cancelling must not mutate content.
   {
     const canvas = document.createElement("canvas"); canvas.width = 160; canvas.height = 80;
@@ -898,6 +919,29 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     const result = await pending;
     t("a square crop produces square image bytes", result.width === result.height && result.blob.size > 0);
     t("crop output preserves PNG format", result.blob.type === "image/png");
+
+    // The shape is decided in front of the photograph, not before it is chosen.
+    {
+      const run = nc.media.cropChoosing(blob, { shape: "16:9", fits: "16:9" });
+      await waitCrop();
+      const pick = [...document.querySelectorAll(".nc-ui select")].at(-1);
+      t("the crop window offers the shape", !!pick && pick.value === "16:9");
+      t("with the page's own shape named first",
+        pick.options[0].value === "16:9" && /fit this space/i.test(pick.options[0].textContent),
+        pick.options[0].textContent);
+      t("and the hint says where that shape came from",
+        /space on your page/i.test(document.querySelector(".nc-ui .nc-hint")?.textContent || ""));
+      pick.value = "1:1"; pick.dispatchEvent(new Event("change"));
+      // Reopened, rather than thrown away: the same file, a new lock.
+      await new Promise((r) => setTimeout(r, 40));
+      await waitCrop();
+      const again = [...document.querySelectorAll(".nc-ui select")].at(-1);
+      t("changing it reopens the crop rather than cancelling", !!document.querySelector(".nc-ui .qc-stage") && again.value === "1:1");
+      [...document.querySelectorAll(".nc-ui button")].find((b) => b.textContent === "Use this crop").click();
+      const out = await run;
+      t("and the crop that comes back is the shape they chose",
+        out && out.shape === "1:1" && out.width === out.height, JSON.stringify(out && { s: out.shape, w: out.width, h: out.height }));
+    }
     const cancelled = nc.media.crop(blob);
     await waitCrop();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

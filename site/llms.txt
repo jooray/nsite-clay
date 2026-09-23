@@ -724,9 +724,13 @@ So write one for every `<img>` that is content, not only the hero:
 { "photo": "#shop-front@src" }
 ```
 
-`nc:crop` names the shape the layout wants, `"16:9"`, `"4:3"` or `"1:1"`, and
-the picker offers that crop first, so a picture somebody uploads from a phone
-arrives the right shape instead of stretching the page.
+`nc:crop` names the shape the layout wants, `"16:9"`, `"4:3"` or `"1:1"`. The
+picker offers that crop first, so a picture somebody uploads from a phone
+arrives the right shape instead of stretching the page. Without it the picker
+measures the element on screen and offers that, which is usually right, so
+`nc:crop` is worth writing only where the measurement would be wrong: an image
+the CSS has not sized yet, or one whose shape should not follow the photograph
+currently in it. The shape can be changed inside the crop window either way.
 
 **Build the page with pictures missing rather than with pictures invented.** You
 are usually writing a page for a business whose photographs you do not have.

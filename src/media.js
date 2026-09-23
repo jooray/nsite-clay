@@ -12,6 +12,54 @@ import { modal, field, toast } from "./ui.js";
 import { uploadAll, list } from "./blossom.js";
 import quickcrop from "quickcrop";
 
+// The ratios worth naming. A photograph cropped to 1.78 and one cropped to
+// 16:9 are the same photograph, and the second is the one somebody recognises.
+const NAMED = [
+  ["16:9", 16 / 9], ["3:2", 3 / 2], ["4:3", 4 / 3], ["1:1", 1],
+  ["3:4", 3 / 4], ["2:3", 2 / 3], ["9:16", 9 / 16],
+];
+
+/** A ratio as a label, snapped to a named one when it is close enough. */
+export function ratioLabel(ratio) {
+  if (!Number.isFinite(ratio) || ratio <= 0) return null;
+  for (const [label, value] of NAMED) {
+    if (Math.abs(ratio - value) / value < 0.04) return label;
+  }
+  return `${Math.round(ratio * 100) / 100}:1`;
+}
+
+/**
+ * The shape of the space a picture is going into.
+ *
+ * Asking somebody to pick between Square, Wide and Photo is asking them to
+ * work out which one their page wants, which the page already knows: the
+ * element is on screen and has a width and a height. An author who declared
+ * nc:crop has said it outright and is believed; otherwise it is measured.
+ *
+ * Null when there is nothing to measure, which is the case when a picture is
+ * being inserted rather than replaced.
+ */
+export function shapeOf(target) {
+  const declared = target?.getAttribute?.("nc:crop");
+  if (declared && !["original", "free"].includes(declared)) return declared;
+  const rect = target?.getBoundingClientRect?.();
+  // Too small to have a shape: a collapsed or hidden element measures as a
+  // point, and a ratio taken from that is noise.
+  if (!rect || rect.width < 16 || rect.height < 16) return null;
+  return ratioLabel(rect.width / rect.height);
+}
+
+// Offered wherever a shape is chosen. "Fit this space" and "Crop freely" are
+// added around these by the caller, since only one of the two dialogs has a
+// space to fit.
+const SHAPES = [
+  { value: "1:1", label: "Square (1:1)" },
+  { value: "16:9", label: "Wide (16:9)" },
+  { value: "4:3", label: "Photo (4:3)" },
+  { value: "3:2", label: "Classic (3:2)" },
+  { value: "9:16", label: "Tall (9:16)" },
+];
+
 export function cropAspect(value) {
   if (!value || value === "free") return null;
   const parts = String(value).split(":").map(Number);
@@ -55,6 +103,9 @@ export class Media {
   constructor(nc) { this.nc = nc; this.doc = nc.doc; }
 
   get servers() { return this.nc.cfg.servers; }
+
+  /** The shape of the space a picture is going into. See shapeOf above. */
+  shapeOf(target) { return shapeOf(target); }
 
   // Upload any file to every configured Blossom server. Succeeds if one takes
   // it; the URL comes from the server's descriptor rather than being guessed,
@@ -206,9 +257,27 @@ export class Media {
 
   // ---- the dialogs --------------------------------------------------------
 
+  /**
+   * Crop, with the shape still on the table.
+   *
+   * The shape used to be chosen before the file was, which is the one moment
+   * nobody can judge it: you are picking between Square and Wide with nothing
+   * on screen. Here the photograph is in front of them, so changing it reopens
+   * the crop with the new shape rather than sending them back to start again.
+   */
+  async cropChoosing(file, { shape = "free", fits = null } = {}) {
+    for (let guard = 0; guard < 20; guard++) {
+      const change = {};
+      const result = await this.crop(file, { aspect: cropAspect(shape), shape, fits, change });
+      if (change.to) { shape = change.to; continue; }
+      return result && { ...result, shape };
+    }
+    return null;
+  }
+
   // Keep the upstream crop stage, but host it in our own dialog so it inherits
   // the page's controls, Escape stack and save exclusion.
-  crop(file, { aspect = null } = {}) {
+  crop(file, { aspect = null, shape = null, fits = null, change = null } = {}) {
     const doc = this.doc;
     return quickcrop(file, {
       aspect, maxWidth: 2560, maxHeight: 2560,
@@ -221,9 +290,26 @@ export class Media {
           qc?.setAttribute("nc:chrome", "");
           let helpers;
           modal({ doc, title: "Crop the image", wide: true,
-            hint: "Drag the corners to choose what stays in the picture.",
+            hint: fits
+              ? `The frame is the shape of the space on your page (${fits}). Drag the corners to choose what stays in the picture.`
+              : "Drag the corners to choose what stays in the picture.",
             submitLabel: confirmLabel,
-            build: (body, h) => { helpers = h; body.append(content); },
+            build: (body, h) => {
+              helpers = h;
+              if (change) {
+                const pick = field(body, { label: "Shape", value: shape, options: [
+                  ...(fits ? [{ value: fits, label: `Fit this space (${fits})` }] : []),
+                  { value: "free", label: "Crop freely" },
+                  ...SHAPES.filter((o) => o.value !== fits),
+                ] });
+                // Reopening is how the shape changes, because quickcrop fixes
+                // the lock when it starts. Cancel is what ends its run, and
+                // the caller's loop is what turns that into a new one; closing
+                // the dialog directly would leave quickcrop waiting forever.
+                pick.onchange = () => { change.to = pick.value; onCancel(); };
+              }
+              body.append(content);
+            },
             onSubmit: () => { onConfirm(); },
           }).then((result) => { if (result === null) onCancel(); });
           // A dialog resets position to static on every descendant, and that
@@ -256,26 +342,29 @@ export class Media {
         file.type = "file"; file.accept = "image/*"; file.hidden = true;
         body.append(drop, file);
 
-        const crop = field(body, { label: "Before uploading", value: target?.getAttribute("nc:crop") || "original",
+        // Default to the shape of the hole it is going into, so a photograph
+        // from a phone arrives the right way round instead of stretching the
+        // page or being cropped by the browser to whatever fits.
+        const fits = shapeOf(target);
+        const crop = field(body, { label: "Before uploading", value: fits || "original",
           options: [
+            ...(fits ? [{ value: fits, label: `Fit this space (${fits})` }] : []),
             { value: "original", label: "Keep the original" },
             { value: "free", label: "Crop freely" },
-            { value: "1:1", label: "Square (1:1)" },
-            { value: "16:9", label: "Wide (16:9)" },
-            { value: "4:3", label: "Photo (4:3)" },
+            ...SHAPES.filter((o) => o.value !== fits),
           ] });
-        const declared = target?.getAttribute("nc:crop");
-        if (declared && ![...crop.options].some((o) => o.value === declared)) {
-          crop.add(new Option(declared, declared)); crop.value = declared;
-        }
         let taking = false;
         const take = async (f) => {
           if (!f || taking) return;
           taking = true; h.busy(true);
           try {
             if (crop.value !== "original") {
-              const result = await this.crop(f, { aspect: cropAspect(crop.value) });
+              // The shape travels into the crop window and can be changed
+              // there, because that is where somebody first sees what the
+              // choice does to their photograph.
+              const result = await this.cropChoosing(f, { shape: crop.value, fits });
               if (!result || !body.isConnected) { h.status(""); return; }
+              if (result.shape) crop.value = result.shape;
               f = result.blob;
             }
             h.status(`Uploading ${(f.size / 1024).toFixed(0)} KB…`);
