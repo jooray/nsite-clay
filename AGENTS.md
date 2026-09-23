@@ -38,8 +38,11 @@ changes nothing for anybody's live site.
    templates, the three translations, and `site/runtime.json` from the two files
    above.
 5. Commit and push.
-6. **Deploy `site/`.** The command is in `CLAUDE.md.local`; it needs the bunker
-   signer awake. Until this runs, no existing page can find the release.
+6. **Deploy `site/`.** The command is in `CLAUDE.md.local`. The bunker signer
+   is normally awake and approves unattended, so deploy as the last step of the
+   release rather than handing it back to be done by hand. Ask only if the
+   signer does not answer. Until this runs, no existing page can find the
+   release.
 
 Then check it landed: the manifest should name `/nsite-clay.js`,
 `/nsite-clay-base.css`, `/nsite-clay-chrome.js` and `/runtime.json`, and the

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.14",
+    "released": "2026-09-23",
+    "notes": [
+      "A page built from a description now always arrives with a design of its own. The instructions the writing model was given listed the things the publisher adds to your page for you, and some models read that list as covering the look of the page too, so they wrote the words and left the styling to somebody who was never going to supply it. What came out was a wall of plain text with no colours, no spacing and no layout, and nothing on screen said why. It is now told plainly that the design is the page's own work and that nothing else provides one, and a page that still turns up without a stylesheet is refused and offered again rather than published as it is.",
+      "Asking to change a page no longer risks losing the look of it. A rewrite could come back with the right words in a page stripped of its styling, for the same reason, and the page you were shown afterwards was your writing with the design gone. Keeping the page as it was now explicitly includes keeping what makes it look like itself.",
+      "A page no longer loses its whole design over a single character. Quotation marks, dashes and other symbols are often written inside a stylesheet as a short code starting with a backslash, and the check that stops a page quietly fetching things from other people's servers treated every one of those as an attempt to do exactly that, and threw the entire stylesheet away without a word. That check now reads a stylesheet the way a browser does, so ordinary symbols are left alone, while a page that really does reach out to another server is still stopped, and stopped in a couple of cases it used to miss."
+    ]
+  },
+  {
     "version": "0.3.13",
     "released": "2026-09-23",
     "notes": [

@@ -4,6 +4,33 @@ import { AI_WRITING, unfence } from "./ai-edit.js";
 const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop"];
 const CHROME = `<div class="nc-bar nc-ui-chrome"><span class="nc-dot"></span><span class="nc-who" data-nc-who>read-only</span><button data-nc-signin>Sign in</button><button class="nc-owner-only" data-nc-write>Write</button><button class="nc-owner-only" data-nc-cms>Edit content</button><button class="nc-owner-only" data-nc-settings>Settings</button><button class="nc-owner-only" data-nc-history>History</button><button class="nc-primary nc-owner-only" data-nc-save>Save</button></div><p class="nc-edit-hint">add #edit to the URL to edit this page</p>`;
 
+/**
+ * Read CSS the way a browser would, rather than the way it was spelled.
+ *
+ * A backslash in a stylesheet can be an evasion of `url(`, written `u\72 l(`,
+ * and it can equally be a curly quote, written `content: "\201C"`. Testing the
+ * raw text could not tell them apart, so it treated every backslash as hostile
+ * and removed the whole <style> element: one escaped glyph anywhere in a
+ * stylesheet threw the page's entire design away, silently, and what got
+ * published was unstyled text.
+ *
+ * Resolving the escapes and dropping the comments first tells them apart. It is
+ * also stricter than the old test rather than looser, because a comment sitting
+ * between `url` and its bracket used to pass untouched.
+ */
+const cssText = (css) => css
+  .replace(/\\([0-9a-f]{1,6})[ \t\n\r\f]?/gi, (_, hex) => {
+    const cp = parseInt(hex, 16);
+    return cp > 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff) ? String.fromCodePoint(cp) : "";
+  })
+  .replace(/\\\r\n|\\[\n\r\f]/g, "")
+  .replace(/\\([^])/g, "$1")
+  .replace(/\/\*[^]*?\*\//g, "");
+
+/** Generated CSS is local to the page. External assets belong in explicit image
+ * tags, rather than hidden CSS requests or imports. */
+const reachesOut = (css) => /@import|url\s*\(|expression\s*\(/i.test(cssText(css));
+
 export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [], previous = "" } = {}) {
   // Models introduce themselves. A reply can open with a sentence about the page
   // and a ```html fence before the document begins, and parsing the whole reply
@@ -28,14 +55,19 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
         if (a.name.startsWith("nc:") && !MARKERS.includes(a.name)) el.removeAttribute(a.name);
         if (/^on/i.test(a.name)) el.removeAttribute(a.name);
       }
-      // Generated CSS is local to the page. External assets belong in explicit
-      // image tags, rather than hidden CSS requests or imports.
-      if (el.localName === "style" && /@import|url\s*\(|expression\s*\(|\\/i.test(el.textContent)) el.remove();
-      if (/@import|url\s*\(|expression\s*\(|\\/i.test(el.getAttribute("style") || "")) el.removeAttribute("style");
+      if (el.localName === "style" && reachesOut(el.textContent)) el.remove();
+      if (reachesOut(el.getAttribute("style") || "")) el.removeAttribute("style");
       if (el.localName === "template") walk(el.content);
     }
   };
   walk(doc);
+  // A page with no stylesheet is a page of unstyled text, whoever dropped it:
+  // a model that assumed something else supplied the design, or the scrub above
+  // taking a stylesheet that reached out of the page. It is not publishable
+  // either way, and it used to reach a relay with nobody told.
+  if (![...doc.querySelectorAll("style")].some((el) => el.textContent.trim())) {
+    throw new Error("The page came back with no stylesheet, so it would publish as unstyled text. Try again.");
+  }
   // Kept across the wipe below, because this runs twice: once on what the model
   // returned, and again in the publisher on the page it already prepared. The
   // second pass has no business forgetting where the first one said to publish.
@@ -151,12 +183,17 @@ function room(chars, floor = 32000) {
 /** A reply cut off by the cap, whatever the endpoint called it. */
 export const ranOut = (e) => e?.reason === "length";
 
+// Sent with both prompts, because a page built from a description and a page
+// rewritten from one have to obey the same rules. They were two identical
+// literals until the stylesheet rule had to change in both and only one moved.
+const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. The page carries its own design and nothing supplies one for it: write the whole stylesheet yourself, in one <style> in the head, covering layout, spacing, colour, type and every class the markup uses. A stylesheet is linked into the page afterwards, but that one draws the editing toolbar and dialogs and sets nothing a reader sees, so a page that leaves its design to it renders as unstyled text. Use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself, and nothing else: it does not style the page. Keep the page useful as plain static HTML.`;
+
 export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress } = {}) {
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Build a complete static HTML page for nsite-clay. Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML. Language: ${lang}. ${AI_WRITING}` },
-    { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch."}` },
+    { role: "system", content: `Build a complete static HTML page for nsite-clay. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch: there is no existing page and no existing stylesheet."}` },
   ], { signal, onProgress, maxTokens: ROOM_MAX }).catch((e) => {
     // Nothing here predicts the size of the answer, so there is no cap to
     // raise: what is left is a smaller page. Saying "change one part of it"
@@ -166,8 +203,6 @@ export async function buildPage(ai, description, { template = "", lang = "en", s
   });
   return preparePage(reply, { owner: ai.nc.npub, lang, relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
-
-const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. Put CSS in <style>, use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself. Keep the page useful as plain static HTML.`;
 
 /**
  * Give a rewritten page back the photographs its owner had already uploaded.
@@ -219,7 +254,7 @@ export async function refinePage(ai, page, instruction, { lang = "en", signal, o
   if (!instruction.trim()) throw new Error("Say what should be different.");
   if (instruction.length > 20000 || page.length > 300000) throw new Error("Use a shorter instruction or a smaller page.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
     // The answer has to hold the whole page again, so the page is what sizes it.
   ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });

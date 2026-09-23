@@ -146,6 +146,44 @@ try {
     assert(result.headTitle, "<title> was pushed out of <head>");
     await page.close();
   }
+  // A stylesheet is the whole of a page's design, so what happens to it has to be
+  // deliberate. A curly quote written as an escape is not an attempt to fetch
+  // anything and has to survive; a stylesheet that reaches off the page must
+  // not; and a page that arrives with no design at all must not reach a relay
+  // quietly, whether the model never wrote one or the scrub took it away.
+  {
+    const page = await browser.newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.routeWebSocket("**", (ws) => ws.close());
+    await page.goto(`http://127.0.0.1:${server.address().port}/deploy.html`);
+    const styling = await page.evaluate(async () => {
+      await nc.ready;
+      const document_ = (head) => `<!DOCTYPE html><html><head><title>A bike workshop</title>${head}</head><body><main nc:blocks><section><h1>A bike workshop</h1><p>Bring your bike on Saturday.</p></section></main></body></html>`;
+      const prepare = (head) => {
+        try {
+          const out = nc.ai.preparePage(document_(head), { owner: "npub1test", path: "/index.html" });
+          const doc = new DOMParser().parseFromString(out, "text/html");
+          return { kept: [...doc.querySelectorAll("style")].some((el) => el.textContent.trim()) };
+        } catch (e) { return { threw: e.message }; }
+      };
+      return {
+        glyph: prepare('<style>body{margin:2rem}blockquote::before{content:"\\201C"}</style>'),
+        selector: prepare('<style>body{margin:2rem}html[nc\\:editing] .x{display:none}</style>'),
+        reaches: prepare('<style>body{margin:2rem;background:url("https://example.invalid/x.png")}</style>'),
+        none: prepare(""),
+      };
+    });
+    // The bug this is here for: one escaped character used to take the whole
+    // stylesheet with it, and the page published as unstyled text.
+    assert.equal(styling.glyph.kept, true, `an escaped glyph cost the page its stylesheet: ${JSON.stringify(styling.glyph)}`);
+    assert.equal(styling.selector.kept, true, `an escaped selector cost the page its stylesheet: ${JSON.stringify(styling.selector)}`);
+    // Still local. A page that fetches from somebody else's server is not a page
+    // you own, so the stylesheet goes and the page is refused rather than served
+    // with a hole in it.
+    assert(styling.reaches.threw, `a stylesheet reaching off the page was allowed: ${JSON.stringify(styling.reaches)}`);
+    assert(styling.none.threw, "a page with no stylesheet was prepared as if it were finished");
+    await page.close();
+  }
   assert.deepEqual(errors, []);
   console.log("Publisher AI: describing and refining preview before publishing, preserve ownership/path, and ship all editable runtime assets.");
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }

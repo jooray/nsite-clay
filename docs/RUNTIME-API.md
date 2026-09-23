@@ -119,9 +119,10 @@ generates a static document. Omit `template` to start from scratch.
 `nc.ai.preparePage(html, { owner, path, lang })` sanitises a completed document,
 assigns the publisher's ownership/path, and supplies runtime references, toolbar,
 editable regions, CMS rules and a fallback block library. It removes generated
-scripts and forms. `nc.ai.previewHTML(html)` adds a restrictive CSP for display
-in an iframe with an empty `sandbox` attribute. Preparing or previewing never
-publishes anything.
+scripts and forms, and CSS that reaches off the page. It refuses a document that
+carries no stylesheet, because that one publishes as unstyled text.
+`nc.ai.previewHTML(html)` adds a restrictive CSP for display in an iframe with an
+empty `sandbox` attribute. Preparing or previewing never publishes anything.
 
 ```js
 await nc.ready                     // resolves to nc

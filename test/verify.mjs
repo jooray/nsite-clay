@@ -876,14 +876,14 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   // page and destructive on a rewrite, and a language model is not a safe place
   // to keep a URL anyway.
   {
-    const before = `<!DOCTYPE html><html><body><main>` +
+    const before = `<!DOCTYPE html><html><head><style>body{margin:2rem}</style></head><body><main>` +
       `<img id="nc-picture-1" alt="The shop from the street" src="https://cdn.example/aaa.png">` +
       `<img id="nc-picture-2" alt="A flat white" src="https://cdn.example/bbb.png">` +
       `<img id="nc-picture-3" alt="Nobody has uploaded this one">` +
       `<p>Words.</p></main></body></html>`;
     // What a rewrite comes back as: the same pictures, described differently,
     // with the sources dropped and one of the ids lost.
-    const after = `<!DOCTYPE html><html><body><main>` +
+    const after = `<!DOCTYPE html><html><head><style>body{margin:2rem}</style></head><body><main>` +
       `<img id="nc-picture-1" alt="The shop counter, rows of guampas">` +
       `<img alt="A cup of terere">` +
       `<img alt="Still nothing here">` +
