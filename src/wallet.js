@@ -84,7 +84,10 @@ export class Wallet {
    */
   async reserve(n) {
     const { seed, counter } = await this.seed();
-    const ok = await this.nc.vault.save({ wallet: { seed: bytesToHex(seed), counter: counter + n } });
+    // Keep the rest of the wallet record, an unfinished mint's recovery details
+    // among it: the vault merges only at the top level.
+    const data = await this.nc.vault.load();
+    const ok = await this.nc.vault.save({ wallet: { ...data?.wallet, seed: bytesToHex(seed), counter: counter + n } });
     if (!ok) throw new Error("The wallet counter could not be saved, so nothing was spent.");
     return { seed, from: counter };
   }
@@ -124,7 +127,7 @@ export class Wallet {
 
   async paid(mint, quoteId) {
     const q = await this.api(mint, `mint/quote/bolt11/${encodeURIComponent(quoteId)}`);
-    return q?.state === "PAID" || q?.paid === true;
+    return q?.state === "PAID" || q?.state === "ISSUED" || q?.paid === true;
   }
 
   /**
@@ -137,14 +140,50 @@ export class Wallet {
    */
   async mint(mintUrl, keysetId, quoteId, parts) {
     const amounts = outputsFor(parts);
-    const { seed, from } = await this.reserve(amounts.length);
-    const prepared = this.outputs(seed, from, amounts, keysetId);
-    const { signatures } = await this.api(mintUrl, "mint/bolt11", {
-      quote: quoteId,
-      outputs: prepared.map((o) => ({ amount: o.amount, id: o.id, B_: o.B_ })),
-    });
+    const { seed, counter } = await this.seed();
+    const data = await this.nc.vault.load();
+    let job = data.wallet?.mint;
+    if (job && (job.quote !== quoteId || job.url !== mintUrl)) {
+      throw new Error("Finish the previous payment before collecting a new one.");
+    }
+    const restoring = !!job;
+    if (!job) {
+      job = { url: mintUrl, id: keysetId, quote: quoteId, from: counter, parts };
+      // Save the quote and its exact outputs with the counter. A counter alone
+      // cannot tell a returning browser which payment it was collecting.
+      const ok = await this.nc.vault.save({ wallet: { ...data.wallet,
+        seed: bytesToHex(seed), counter: counter + amounts.length, mint: job } });
+      if (!ok) throw new Error("The payment recovery details could not be saved. Nothing was collected; try again.");
+    }
+    if (job.id !== keysetId || JSON.stringify(job.parts) !== JSON.stringify(parts)) {
+      throw new Error("This payment must be collected using its original amounts and mint keys.");
+    }
+    const prepared = this.outputs(seed, job.from, amounts, keysetId);
+    const outputs = prepared.map((o) => ({ amount: o.amount, id: o.id, B_: o.B_ }));
+    let signatures;
+    if (restoring) {
+      const restored = await this.api(mintUrl, "restore", { outputs });
+      const found = new Map((restored.outputs || []).map((o, i) => [o.B_, (restored.signatures || restored.promises || [])[i]]));
+      if (found.size) {
+        signatures = outputs.map((o) => found.get(o.B_));
+        if (signatures.some((s) => !s)) throw new Error("The mint returned only part of the payment. Keep this invoice and try again.");
+      }
+    }
+    if (!signatures) ({ signatures } = await this.api(mintUrl, "mint/bolt11", { quote: quoteId, outputs }));
+    if (!Array.isArray(signatures) || signatures.length !== prepared.length || signatures.some((s, i) =>
+      s.id !== keysetId || s.amount !== prepared[i].amount)) {
+      throw new Error("The mint returned incomplete or mismatched coins. Keep this invoice and try again.");
+    }
     const all = await this.proofs(mintUrl, keysetId, prepared, signatures);
     return this.cut(all, parts, mintUrl);
+  }
+
+  /** Clear recovery metadata only after the caller has saved both tokens. */
+  async finishMint() {
+    const data = await this.nc.vault.load();
+    if (!data?.wallet?.mint) return;
+    const { mint, ...wallet } = data.wallet;
+    if (!await this.nc.vault.save({ wallet })) throw new Error("The collected payment could not be saved. Try again.");
   }
 
   /**

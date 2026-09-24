@@ -3,6 +3,8 @@
 // with AI there. Nothing here touches a public relay or real money.
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
+import { localPorts } from "./local-ports.mjs";
+import { mockAiAccount } from "./ai-account-fixture.mjs";
 
 const NSEC = "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y";
 const PAGE = '<!DOCTYPE html><html><head><title>Bike workshop</title><style>body{background:#fff;color:#111;font-family:system-ui;margin:2rem}h1{color:#345}</style></head><body><main nc:blocks><section><h1>A bike workshop</h1><p>Bring your bike on Saturday morning.</p></section></main></body></html>';
@@ -12,7 +14,10 @@ const DARK = '<!DOCTYPE html><html><head><title>Bike workshop at night</title><s
 const out = [];
 const t = (name, pass, detail = "") => out.push([name, pass, detail]);
 
-const stack = spawn("node", ["tools/publish-local.mjs"], { stdio: ["ignore", "pipe", "pipe"] });
+const [publisherPort, relayPort, blossomPort, gatewayPort] = await localPorts(4);
+const stack = spawn("node", ["tools/publish-local.mjs"], { stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, PUBLISH_LOCAL_PORT: publisherPort, DEVNET_RELAY_PORT: relayPort,
+    DEVNET_BLOSSOM_PORT: blossomPort, DEVNET_GATEWAY_PORT: gatewayPort } });
 let ready = false;
 stack.stdout.on("data", (d) => { if (/publisher|gateway|http:\/\//i.test(String(d))) ready = true; });
 stack.stderr.on("data", (d) => process.stderr.write(String(d).slice(0, 300)));
@@ -24,6 +29,7 @@ let published;
 try {
   // ---- the wizard --------------------------------------------------------
   const wiz = await browser.newPage();
+  await mockAiAccount(wiz);
   wiz.on("pageerror", (e) => t("pageerror(wizard)", false, e.message));
   let turn = 0;
   const reply = (route) => {
@@ -32,7 +38,7 @@ try {
       body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: body }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` });
   };
   await wiz.route("https://routstr.cypherpunk.today/v1/chat/completions", reply);
-  await wiz.goto("http://127.0.0.1:4792/deploy.html");
+  await wiz.goto(`http://127.0.0.1:${publisherPort}/deploy.html`);
   await wiz.evaluate(async () => {
     await nc.ready;
     nc.ai.client.configure({ ...nc.ai.client.config, key: "sk-local-e2e" });
@@ -67,11 +73,12 @@ try {
   // The wizard links to the public gateway; this stack has its own, serving the
   // same npub as a hostname exactly as a real one does.
   published = await wiz.evaluate(() => ({ npub: nc.npub }));
-  published.link = `http://${published.npub}.localhost:4871/workshop/`;
+  published.link = `http://${published.npub}.localhost:${gatewayPort}/workshop/`;
   t("the page is published", !!published.npub, published.link);
 
   // ---- the published page ------------------------------------------------
   const live = await browser.newPage();
+  await mockAiAccount(live);
   live.on("pageerror", (e) => t("pageerror(page)", false, e.message));
   await live.route("https://routstr.cypherpunk.today/v1/chat/completions", reply);
   const url = published.link + "#edit";
@@ -81,9 +88,9 @@ try {
   // publisher stamps them. Without them the page looks for its own manifest,
   // and for its owner's vault, on relays nobody published it to.
   const attrs = await live.evaluate(() => Object.fromEntries([...document.documentElement.attributes].map((a) => [a.name, a.value])));
-  t("the published page names the relays it was published to", attrs["nc:relays"] === "ws://127.0.0.1:4869",
+  t("the published page names the relays it was published to", attrs["nc:relays"] === `ws://127.0.0.1:${relayPort}`,
     JSON.stringify(attrs).slice(0, 220));
-  t("and the Blossom servers holding its bytes", attrs["nc:servers"] === "http://127.0.0.1:4870");
+  t("and the Blossom servers holding its bytes", attrs["nc:servers"] === `http://127.0.0.1:${blossomPort}`);
   const fresh = await live.evaluate(() => ({
     key: nc.ai.client.session().key,
     stored: window.localStorage.getItem("nsite-clay.ai"),
@@ -176,7 +183,7 @@ try {
   console.log(`\n${out.filter((r) => r[1]).length}/${out.length} passed`);
   if (out.every((r) => r[1])) console.log("End to end: an AI page is published, its owner's credit follows it, and the whole page is rewritten, saved and served.");
   await browser.close();
-  stack.kill("SIGKILL");
-  await new Promise((r) => setTimeout(r, 800));
+  stack.kill("SIGTERM");
+  await new Promise((resolve) => stack.exitCode !== null ? resolve() : stack.once("exit", resolve));
   process.exit(out.every((r) => r[1]) ? 0 : 1);
 }

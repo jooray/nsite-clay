@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { join, extname } from "node:path";
 import { chromium } from "playwright";
+import { mockAiAccount } from "./ai-account-fixture.mjs";
 const srv = createServer((q, r) => {
   const p = new URL(q.url, "http://l").pathname;
   const f = p === "/nsite-clay.js" ? "dist/nsite-clay.js" : p === "/nsite-clay-base.css" ? "templates/_shared/nsite-clay-base.css" : join("site", p);
@@ -16,6 +17,7 @@ const out = [];
 const t = (n, pass, d = "") => out.push([n, pass, d]);
 const ctx = await b.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
 const page = await ctx.newPage();
+await mockAiAccount(page);
 await page.goto("http://127.0.0.1:4809/deploy.html");
 await page.evaluate(async () => { await nc.ready; });
 await page.click("#way-new");
@@ -37,6 +39,7 @@ t("and pressing it again does copy again", (await page.textContent("#newkey-copy
 // A browser with no clipboard API at all, which plain HTTP is.
 const bare = await b.newContext();
 const p2 = await bare.newPage();
+await mockAiAccount(p2);
 await p2.addInitScript(() => {
   Object.defineProperty(navigator, "clipboard", { get: () => undefined, configurable: true });
   document.execCommand = () => false;

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cafe-en",
+    "lang": "en",
+    "kind": "build",
+    "prompt": "Make a one-page site for a fictional cafe called Saturday Coffee. Use only these facts: 123 Satoshi Way, Asunción, Paraguay. Open Tuesday through Saturday, 08:00 to 17:00. Flat white: 18000 PYG. Filter coffee: 14000 PYG. Nostr meetup every Tuesday at 20:00, outside normal opening hours. Email hello@saturday.example. Warm brown and cream, readable on a phone, with three photo spaces I can fill later. Make opening hours and the address easy to find. Do not add reviews, awards or other menu items.",
+    "mustContain": ["Saturday Coffee", "123 Satoshi Way", "18000", "14000", "hello@saturday.example"],
+    "review": ["Meetup time is not silently changed to match cafe hours.", "Menu and opening hours are editable.", "Exactly three intentional empty photo spaces, with useful descriptions.", "Contact action works as a mailto link, not an inert form."]
+  },
+  {
+    "id": "cafe-sk",
+    "lang": "sk",
+    "kind": "build",
+    "prompt": "Vytvor slovenskú jednostránkovú webstránku pre fiktívnu kaviareň Zrnko. Použi iba tieto údaje: Námestie 12, Bratislava. Utorok až sobota 08:00 až 17:00, nedeľa a pondelok zatvorené. Espresso 2,40 €, filter 3,20 €. Čítanie poézie každý štvrtok o 18:00, mimo bežných otváracích hodín. Kontakt ahoj@zrnko.example. Pokojný krémový dizajn so zeleným akcentom, dve miesta pre vlastné fotografie. Návštevník má rýchlo zistiť, kde sme a kedy je otvorené. Nevymýšľaj recenzie ani ocenenia.",
+    "mustContain": ["Zrnko", "Námestie 12", "Bratislava", "2,40", "3,20", "ahoj@zrnko.example"],
+    "review": ["All reader-facing navigation and section labels are Slovak.", "Accents, euro prices and closed days survive.", "Poetry time is clearly an exception to ordinary opening hours."]
+  },
+  {
+    "id": "event-es",
+    "lang": "es",
+    "kind": "build",
+    "prompt": "Crea una página en español para el encuentro ficticio Taller de bicicletas. Fecha: 17 de octubre de 2026. Horario: 10:00 a 14:00, hora de Asunción. Lugar: Patio Norte, Calle Inventada 8, Asunción. Entrada gratuita, sin inscripción. Trae tu bicicleta y los repuestos que necesite; prestamos herramientas. Contacto: taller@example.com. Estética de cartel clara y alegre. La fecha, el lugar y qué llevar deben verse fácilmente en un teléfono. No inventes patrocinadores, ponentes ni un formulario de inscripción.",
+    "mustContain": ["Taller de bicicletas", "2026", "Patio Norte", "Calle Inventada 8", "taller@example.com"],
+    "review": ["Date, local time and free entry are prominent at 390px.", "No registration interaction appears.", "Spanish is natural and consistent, with no invented sponsors."]
+  },
+  {
+    "id": "portfolio-cs",
+    "lang": "cs",
+    "kind": "build",
+    "prompt": "Vytvoř české portfolio pro fiktivní ilustrátorku Evu Novou. Pracuje na knižních obálkách a ilustracích pro časopisy. Ukázky: Noční zahrada, plakát, 2024; Mapa ticha, obálka, 2025; Dům u řeky, ilustrace, 2026. U každé nech místo na vlastní obrázek. Kontakt eva@example.com. Hlavní akce má být napsat Evě e-mail. Vzdušné bílé pozadí, černá typografie, jediný červený akcent. Nevymýšlej klienty, ceny, reference ani životopisné údaje. Musí dobře fungovat na mobilu.",
+    "mustContain": ["Eva", "Noční zahrada", "Mapa ticha", "Dům u řeky", "eva@example.com"],
+    "review": ["Artwork titles, types and years stay paired correctly.", "Three photo spaces are editable and retain useful alt descriptions.", "The contact action is obvious without overwhelming the portfolio."]
+  },
+  {
+    "id": "photo-preservation",
+    "lang": "en",
+    "kind": "refine",
+    "fixture": "photos.html",
+    "prompt": "Make the existing page darker and warmer. Put the two photographs above the opening hours, but keep each photo with its own caption. Keep all facts, prices, image URLs and image IDs unchanged. Add no new images or contact details.",
+    "mustContain": ["Workshop bench", "Repair tools", "Saturday", "10:00", "16:00", "15 EUR"],
+    "review": ["Photo sources and IDs are identical to the starting page, not merely the same count.", "Captions are still associated with the correct images.", "Contrast remains readable in the new dark theme."]
+  },
+  {
+    "id": "iterative-page",
+    "lang": "en",
+    "kind": "build",
+    "prompt": "Build a restrained one-page website for the fictional Saturday Repair Club. We meet Saturdays from 10:00 to 16:00 behind the old station. Bring a broken household object. Volunteers help you diagnose it; a repair is not guaranteed. Entry is free. Email repairs@example.com. Include an introduction, practical details and a photo space. Warm cream paper, dark green text, system fonts. Do not invent success statistics or testimonials.",
+    "refinements": ["Keep the design and all facts. Put practical details before the introduction, and add that children must be accompanied by an adult.", "Keep that order and the new rule about children. Make the introduction half as long. Keep the photo space and contact link."],
+    "mustContain": ["Saturday Repair Club", "repairs@example.com", "10:00", "16:00"],
+    "review": ["Each revision changes the selected proposed version rather than starting again.", "The final page retains the child-accompaniment rule introduced in revision two.", "Existing facts and the photo space survive all three requests."]
+  },
+  {
+    "id": "long-guide",
+    "lang": "en",
+    "kind": "build",
+    "prompt": "Create a practical static beginner's bicycle maintenance guide with twelve clearly separated sections: inspection, tyre pressure, punctures, wheel removal, chain cleaning, lubrication, brakes, gears, saddle adjustment, lights, storage and when to visit a mechanic. Use concise general guidance, no invented brand specifications or exact torque values. Include an on-page contents list whose links work, a short tool checklist, and a clear reminder to use the bicycle manufacturer's specifications. Readable at 390px with no horizontal scrolling. Leave two spaces for diagrams supplied by the owner; do not invent diagram URLs. Make this one complete HTML page, with all twelve sections finished.",
+    "mustContain": ["inspection", "pressure", "puncture", "lubric", "brake", "gear", "saddle", "light", "storage", "mechanic"],
+    "review": ["All twelve requested sections are complete, including the last one.", "Contents links resolve to actual section IDs.", "No arbitrary torque specifications or external diagram URLs are invented."]
+  },
+  {
+    "id": "unsupported-backend",
+    "lang": "en",
+    "kind": "build",
+    "prompt": "Make a page for a fictional ceramics studio named Clay Saturday. Classes are Saturdays at 11:00 and cost 25 EUR. Contact studio@example.com. I would like online bookings, payment and a contact form, but I do not have a booking service, payment endpoint or form backend. Make the useful static page that can honestly work now, using email for enquiries. Do not draw fake working payment or booking controls. Use two empty photo spaces and a compact mobile-friendly layout.",
+    "mustContain": ["Clay Saturday", "11:00", "25", "studio@example.com"],
+    "review": ["No invented checkout or booking URL.", "The email enquiry action works.", "The result is useful without presenting inert controls as implemented features."]
+  }
+]

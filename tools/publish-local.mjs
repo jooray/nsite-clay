@@ -23,9 +23,9 @@ import { readFileSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 
 const PORT = Number(process.env.PUBLISH_LOCAL_PORT || 4792);
-const RELAY = "ws://127.0.0.1:4869";
-const BLOSSOM = "http://127.0.0.1:4870";
-const GATEWAY_PORT = 4871;
+const RELAY = `ws://127.0.0.1:${process.env.DEVNET_RELAY_PORT || 4869}`;
+const BLOSSOM = `http://127.0.0.1:${process.env.DEVNET_BLOSSOM_PORT || 4870}`;
+const GATEWAY_PORT = Number(process.env.DEVNET_GATEWAY_PORT || 4871);
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml",
@@ -41,7 +41,11 @@ const local = (html) => html
 
 const devnet = spawn("node", [join("tools", "devnet.mjs")], { stdio: "inherit" });
 const stop = () => { try { devnet.kill(); } catch {} };
-for (const sig of ["SIGINT", "SIGTERM", "exit"]) process.on(sig, stop);
+process.on("exit", stop);
+for (const sig of ["SIGINT", "SIGTERM"]) process.once(sig, () => {
+  stop(); server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 1000).unref();
+});
 
 const server = createServer((req, res) => {
   let path = decodeURIComponent(req.url.split("?")[0]);

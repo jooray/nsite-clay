@@ -135,9 +135,11 @@ Your job is the markup, the styling and the words. Sign-in, saving, versions,
 media upload, feeds and the post composer already exist. Writing your own is the
 commonest mistake; check the runtime reference before implementing anything.
 
-The runtime also draws the AI controls on pages that ask for them: a toolbar
-button that rewrites the element the owner clicked, behind a preview they accept
-or discard, and a settings dialog for the provider. An owner can add a crop step
+The runtime also draws the AI controls: a toolbar button that rewrites a static
+page, with an option to change only the element the owner clicked. Pages with
+live feeds, forms or custom scripts use selected-text edits instead, so those
+features are not lost in a static rewrite. Changes have a preview the owner
+accepts or discards, and a settings dialog chooses the provider. An owner can add a crop step
 to a picture upload, and content fields can be given types (`nc:cms-type`) and
 rich text (`@innerHTML`). Nothing AI writes reaches a page without the owner
 keeping it; you never wire that up yourself.

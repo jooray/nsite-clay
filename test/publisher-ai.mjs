@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { join, extname } from "node:path";
 import { chromium } from "playwright";
+import { mockAiAccount } from "./ai-account-fixture.mjs";
 
 // What a model actually sends: a sentence about itself, a fence, then the page.
 const preamble = 'Here is a complete static HTML page for the workshop. It covers opening hours and contact details.\n```html\n';
@@ -22,6 +23,7 @@ try {
   // whole page again.
   for (const [lang, refine] of [["en", false], ["en", true], ["es", false], ["sk", false], ["cs", false]]) {
     const page = await browser.newPage();
+    await mockAiAccount(page);
     page.on("pageerror", (e) => errors.push(e.message));
     await page.routeWebSocket("**", (ws) => ws.close());
     await page.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => {
@@ -87,6 +89,15 @@ try {
       // The page it is rewriting is what sizes the answer it is allowed to give.
       assert(requests.at(-1).max_tokens >= 32000, `max_tokens is ${requests.at(-1).max_tokens}`);
       assert(!/sk-browser-test/.test(JSON.stringify(requests.at(-1))));
+      const prior = await page.getAttribute("#ai-preview", "srcdoc");
+      await page.click("#ai-again");
+      assert(await page.isVisible("#ai-result"), "editing the description discarded the paid preview");
+      await page.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":{"message":"Try again later"}}' }));
+      await page.click("#ai-generate");
+      await page.waitForFunction(() => document.querySelector("#ai-status").textContent.includes("Try again later"));
+      assert(await page.isVisible("#ai-result"), "failed generation discarded the prior preview");
+      assert.equal(await page.getAttribute("#ai-preview", "srcdoc"), prior);
+      assert(await page.isEnabled("#ai-use"), "the prior preview cannot be used after a failed replacement");
     }
     await page.click("#ai-use");
     await page.fill("#path", "/workshop/");
@@ -146,6 +157,65 @@ try {
     assert(result.headTitle, "<title> was pushed out of <head>");
     await page.close();
   }
+  // Payment setup is a resumable transaction. A failed credit handoff must not
+  // mint or charge again, even if the user closes and reloads the publisher.
+  {
+    const page = await browser.newPage();
+    await mockAiAccount(page);
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.routeWebSocket("**", (ws) => ws.close());
+    await page.route("https://cypherpunk.today/donation-sink/**", (route) => route.fulfill({ status: 200, body: "ok" }));
+    await page.goto(`http://127.0.0.1:${server.address().port}/deploy.html`);
+    const install = async (saved = {}) => page.evaluate(async (saved) => {
+      await nc.ready;
+      window.paymentData = saved; window.payCalls = { invoices: 0, checks: 0, mints: 0, credit: 0 };
+      window.failCredit = true;
+      nc.manifestOf = async () => null;
+      nc.vault = { usable: true, load: async () => window.paymentData,
+        save: async (patch) => { window.paymentData = { ...window.paymentData, ...patch }; return true; } };
+      nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
+      window.NsiteClayWallet = { Wallet: class {
+        async mints() { return [{ mint: "https://mint.example", id: "test" }]; }
+        async invoice() { window.payCalls.invoices++; return { quote: "same-invoice", request: "lnbc1fixture" }; }
+        async paid() { window.payCalls.checks++; return true; }
+        async mint() { window.payCalls.mints++; return ["cashuA-credit", "cashuA-gift"]; }
+        async finishMint() {}
+      } };
+      nc.ai.client.cashu = async () => {
+        window.payCalls.credit++;
+        if (window.failCredit) throw new Error("Credit handoff interrupted");
+        nc.ai.client.setKey("sk-recovered");
+      };
+    }, saved);
+    await install();
+    await page.click("#way-key");
+    await page.fill("#key", "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y");
+    await page.click("#key-go");
+    await page.click("#ai-buy");
+    await page.waitForSelector("dialog.nc-ui");
+    await page.click("dialog.nc-ui button[type=submit]");
+    await page.waitForFunction(() => document.querySelector(".nc-status")?.textContent.includes("Do not pay again"));
+    assert.deepEqual(await page.evaluate(() => window.payCalls), { invoices: 1, checks: 1, mints: 1, credit: 1 });
+    const saved = await page.evaluate(() => window.paymentData);
+    assert.equal(saved.aiSetup.quote.quote, "same-invoice");
+    assert.equal(saved.pending.credit, "cashuA-credit");
+    await page.click("dialog.nc-ui .nc-cancel");
+    await page.reload();
+    await install(saved);
+    await page.evaluate(() => { window.failCredit = false; });
+    await page.click("#way-key");
+    await page.fill("#key", "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y");
+    await page.click("#key-go");
+    await page.waitForSelector("#ai-resume:not([hidden])");
+    assert(!(await page.isVisible("#ai-buy")), "an unfinished payment offers another purchase");
+    await page.click("#ai-resume");
+    await page.waitForFunction(() => document.querySelector("#ai-status").textContent === "Ready.");
+    assert.deepEqual(await page.evaluate(() => window.payCalls), { invoices: 0, checks: 0, mints: 0, credit: 1 });
+    assert.equal(await page.evaluate(() => window.paymentData.pending), null);
+    assert.equal(await page.evaluate(() => window.paymentData.aiSetup), null);
+    assert.equal(await page.evaluate(() => window.paymentData.ai[nc.ai.client.config.base]), "sk-recovered");
+    await page.close();
+  }
   // A stylesheet is the whole of a page's design, so what happens to it has to be
   // deliberate. A curly quote written as an escape is not an attempt to fetch
   // anything and has to survive; a stylesheet that reaches off the page must
@@ -153,6 +223,7 @@ try {
   // quietly, whether the model never wrote one or the scrub took it away.
   {
     const page = await browser.newPage();
+    await mockAiAccount(page);
     page.on("pageerror", (e) => errors.push(e.message));
     await page.routeWebSocket("**", (ws) => ws.close());
     await page.goto(`http://127.0.0.1:${server.address().port}/deploy.html`);

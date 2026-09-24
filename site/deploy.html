@@ -302,6 +302,7 @@
       <h2 data-t="tplTitle">How do you want to start?</h2>
       <p class="sub" data-t="tplSub">Two ways. Describe the page you want and have it built, or take a
       finished one and type over it. Either way the page is yours afterwards and edits itself.</p>
+      <p class="note"><a href="#template-route" data-t="freeRoute">Prefer to start free? Choose a template.</a></p>
       <!-- Two routes, drawn as two routes. Each carries its own heading and its
            own description, so neither one's explanation can be read as the
            other's. That is the mistake this replaced: the sentence describing
@@ -309,19 +310,31 @@
       <section class="route" id="ai-builder" nc:no-persist>
         <h3 data-t="aiTitle">Describe it, and AI builds it</h3>
         <p class="note" data-t="aiHint">Write what the page is for and what should be on it. Paid with Lightning or Cashu, and the page is ordinary HTML you can keep editing afterwards.</p>
+        <p class="note" data-t="aiCost">Simple setup costs 2000 sats: 1000 support nsite-clay and 1000 become your AI credit. You need a funded Lightning wallet. Templates below are free.</p>
+        <p class="note" data-ai-word="capabilities"></p>
         <label class="f" for="ai-description" data-t="aiDescribe">What page do you want?</label>
         <textarea id="ai-description" rows="5" nc:no-persist data-t-placeholder="aiPlaceholder"
           placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
         <p class="note" id="ai-provider"></p>
+        <div id="ai-readiness"></div>
         <div class="row">
           <button type="button" class="primary" id="ai-buy" data-t="aiBuy">Simple setup, 2000 sats</button>
+          <button type="button" id="ai-resume" hidden data-t="buyResume">Resume previous payment</button>
+          <button type="button" id="ai-topup" hidden data-ai-word="addCredit">Add AI credit</button>
           <button type="button" class="primary" id="ai-generate" data-t="aiGenerate">Generate preview</button>
           <button type="button" id="ai-cancel" hidden data-t="aiCancel">Cancel generation</button>
         </div>
         <p class="note"><a href="#" id="ai-settings" data-t="aiAdvanced">Advanced setup, or my own API key</a></p>
+        <details class="adv"><summary data-ai-word="importDraft">Restore draft file</summary>
+          <label class="f" for="ai-import" data-ai-word="importDraft">Restore draft file</label>
+          <input type="file" id="ai-import" accept=".json,application/json">
+        </details>
         <p class="note" id="ai-status" role="status"></p>
+        <p class="note" id="ai-draft-status" role="status"></p>
         <div id="ai-result" hidden>
-          <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
+          <h4 id="ai-review-title" tabindex="-1" data-t="aiPreviewTitle">Review your page</h4>
+          <label class="f" for="ai-version" data-ai-word="version">Proposed version</label>
+          <select id="ai-version"></select>
           <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
           <!-- Three ways on, drawn as three, because a preview with one button
                and no way back reads as a decision somebody is not allowed to
@@ -330,7 +343,10 @@
           <div class="row">
             <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
             <button type="button" id="ai-again" data-t="aiAgain">Change the description</button>
+            <button type="button" id="ai-download" data-ai-word="downloadDraft">Download draft</button>
+            <button type="button" id="ai-discard" data-ai-word="discardDraft">Discard draft</button>
           </div>
+          <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
           <label class="f" for="ai-change" data-t="aiChangeLabel">Or tell AI what to change about this page</label>
           <textarea id="ai-change" rows="2" nc:no-persist data-t-placeholder="aiChangePlaceholder"
             placeholder="Make it darker, drop the photos, and put the opening hours at the top"></textarea>
@@ -339,7 +355,7 @@
           </div>
         </div>
       </section>
-      <section class="route">
+      <section class="route" id="template-route">
         <h3 data-t="aiOr">Start from a finished page</h3>
         <p class="note" data-t="tplPick">Every one of these is a whole page you can type over. The first is built
         out of blocks you add and rearrange, which is the easiest place to begin. Free, and no AI involved.</p>
@@ -437,6 +453,13 @@
   const STRINGS = {
     en: {},
     es: {
+      freeRoute: "¿Prefieres empezar gratis? Elige una plantilla.",
+      aiCost: "La configuración simple cuesta 2000 sats: 1000 apoyan a nsite-clay y 1000 son tu saldo de IA. Necesitas una cartera Lightning con fondos. Las plantillas de abajo son gratis.",
+      aiPreviewTitle: "Revisa tu página",
+      buyResume: "Continuar el pago anterior",
+      buyRecovery: "No se ha terminado. Pulsa Comprobar pago para continuar el mismo pago. No pagues otra vez.",
+      buySaveFailed: "No se pudieron guardar los datos de recuperación en tus relays. Mantén esta página abierta e inténtalo otra vez.",
+      buyWalletMissing: "No se pudo cargar la cartera. Vuelve a abrir el publicador para continuar.",
       copyFail: "No se pudo copiar. Selecciona la clave de arriba y cópiala.",
       aiAgain: "Cambiar la descripción",
       aiChangeLabel: "O dile a la IA qué cambiar en esta página",
@@ -526,6 +549,13 @@
       fNote: "La publicación funciona en tu navegador. Si usas IA, tu descripción y la plantilla elegida se envían al proveedor que selecciones. Tu clave de firma Nostr queda aparte.",
     },
     sk: {
+      freeRoute: "Chceš začať zadarmo? Vyber si šablónu.",
+      aiCost: "Jednoduché nastavenie stojí 2000 satov: 1000 podporí nsite-clay a 1000 bude tvoj AI kredit. Potrebuješ Lightning peňaženku so zostatkom. Šablóny nižšie sú zadarmo.",
+      aiPreviewTitle: "Skontroluj svoju stránku",
+      buyResume: "Pokračovať v predošlej platbe",
+      buyRecovery: "Nastavenie sa nedokončilo. Stlač Skontrolovať platbu a pokračuj v tej istej platbe. Neplať znova.",
+      buySaveFailed: "Údaje na obnovu sa nepodarilo uložiť na tvoje relaye. Nechaj túto stránku otvorenú a skús to znova.",
+      buyWalletMissing: "Peňaženku sa nepodarilo načítať. Znova otvor publikátor a pokračuj.",
       copyFail: "Nepodarilo sa skopírovať. Označ kľúč vyššie a skopíruj ho.",
       aiAgain: "Zmeniť opis",
       aiChangeLabel: "Alebo povedz AI, čo má na tejto stránke zmeniť",
@@ -615,6 +645,13 @@
       fNote: "Publikovanie beží v prehliadači. Ak použiješ AI, opis a vybraná šablóna odídu k poskytovateľovi, ktorého zvolíš. Podpisový kľúč Nostr zostáva oddelený.",
     },
     cs: {
+      freeRoute: "Chceš začít zdarma? Vyber si šablonu.",
+      aiCost: "Jednoduché nastavení stojí 2000 satů: 1000 podpoří nsite-clay a 1000 bude tvůj AI kredit. Potřebuješ Lightning peněženku se zůstatkem. Šablony níže jsou zdarma.",
+      aiPreviewTitle: "Zkontroluj svou stránku",
+      buyResume: "Pokračovat v předchozí platbě",
+      buyRecovery: "Nastavení se nedokončilo. Stiskni Zkontrolovat platbu a pokračuj ve stejné platbě. Neplať znovu.",
+      buySaveFailed: "Údaje pro obnovu se nepodařilo uložit na tvoje relaye. Nech tuto stránku otevřenou a zkus to znovu.",
+      buyWalletMissing: "Peněženku se nepodařilo načíst. Znovu otevři publikátor a pokračuj.",
       copyFail: "Nepodařilo se zkopírovat. Označ klíč výše a zkopíruj ho.",
       aiAgain: "Změnit popis",
       aiChangeLabel: "Nebo řekni AI, co má na téhle stránce změnit",
@@ -718,6 +755,7 @@
   const say = (key, fallback) => T[key] || fallback;
 
   const $ = (s) => document.querySelector(s);
+  for (const el of document.querySelectorAll("[data-ai-word]")) el.textContent = nc.ai.say(el.dataset.aiWord);
   const state = { template: null, catalogue: [], path: "/", confirmed: false, reached: 1, published: false };
 
   // ---- the stepper -------------------------------------------------------
@@ -747,7 +785,7 @@
   }
 
   function goTo(n) {
-    if (state.published || n > state.reached) return;
+    if (state.published || generation || settingUp || n > state.reached) return;
     step(n);
     if (n === 2) loadTemplates();
     if (n === 3) checkPath();
@@ -772,6 +810,8 @@
   function signedIn() {
     step(2);
     loadTemplates();
+    restoreCredit();
+    restoreBuilderDraft();
   }
 
   if (window.nostr) $("#way-nip07").hidden = false;
@@ -1003,17 +1043,85 @@
   // AI produces an in-memory draft. Only Use this page hands it to the ordinary
   // publishing path; tokens, keys and prompts never enter the generated HTML.
   let generation = null, generated = null, generatedTemplate = null;
+  let settingUp = false, paymentSetup = null, paymentPending = false, restoringCredit = false;
+  let builderDraft = { prompt: "", versions: [] }, builderSaved = true, aiReady = null, readinessStamp = "";
+  const saveBuilderDraft = () => {
+    builderDraft.prompt = $("#ai-description").value; builderDraft.change = $("#ai-change").value;
+    builderSaved = nc.ai.drafts.write("builder", builderDraft);
+    $("#ai-draft-status").textContent = nc.ai.say(builderSaved ? "savedHere" : "draftFailed");
+  };
+  function restoreBuilderDraft() {
+    generated = null;
+    $("#ai-result").hidden = true;
+    builderDraft = nc.ai.drafts.read("builder") || { prompt: "", versions: [] };
+    $("#ai-description").value = builderDraft.prompt; $("#ai-change").value = builderDraft.change || "";
+    const version = builderDraft.versions.find((v) => v.number === builderDraft.selected) || builderDraft.versions.at(-1);
+    if (!version) { generated = null; $("#ai-result").hidden = true; return; }
+    try {
+      generated = nc.ai.preparePage(version.html, { owner: nc.npub, lang: LANG, relays: nc.cfg.relays, servers: nc.cfg.servers });
+      reviewGenerated(false); $("#ai-draft-status").textContent = nc.ai.say("draftRecovered");
+    } catch (e) { $("#ai-draft-status").textContent = e.message; }
+  }
+  const rememberVersion = (html, prompt) => {
+    const number = (builderDraft.versions.at(-1)?.number || 0) + 1;
+    builderDraft.versions.push({ number, html, prompt }); builderDraft.versions = builderDraft.versions.slice(-5);
+    builderDraft.selected = number; saveBuilderDraft();
+  };
+  const availability = nc.ai.readiness($("#ai-readiness"), { chars: () => (generated?.length || 0) + $("#ai-description").value.length + $("#ai-change").value.length,
+    onChange: (status) => {
+      aiReady = status;
+      $("#ai-generate").disabled = !status.canGenerate || !!generation || settingUp;
+      $("#ai-refine").disabled = !status.canGenerate || !!generation || settingUp;
+    } });
+  const checkReadiness = (force = false) => {
+    const stamp = JSON.stringify(nc.ai.client.session());
+    if (force || stamp !== readinessStamp) { readinessStamp = stamp; availability.refresh(); }
+    else availability.update();
+  };
+  for (const id of ["ai-description", "ai-change"]) $("#" + id).addEventListener("input", () => { saveBuilderDraft(); availability.update(); });
+  $("#ai-download").onclick = () => nc.ai.download({ ...builderDraft, schema: 1 }, "nsite-clay-ai-draft.json");
+  $("#ai-import").onchange = async () => {
+    const file = $("#ai-import").files[0]; if (!file) return;
+    try {
+      if (file.size > 2500000 || !nc.ai.drafts.import("builder", await file.text())) throw new Error(nc.ai.say("draftUnreadable"));
+      restoreBuilderDraft();
+    } catch (e) { $("#ai-draft-status").textContent = e.message; }
+  };
+  $("#ai-discard").onclick = () => {
+    nc.ai.drafts.clear("builder"); builderDraft = { prompt: "", versions: [] }; generated = null;
+    $("#ai-result").hidden = true; $("#ai-description").value = ""; $("#ai-change").value = "";
+    $("#ai-draft-status").textContent = ""; $("#ai-description").focus(); showProvider();
+  };
+  $("#ai-version").onchange = () => {
+    builderDraft.selected = Number($("#ai-version").value); saveBuilderDraft(); restoreBuilderDraft();
+  };
+  $("#ai-topup").onclick = async () => { await nc.ai.addCredit(); showProvider(); checkReadiness(true); };
+  async function restoreCredit() {
+    restoringCredit = true; showProvider();
+    try {
+      await nc.ai.adopt();
+      const data = await nc.vault.load();
+      paymentSetup = data?.aiSetup; paymentPending = !!data?.pending;
+    } catch { /* settings offers an explicit restore when relays return */ }
+    restoringCredit = false; showProvider();
+  }
   // Say it before the work. Without this somebody writes a description, waits, and
   // is only then told they needed credit all along.
   const showProvider = () => {
     const s = nc.ai.client.session();
     const el = $("#ai-provider");
-    el.textContent = s.key ? `${s.model} · ${new URL(s.base).host}` : nc.ai.say("noCredit");
-    el.classList.toggle("bad", !s.key);
+    el.textContent = s.key ? `${s.model} · ${new URL(s.base).host}`
+      : restoringCredit ? nc.ai.say("looking")
+      : paymentSetup || paymentPending ? say("buyResume", "Resume previous payment") : nc.ai.say("noCredit");
+    el.classList.toggle("bad", !s.key && !restoringCredit && !paymentSetup && !paymentPending);
     // One button at a time. Offering Simple setup to somebody who has just paid
     // asks them to decide whether they paid, which they should not have to.
-    $("#ai-buy").hidden = !!s.key;
-    $("#ai-generate").disabled = !s.key;
+    $("#ai-buy").hidden = !!s.key || !!paymentSetup || paymentPending || restoringCredit;
+    $("#ai-resume").hidden = !paymentSetup && !paymentPending;
+    $("#ai-topup").hidden = !s.key || s.mode !== "routstr";
+    $("#ai-generate").disabled = !aiReady?.canGenerate || !!generation || settingUp;
+    $("#ai-generate").classList.toggle("primary", !generated);
+    checkReadiness();
   };
   showProvider();
 
@@ -1027,27 +1135,51 @@
   // every token that has not reached its destination is written to the vault
   // before the next step, so a closed tab costs a retry and never the money.
   $("#ai-buy").onclick = async () => {
-    const say2 = (k, f) => say(k, f);
-    if (!nc.vault?.usable) { $("#ai-status").textContent = say2("buyNoSigner", "Sign in with a key this browser can encrypt with."); return; }
-    if (!window.NsiteClayWallet) { $("#ai-status").textContent = "The wallet could not be loaded."; return; }
+    if (settingUp || generation) return;
+    if (!nc.vault?.usable) { $("#ai-status").textContent = say("buyNoSigner", "Sign in with a key this browser can encrypt with."); return; }
+    if (!window.NsiteClayWallet) { $("#ai-status").textContent = say("buyWalletMissing", "The wallet could not be loaded. Reopen the publisher to continue."); return; }
     const wallet = new window.NsiteClayWallet.Wallet(nc);
-    const node = nc.ai.client.config.base;
-    const busy = (on) => { for (const id of ["ai-buy", "ai-generate", "ai-settings"]) $("#" + id).disabled = on; };
+    let ready = false;
+    const busy = (on) => {
+      settingUp = on;
+      for (const id of ["ai-buy", "ai-resume", "ai-generate", "tpl-back"]) $("#" + id).disabled = on;
+      $("#ai-settings").inert = on; $("#tpls").inert = on;
+    };
     busy(true);
     try {
-      $("#ai-status").textContent = say2("buyWorking", "Setting it up…");
-      const [best] = await wallet.mints(node);
-      const quote = await wallet.invoice(best.mint, 2000);
-      await payDialog(quote, best, wallet, node);
+      $("#ai-status").textContent = say("buyWorking", "Setting it up…");
+      const data = await nc.vault.load({ force: true });
+      if (data === null) throw new Error(say("buySaveFailed", "Could not save recovery details to your relays. Keep this page open and try again."));
+      let setup = data.aiSetup;
+      if (data.pending) {
+        await deliver(wallet, setup?.best, setup?.quote, data.pending.node || setup?.node || nc.ai.client.config.base,
+          { status: (message) => { $("#ai-status").textContent = message; } });
+        ready = true;
+      } else {
+        if (!setup) {
+          const node = nc.ai.client.config.base;
+          const [best] = await wallet.mints(node);
+          const quote = await wallet.invoice(best.mint, 2000);
+          setup = { best, quote, node };
+          await savePayment({ aiSetup: setup });
+        }
+        paymentSetup = setup;
+        ready = await payDialog(setup.quote, setup.best, wallet, setup.node);
+      }
     } catch (e) {
       $("#ai-status").textContent = e.message;
-    } finally { busy(false); showProvider(); }
-    if (nc.ai.client.session().key && $("#ai-description").value.trim()) $("#ai-generate").click();
+    } finally { busy(false); await restoreCredit(); }
+    if (ready && nc.ai.client.session().key && $("#ai-description").value.trim()) $("#ai-generate").click();
   };
+  $("#ai-resume").onclick = () => $("#ai-buy").onclick();
+
+  async function savePayment(patch) {
+    if (!await nc.vault.save(patch)) throw new Error(say("buySaveFailed", "Could not save recovery details to your relays. Keep this page open and try again."));
+  }
 
   async function payDialog(quote, best, wallet, node) {
-    let done = false, timer;
-    await nc.modal({
+    let closed = false, checking = false, timer, poll;
+    return nc.modal({
       title: say("buyTitle", "Set up AI"), submitLabel: nc.ai.say("check"), noCancel: false,
       build: (body, h) => {
         const split = document.createElement("ul");
@@ -1066,24 +1198,32 @@
         const link = document.createElement("a"); link.href = "lightning:" + quote.request;
         link.textContent = nc.ai.say("openWallet"); body.append(link);
 
-        const poll = async () => {
-          if (done) return;
+        poll = async () => {
+          if (closed || checking) return;
+          checking = true; clearTimeout(timer); h.busy(true);
           try {
-            if (await wallet.paid(best.mint, quote.quote)) {
-              done = true;
+            const paid = await wallet.paid(best.mint, quote.quote);
+            if (closed) return;
+            if (paid) {
               h.status(say("buyWorking", "Setting it up…"));
               await deliver(wallet, best, quote, node, h);
               h.close(true);
               return;
             }
+            if (quote.expiry && quote.expiry * 1000 < Date.now()) {
+              await savePayment({ aiSetup: null }); paymentSetup = null;
+              h.status(nc.ai.say("expired"), true); return;
+            }
             h.status(say("buyWaiting", "Waiting for your payment…"));
-          } catch (e) { h.status(e.message, true); }
-          timer = setTimeout(poll, 3000);
+            timer = setTimeout(poll, 3000);
+          } catch (e) {
+            if (!closed) h.status(`${e.message} ${say("buyRecovery", "Setup is unfinished. Press Check payment to continue the same payment. Do not pay again.")}`, true);
+          } finally { checking = false; h.busy(false); }
         };
         timer = setTimeout(poll, 800);
       },
-      onSubmit: async () => { /* the poll above is what finishes this */ },
-    }).finally(() => { done = true; clearTimeout(timer); });
+      onSubmit: async () => { await poll(); },
+    }).finally(() => { closed = true; clearTimeout(timer); });
   }
 
   // Mint, split, and hand both halves over. Each token is parked in the vault
@@ -1092,12 +1232,25 @@
   // Every step says what it is doing. This takes several seconds across four
   // machines, and a single unchanging "Setting it up" is indistinguishable from
   // a hang to the one person who has just handed over money.
-  async function deliver(wallet, best, quote, node, h) {
+  let delivery = null;
+  function deliver(wallet, best, quote, node, h) {
+    // Closing the invoice does not cancel a handoff already in flight. A quick
+    // resume joins it rather than starting a second redemption.
+    if (!delivery) delivery = finishDelivery(wallet, best, quote, node, h).finally(() => { delivery = null; });
+    return delivery;
+  }
+  async function finishDelivery(wallet, best, quote, node, h) {
     const step = (k, fallback) => { const m = say(k, fallback); h.status(m); $("#ai-status").textContent = m; };
 
-    step("buyMinting", "Payment received. Collecting your coins…");
-    const [creditToken, giftToken] = await wallet.mint(best.mint, best.id, quote.quote, [1000, 1000]);
-    await nc.vault.save({ pending: { credit: creditToken, gift: giftToken, node } });
+    let pending = (await nc.vault.load())?.pending;
+    if (!pending) {
+      step("buyMinting", "Payment received. Collecting your coins…");
+      const [credit, gift] = await wallet.mint(best.mint, best.id, quote.quote, [1000, 1000]);
+      pending = { credit, gift, node, creditKey: nc.ai.client.record(node).key || "" };
+      await savePayment({ pending });
+    }
+    await wallet.finishMint();
+    const { credit: creditToken, gift: giftToken } = pending;
 
     // Both halves leave at once. They have nothing to do with each other: one is
     // a topup at the node, the other a POST to the donation sink, and each is a
@@ -1108,36 +1261,60 @@
     //
     // Nothing is risked by starting it early. Both tokens are in the vault on
     // the line above, so a tab that dies here loses neither.
-    const donation = fetch(DONATION_SINK, {
+    const donation = giftToken ? fetch(DONATION_SINK, {
       method: "POST", headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(15000), credentials: "omit", redirect: "error",
       body: JSON.stringify({ token: giftToken, project: "nsite-clay" }),
-    }).then((r) => r.ok, () => false);
+    }).then((r) => r.ok, () => false) : Promise.resolve(true);
 
-    step("buyCrediting", "Adding your AI credit…");
-    const out = await nc.ai.client.cashu(creditToken, { ...nc.ai.client.session(), base: node });
-    const key = nc.ai.client.session().key;
+    if (creditToken) {
+      step("buyCrediting", "Adding your AI credit…");
+      await nc.ai.client.cashu(creditToken, { ...nc.ai.client.session(), mode: "routstr", base: node, key: pending.creditKey || "" });
+      const key = nc.ai.client.record(node).key;
 
-    // The vault writes stay in order, whatever the network did. Two saves at
-    // once race to replace the same event and one of them loses.
-    step("buySaving", "Saving your key to your Nostr relays…");
-    await nc.vault.save({ ai: { ...(await nc.vault.load())?.ai, [node]: key }, pending: { gift: giftToken } });
+      // The vault writes stay in order, whatever the network did. Two saves at
+      // once race to replace the same event and one of them loses.
+      step("buySaving", "Saving your key to your Nostr relays…");
+      await savePayment({ ...nc.ai.relayData(await nc.vault.load(), node), pending: { gift: giftToken, node }, aiSetup: null });
+    }
 
     step("buyDonating", "Sending the half that supports nsite-clay…");
-    if (await donation) await nc.vault.save({ pending: null });
+    if (await donation) await savePayment({ pending: null, aiSetup: null });
     // A donation that did not arrive stays in the vault and goes next time.
 
     step("buyDone", "Ready.");
-    return out;
+    return true;
   }
 
   const DONATION_SINK = "https://cypherpunk.today/donation-sink/donation-sink.php";
+  const generationBusy = (on) => {
+    for (const id of ["ai-generate", "ai-buy", "ai-resume", "ai-topup", "ai-import", "ai-version", "ai-download", "ai-discard", "ai-description", "ai-change", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = on;
+    $("#ai-settings").inert = on;
+    $("#tpls").inert = on; $("#ai-cancel").hidden = !on;
+    $("#ai-builder").setAttribute("aria-busy", String(on));
+    if (!on) { showProvider(); checkReadiness(true); }
+  };
+  const reviewGenerated = (focus = true) => {
+    $("#ai-preview").srcdoc = nc.ai.previewHTML(generated);
+    $("#ai-result").hidden = false;
+    $("#ai-version").replaceChildren(...builderDraft.versions.map((v) => {
+      const o = document.createElement("option"); o.value = v.number; o.textContent = `${v.number}. ${v.prompt.slice(0, 70)}`; return o;
+    }));
+    $("#ai-version").value = builderDraft.selected;
+    if (focus) { $("#ai-review-title").focus({ preventScroll: true }); $("#ai-review-title").scrollIntoView({ block: "start" }); }
+  };
+  window.addEventListener("beforeunload", (e) => {
+    if (!state.published && (generation || (!builderSaved && (generated || $("#ai-description").value.trim())))) {
+      e.preventDefault(); e.returnValue = "";
+    }
+  });
   $("#ai-cancel").onclick = () => generation?.abort();
   $("#ai-generate").onclick = async () => {
+    if (generation || settingUp) return;
+    if (!$("#ai-description").value.trim()) { $("#ai-description").focus(); return; }
     const controller = new AbortController(); generation = controller;
     const template = null;   // this screen describes a page; templates are the other route
-    $("#ai-result").hidden = true; generated = null;
-    for (const id of ["ai-generate", "ai-buy", "ai-settings", "ai-description", "tpl-back"]) $("#" + id).disabled = true;
-    $("#tpls").inert = true; $("#ai-cancel").hidden = false;
+    generationBusy(true);
     $("#ai-status").textContent = say("aiWorking", "Generating…");
     try {
       let html = "";
@@ -1156,26 +1333,23 @@
         } });
       if (controller.signal.aborted) return;
       generated = result; generatedTemplate = template;
-      $("#ai-preview").srcdoc = nc.ai.previewHTML(result);
-      $("#ai-result").hidden = false; $("#ai-status").textContent = say("aiReady", "The preview is ready.");
+      rememberVersion(result, $("#ai-description").value);
+      reviewGenerated(); $("#ai-status").textContent = say("aiReady", "The preview is ready.");
     } catch (e) {
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
-      generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
-      for (const id of ["ai-settings", "ai-description", "tpl-back"]) $("#" + id).disabled = false;
-      showProvider();   // re-enables Generate only if there is still a key to use
+      generation = null; generationBusy(false);
     }
   };
   // Changing one thing about a page that is almost right, rather than throwing it
   // away and describing it again from nothing. It is the cheaper of the two as
   // well: the model is given the page and one instruction.
   $("#ai-refine").onclick = async () => {
-    if (!generated) return;
+    if (!generated || generation || settingUp) return;
     const instruction = $("#ai-change").value.trim();
     if (!instruction) { $("#ai-change").focus(); $("#ai-status").textContent = say("aiChangeEmpty", "Say what should be different about it."); return; }
     const controller = new AbortController(); generation = controller;
-    for (const id of ["ai-generate", "ai-buy", "ai-settings", "ai-description", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = true;
-    $("#tpls").inert = true; $("#ai-cancel").hidden = false;
+    generationBusy(true);
     $("#ai-status").textContent = say("aiChanging", "Making that change…");
     try {
       const result = await nc.ai.refinePage(generated, instruction, { lang: LANG, signal: controller.signal,
@@ -1186,23 +1360,20 @@
         } });
       if (controller.signal.aborted) return;
       generated = result;
-      $("#ai-preview").srcdoc = nc.ai.previewHTML(result);
+      rememberVersion(result, instruction);
+      reviewGenerated();
       $("#ai-change").value = "";
+      saveBuilderDraft();
       $("#ai-status").textContent = say("aiChanged", "Changed. Check it again below.");
     } catch (e) {
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
-      generation = null; $("#ai-cancel").hidden = true; $("#tpls").inert = false;
-      for (const id of ["ai-settings", "ai-description", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = false;
-      showProvider();
+      generation = null; generationBusy(false);
     }
   };
 
-  // Back to the description, with what they wrote still in it. The preview goes,
-  // because leaving a page on screen that the next press will replace is the
-  // reason somebody has to guess which button they are supposed to use.
+  // Keep the last usable result until a replacement has actually arrived.
   $("#ai-again").onclick = () => {
-    $("#ai-result").hidden = true; generated = null;
     $("#ai-status").textContent = say("aiEditDescription", "Change the description and generate a new preview.");
     $("#ai-description").focus();
     $("#ai-description").scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1578,6 +1749,7 @@
       $("#done-open").href = url + "#edit";
       $("#done-plain").href = url;
       state.published = true;
+      nc.ai.drafts.clear("builder");
       step(4);
       $("#progress-card").hidden = true;
       $("#done-card").hidden = false;

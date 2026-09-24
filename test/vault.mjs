@@ -12,10 +12,15 @@ import { readFileSync } from "node:fs";
 import { join, extname } from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
+import { localPorts } from "./local-ports.mjs";
+import { mockAiAccount } from "./ai-account-fixture.mjs";
 
 const NSEC = "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y";
 const NPUB = "npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u";
-const devnet = spawn("node", ["tools/devnet.mjs"], { stdio: ["ignore", "pipe", "pipe"] });
+const [relayPort, blossomPort, gatewayPort] = await localPorts(3);
+const relay = `ws://127.0.0.1:${relayPort}`;
+const devnet = spawn("node", ["tools/devnet.mjs"], { stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, DEVNET_RELAY_PORT: relayPort, DEVNET_BLOSSOM_PORT: blossomPort, DEVNET_GATEWAY_PORT: gatewayPort } });
 let up = false;
 devnet.stdout.on("data", (d) => { if (/relay|listening|ready/i.test(String(d))) up = true; });
 for (let i = 0; i < 60 && !up; i++) await new Promise((r) => setTimeout(r, 250));
@@ -24,7 +29,7 @@ await new Promise((r) => setTimeout(r, 1500));
 const page0 = readFileSync("site/t/cms/index.html", "utf8")
   .replace(/nc:owner="[^"]*"/, `nc:owner="${NPUB}"`)
   .replace(/nc:path="[^"]*"/, 'nc:path="/index.html"')
-  .replace(/nc:relays="[^"]*"/, 'nc:relays="ws://127.0.0.1:4869"');
+  .replace(/nc:relays="[^"]*"/, `nc:relays="${relay}"`);
 const srv = createServer((q, r) => {
   const p = new URL(q.url, "http://l").pathname;
   if (p === "/" || p === "/index.html") { r.writeHead(200, { "Content-Type": "text/html" }); return r.end(page0); }
@@ -32,7 +37,7 @@ const srv = createServer((q, r) => {
     ? join("dist", p.includes("source") ? "nsite-clay-source.js" : "nsite-clay.js") : join("site", p);
   try { r.writeHead(200, { "Content-Type": { ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json" }[extname(f)] || "application/octet-stream" }); r.end(readFileSync(f)); }
   catch { r.writeHead(404); r.end(); }
-}).listen(4801, "127.0.0.1");
+}).listen(0, "127.0.0.1");
 await new Promise((r) => srv.once("listening", r));
 
 const browser = await chromium.launch({ channel: "chrome" });
@@ -41,8 +46,9 @@ const t = (name, pass, detail = "") => { out.push([name, pass, detail]); };
 
 // --- device one: sign in, write the vault -----------------------------------
 const one = await browser.newPage();
+await mockAiAccount(one);
 one.on("pageerror", (e) => out.push(["pageerror(1)", false, e.message]));
-await one.goto("http://127.0.0.1:4801/#edit");
+await one.goto(`http://127.0.0.1:${srv.address().port}/#edit`);
 await one.evaluate(async () => { await nc.ready; });
 const before = await one.evaluate(() => ({ usable: nc.vault.usable, pubkey: !!nc.pubkey }));
 t("a vault is unusable before sign-in", before.usable === false && before.pubkey === false);
@@ -61,8 +67,9 @@ t("saving reaches a relay", wrote.saved === true);
 
 // --- device two: a fresh browser, nothing local ------------------------------
 const two = await browser.newPage();
+await mockAiAccount(two);
 two.on("pageerror", (e) => out.push(["pageerror(2)", false, e.message]));
-await two.goto("http://127.0.0.1:4801/#edit");
+await two.goto(`http://127.0.0.1:${srv.address().port}/#edit`);
 await two.evaluate(async () => { await nc.ready; });
 // Read before signing in: signing in is what goes and fetches the credit, so
 // after it this browser is supposed to have something.
@@ -93,7 +100,8 @@ t("and this browser keeps it from then on",
   JSON.stringify(adopted.kept).slice(0, 120));
 
 const dialog = await two.evaluate(async () => {
-  nc.ai.edit(null);
+  // This template has live behaviour, so the supported route is an element edit.
+  nc.ai.edit(document.querySelector("[editable]"));
   await new Promise((r) => setTimeout(r, 200));
   const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
   const text = panel.querySelector(".nc-hint.nc-bad")?.textContent || "";
@@ -106,7 +114,7 @@ t("and generating is offered rather than blocked", dialog.submitDisabled === fal
 
 // --- what a stranger sees ----------------------------------------------------
 const seen = await two.evaluate(async () => {
-  const ev = await nc.pool.get(["ws://127.0.0.1:4869"], { kinds: [30078], authors: [nc.pubkey], "#d": ["nsite-clay"], limit: 1 });
+  const ev = await nc.pool.get(nc.cfg.relays, { kinds: [30078], authors: [nc.pubkey], "#d": ["nsite-clay"], limit: 1 });
   return { kind: ev?.kind, d: ev?.tags?.find((x) => x[0] === "d")?.[1], content: ev?.content || "" };
 });
 t("it is one replaceable kind 30078 under a d tag", seen.kind === 30078 && seen.d === "nsite-clay");

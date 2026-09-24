@@ -31,7 +31,10 @@ const cssText = (css) => css
  * tags, rather than hidden CSS requests or imports. */
 const reachesOut = (css) => /@import|url\s*\(|expression\s*\(/i.test(cssText(css));
 
-export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [], previous = "" } = {}) {
+export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [], previous = "", keep = false } = {}) {
+  // nc:keep marks where a live part of the page, such as a feed, goes back after
+  // a rewrite. It is honoured only when the caller put such places there.
+  const markers = keep ? [...MARKERS, "nc:keep"] : MARKERS;
   // Models introduce themselves. A reply can open with a sentence about the page
   // and a ```html fence before the document begins, and parsing the whole reply
   // as a document puts all of that in the body: the chatter becomes the page's
@@ -44,7 +47,7 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
   if (!page || !/<body[\s>]/i.test(page)) {
     throw new Error("The model did not return a complete HTML page. Try a shorter description.");
   }
-  const clean = DOMPurify.sanitize(page, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "template"], ADD_ATTR: MARKERS,
+  const clean = DOMPurify.sanitize(page, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "template"], ADD_ATTR: markers,
     FORBID_TAGS: ["script", "iframe", "object", "embed", "base", "form", "input", "button", "textarea", "select", "link", "meta"],
     FORBID_ATTR: ["srcdoc", "srcset", "ping", "formaction"], ALLOW_DATA_ATTR: false });
   const doc = new DOMParser().parseFromString(clean, "text/html");
@@ -52,7 +55,7 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
   const walk = (root) => {
     for (const el of root.querySelectorAll("*")) {
       for (const a of [...el.attributes]) {
-        if (a.name.startsWith("nc:") && !MARKERS.includes(a.name)) el.removeAttribute(a.name);
+        if (a.name.startsWith("nc:") && !markers.includes(a.name)) el.removeAttribute(a.name);
         if (/^on/i.test(a.name)) el.removeAttribute(a.name);
       }
       if (el.localName === "style" && reachesOut(el.textContent)) el.remove();
@@ -226,6 +229,11 @@ function keepPictures(previous, doc) {
   if (!had.length) return;
   const fresh = [...doc.body.querySelectorAll("img")].filter((el) => !el.closest("template"));
   const used = new Set();
+  for (const el of fresh) {
+    const src = el.getAttribute("src");
+    const original = src && had.find((o) => !used.has(o) && o.getAttribute("src") === src);
+    if (original) used.add(original);
+  }
   const give = (el, from) => {
     if (!from || used.has(from)) return false;
     used.add(from);
@@ -242,6 +250,8 @@ function keepPictures(previous, doc) {
   for (const el of empty()) { if (spare.length) give(el, spare.shift()); }
 }
 
+const KEEP_RULE = `An empty <div nc:keep="N"></div> is a live part of the page, such as a feed of posts, that the page fills in when it loads. Return every one of them exactly once, empty and with its nc:keep number unchanged, placed where it belongs in the new layout. `;
+
 /**
  * Change a page that was just built, without starting again from the description.
  *
@@ -250,15 +260,15 @@ function keepPictures(previous, doc) {
  * This keeps the page and changes the one thing asked for, which is both what
  * somebody means and the cheaper of the two.
  */
-export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress } = {}) {
+export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress, keep = false } = {}) {
   if (!instruction.trim()) throw new Error("Say what should be different.");
   if (instruction.length > 20000 || page.length > 300000) throw new Error("Use a shorter instruction or a smaller page.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${keep ? KEEP_RULE : ""}${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
     // The answer has to hold the whole page again, so the page is what sizes it.
   ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });
-  return preparePage(reply, { owner: ai.nc.npub, lang, previous: page,
+  return preparePage(reply, { owner: ai.nc.npub, lang, previous: page, keep,
     relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
 }
 
@@ -272,14 +282,24 @@ export async function refinePage(ai, page, instruction, { lang = "en", signal, o
  * the toolbar keeps working, the undo engine records one step, and nothing is on
  * anybody's relays until the owner presses Save, exactly like every other edit.
  */
-export function applyPage(ai, html) {
+export function applyPage(ai, html, { before } = {}) {
   const nc = ai.nc, doc = nc.doc;
+  if (!nc.isOwner) throw new Error("Only the owner can edit this page.");
+  if (before !== undefined && nc.getHTML() !== before) {
+    throw new Error("The page changed while AI was working. Go back to your instruction and generate a fresh preview.");
+  }
   const fresh = new DOMParser().parseFromString(html, "text/html");
   if (!fresh.body?.children.length) throw new Error("The rewritten page came back empty.");
   // The running scripts, the published toolbar, and whatever chrome the runtime
   // drew, including the dialog this is being pressed in.
   const KEEP = 'script[src], [nc\\:chrome], .nc-ui-chrome, .nc-edit-hint';
   return nc.undo.commit("AI page edit", () => {
+    for (const [current, next] of [[doc.documentElement, fresh.documentElement], [doc.body, fresh.body]]) {
+      for (const name of ["class", "dir", "style"]) {
+        if (next.hasAttribute(name)) current.setAttribute(name, next.getAttribute(name));
+        else current.removeAttribute(name);
+      }
+    }
     const kept = [...doc.body.children].filter((el) => el.matches(KEEP));
     const incoming = [...fresh.body.children].filter((el) => !el.matches(KEEP))
       .map((el) => doc.importNode(el, true));
@@ -291,6 +311,8 @@ export function applyPage(ai, html) {
     const title = fresh.title.trim();
     if (title) doc.title = title;
     nc.editable.refresh(); nc.blocks.refresh(); nc.dirty = true;
+    // A feed is filled in at load, and these ones arrived after it.
+    for (const el of doc.body.querySelectorAll("[nc\\:feed]")) nc.feed?.load(el).catch(() => {});
     return true;
   });
 }

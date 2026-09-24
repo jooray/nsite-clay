@@ -21,6 +21,8 @@ for (let a = 1; a <= 1 << 20; a <<= 1) k[a] = BigInt("0x" + bytesToHex(new Uint8
 const pub = Object.fromEntries(Object.entries(k).map(([a, key]) => [a, Point.BASE.multiply(key).toHex(true)]));
 
 const calls = [];
+const issued = new Map();
+let loseMintReply = false;
 const fakeFetch = async (url, opts) => {
   const path = String(url).replace(MINT + "/v1/", "");
   const body = opts?.body ? JSON.parse(opts.body) : undefined;
@@ -30,10 +32,17 @@ const fakeFetch = async (url, opts) => {
   if (path.startsWith("keys/")) return reply({ keysets: [{ id: KEYSET, unit: "sat", keys: pub }] });
   if (path === "mint/quote/bolt11") return reply({ quote: "q1", request: "lnbc...", state: "UNPAID" });
   if (path.startsWith("mint/quote/bolt11/")) return reply({ quote: "q1", state: "PAID" });
+  if (path === "restore") {
+    const outputs = body.outputs.filter((o) => issued.has(o.B_)).reverse();
+    return reply({ outputs, signatures: outputs.map((o) => issued.get(o.B_)) });
+  }
   if (path === "mint/bolt11" || path === "swap") {
-    return reply({ signatures: body.outputs.map((o) => ({
+    const signatures = body.outputs.map((o) => ({
       id: o.id, amount: o.amount, C_: Point.fromHex(o.B_).multiply(k[o.amount]).toHex(true),
-    })) });
+    }));
+    body.outputs.forEach((o, i) => issued.set(o.B_, signatures[i]));
+    if (loseMintReply) { loseMintReply = false; throw new Error("Connection dropped after the mint signed"); }
+    return reply({ signatures });
   }
   throw new Error("unexpected " + path);
 };
@@ -95,6 +104,26 @@ t("the counter was written before the mint was asked", stored.wallet.counter ===
   t("a counter that cannot be saved stops the spend", /nothing was spent/.test(msg), msg);
 }
 
+// A fresh Wallet instance has no in-memory transaction state. It must restore
+// the exact issued outputs, even when the mint returns them in a different order.
+{
+  stored = {}; calls.length = 0;
+  loseMintReply = true;
+  try { await new Wallet(nc).mint(MINT, KEYSET, "lost-reply", [1000, 1000]); } catch {}
+  t("a lost mint reply leaves its quote and counters on relays", stored.wallet.mint.quote === "lost-reply" && stored.wallet.counter === 12);
+  const tokens = await new Wallet(nc).mint(MINT, KEYSET, "lost-reply", [1000, 1000]);
+  t("a new browser restores both halves", tokens.every((token) => decodeToken(token).proofs.reduce((sum, p) => sum + p.amount, 0) === 1000));
+  t("restoration never mints or reserves twice", calls.filter((p) => p === "mint/bolt11").length === 1 && stored.wallet.counter === 12);
+  await w.finishMint();
+  t("recovery metadata clears only after the caller parks the tokens", !stored.wallet.mint && stored.wallet.counter === 12);
+}
+{
+  stored = {}; calls.length = 0;
+  const refused = new Wallet({ vault: { usable: true, async load() { return stored; }, async save() { return false; } } });
+  try { await refused.mint(MINT, KEYSET, "unsaved", [1000, 1000]); } catch {}
+  t("no payment is collected when its recovery record cannot be saved", !calls.includes("mint/bolt11"));
+}
+
 // --- splitting a token somebody already holds --------------------------------
 {
   stored = {};
@@ -116,6 +145,6 @@ t("the counter was written before the mint was asked", stored.wallet.counter ===
 
 console.log(`\n${pass}/${pass + fail} passed`);
 console.log("\nNot covered here: a real mint's responses, a real Lightning payment, and");
-console.log("NUT-09 restore after a genuinely dropped request. The mint above signs");
-console.log("correctly but is not adversarial, and no satoshi has moved.");
+console.log("a real mint's NUT-09 compatibility. Lost replies and reordered restore");
+console.log("responses are simulated above; no satoshi has moved.");
 process.exit(fail ? 1 : 0);

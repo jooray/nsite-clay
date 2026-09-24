@@ -80,9 +80,9 @@ people's leftovers.
 
 Open **[the publisher](https://nsite-clay.cypherpunk.today/deploy.html)**,
 pick a template, sign in with your key or make one on the spot, and it is online.
-You can also open **Create a page from a description with AI** in the template step. Start from
-scratch or pick a template for AI to adapt, describe the page, and check the
-preview before continuing. The generated page has editable text, a content form
+You can also describe a page for AI to build in the second step. Describe what
+you want, generate a preview, and review it before choosing an address and
+publishing. The generated page has editable text, a content form
 and blocks you can add later. The publisher supplies its owner and runtime files.
 It runs entirely in the browser: it fetches the template and the runtime from the
 site it is published on, uploads them to your Blossom servers, and signs the
@@ -161,17 +161,38 @@ update the same fields through `nc.cms.getData()` and `nc.cms.setData()`.
 
 ## AI provider settings
 
-Click the text or block you want to change, then **Edit with AI**. Describe the
-change and review the preview. **Keep this change** applies it as one undo step;
-Save publishes it. Cancelling a request or a preview leaves the page alone.
+Choose **Edit with AI** to change the whole static page. To change one part,
+click its text or block first, then choose **Only what I clicked** in the dialog.
+A whole-page rewrite keeps the page's live feeds exactly as they were and may
+move them; a result that leaves one out is refused. Pages with forms or custom
+scripts support selected-text AI edits only, because the static page builder
+cannot preserve those behaviours in a whole-page rewrite.
+Describe the change and review the preview. **Keep this change** applies it as
+one undo step; **Save** publishes it. **Back to my instruction** keeps your prompt
+so you can revise it. **Ask for another change** refines the proposed version;
+the version selector lets you return to an earlier proposal, and **Show current
+page** compares it with the unchanged page. Up to five proposed versions stay
+in this browser, under your key and this page's path. Reopen **Edit with AI**
+after reloading to resume. Download a draft or restore its JSON file to move it
+between browsers. Cancelling leaves the page alone; keeping or discarding the
+draft clears its saved copy.
 
 Open **Settings → AI settings** to choose a provider and model. The default is
 DeepSeek V4.1 Flash through `routstr.cypherpunk.today`, our Routstr node. Its
 fees help fund nsite-clay. Requests stay on that node unless you choose another.
 
-Add credit with a Cashu token or a Lightning invoice. You can check the balance
-and withdraw what remains from the same dialog. Download your AI key to use the
-credit on another site or device. Your browser stores it separately from the page.
+**Add AI credit** opens a separate amount-and-payment dialog for Lightning or
+Cashu, then returns you to your page. Before generation, the editor checks
+available Routstr credit and shows a rough price range from current model rates.
+Unknown balances are labelled unknown, and BYOK balances stay with that provider.
+
+AI settings keeps provider details under **Advanced provider settings**, backup
+controls under **Backup and recovery**, and withdrawal in its own dialog. Saving
+settings or receiving credit backs up the endpoint, provider type, model and key
+to your encrypted Nostr vault. A failed backup is shown with recovery instructions.
+The setup is separate from your published page.
+
+For model comparisons, see [the AI evaluation prompts and runner](docs/ai-evaluation.md).
 
 You can also enter another Routstr node or bring a key for an OpenAI-compatible
 API. That endpoint must allow browser requests. Changing nodes keeps their keys

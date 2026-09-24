@@ -51,6 +51,8 @@ await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
 
 const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   await nc.ready;
+  nc.ai.client.check = async (session = nc.ai.client.session()) => ({ session,
+    state: session.key ? "ready" : "noKey", canGenerate: !!session.key, available: session.key ? 100 : undefined });
   // bake() only reads tags and content, so an unsigned template is enough here.
   const finalizeEventInPage = (t) => ({ ...t, pubkey: PUB, id: "0".repeat(64), sig: "0".repeat(128) });
   const out = [];
@@ -1088,6 +1090,30 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
     t("an unfinished AI element is refused", /unfinished/i.test(await err(() => nc.ai.propose(target, "Change"))));
     nc.ai.client.complete = complete;
 
+    // This fixture carries a live feed. The sanitizer strips a feed's nc:
+    // attributes, so a whole-page rewrite has to carry it through as it was, and
+    // refuse a result that left it out rather than quietly lose it.
+    {
+      const before = nc.ai.client.complete;
+      const saved = new DOMParser().parseFromString(nc.getHTML(), "text/html").querySelector("#widget").outerHTML;
+      const page = (body) => `<!DOCTYPE html><html><head><style>body{color:#222}</style></head><body><main nc:blocks>` +
+        `<h1 editable="single-line">Kept</h1>${body}</main></body></html>`;
+      let asked;
+      nc.ai.client.complete = async (messages) => { asked = messages; return page('<section><div nc:keep="0"></div></section>'); };
+      const rewritten = new DOMParser().parseFromString((await nc.ai.proposePage("Make it dark")).page, "text/html");
+      t("a whole-page rewrite sends a feed as a place to keep", /nc:keep="0"/.test(asked[1].content) && !/nc:feed=/.test(asked[1].content));
+      t("and says what the place is for", /nc:keep/.test(asked[0].content));
+      t("the feed comes back exactly as it was, where the rewrite put it", rewritten.querySelector("section > #widget")?.outerHTML === saved);
+      nc.ai.client.complete = async () => page("");
+      t("a rewrite that leaves a feed out is refused", /left out one of the page's live feeds/.test(await err(() => nc.ai.proposePage("Make it dark"))));
+      const form = document.createElement("form"); document.body.append(form);
+      t("whole-page rewriting still refuses to discard a form", /whole-page rewrite would remove/.test(await err(() => nc.ai.proposePage("Make it dark"))));
+      form.remove();
+      nc.ai.client.complete = before;
+    }
+    const liveFeatures = [...document.querySelectorAll('[nc\\:feed], form:not([clay~="no-save"])')];
+    liveFeatures.forEach((el) => el.remove());
+
     // The dialog has to say there is no credit before somebody writes a prompt and
     // waits, and the preview has to show what is there now as well as what would
     // replace it.
@@ -1098,10 +1124,11 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       await new Promise((r) => setTimeout(r, 30));
       const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
       t("an owner with no AI credit is told before writing a prompt",
-        /credit/i.test(panel.querySelector(".nc-hint.nc-bad")?.textContent || ""));
+        /credit/i.test(panel.querySelector(".nc-ai-readiness")?.textContent || ""));
       t("and the settings button is the one offered", !!panel.querySelector("button.nc-primary"));
       t("while Generate is not pressable yet", panel.querySelector("button[type=submit]").disabled);
       panel.querySelector(".nc-cancel").click();
+      await new Promise((r) => setTimeout(r, 0));
 
       nc.ai.client.configure({ ...nc.ai.client.config, key: key || "sk-test-never-publish" });
       const complete2 = nc.ai.client.complete;
@@ -1133,20 +1160,32 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
       await finished;
       t("cancelling the preview leaves the page alone", document.querySelector("#line") === target);
 
+      const revise = nc.ai.edit(target);
+      await new Promise((r) => setTimeout(r, 30));
+      [...document.querySelectorAll(".nc-ui button")].find((b) => b.textContent === "Back to my instruction").click();
+      await new Promise((r) => setTimeout(r, 30));
+      const resumed = [...document.querySelectorAll(".nc-ui")].at(-1);
+      t("reopening a rejected edit keeps the instruction and scope", resumed.querySelector("textarea").value === "shorter" && resumed.querySelector("select").value === "element");
+      t("the editor is a labelled native modal", resumed.localName === "dialog" && resumed.matches(":modal") && !!document.getElementById(resumed.getAttribute("aria-labelledby")));
+      t("AI status updates are announced", resumed.querySelector(".nc-status").getAttribute("role") === "status");
+      resumed.querySelector(".nc-cancel").click(); await revise;
+
       // The whole page, which is the default and the thing the toolbar button is
       // about. The model returns a document; the runtime has to take its markup
       // and its styles and leave its own toolbar and scripts exactly where they
       // are, because they are what is running this.
       {
+        nc.ai.drafts.clear("edit");
         const styleCount = document.head.querySelectorAll("style:not([nc\\:chrome])").length;
         const bar = document.querySelector(".nc-bar");
-        nc.ai.client.complete = async () => `<!DOCTYPE html><html><head><title>Rebuilt</title>` +
-          `<style>body{background:#123456}</style></head><body><main nc:blocks>` +
+        nc.ai.client.complete = async (messages) => { sent = messages; return `<!DOCTYPE html><html class="new-theme"><head><title>Rebuilt</title>` +
+          `<style>body{background:#123456}</style></head><body class="new-layout"><main nc:blocks>` +
           `<h1 editable="single-line">A rebuilt page</h1><p editable>With new words on it.</p>` +
-          `</main></body></html>`;
+          `</main></body></html>`; };
         const done = nc.ai.edit(target);
         await new Promise((r) => setTimeout(r, 30));
         const ask2 = [...document.querySelectorAll(".nc-ui")].at(-1);
+        ask2.querySelector("select").value = "page";
         ask2.querySelector("textarea").value = "rebuild it";
         ask2.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
         await new Promise((r) => setTimeout(r, 150));
@@ -1155,6 +1194,7 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
         // One frame, not two: the page as it is fills the screen behind the dialog.
         t("a whole-page preview shows the rewritten page", frames2.length === 1);
         t("and it is the rewritten page", frames2[0]?.srcdoc.includes("A rebuilt page"));
+        t("a whole-page prompt excludes ownership and editor scripts", !/nc:owner|<script|nc-ui-chrome/.test(sent[1].content));
         // The dialog is tall, so the button that accepts it has to stay on screen.
         t("with the button that keeps it still reachable", (() => {
           const card = preview2.querySelector(".nc-ui-card");
@@ -1164,11 +1204,17 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
             actions.getBoundingClientRect().bottom <= card.getBoundingClientRect().bottom + 1;
         })());
         t("while the page itself is untouched until it is kept", !document.body.textContent.includes("A rebuilt page"));
+        const manual = document.createElement("p"); manual.textContent = "A concurrent edit"; document.body.append(manual);
+        preview2.querySelector("form").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 30));
+        t("a whole-page preview cannot overwrite a newer edit", manual.isConnected && /changed while AI/.test(preview2.querySelector(".nc-status").textContent));
+        manual.remove();
         preview2.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
         await done;
         t("keeping it puts the new markup in the live document", !!document.querySelector("main [editable]") &&
           document.body.textContent.includes("A rebuilt page"));
         t("its styles come with it", [...document.head.querySelectorAll("style")].some((el) => el.textContent.includes("#123456")));
+        t("its page-level styling hooks come with it", document.documentElement.classList.contains("new-theme") && document.body.classList.contains("new-layout"));
         t("the authored styles it replaced are gone", document.head.querySelectorAll("style:not([nc\\:chrome])").length <= styleCount + 1);
         t("the toolbar that was running this is still the same element", document.querySelector(".nc-bar") === bar);
         t("the runtime scripts are still in the document", !!document.querySelector('script[src*="nsite-clay"]'));
@@ -1182,6 +1228,7 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
 
     await nc.logout();
     t("AI editing requires the owner", /owner/i.test(await err(() => nc.ai.propose(target, "Change"))));
+    t("whole-page acceptance also requires the owner", /owner/i.test(await err(() => nc.ai.applyPage("<html><body><p>No</p></body></html>"))));
   }
 
   // The serialiser and its parser are a third of the runtime, and a reader has no

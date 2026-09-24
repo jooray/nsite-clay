@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.3.15",
+    "released": "2026-09-25",
+    "notes": [
+      "Paying for AI credit is safer. If the page closed or the connection dropped while your payment was being collected, the coins could be left stranded. What is needed to finish is now saved first, and Check payment picks up the same payment again rather than asking you to pay twice.",
+      "Adding AI credit now has a window of its own: choose an amount, pay, and carry on where you were. Before you ask for anything, you see your balance and a rough idea of what the request will cost.",
+      "A preview you paid for is no longer thrown away when a follow-up request fails. You can ask for further changes to a proposed page, go back to earlier versions, and compare it with the page as it is before keeping it. A draft also comes back after a reload.",
+      "Rewriting the whole page with AI now keeps your live feeds of posts exactly as they were. Before, a redesign could quietly remove them. A rewrite that leaves one out is not used, and you are told why.",
+      "A preview can no longer overwrite changes you made while the AI was working, and going back to your instruction keeps what you wrote.",
+      "Your AI provider, address and model are saved together with your key on your relays, so another device picks up the same setup.",
+      "Dialogs keep keyboard focus inside them and announce what they are doing to screen readers."
+    ]
+  },
+  {
     "version": "0.3.14",
     "released": "2026-09-23",
     "notes": [

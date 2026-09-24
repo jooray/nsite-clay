@@ -97,22 +97,50 @@ property-only changes made by scripts can call `nc.undo.recordValue(element,
 
 ### Common operations
 
-`nc.ai.settings()` opens provider, model and payment settings. `nc.ai.client`
+`nc.ai.settings()` opens the AI settings hub, with provider/model configuration
+under Advanced and backup/recovery in its own section. `nc.ai.addCredit()` opens
+the focused Lightning/Cashu flow; `nc.ai.withdraw()` opens withdrawal. `nc.ai.client`
 is the OpenAI-compatible client; its default base is
 `https://routstr.cypherpunk.today/v1` and its default model is
-`deepseek-v4-1-flash`. Settings and endpoint-bound credentials are browser-local.
+`deepseek-v4-1-flash`. Settings and endpoint-bound credentials are kept locally
+and backed up by `nc.ai.keepOnRelays()` to the owner's encrypted vault. The vault
+keeps the legacy `ai[endpoint]` key map plus `aiProfiles[endpoint]` with `mode`,
+`base` and `model`, and `aiSelected` for fresh-device restoration. `nc.ai.adopt()`
+restores the complete profile; `{ force: true }` requests an explicit restore.
+Backup failure returns false and the dialogs show recovery instructions.
 `models()`, `balance()`, `cashu(token)`, `invoice(sats)`, `invoiceStatus(invoice)`
 and `refund()` use that explicit endpoint. No node discovery or automatic retry
 of paid requests occurs. `complete(messages, { signal, onProgress, maxTokens })`
 streams text but only resolves for a complete response with `finish_reason: stop`.
 Raw stream fragments must never be applied to the live document.
 
-`await nc.ai.edit(element)` opens the prompt and preview flow. For a custom UI,
+`await nc.ai.client.check()` returns readiness, available Routstr sats after
+reservations, and current model pricing when available. States are `noKey`,
+`ready`, `insufficient`, `invalidKey`, `modelMissing`, `unavailable`, and
+`configured` for BYOK. BYOK has no standard balance API. Unknown balance is not
+reported as zero. Cost ranges are estimates, not provider quotes or spending caps.
+
+`await nc.ai.edit(element)` opens the prompt and preview flow, including proposed
+version refinement, comparison, and locally recovered drafts. Omitting the element
+selects the whole static page. Live feeds go to the model as numbered
+`nc:keep` places and come back exactly as they were; a rewrite that leaves one
+out is refused. Pages with forms or custom scripts offer element editing
+instead. For a custom UI,
 `await nc.ai.propose(element, prompt, { signal })` returns a proposal and
 `nc.ai.accept(proposal)` applies it as one undo step. Both require the owner.
 Acceptance refuses a target changed since generation began. Only the selected
 element goes to the model. Scripts, live feeds and whole-document elements are
-excluded; use the publisher's page builder to create a whole page.
+excluded from element proposals. `nc.ai.proposePage(prompt, options)` returns
+`{ page, before }`; `nc.ai.applyPage(page, { before })` checks ownership and the
+original snapshot before replacing the page as one undo step.
+
+`nc.ai.drafts.read(kind)`, `.write(kind, draft)`, `.clear(kind)` and
+`.import(kind, jsonText)` manage local drafts. Kinds are `edit` and `builder`.
+Storage is scoped to the signed-in pubkey, document path and workflow, keeps up
+to five proposed versions, and reports write failure without discarding memory.
+Draft files are sanitised again before preview or acceptance. They contain page
+content and instructions, not provider credentials, and never enter the published
+document or the relay vault.
 
 `await nc.ai.buildPage(description, { template, lang, signal, onProgress })`
 generates a static document. Omit `template` to start from scratch.

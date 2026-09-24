@@ -4,8 +4,13 @@ import { qrElement } from "./qr.js";
 import { installEditing, editDialog, propose, proposePage, accept } from "./ai-edit.js";
 import { buildPage, refinePage, applyPage, preparePage } from "./ai-builder.js";
 import { previewHTML } from "./ai-edit.js";
+import { FLOW_WORDS } from "./ai-flow-words.js";
+import { creditDialog, withdrawalDialog } from "./ai-credit.js";
+import { readinessPanel } from "./ai-status.js";
+import { AiDrafts } from "./ai-drafts.js";
 
 const WORDS = {
+  ...FLOW_WORDS,
   settings: ["AI settings", "Ajustes de IA", "Nastavenia AI", "Nastavení AI"],
   hint: ["AI uses our Cypherpunk Routstr node by default. Fees support nsite-clay. You can choose another node or use your own API key.", "La IA usa nuestro nodo Routstr Cypherpunk por defecto. Las tarifas ayudan a mantener nsite-clay. Puedes elegir otro nodo o usar tu propia clave API.", "AI predvolene používa náš Routstr node Cypherpunk. Poplatky podporujú nsite-clay. Môžeš si vybrať iný node alebo vlastný API kľúč.", "AI ve výchozím nastavení používá náš Routstr node Cypherpunk. Poplatky podporují nsite-clay. Můžeš si vybrat jiný node nebo vlastní API klíč."],
   apply: ["Save AI settings", "Guardar ajustes de IA", "Uložiť nastavenia AI", "Uložit nastavení AI"],
@@ -14,7 +19,7 @@ const WORDS = {
   endpoint: ["API base URL", "URL base de la API", "Základná URL API", "Základní URL API"],
   key: ["API key for this endpoint", "Clave API de este servidor", "API kľúč pre tento server", "API klíč pro tento server"],
   keyRoutstr: ["Node key (you get one by adding credit)", "Clave del nodo (la obtienes al añadir saldo)", "Kľúč nodu (dostaneš ho, keď pridáš kredit)", "Klíč nodu (dostaneš ho, když přidáš kredit)"],
-  keyHintRoutstr: ["Leave this empty. A Routstr node issues the key when you pay, below. Paste one only to reuse credit you already bought on another device.", "Déjalo vacío. El nodo Routstr emite la clave cuando pagas, más abajo. Pega una solo para reutilizar saldo que ya compraste en otro dispositivo.", "Nechaj prázdne. Routstr node kľúč vydá, keď nižšie zaplatíš. Vlož ho sem len vtedy, ak chceš použiť kredit, ktorý si už kúpil na inom zariadení.", "Nech prázdné. Routstr node klíč vydá, až níže zaplatíš. Vlož ho sem jen tehdy, pokud chceš použít kredit, který sis už koupil na jiném zařízení."],
+  keyHintRoutstr: ["Adding credit creates a key automatically. Paste an existing node key here only to reuse credit you already bought.", "Añadir saldo crea una clave automáticamente. Pega una clave existente solo para reutilizar saldo que ya compraste.", "Pridanie kreditu automaticky vytvorí kľúč. Existujúci kľúč vlož len na použitie už kúpeného kreditu.", "Přidání kreditu automaticky vytvoří klíč. Existující klíč vlož jen pro použití už koupeného kreditu."],
   model: ["Model ID", "ID del modelo", "ID modelu", "ID modelu"],
   models: ["Load models", "Cargar modelos", "Načítať modely", "Načíst modely"],
   local: ["Your AI key is kept out of the page. Save it to your own Nostr relays, encrypted to your key, and any device you can sign with gets it back.", "Tu clave de IA se guarda fuera de la página. Guárdala en tus propios relays de Nostr, cifrada con tu clave, y la recuperas en cualquier dispositivo con el que puedas firmar.", "AI kľúč sa neukladá do stránky. Ulož si ho na vlastné Nostr relaye, zašifrovaný tvojím kľúčom, a dostaneš ho späť na každom zariadení, ktorým vieš podpisovať.", "AI klíč se neukládá do stránky. Ulož si ho na vlastní Nostr relaye, zašifrovaný tvým klíčem, a dostaneš ho zpět na každém zařízení, kterým umíš podepisovat."],
@@ -53,12 +58,17 @@ const WORDS = {
   editHint: ["Say what should change. By default this rewrites the whole page, so you can change the design, add a section, or reword everything at once.", "Di qué quieres cambiar. Por defecto esto reescribe la página entera, así que puedes cambiar el diseño, añadir una sección o reescribirlo todo de una vez.", "Povedz, čo sa má zmeniť. Predvolene sa prepíše celá stránka, takže vieš zmeniť dizajn, pridať sekciu alebo preformulovať všetko naraz.", "Řekni, co se má změnit. Ve výchozím nastavení se přepíše celá stránka, takže umíš změnit design, přidat sekci nebo přeformulovat všechno naráz."],
   scope: ["What should AI change?", "¿Qué debe cambiar la IA?", "Čo má AI zmeniť?", "Co má AI změnit?"],
   scopePage: ["The whole page", "La página entera", "Celú stránku", "Celou stránku"],
+  staticSelection: ["AI will change only the selected text or block. Your live feeds, forms and scripts stay in place.", "La IA cambiará solo el texto o bloque seleccionado. Tus feeds, formularios y scripts se conservan.", "AI zmení len vybraný text alebo blok. Živé kanály, formuláre a skripty zostanú zachované.", "AI změní jen vybraný text nebo blok. Živé kanály, formuláře a skripty zůstanou zachovány."],
+  staticOnly: ["This page has a form or custom script that a whole-page rewrite would remove. You can edit selected text with AI. Close this dialog, click the text, then open Edit with AI again.", "Esta página tiene un formulario o script propio que una reescritura completa eliminaría. Puedes editar texto seleccionado con IA. Cierra este cuadro, pulsa el texto y vuelve a abrir Editar con IA.", "Táto stránka má formulár alebo vlastný skript, ktorý by prepis celej stránky odstránil. S AI môžeš upraviť vybraný text. Zavri toto okno, klikni na text a znova otvor Upraviť s AI.", "Tahle stránka má formulář nebo vlastní skript, který by přepis celé stránky odstranil. S AI můžeš upravit vybraný text. Zavři toto okno, klikni na text a znovu otevři Upravit s AI."],
+  feedLost: ["The new version left out one of the page's live feeds, so it was not used. Try again, or say where the feed should go.", "La nueva versión dejó fuera uno de los feeds de la página, así que no se ha usado. Inténtalo de nuevo o di dónde debe ir el feed.", "Nová verzia vynechala jeden zo živých kanálov stránky, preto sa nepoužila. Skús to znova alebo povedz, kam má kanál patriť.", "Nová verze vynechala jeden z živých kanálů stránky, proto se nepoužila. Zkus to znovu nebo řekni, kam má kanál patřit."],
   scopeElement: ["Only what I clicked", "Solo lo que he pulsado", "Len to, na čo som klikol", "Jen to, na co jsem klikl"],
   editPlaceholder: ["Make it darker and warmer, add a section about our roasting, and move the photos above the opening hours", "Ponla más oscura y cálida, añade una sección sobre nuestro tueste y mueve las fotos encima del horario", "Sprav to tmavšie a teplejšie, pridaj sekciu o našom pražení a fotky daj nad otváracie hodiny", "Udělej to tmavší a teplejší, přidej sekci o našem pražení a fotky dej nad otevírací dobu"],
   tooBig: ["This page may be too long to rewrite in one go. Click the part you want changed, then press Edit with AI again and choose it in the box.", "Puede que esta página sea demasiado larga para reescribirla de una vez. Pulsa la parte que quieres cambiar, vuelve a pulsar Editar con IA y elígela en el cuadro.", "Táto stránka je možno pridlhá na to, aby sa prepísala naraz. Klikni na časť, ktorú chceš zmeniť, znova stlač Upraviť s AI a vyber ju v okne.", "Tahle stránka je možná moc dlouhá na to, aby se přepsala najednou. Klikni na část, kterou chceš změnit, znovu stiskni Upravit s AI a vyber ji v okně."],
   reviewPage: ["This replaces the whole page. Nothing is published until you press Save, and undo brings the old page back.", "Esto sustituye la página entera. No se publica nada hasta que pulses Guardar, y deshacer recupera la página anterior.", "Toto nahradí celú stránku. Kým nestlačíš Uložiť, nič sa nezverejní, a späť vráti starú stránku.", "Tohle nahradí celou stránku. Dokud nestiskneš Uložit, nic se nezveřejní, a zpět vrátí starou stránku."],
   describe: ["What should change?", "¿Qué quieres cambiar?", "Čo sa má zmeniť?", "Co se má změnit?"],
   keep: ["Keep this change", "Aceptar este cambio", "Prijať zmenu", "Přijmout změnu"],
+  backInstruction: ["Back to my instruction", "Volver a mi instrucción", "Späť k môjmu zadaniu", "Zpět k mému zadání"],
+  kept: ["Change kept. Press Save to publish it, or Undo to go back.", "Cambio aceptado. Pulsa Guardar para publicarlo o Deshacer para volver atrás.", "Zmena prijatá. Zverejni ju tlačidlom Uložiť, alebo ju vráť tlačidlom Späť.", "Změna přijata. Zveřejni ji tlačítkem Uložit, nebo ji vrať tlačítkem Zpět."],
   preview: ["Preview", "Vista previa", "Náhľad", "Náhled"],
   generating: ["Generating…", "Generando…", "Generuje sa…", "Generuje se…"],
   thinking: ["Thinking…", "Pensando…", "Rozmýšľa…", "Rozmýšlí…"],
@@ -76,6 +86,7 @@ export class Ai {
     this.nc = nc; this.doc = nc.doc;
     let storage; try { storage = this.doc.defaultView.localStorage; } catch {}
     this.client = new AiClient(storage);
+    this.drafts = new AiDrafts(nc, storage);
   }
   say(key) {
     const lang = ["en", "es", "sk", "cs"].indexOf(this.doc.documentElement.lang.slice(0, 2));
@@ -83,10 +94,19 @@ export class Ai {
   }
 
   start() { installEditing(this); }
-  edit(target) { return editDialog(this, target); }
+  edit(target) {
+    if (!this._editing) this._editing = editDialog(this, target).finally(() => { this._editing = null; });
+    return this._editing;
+  }
+  addCredit() {
+    if (!this._funding) this._funding = creditDialog(this).finally(() => { this._funding = null; });
+    return this._funding;
+  }
+  withdraw() { return withdrawalDialog(this); }
+  readiness(parent, options) { return readinessPanel(this, parent, options); }
   propose(target, prompt, options) { return propose(this, target, prompt, options); }
   proposePage(prompt, options) { return proposePage(this, prompt, options); }
-  applyPage(html) { return applyPage(this, html); }
+  applyPage(html, options) { return applyPage(this, html, options); }
   accept(proposal) { return accept(this, proposal); }
   buildPage(description, options) { return buildPage(this, description, options); }
   refinePage(page, instruction, options) { return refinePage(this, page, instruction, options); }
@@ -108,25 +128,28 @@ export class Ai {
    * Returns true when a key is now in hand. Every failure is quiet and leaves
    * things exactly as they were: this runs before somebody asked for anything.
    */
-  adopt() {
-    if (this.client.session().key) return Promise.resolve(true);
+  adopt({ force = false, base } = {}) {
+    if (!force && this.client.session().key) return Promise.resolve(true);
     // Signing in, opening the toolbar and opening the dialog can all ask within
     // a second of each other. One lookup answers all three, and a different key
     // signing in is a different question.
     const who = this.nc.pubkey || "";
-    if (this._adoptedFor !== who) { this._adoptedFor = who; this._adopting = this._adopt(); }
+    if (force || this._adoptedFor !== who) { this._adoptedFor = who; this._adopting = this._adopt(base, force); }
     return this._adopting;
   }
 
-  async _adopt() {
+  async _adopt(requestedBase, preferSaved = false) {
     const vault = this.nc.vault;
     if (!vault?.usable) return false;
+    const who = this.nc.pubkey;
     let data;
     try { data = await vault.load({ force: true }); } catch { return false; }
+    if (who !== this.nc.pubkey) return false;
     const stored = data?.ai;
     if (!stored || typeof stored !== "object") return false;
-    const here = this.client.session().base;
-    if (typeof stored[here] === "string" && stored[here].trim()) return this.take(stored[here], here);
+    const here = requestedBase || ((preferSaved || !this.client.data.config) && data.aiSelected) || this.client.session().base;
+    if (typeof stored[here] === "string" && stored[here].trim()) return this.restoreProfile(here, stored[here], data.aiProfiles?.[here]);
+    if (requestedBase) return false;
     // The credit may sit on a node this browser is not pointed at, because the
     // node is chosen per browser and the credit is not. One stored node is not
     // ambiguous, so follow it; several would be a guess, and guessing which node
@@ -134,8 +157,33 @@ export class Ai {
     const others = Object.entries(stored).filter(([, k]) => typeof k === "string" && k.trim());
     if (others.length !== 1) return false;
     const [base, key] = others[0];
-    try { this.client.configure({ ...this.client.config, base, key }); return true; }
-    catch { return false; }
+    return this.restoreProfile(base, key, data.aiProfiles?.[base]);
+  }
+
+  restoreProfile(base, key, profile) {
+    const config = profile || { ...this.client.config, base };
+    try {
+      if (config.base !== base || aiEndpoint(base, config.mode) !== base || !config.model?.trim()) return false;
+      this.client.configure({ ...config, key });
+    } catch {
+      // configure can succeed in memory while localStorage is unavailable.
+      return this.client.session().base === base && this.client.session().key === key;
+    }
+    return true;
+  }
+
+  relayData(current, base = this.client.config.base) {
+    return { ai: { ...(current?.ai || {}), [base]: this.client.record(base).key },
+      aiProfiles: { ...(current?.aiProfiles || {}), [base]: this.client.profile(base) }, aiSelected: base };
+  }
+
+  downloadKey() {
+    this.download(this.client.session(), "nsite-clay-ai-key.json");
+  }
+  download(value, name, type = "application/json") {
+    const url = URL.createObjectURL(new Blob([typeof value === "string" ? value : JSON.stringify(value, null, 2)], { type }));
+    const a = this.doc.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   /**
@@ -152,8 +200,11 @@ export class Ai {
     if (!key || !vault?.usable) return false;
     try {
       const current = await vault.load();
-      if (current?.ai?.[base] === key) return true;
-      return await vault.save({ ai: { ...(current?.ai || {}), [base]: key } });
+      if (current === null) return false;
+      const patch = this.relayData(current, base);
+      if (current?.ai?.[base] === key && current.aiSelected === base &&
+        JSON.stringify(current.aiProfiles?.[base]) === JSON.stringify(patch.aiProfiles[base])) return true;
+      return await vault.save(patch);
     } catch { return false; }
   }
 
@@ -178,23 +229,31 @@ export class Ai {
     // rather than being empty next to a button called "Restore from my relays".
     // Bounded by the vault's own timeouts, and a failure just leaves it empty.
     if (this.nc.isOwner) await this.adopt().catch(() => false);
-    let mode, base, key, model;
-    await modal({ doc: this.doc, title: say("settings"), hint: say("hint"), submitLabel: say("apply"),
+    let mode, base, key, model, backedUp = true;
+    const result = await modal({ doc: this.doc, title: say("settings"), hint: say("hint"), submitLabel: say("apply"),
       build: (body, h) => {
         const current = client.session();
-        mode = field(body, { label: say("provider"), value: current.mode, options: [
+        const readiness = this.readiness(body); readiness.refresh();
+        const payments = this.doc.createElement("div"); payments.className = "nc-row"; body.append(payments);
+        const section = (name) => {
+          const el = this.doc.createElement("details"), title = this.doc.createElement("summary");
+          title.textContent = say(name); el.append(title); body.append(el); return el;
+        };
+        const advanced = section("advanced"); advanced.className = "nc-ai-provider";
+        advanced.open = current.mode === "byok" && !current.key;
+        mode = field(advanced, { label: say("provider"), value: current.mode, options: [
           { value: "routstr", label: "Routstr (Cashu / Lightning)" }, { value: "byok", label: say("byok") }] });
-        base = field(body, { label: say("endpoint"), value: current.base });
-        key = field(body, { label: say("key"), type: "password", value: current.key });
+        base = field(advanced, { label: say("endpoint"), value: current.base });
+        key = field(advanced, { label: say("key"), type: "password", value: current.key });
         // With Routstr this field is an output, not a question: the node issues the
         // key when you pay. Saying so is the difference between an empty box you are
         // expected to fill and an empty box that is empty on purpose.
         const keyHint = this.doc.createElement("p"); keyHint.className = "nc-hint";
         (key.closest(".nc-field") || key).after(keyHint);
-        model = field(body, { label: say("model"), value: current.model });
+        model = field(advanced, { label: say("model"), value: current.model });
         const options = this.doc.createElement("datalist"); options.id = model.id + "-models";
-        model.setAttribute("list", options.id); body.append(options);
-        const rates = this.doc.createElement("p"); rates.className = "nc-hint"; body.append(rates);
+        model.setAttribute("list", options.id); advanced.append(options);
+        const rates = this.doc.createElement("p"); rates.className = "nc-hint"; advanced.append(rates);
         let models = [], working = false;
         const session = () => ({ mode: mode.value, base: aiEndpoint(base.value, mode.value), key: key.value.trim(), model: model.value.trim() });
         const apply = () => client.configure(session());
@@ -208,7 +267,7 @@ export class Ai {
             controls.forEach(([el]) => { el.disabled = true; });
             h.busy(true); h.status(say("working"));
             try { h.status((await fn()) || ""); } catch (e) { h.status(e.message, true); }
-            finally { working = false; controls.forEach(([el, disabled]) => { el.disabled = disabled; }); h.busy(false); }
+            finally { working = false; controls.forEach(([el, disabled]) => { el.disabled = disabled; }); gate(); h.busy(false); }
           };
           return b;
         };
@@ -217,70 +276,47 @@ export class Ai {
           rates.textContent = p ? `${(p.prompt * 1000).toFixed(3)} / ${(p.completion * 1000).toFixed(3)} ${say("rates")}` : "";
         };
         model.addEventListener("input", price);
-        button(body, "models", async () => {
+        button(advanced, "models", async () => {
           const selected = session(); models = await client.models(selected); options.replaceChildren();
           for (const m of models) { const o = this.doc.createElement("option"); o.value = m.id; o.label = m.name || m.id; options.append(o); }
           price();
         });
-        const note = this.doc.createElement("p"); note.className = "nc-hint"; note.textContent = say("local"); body.append(note);
+        const backups = section("backups");
+        const note = this.doc.createElement("p"); note.className = "nc-hint"; note.textContent = say("local"); backups.append(note);
         // The credit somebody paid for should not depend on one browser's storage,
         // and a downloaded file is a chore people do not do and cannot do on a
         // phone. It goes to their own relays, encrypted to their own key.
         const vault = this.nc.vault;
-        button(body, "backup", async () => {
+        button(backups, "backup", async () => {
           const s = apply(); if (!s.key) throw new Error(say("needKey"));
           if (!vault?.usable) throw new Error(say("noVault"));
-          const ok = await vault.save({ ai: { ...(await vault.load())?.ai, [s.base]: s.key } });
-          if (!ok) throw new Error("No relay accepted it. Your key is still in this browser.");
+          const ok = await this.keepOnRelays(s.base);
+          if (!ok) throw new Error(say("backupFailed"));
           return say("saved");
         });
-        button(body, "restore", async () => {
+        button(backups, "restore", async () => {
           if (!vault?.usable) throw new Error(say("noVault"));
-          const data = await vault.load({ force: true });
-          if (data === null) throw new Error("The stored copy could not be read.");
-          const found = data.ai?.[aiEndpoint(base.value, mode.value)];
-          if (!found) throw new Error(say("nothingStored"));
-          key.value = found; apply(); gate();
+          if (!await this.adopt({ force: true })) throw new Error(say("restoreFailed"));
+          const found = client.session();
+          mode.value = found.mode; base.value = found.base; key.value = found.key; model.value = found.model;
+          advanced.open = true; gate(); await readiness.refresh();
           return say("restored");
         });
         // Kept, demoted: relays can be unreachable and some signers cannot encrypt.
-        button(body, "download", () => {
+        button(backups, "download", () => {
           const s = apply(); if (!s.key) throw new Error(say("needKey"));
-          const url = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }));
-          const a = this.doc.createElement("a"); a.href = url; a.download = "nsite-clay-ai-key.json"; a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          this.downloadKey();
         });
-        button(body, "forget", () => { key.value = ""; apply(); gate(); });
-        const payments = this.doc.createElement("div"); body.append(payments);
-        const showBalance = async () => {
-          const result = await client.balance(apply());
-          balance.textContent = `${(Number(result.balance) / 1000).toLocaleString()} sats`;
-        };
-        const balance = this.doc.createElement("p"); balance.className = "nc-hint"; payments.append(balance);
-        button(payments, "balance", showBalance);
-        const amount = field(payments, { label: say("amount"), type: "number", value: "100" }); amount.min = "1"; amount.max = "1000000"; amount.step = "1";
-        button(payments, "lightning", async () => {
-          const s = apply();
-          const invoice = client.record(s.base).invoice || await client.invoice(Number(amount.value), s);
-          const paid = await this.showInvoice(invoice, s); key.value = client.record(s.base).key || "";
-          if (key.value) { await this.keepOnRelays(s.base); await showBalance(); }
-          return paid ? say("paid") : "";
-        });
-        const token = field(payments, { label: say("cashu"), type: "password", value: client.record().deposit || "" });
-        button(payments, "deposit", async () => {
-          const s = apply(); await client.cashu(token.value, s); token.value = "";
-          key.value = client.record(s.base).key || "";
-          await this.keepOnRelays(s.base); await showBalance(); return say("paid");
+        button(backups, "forget", async () => { key.value = ""; apply(); gate(); await readiness.refresh(); });
+        button(payments, "addCredit", async () => {
+          apply(); await this.addCredit(); key.value = client.session().key; gate(); await readiness.refresh();
         });
         const refundDisplay = (result) => notice(result?.token ? say("refundHint") : result?.status || "", {
           doc: this.doc, title: say("refund"), detail: result?.token || JSON.stringify(result),
           labels: { copy: say("copy"), copied: say("copied"), close: say("close") },
         });
-        const payTo = field(payments, { label: say("payTo"), value: "", placeholder: "name@example.com" });
-        const payToHint = this.doc.createElement("p"); payToHint.className = "nc-hint";
-        payToHint.textContent = say("payToHint"); (payTo.closest(".nc-field") || payTo).after(payToHint);
-        button(payments, "refund", async () => { refundDisplay(await client.refund(apply(), payTo.value)); });
-        button(payments, "lastRefund", () => { const result = client.record(session().base).refund; if (result) refundDisplay(result); });
+        button(payments, "refund", async () => { apply(); await this.withdraw(); await readiness.refresh(); });
+        button(backups, "lastRefund", () => { const result = client.record(session().base).refund; if (result) refundDisplay(result); });
         // Asking a node about a balance that does not exist yet is how you get a
         // raw 422 on screen. Until there is a key, the only thing on offer is
         // buying one.
@@ -298,15 +334,21 @@ export class Ai {
         };
         const changed = () => {
           try { key.value = client.record(aiEndpoint(base.value, mode.value)).key || ""; } catch { key.value = ""; }
-          models = []; options.replaceChildren(); rates.textContent = ""; balance.textContent = ""; token.value = "";
+          models = []; options.replaceChildren(); rates.textContent = "";
           gate();
         };
         base.addEventListener("input", changed); mode.addEventListener("change", changed);
         key.addEventListener("input", gate);
         gate();
       },
-      onSubmit: () => client.configure({ mode: mode.value, base: base.value, key: key.value, model: model.value }),
+      onSubmit: async () => {
+        const selected = client.configure({ mode: mode.value, base: base.value, key: key.value, model: model.value });
+        if (selected.key) backedUp = await this.keepOnRelays();
+        return selected;
+      },
     });
+    if (result && !backedUp) notice(say("backupFailed"), { doc: this.doc, title: say("backups"), bad: true });
+    return result;
   }
 
   async showInvoice(invoice, session) {
@@ -316,6 +358,9 @@ export class Ai {
       checking = true;
       try {
         const out = await this.client.invoiceStatus(invoice, session);
+        if (out.status === "paid" && closed && !await this.keepOnRelays(session.base)) {
+          notice(this.say("backupFailed"), { doc: this.doc, title: this.say("backups"), bad: true });
+        }
         if (closed) return;
         if (out.status === "paid") { helpers.close(true); return; }
         if (out.status === "expired") {

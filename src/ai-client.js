@@ -3,6 +3,18 @@
 export const AI_DEFAULTS = Object.freeze({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash" });
 const STORAGE = "nsite-clay.ai";
 
+// Estimates include room for reasoning. They are a planning range, not a quote
+// or the provider's reservation, and never a reason to refuse a paid request.
+export function estimateAiCost(pricing, chars = 0, kind = "page") {
+  if (pricing?.prompt == null || pricing?.completion == null || pricing.prompt === "" || pricing.completion === "") return null;
+  const input = Number(pricing?.prompt), output = Number(pricing?.completion);
+  if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0) return null;
+  const inputTokens = 1000 + Math.ceil(Math.max(0, chars) / 3);
+  const [low, high] = kind === "element" ? [500, 4000] : [8000, 32000];
+  return { low: inputTokens * input + low * output, high: inputTokens * input + high * output,
+    inputPerK: input * 1000, outputPerK: output * 1000 };
+}
+
 export function aiEndpoint(value, mode = "routstr") {
   const url = new URL(String(value).trim());
   if (url.username || url.password || url.search || url.hash) throw new Error("Use an API URL without credentials, query parameters or a fragment.");
@@ -46,10 +58,14 @@ export class AiClient {
   }
   record(base = this.config.base) { return this.data.nodes[base] ||= {}; }
   session() { return { ...this.config, key: this.record().key || "" }; }
+  profile(base = this.config.base) {
+    return { ...(base === this.config.base ? this.config : this.record(base).profile), base };
+  }
   configure({ mode, base, model, key } = {}) {
     const next = { mode: mode === "byok" ? "byok" : "routstr", base: aiEndpoint(base || AI_DEFAULTS.base, mode), model: String(model || "").trim() };
     if (!next.model) throw new Error("Choose a model or enter its model ID.");
     this.config = next; this.data.config = next;
+    this.record(next.base).profile = { ...next };
     if (key !== undefined) this.record(next.base).key = String(key).trim();
     this.persist();
     return this.session();
@@ -94,8 +110,8 @@ export class AiClient {
         // A Routstr node answers 422 to a balance question asked with no key. The
         // node is right and the question was wrong: there is nothing to ask about
         // until credit has been added, and "HTTP 422" says none of that.
-        if (!session.key) message = "There is no key for this node yet. Add credit below and the node issues one.";
-        throw new Error(message);
+        if (!session.key && path === "/balance/info") message = "There is no key for this node yet. Add credit below and the node issues one.";
+        throw Object.assign(new Error(message), { status: response.status });
       }
       return raw ? response : await response.json();
     } finally {
@@ -105,14 +121,37 @@ export class AiClient {
     }
   }
 
-  async models(session = this.session()) {
-    const data = await this.request("/models", { session, publicRequest: session.mode === "routstr" });
+  async models(session = this.session(), options = {}) {
+    const data = await this.request("/models", { ...options, session, publicRequest: session.mode === "routstr" });
     if (!Array.isArray(data.data)) throw new Error("The endpoint did not return a model list. Enter the model ID manually.");
     return data.data.filter((m) => m.id && m.enabled !== false && (!m.architecture?.output_modalities || m.architecture.output_modalities.includes("text")));
   }
   routstr(session) { if (session.mode !== "routstr") throw new Error("Credit controls are available for Routstr nodes."); }
-  balance(session = this.session()) { this.routstr(session); return this.request("/balance/info", { session }); }
+  balance(session = this.session(), options = {}) { this.routstr(session); return this.request("/balance/info", { ...options, session }); }
   info(session = this.session()) { this.routstr(session); return this.request("/info", { session, publicRequest: true }); }
+
+  async check(session = this.session()) {
+    // OpenAI-compatible APIs have no standard balance endpoint. A configured key
+    // is not proof of either its validity or available funds.
+    if (session.mode !== "routstr") return { state: session.key ? "configured" : "noKey", session, canGenerate: !!session.key };
+    const [funds, models] = await Promise.allSettled([
+      session.key ? this.balance(session, { timeout: 8000 }) : Promise.resolve(null),
+      this.models(session, { timeout: 8000 }),
+    ]);
+    const model = models.status === "fulfilled" ? models.value.find((m) => m.id === session.model) : null;
+    const result = { session, pricing: model?.sats_pricing || null, checkedAt: Date.now(), canGenerate: false };
+    if (!session.key) return { ...result, state: "noKey" };
+    if (funds.status === "rejected") return { ...result,
+      state: funds.reason.status === 401 ? "invalidKey" : "unavailable", canGenerate: funds.reason.status !== 401 };
+    const balance = funds.value?.balance, reserved = funds.value?.reserved ?? 0;
+    if (balance === null || balance === undefined || !Number.isFinite(Number(balance)) || !Number.isFinite(Number(reserved))) {
+      return { ...result, state: "unavailable", canGenerate: true };
+    }
+    const available = Math.max(0, Number(balance) - Number(reserved)) / 1000;
+    if (available === 0) return { ...result, state: "insufficient", available };
+    if (models.status === "fulfilled" && !model) return { ...result, state: "modelMissing", available };
+    return { ...result, state: "ready", available, canGenerate: true };
+  }
 
   async cashu(token, session = this.session()) {
     this.routstr(session);
@@ -142,6 +181,7 @@ export class AiClient {
     const out = await this.request(`/v2/lightning/invoice/${encodeURIComponent(invoice.invoice_id)}/status`, { session, publicRequest: true });
     if (out.status === "paid") {
       if (out.api_key) this.setKey(out.api_key, session.base);
+      if (!this.record(session.base).key) throw new Error("Payment received, but the node has not returned your AI key yet. Check this payment again; do not pay twice.");
       delete this.record(session.base).invoice; this.persist();
     }
     return out;

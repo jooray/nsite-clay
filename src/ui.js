@@ -24,6 +24,7 @@ const CSS = `
 }
 .nc-ui {
   position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center;
+  width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0;
   background: var(--nc-scrim, rgba(6,4,12,.62)); padding: 1rem;
   font: 15px/1.55 var(--nc-chrome-font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
 }
@@ -37,10 +38,11 @@ const CSS = `
   border: 1px solid var(--nc-edge, #322c40); border-radius: var(--nc-radius, 14px);
   padding: 1.25rem; box-shadow: var(--nc-shadow, 0 30px 80px -30px rgba(0,0,0,.8));
 }
-.nc-ui-card > .nc-body { overflow: auto; min-height: 0; flex: 1 1 auto; }
+.nc-ui-card > .nc-body { overflow: auto; scrollbar-gutter: stable; padding: 2px; min-height: 0; flex: 1 1 auto; }
 .nc-ui-card > h3, .nc-ui-card > p.nc-hint, .nc-ui-card > .nc-actions { flex: 0 0 auto; }
 .nc-ui-card h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
 .nc-ui-card p.nc-hint { margin: 0 0 1rem; color: var(--nc-ink-dim, #9a92ad); font-size: .86rem; }
+.nc-ui-card p.nc-hint { overflow-wrap: anywhere; }
 .nc-ui label { display: block; font-size: .78rem; color: var(--nc-ink-dim, #9a92ad); margin: .85rem 0 .3rem; }
 .nc-ui .nc-field { margin-top: .85rem; }
 .nc-ui .nc-field label { margin: 0 0 .3rem; }
@@ -55,6 +57,10 @@ const CSS = `
 .nc-ui .nc-row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
 .nc-ui .nc-row > .nc-field { flex: 1 1 8rem; }
 .nc-ui .nc-field label { margin-top: 0; }
+.nc-ui details { margin-top: 1rem; }
+.nc-ui summary { cursor: pointer; font-weight: 600; }
+.nc-ui .nc-ai-readiness { margin: .85rem 0; }
+.nc-ui .nc-ai-readiness p.nc-hint { margin-bottom: .5rem; }
 .nc-ui .nc-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.2rem; flex-wrap: wrap; align-items: center; }
 .nc-ui button {
   font: inherit; font-size: .88rem; padding: .5rem .95rem; cursor: pointer;
@@ -160,7 +166,7 @@ export function toast(message, { doc = document, ms = 2600 } = {}) {
   el.setAttribute("nc:chrome", "");
   el.setAttribute("role", "status");
   el.textContent = message;
-  doc.body.appendChild(el);
+  ([...doc.querySelectorAll("dialog.nc-ui[open]")].at(-1) || doc.body).appendChild(el);
   setTimeout(() => el.remove(), ms);
   return el;
 }
@@ -208,7 +214,7 @@ export function notice(message, { doc = document, title = "", detail = "", bad =
       const ta = doc.createElement("textarea");
       ta.value = text;
       ta.style.cssText = "position:fixed;opacity:0";
-      doc.body.appendChild(ta);
+      el.appendChild(ta);
       ta.select();
       try { doc.execCommand("copy"); } catch { /* nothing left to try */ }
       ta.remove();
@@ -223,7 +229,7 @@ export function notice(message, { doc = document, title = "", detail = "", bad =
   actions.append(copy, close);
   el.appendChild(actions);
 
-  doc.body.appendChild(el);
+  ([...doc.querySelectorAll("dialog.nc-ui[open]")].at(-1) || doc.body).appendChild(el);
   return el;
 }
 
@@ -245,13 +251,17 @@ function cancelLabel(doc) {
 // stack the outer one hears the key too and a single press closes the lot,
 // including the dialog the person was actually looking at.
 const openModals = [];
+let modalId = 0;
 
 export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, doc = document, wide = false, noCancel = false }) {
   styles(doc);
   return new Promise((resolve) => {
-    const root = doc.createElement("div");
+    const previousFocus = doc.activeElement;
+    let closed = false, submitting = false;
+    const root = doc.createElement("dialog");
     root.className = "nc-ui";
     root.setAttribute("nc:chrome", "");
+    root.setAttribute("aria-modal", "true");
     const card = doc.createElement("form");
     card.className = "nc-ui-card";
     if (wide) card.style.width = "min(52rem, 100%)";
@@ -261,21 +271,32 @@ export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, do
       `<button type="button" class="nc-cancel"></button>` +
       `<button type="submit" class="nc-primary"></button></div>`;
     card.querySelector("h3").textContent = title;
+    card.querySelector("h3").id = `nc-dialog-${++modalId}`;
+    root.setAttribute("aria-labelledby", card.querySelector("h3").id);
     if (hint) card.querySelector(".nc-hint").textContent = hint;
     card.querySelector(".nc-primary").textContent = submitLabel;
     card.querySelector(".nc-cancel").textContent = cancelLabel(doc);
     if (noCancel) card.querySelector(".nc-cancel").remove();
 
     const status = card.querySelector(".nc-status");
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
     const primary = card.querySelector(".nc-primary");
     const helpers = {
       status(msg, bad = false) { status.textContent = msg || ""; status.classList.toggle("nc-bad", !!bad); },
       busy(on) { primary.disabled = !!on; },
+      label(text) { primary.textContent = text; },
       close(value) {
+        if (closed) return;
+        closed = true;
+        root.close();
+        const destination = [...doc.querySelectorAll("dialog.nc-ui[open]")].at(-1) || doc.body;
+        for (const el of [...root.children]) if (el.matches(".nc-notice, .nc-toast")) destination.append(el);
         root.remove();
         doc.removeEventListener("keydown", esc, true);
         const i = openModals.indexOf(helpers);
         if (i >= 0) openModals.splice(i, 1);
+        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
         resolve(value ?? null);
       },
     };
@@ -291,20 +312,24 @@ export function modal({ title, hint, submitLabel = "Insert", build, onSubmit, do
     root.onclick = (e) => { if (e.target === root) helpers.close(null); };
     card.onsubmit = async (e) => {
       e.preventDefault();
+      if (closed || submitting || primary.disabled) return;
+      submitting = true;
       helpers.busy(true);
       try {
         const out = await onSubmit(helpers);
         if (out !== undefined) helpers.close(out);
       } catch (err) {
         helpers.status(err.message || String(err), true);
-      } finally { helpers.busy(false); }
+      } finally { submitting = false; helpers.busy(false); }
     };
 
     root.appendChild(card);
     doc.body.appendChild(root);
+    root.showModal();
     openModals.push(helpers);
     doc.addEventListener("keydown", esc, true);
-    card.querySelector("input, textarea, select")?.focus();
+    (card.querySelector("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") ||
+      card.querySelector("button:not([disabled])"))?.focus();
   });
 }
 
