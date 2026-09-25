@@ -413,6 +413,31 @@ Signing takes either a raw key (`--sec`, or `NOSTR_SECRET_KEY`) or a remote sign
 (`--bunker="bunker://…"`, or `NOSTR_BUNKER_URI`). A bunker keeps the key off the machine running
 the deploy, so a CI runner never holds it.
 
+### What gets published
+
+**Everything in the directory is published**, except dotfiles, and a published blob cannot be
+taken back: it is content-addressed, and the manifest naming it is signed and public. Keep the
+directory to what the page needs, and leave the rest out explicitly:
+
+```gitignore
+# .nsiteignore, next to index.html, in gitignore syntax
+README.md
+*.sh
+drafts/
+notes/*
+!notes/public.md
+```
+
+`--exclude=<glob>` does the same from the command line; repeat it or separate patterns with
+commas. A pattern with a slash is anchored to the directory being published, one without matches
+a name at any depth, and a trailing slash matches directories only. `--dry-run` lists what would
+be published and what was left out, publishes nothing, and needs no key.
+
+Files that look like keys are refused even without an ignore file: `*.pem`, `*.key`, `*.p12`,
+`*.pfx`, `*.ppk`, `*.macaroon`, `id_rsa` and its siblings, `npmrc`, and names like `env.backup`
+or `nsec.txt`. A web asset is never refused by its name alone, so `what-is-nsec.html` publishes.
+`--publish-secrets` overrides the rule.
+
 ### Where your site ends up
 
 A key has one **root site** and any number of **named sites**:

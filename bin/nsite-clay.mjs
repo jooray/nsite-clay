@@ -226,21 +226,103 @@ async function upload(server, bytes, type, signer) {
 // never take back: a blob is content-addressed and the manifest naming it is
 // signed and public. A dotfile is already skipped below, which covers .env and
 // .ssh, but the same secret under a name the shell does not hide is not:
-// admin.macaroon, id_rsa, server.pem, env.backup all publish today.
+// admin.macaroon, id_rsa, server.pem, env.backup all publish otherwise.
 //
-// Refusing costs a user nothing except the surprise. Anyone who means to serve
-// one of these can rename it.
-const SECRET_FILE = /(^|\.)(env|envrc)(\.|$)|\.(pem|key|p12|pfx|macaroon|ppk)$|^id_(rsa|dsa|ecdsa|ed25519)$|^\.?npmrc$|(^|[-_.])nsec([-_.]|$)/i;
+// Two rules, because they fail differently. An extension like .pem or .macaroon
+// is never a web asset, so it is refused whatever it is called. A name that
+// merely mentions env or nsec is refused only when it is not a web asset
+// either: what-is-nsec.html and app.env.js are pages, and refusing a page is a
+// worse surprise than any rename. --publish-secrets overrides both.
+const SECRET_EXT = /\.(pem|key|p12|pfx|macaroon|ppk)$/i;
+const SECRET_NAME = /(^|\.)(env|envrc)(\.|$)|^id_(rsa|dsa|ecdsa|ed25519)$|^\.?npmrc$|(^|[-_.])nsec([-_.]|$)/i;
+const WEB_ASSET = /\.(html?|css|m?js|json|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|mp4|webm|mp3|ogg|wav)$/i;
+const looksSecret = (name) => SECRET_EXT.test(name) || (SECRET_NAME.test(name) && !WEB_ASSET.test(name));
 
-function walk(base, cur = base, out = [], skipped = []) {
-  for (const name of readdirSync(cur)) {
-    if (name.startsWith(".")) continue;
-    const p = join(cur, name);
-    if (statSync(p).isDirectory()) { walk(base, p, out, skipped); continue; }
-    if (SECRET_FILE.test(name)) { skipped.push(relative(base, p).split("\\").join("/")); continue; }
-    out.push(p);
+// .nsiteignore, in gitignore syntax, and --exclude=<glob>, which may be given
+// more than once or as a comma-separated list. The last rule that matches
+// decides, so a later !pattern brings a file back. A pattern with a slash
+// anywhere but its end is anchored to the directory being published; one
+// without matches a name at any depth. A trailing slash matches directories
+// only, and a directory left out takes everything under it along.
+function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*" && glob[i + 1] === "*") {
+      const slash = glob[i + 2] === "/";
+      re += slash ? "(?:.*/)?" : ".*";
+      i += slash ? 2 : 1;
+    } else if (c === "*") re += "[^/]*";
+    else if (c === "?") re += "[^/]";
+    else if (c === "[") {
+      const end = glob.indexOf("]", i + 1);
+      if (end < 0) { re += "\\["; continue; }
+      re += "[" + glob.slice(i + 1, end).replace(/^!/, "^").replace(/\\/g, "\\\\") + "]";
+      i = end;
+    } else re += c.replace(/[.+^${}()|\\]/g, "\\$&");
+  }
+  return re;
+}
+
+function ignoreRules(lines) {
+  const rules = [];
+  for (let line of lines) {
+    line = line.replace(/(?<!\\)\s+$/, "");
+    if (!line || line.startsWith("#")) continue;
+    const negate = line.startsWith("!");
+    if (negate) line = line.slice(1);
+    const dirOnly = line.endsWith("/");
+    if (dirOnly) line = line.slice(0, -1);
+    const anchored = line.includes("/");
+    line = line.replace(/^\//, "");
+    if (!line) continue;
+    rules.push({ negate, dirOnly, anchored, re: new RegExp("^" + globToRegExp(line) + "$") });
+  }
+  return rules;
+}
+
+function ignored(rules, rel, isDir) {
+  let out = false;
+  const name = rel.slice(rel.lastIndexOf("/") + 1);
+  for (const r of rules) {
+    if (r.dirOnly && !isDir) continue;
+    if (r.re.test(r.anchored ? rel : name)) out = !r.negate;
   }
   return out;
+}
+
+function walk(base, { rules = [], publishSecrets = false } = {}, cur = base, found = { files: [], secrets: [], ignored: [] }) {
+  for (const name of readdirSync(cur).sort()) {
+    if (name.startsWith(".")) continue;
+    const p = join(cur, name);
+    const rel = relative(base, p).split("\\").join("/");
+    const isDir = statSync(p).isDirectory();
+    if (ignored(rules, rel, isDir)) { found.ignored.push(isDir ? rel + "/" : rel); continue; }
+    if (isDir) { walk(base, { rules, publishSecrets }, p, found); continue; }
+    if (!publishSecrets && looksSecret(name)) { found.secrets.push(rel); continue; }
+    found.files.push(p);
+  }
+  return found;
+}
+
+// What a deploy of `dir` publishes, saying out loud what it leaves behind.
+function selectFiles(dir) {
+  const file = join(dir, ".nsiteignore");
+  const lines = existsSync(file) ? readFileSync(file, "utf8").split(/\r?\n/) : [];
+  // Every --exclude counts, not only the last one the flag table kept.
+  for (const a of argv) if (a.startsWith("--exclude=")) lines.push(...a.slice(10).split(",").map((s) => s.trim()));
+  const found = walk(dir, { rules: ignoreRules(lines), publishSecrets: !!flags["publish-secrets"] });
+  if (found.ignored.length) {
+    console.log(`Leaving out ${found.ignored.length} matched by .nsiteignore or --exclude:`);
+    for (const s of found.ignored) console.log(`  ${s}`);
+  }
+  if (found.secrets.length) {
+    console.log(`Not publishing ${found.secrets.length} file(s) that look like secrets:`);
+    for (const s of found.secrets) console.log(`  ${s}`);
+    console.log(`Pass --publish-secrets to publish them anyway.`);
+  }
+  if (!found.files.length) die(`${dir} has nothing to publish`);
+  return found.files;
 }
 
 // NIP-5A aggregate hash: sha256 over sorted "<hash> <path>\n" lines, path tags
@@ -321,19 +403,20 @@ async function cmdDeploy() {
     if (site) die("--site must be 1-13 characters of [a-z0-9-] and must not end with a dash");
   }
 
+  // Chosen before the signer is asked for anything, so what is being left out
+  // is on screen before a bunker prompt, and --dry-run needs no key at all.
+  const files = selectFiles(dir);
+  if (flags["dry-run"]) {
+    console.log(`Would publish ${files.length} file(s):`);
+    for (const f of files) console.log(`  /${relative(dir, f).split("\\").join("/")}`);
+    return;
+  }
+
   const signer = await getSigner();
   const pub = signer.pubkey;
 
   const fingerprint = !flags["no-fingerprint"];
   const isHtml = (f) => /\.html?$/i.test(f);
-  const skipped = [];
-  const files = walk(dir, dir, [], skipped);
-  if (skipped.length) {
-    console.log(`Not publishing ${skipped.length} file(s) that look like secrets:`);
-    for (const s of skipped) console.log(`  ${s}`);
-    console.log(`Rename one to publish it anyway.`);
-  }
-  if (!files.length) die(`${dir} is empty`);
   const contents = new Map(files.map((f) => [f, readFileSync(f)]));
   const pathOf = (f) => "/" + relative(dir, f).split("\\").join("/");
   const rename = new Map();
@@ -511,6 +594,12 @@ Deploy options
   --relays=a,b,c      default: ${DEFAULT_RELAYS.join(",")}
   --servers=a,b       default: ${DEFAULT_SERVERS.join(",")}
   --no-fingerprint    do not put content hashes in asset paths
+  --exclude=<glob>    leave matching files out; repeat it or separate with commas.
+                      A .nsiteignore file in the directory (gitignore syntax)
+                      does the same. Dotfiles are never published.
+  --publish-secrets   publish files that look like keys (*.pem, id_rsa, env.backup…),
+                      which are otherwise refused
+  --dry-run           list what would be published and stop; needs no key
 
 Once a site is published, the owner opens it, signs in, and edits it in the page.
 Saving from the browser republishes it; this CLI is only needed for the first
