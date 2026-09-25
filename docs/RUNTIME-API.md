@@ -274,6 +274,7 @@ A save keeps the `editable` attribute as an inert marker and drops the rest: no
 |---|---|
 | `clay="no-save"` or `no-save` | never written to the file |
 | `clay="no-snapshot"` or `no-snapshot` | never leaves the live page |
+| `nc:transient` | put on the page at view time, by a feed or your own script; never written to the file, not an undo step, not an edit to autosave |
 | `nc:chrome` | runtime UI; always stripped |
 | `nc:keep-editable` | keep `contenteditable` on this element in the saved file |
 | `nc:no-persist` | a form control whose value is not written into the file |
@@ -284,6 +285,9 @@ Form state is written into markup before serialising, so inputs, checkboxes and 
 a save: a checked box is still checked for the next visitor, which is what makes the document a
 database. Password and file inputs never are, and `nc:no-persist` opts a search box or a filter
 out.
+
+A page with a form, whose visitors type something and get an answer back, is worked
+through in **[docs/forms.md](forms.md)**.
 
 Where a given thing belongs, in the document or on relays, is
 **[docs/state.md](state.md)**.

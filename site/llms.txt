@@ -59,6 +59,13 @@ nsite.lol, nsite.run, nosto.re, nwb.tf, nsite.cloud, shakespeare.to. If one is
 down, change the hostname. If all of them are down, run one yourself; the repo
 ships one that fits in a file.
 
+A gateway has to find the page before it can serve it. The reference gateway looks up the owner's
+relay list (kind 10002) on `wss://purplepag.es` and read the site from the
+relays on it, so a key with no relay list shows up on nsite.lol, which reads the
+default `wss://relay.nsite.lol`, and may answer 404 elsewhere. If the person's key
+is new, tell them to publish a relay list from any Nostr client and to deploy to
+the relays it names.
+
 There is no account, no password reset, no billing relationship, and no terms of
 service between a person and their own page.
 
@@ -136,9 +143,10 @@ media upload, feeds and the post composer already exist. Writing your own is the
 commonest mistake; check the runtime reference before implementing anything.
 
 The runtime also draws the AI controls: a toolbar button that rewrites a static
-page, with an option to change only the element the owner clicked. Pages with
-live feeds, forms or custom scripts use selected-text edits instead, so those
-features are not lost in a static rewrite. Changes have a preview the owner
+page, with an option to change only the element the owner clicked. A rewrite
+carries the page's live feeds through unchanged. Pages with forms or custom
+scripts use selected-text edits instead, so those features are not lost in a
+static rewrite. Changes have a preview the owner
 accepts or discards, and a settings dialog chooses the provider. An owner can add a crop step
 to a picture upload, and content fields can be given types (`nc:cms-type`) and
 rich text (`@innerHTML`). Nothing AI writes reaches a page without the owner
@@ -540,7 +548,11 @@ line, it is whether there is a reason it must never change, and there rarely is.
 Form controls persist by default, because that is what "the document is the
 database" means: a checked box is still checked for the next visitor. Put
 `nc:no-persist` on a search box or a filter, where baking the last value into
-the published file would be wrong.
+the published file would be wrong. Whatever a script puts on the page for one
+visitor, such as an answer from an API, gets `nc:transient` on the nodes it
+creates, never on the authored container they go into. A page with a form is
+worked through in
+[docs/forms.md](https://github.com/jooray/nsite-clay/blob/main/docs/forms.md).
 
 ### Layer two: the things there is more than one of
 

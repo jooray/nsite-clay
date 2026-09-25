@@ -325,6 +325,15 @@ Turn it on in the same settings panel. Both settings are attributes on `<html>`,
 so they are saved with the page and travel with the file rather than living in
 one browser.
 
+## Pages with a form
+
+A save writes the live page, form state included, which is what lets a checklist
+remember its ticks. On a page where visitors type something and get an answer
+back, that would publish one visitor's input and result to the next. Put
+`nc:no-persist` on every control a visitor fills in, and `nc:transient` on the
+nodes your script adds to show a result, not on the container they go into.
+[docs/forms.md](docs/forms.md) has the whole pattern in one example.
+
 ## Signing in
 
 Ranked by how much you have to trust the page in front of you:
@@ -457,20 +466,41 @@ characters and the base36 pubkey uses 50 of them.
 
 ### Where it gets served
 
-An nsite gateway resolves your manifest and serves the files. They all read the
-same events, so a site is not tied to any of them:
+An nsite gateway resolves your manifest and serves the files. They read the same
+events, so a site is not tied to any of them, but each one has to find those
+events first, and they do not all look in the same places:
 
 | Gateway | |
 |---|---|
-| [nsite.lol](https://nsite.lol) | public gateway |
+| [nsite.lol](https://nsite.lol) | public gateway; reads `wss://relay.nsite.lol`, which is in the default relay set |
 | [nsite.run](https://nsite.run) | reference implementation, and the clearest explanation of what an nsite is |
 | [nosto.re](https://nosto.re) | public gateway |
 | [nwb.tf](https://nwb.tf) | public gateway |
 | [nsite.cloud](https://nsite.cloud) | reference implementation |
 | [shakespeare.to](https://shakespeare.to) | reference implementation |
 
-If one is down, swap the hostname and your site is still there, and
-`npm run devnet` runs one on your laptop.
+**How a gateway finds your site.** The reference gateway
+([nsite-gateway](https://github.com/hzrd149/nsite-gateway)) asks two lookup relays,
+`wss://purplepag.es` and `wss://user.kindpag.es`, for your relay list (a kind-10002
+event), then reads your manifest from the relays on that list plus any its operator
+added. A gateway running it finds a site through your relay list. A key
+that has never published one is findable only on relays the operator happens to read,
+which is why a first deploy from a fresh key can show on nsite.lol and answer
+`404 nsite not found` elsewhere.
+
+So, for a site every gateway can find:
+
+- **Publish a relay list for your key** that names at least one relay you deploy to, and
+  make sure it reaches `purplepag.es`. Any Nostr client that edits relays does this; a key
+  you already use in a client usually has one.
+- **Deploy to the relays on that list.** `--relays=` takes the same URLs.
+- **Keep `wss://relay.nsite.lol` in the set** for nsite.lol, which subscribes to it live
+  and shows a change in about a second instead of up to ten minutes.
+
+Gateways also go down. On 25 September 2026 nosto.re answered `502` and
+shakespeare.to did not resolve this project's own site, while nsite.cloud served a
+copy some minutes old. If one fails, swap the hostname and your site is still there,
+and `npm run devnet` runs a gateway on your laptop.
 
 ### Custom domains
 

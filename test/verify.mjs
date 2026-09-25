@@ -524,6 +524,24 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   t("a control persists its value by default", withForms.includes('value="changed"'));
   t("nc:no-persist keeps a filter out of the file", !withForms.includes("changed-filter"));
 
+  // docs/forms.md, as a contract: a visitor's question and the answer a script
+  // put on the page never reach the file, and the place the answer goes does.
+  {
+    const box = document.createElement("div"); box.id = "forms-doc-answer";
+    const asked = document.createElement("input"); asked.setAttribute("nc:no-persist", "");
+    const ticked = document.createElement("input"); ticked.type = "checkbox"; ticked.setAttribute("nc:no-persist", "");
+    document.body.append(asked, ticked, box);
+    asked.value = "a-visitors-question"; ticked.checked = true;
+    const reply = document.createElement("p"); reply.setAttribute("nc:transient", ""); reply.textContent = "an-answer-for-one-visitor";
+    box.append(reply);
+    const saved = nc.getHTML();
+    t("a visitor's typed question is not saved", !saved.includes("a-visitors-question"));
+    t("nor a box they ticked", !/<input[^>]*type="checkbox"[^>]*nc:no-persist[^>]*checked/.test(saved) && !/<input[^>]*nc:no-persist[^>]*type="checkbox"[^>]*checked/.test(saved));
+    t("nor the answer a script showed them", !saved.includes("an-answer-for-one-visitor"));
+    t("but the container the answer goes into is", saved.includes('id="forms-doc-answer"'));
+    asked.remove(); ticked.remove(); box.remove();
+  }
+
   // --- a post can live in both places --------------------------------------
   {
     const article = finalizeEventInPage({
