@@ -38,7 +38,7 @@ html[nc\:editable="true"] [editable]:hover:not(:focus) {
 }
 
 /* ---- the edit gate ------------------------------------------------------
- * With nc:edit-gate="hash" on <html>, the runtime sets nc:editing to false
+ * With nc:edit-gate="hash" on the html element, the runtime sets nc:editing to false
  * until the URL ends in #edit. Anything marked nc-ui disappears with it, so a
  * reader gets the page and nothing else. Templates put their toolbar, their
  * sign-in panel and any other control inside an element carrying nc-ui. */
@@ -87,11 +87,11 @@ html[nc\:status="error"]  .nc-bar .nc-dot { background: var(--nc-bad); }
 @keyframes nc-pulse { 50% { opacity: .3; } }
 
 /* The content form's button, on a page with no nc:cms rules for it to draw,
-   has nothing to open. The runtime stamps nc:cms-rules on <html> when the page
+   has nothing to open. The runtime stamps nc:cms-rules on the html element when the page
    carries a rules block, so a toolbar can hold the button unconditionally. */
 html:not([nc\:cms-rules]) [data-nc-cms] { display: none !important; }
 
-/* Owner-only controls. The runtime stamps nc:owner-here on <html>. */
+/* Owner-only controls. The runtime stamps nc:owner-here on the html element. */
 .nc-owner-only { display: none; }
 html[nc\:owner-here="true"] .nc-owner-only { display: inline-flex; }
 html[nc\:owner-here="true"] .nc-guest-only { display: none; }

@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.16",
+    "released": "2026-09-25",
+    "notes": [
+      "Your page could appear without its design, as plain text and oversized pictures, when it was opened through a gateway that fetched its stylesheet from one particular storage server. That server guessed what kind of file the stylesheet was from a comment inside it and guessed wrong, and browsers refuse to use a stylesheet labelled as a web page. The stylesheet and the toolbar script no longer confuse it. Taking this upgrade fixes a page that sometimes looked broken."
+    ]
+  },
+  {
     "version": "0.3.15",
     "released": "2026-09-25",
     "notes": [

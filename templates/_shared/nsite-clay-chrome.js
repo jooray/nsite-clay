@@ -23,7 +23,7 @@
 
   // This script writes labels over whatever the markup said, so a translated
   // page would end up with English in the corner however carefully it was
-  // translated. The strings live here instead, picked by <html lang>, and an
+  // translated. The strings live here instead, picked by the html element's lang, and an
   // unknown language falls back to English rather than showing a blank button.
   const STRINGS = {
     en: {},
@@ -187,7 +187,7 @@
   // A label the author wrote themselves is left alone. Only wording a template
   // shipped is replaced, which is why the known set below is every language's,
   // not just this one's: it also makes the pass idempotent, and lets a page that
-  // changes its <html lang> relabel rather than freeze on the first language it
+  // changes its lang attribute relabel rather than freeze on the first language it
   // was opened in. A button holding an element is left alone too, because
   // textContent would take the icon inside it with the word.
   const KNOWN = (key) =>
