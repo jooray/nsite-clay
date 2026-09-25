@@ -43,6 +43,14 @@ changes nothing for anybody's live site.
    release rather than handing it back to be done by hand. Ask only if the
    signer does not answer. Until this runs, no existing page can find the
    release.
+7. **Publish to npm**, so `npx nsite-clay` gets the same version. The account
+   uses a passkey, which npm can only ask for in a real terminal: hand the
+   owner `npm publish --ignore-scripts` to run in their own terminal (the
+   suite already passed in step 3), and do not try it through a
+   non-interactive shell, which only prints a dead link. Afterwards,
+   `npm view nsite-clay version` should name the new version. Keep the `bin`
+   path in `package.json` without a leading `./`: npm drops such an entry on
+   publish and the package ships with no command.
 
 Then check it landed: the manifest should name `/nsite-clay.js`,
 `/nsite-clay-base.css`, `/nsite-clay-chrome.js` and `/runtime.json`, and the
