@@ -62,6 +62,36 @@ does not have to rewrite every quote and space around it. The runtime checks
 that the saved markup still represents the page and falls back to a full
 serialization if it cannot preserve the source safely.
 
+## Write and edit with AI
+
+Describe the page you want in
+[the publisher](https://nsite-clay.cypherpunk.today/deploy.html) and AI writes
+it: the layout, the stylesheet, text you can edit and empty frames for your own
+photos. Look at the preview, ask for changes, and publish it with your own key.
+
+On a page that is already published, press **Edit with AI** and say what should
+change, either the whole page or only the part you clicked. Nothing reaches the
+page until you keep the result. **Undo** takes it back, and **Save** publishes it.
+
+You pay for AI in one of three ways:
+
+1. **Support the project.** The default. Pay one 2000 sat Lightning invoice and
+   everything works: 1000 sats fund nsite-clay, and 1000 become your AI credit
+   on our Routstr node, `routstr.cypherpunk.today`. The key is kept encrypted on
+   your own Nostr relays, so it follows you to every device you sign in on, and
+   credit you do not spend can be withdrawn.
+2. **Your own Routstr node.** Point **AI settings** at any other Routstr node and
+   add credit there with Lightning or Cashu. The fees go to whoever runs that node.
+3. **Bring your own key.** Use any OpenAI-compatible API that accepts requests
+   from a browser, with your own key and the model you choose. What you pay
+   stays between you and that provider.
+
+**AI is an extra, and everything else stays free.** The editor, the twelve
+templates, the block composer and publishing never ask for payment. Pick a
+template, click into the page and type, exactly as before.
+
+The details of each mode are under [AI provider settings](#ai-provider-settings).
+
 ## Try it
 
 A live document is published under a throwaway key, and the key is public on purpose:

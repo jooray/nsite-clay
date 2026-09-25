@@ -181,6 +181,7 @@
     <p class="tag" editable="single-line">Un nsite que se edita a sí mismo. Un solo archivo HTML que se edita y se vuelve a publicar por su cuenta, alojado en Nostr.</p>
     <div class="cta">
       <a class="btn primary" href="/es/deploy.html">Publica un sitio</a>
+      <a class="btn" href="#ai">Escríbelo con IA</a>
       <a class="btn" href="/es/guide.html">Lee la guía</a>
       <a class="btn" href="#try">Prueba la demo</a>
       <a class="btn" href="https://github.com/jooray/nsite-clay">Código en GitHub</a>
@@ -232,15 +233,36 @@
   </section>
 
   <section id="ai">
-    <h2 editable="single-line">Crea una página con IA</h2>
+    <h2 editable="single-line">Escribe y edita con IA</h2>
     <div editable>
-      <p class="lede">Describe la página que quieres en <a href="/es/deploy.html">el publicador</a>.
-        desde cero o pidiendo a la IA que adapte una plantilla, revisa la vista previa y publícala con tu propia clave.</p>
-      <p class="lede">La IA usa nuestro nodo Routstr Cypherpunk y DeepSeek V4.1 Flash por defecto.
-        Pagas con Cashu o Lightning; las tarifas ayudan a mantener nsite-clay. En los ajustes de IA puedes elegir otro modelo,
-        otro nodo o tu propia clave API.</p>
-      <p class="lede">En una página publicada, haz clic en el texto o bloque que quieras cambiar y elige Editar con IA.
-        Nada cambia en la página hasta que aceptes el resultado. Deshacer revierte el cambio y Guardar lo publica.</p>
+      <p class="lede">Describe la página que quieres en <a href="/es/deploy.html">el publicador</a> y la IA
+        la escribe: el diseño, la hoja de estilos, textos que puedes editar y marcos vacíos para tus propias fotos.
+        Revisa la vista previa, pide cambios y publícala con tu propia clave.</p>
+      <p class="lede">En una página ya publicada, pulsa Editar con IA y di qué debe cambiar, sea la página entera o solo
+        la parte en la que hiciste clic. Nada cambia en la página hasta que aceptes el resultado. Deshacer lo
+        revierte y Guardar lo publica.</p>
+      <p class="lede">Puedes pagar la IA de tres maneras.</p>
+    </div>
+
+    <ol class="steps">
+      <li><span class="n">01 APOYA EL PROYECTO</span>
+        <p>La opción por defecto. Paga una sola factura Lightning de 2000 sats y todo funciona:
+          1000 sats financian nsite-clay y 1000 pasan a ser tu saldo de IA en nuestro nodo Routstr. La clave se guarda
+          cifrada en tus propios relays, así que te acompaña en cada dispositivo donde inicies sesión, y el saldo que
+          no gastes lo puedes retirar.</p></li>
+      <li><span class="n">02 TU PROPIO NODO ROUTSTR</span>
+        <p>Indica otro nodo Routstr en los ajustes de IA y añade saldo allí con Lightning
+          o Cashu. Las tarifas son para quien gestiona ese nodo.</p></li>
+      <li><span class="n">03 TRAE TU PROPIA CLAVE</span>
+        <p>Usa cualquier API compatible con OpenAI que acepte peticiones desde el
+          navegador, con tu propia clave y el modelo que elijas. Lo que pagues queda entre tú y ese proveedor.</p></li>
+    </ol>
+
+    <div editable>
+      <p style="margin-top:1.4rem" class="lede"><strong>La IA es un extra, y todo lo demás sigue siendo gratis.</strong>
+        El editor, las doce plantillas,
+        el compositor de bloques y la publicación nunca piden un pago. Elige una plantilla, haz clic en la página y
+        escribe, como siempre.</p>
     </div>
   </section>
 

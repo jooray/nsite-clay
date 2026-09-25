@@ -181,6 +181,7 @@
     <p class="tag" editable="single-line">Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.</p>
     <div class="cta">
       <a class="btn primary" href="/cs/deploy.html">Publikuj web</a>
+      <a class="btn" href="#ai">Napiš ho s AI</a>
       <a class="btn" href="/cs/guide.html">Přečti si návod</a>
       <a class="btn" href="#try">Vyzkoušej živé demo</a>
       <a class="btn" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHubu</a>
@@ -231,15 +232,35 @@
   </section>
 
   <section id="ai">
-    <h2 editable="single-line">Vytvoř stránku s AI</h2>
+    <h2 editable="single-line">Piš a upravuj s AI</h2>
     <div editable>
-      <p class="lede">V <a href="/cs/deploy.html">publikátoru</a> popiš, jakou stránku chceš.
-        od nuly nebo úpravou šablony, prohlédni si náhled a zveřejni ji vlastním klíčem.</p>
-      <p class="lede">AI ve výchozím nastavení běží přes náš Routstr node Cypherpunk s modelem DeepSeek V4.1 Flash.
-        Platíš přes Cashu nebo Lightning a poplatky podporují nsite-clay. V nastavení AI si můžeš vybrat jiný model,
-        jiný node nebo vlastní API klíč.</p>
-      <p class="lede">Na zveřejněné stránce klikni na text nebo blok a zvol Upravit s AI.
-        Nic se ve stránce nezmění, dokud výsledek nepřijmeš. Zpět přijatou úpravu vrátí a Uložit ji zveřejní.</p>
+      <p class="lede">V <a href="/cs/deploy.html">publikátoru</a> popiš, jakou stránku chceš, a AI ji napíše:
+        rozvržení, styly, texty, které můžeš upravovat, a prázdné rámečky na tvoje vlastní fotky. Prohlédni si
+        náhled, požádej o změny a zveřejni ji vlastním klíčem.</p>
+      <p class="lede">Na už zveřejněné stránce stiskni Upravit s AI a řekni, co se má změnit, jestli celá stránka, nebo
+        jen část, na kterou jsi klikl. Dokud výsledek nepřijmeš, na stránce se nic nezmění. Zpět ho vrátí a Uložit
+        ho zveřejní.</p>
+      <p class="lede">Za AI můžeš platit třemi způsoby.</p>
+    </div>
+
+    <ol class="steps">
+      <li><span class="n">01 PODPOŘ PROJEKT</span>
+        <p>Výchozí možnost. Zaplatíš jednu Lightning fakturu na 2000 satů a všechno funguje:
+          1000 satů podpoří nsite-clay a 1000 se stane tvým AI kreditem na našem Routstr node. Klíč se uloží
+          zašifrovaný na tvoje vlastní relaye, takže ho máš na každém zařízení, kde se přihlásíš. Kredit, který
+          neutratíš, si můžeš vybrat zpět.</p></li>
+      <li><span class="n">02 VLASTNÍ ROUTSTR NODE</span>
+        <p>V nastavení AI zadej jiný Routstr node a kredit si tam dobij přes Lightning
+          nebo Cashu. Poplatky jdou tomu, kdo ten node provozuje.</p></li>
+      <li><span class="n">03 VLASTNÍ API KLÍČ</span>
+        <p>Použij jakékoli API kompatibilní s OpenAI, které přijímá požadavky
+          z prohlížeče, s vlastním klíčem a modelem podle sebe. Platby zůstanou mezi tebou a tím poskytovatelem.</p></li>
+    </ol>
+
+    <div editable>
+      <p style="margin-top:1.4rem" class="lede"><strong>AI je navíc, všechno ostatní zůstává zdarma.</strong>
+        Editor, dvanáct šablon, skládání z bloků
+        i zveřejňování nikdy nechtějí platbu. Vyber si šablonu, klikni do stránky a piš, přesně jako doteď.</p>
     </div>
   </section>
 

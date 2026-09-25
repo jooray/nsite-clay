@@ -181,6 +181,7 @@
     <p class="tag" editable="single-line">A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.</p>
     <div class="cta">
       <a class="btn primary" href="/deploy.html">Publish a site</a>
+      <a class="btn" href="#ai">Write it with AI</a>
       <a class="btn" href="/guide.html">Read the guide</a>
       <a class="btn" href="#try">Try the live demo</a>
       <a class="btn" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
@@ -231,15 +232,34 @@
   </section>
 
   <section id="ai">
-    <h2 editable="single-line">Build a page with AI</h2>
+    <h2 editable="single-line">Write and edit with AI</h2>
     <div editable>
-      <p class="lede">Describe the page you want in <a href="/deploy.html">the publisher</a>,
-        either from scratch or by asking AI to adapt a template, look at the preview, and publish it with your own key.</p>
-      <p class="lede">AI runs through our Cypherpunk Routstr node by default, using DeepSeek V4.1 Flash.
-        Pay with Cashu or Lightning; the fees help fund nsite-clay. AI settings let you choose a different model,
-        another node or your own API key.</p>
-      <p class="lede">On a published page, click the text or block you want to change and choose Edit with AI.
-        Nothing reaches the page until you keep the result; Undo takes an accepted edit back and Save publishes it.</p>
+      <p class="lede">Describe the page you want in <a href="/deploy.html">the publisher</a> and AI writes
+        it: the layout, the stylesheet, text you can edit and empty frames for your own photos. Look at the
+        preview, ask for changes, and publish it with your own key.</p>
+      <p class="lede">On a page that is already published, press Edit with AI and say what should change,
+        either the whole page or only the part you clicked. Nothing reaches the page until you keep the
+        result. Undo takes it back, and Save publishes it.</p>
+      <p class="lede">You pay for AI in one of three ways.</p>
+    </div>
+
+    <ol class="steps">
+      <li><span class="n">01 SUPPORT THE PROJECT</span>
+        <p>The default. Pay one 2000 sat Lightning invoice and everything works: 1000 sats fund nsite-clay,
+          1000 become your AI credit on our Routstr node. The key is kept encrypted on your own relays, so it
+          follows you to every device you sign in on, and credit you do not spend can be withdrawn.</p></li>
+      <li><span class="n">02 YOUR OWN ROUTSTR NODE</span>
+        <p>Point AI settings at any other Routstr node and add credit there with Lightning or Cashu. The fees
+          go to whoever runs that node.</p></li>
+      <li><span class="n">03 BRING YOUR OWN KEY</span>
+        <p>Use any OpenAI-compatible API that accepts requests from a browser, with your own key and the model
+          you choose. What you pay stays between you and that provider.</p></li>
+    </ol>
+
+    <div editable>
+      <p style="margin-top:1.4rem" class="lede"><strong>AI is an extra, and everything else stays free.</strong>
+        The editor, the twelve templates, the block composer and publishing never ask for payment. Pick a
+        template, click into the page and type, exactly as before.</p>
     </div>
   </section>
 
