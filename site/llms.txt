@@ -1111,7 +1111,8 @@ alongside the document.
   the gateway sees changes promptly. Verify retention by reading your own events
   back: some relays accept a publish and store nothing.
 - **Blossom servers are picky.** Several refuse `text/html`. `cdn.hzrd149.com` and
-  `blossom.primal.net` work.
+  `nostr.download` work. Do not publish a site to `blossom.primal.net`: it ignores
+  the uploaded type and serves CSS as `text/plain`, which a browser will not apply.
 - **`relay.damus.io` has been unreliable.** Do not put it first.
 - **One key, no conflict detection.** Two devices editing at once lose one side's
   work.

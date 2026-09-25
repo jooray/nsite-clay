@@ -19,7 +19,7 @@ chrome should mean editing `templates/_shared/`, never ten template files.
       nc:owner="npub1…"
       nc:edit-gate="hash"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+      nc:servers="https://cdn.hzrd149.com,https://nostr.download">
 ```
 
 `nc:edit-gate="hash"` is required in every template. A reader gets the page and

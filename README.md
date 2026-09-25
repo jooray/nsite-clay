@@ -533,8 +533,15 @@ about a second; without it, up to ten minutes. It is in the default set for that
 sensibly enough, since they would be hosting arbitrary pages on their own domain. Several accept
 only padded base64 in the auth header where BUD-11 asks for base64url. The CLI and the runtime
 both try each encoding, and a deploy succeeds if any one server takes the blob, since blobs are
-content-addressed and more copies is strictly better. `cdn.hzrd149.com` and `blossom.primal.net`
-are known to work.
+content-addressed and more copies is strictly better. `cdn.hzrd149.com` and `nostr.download`
+are known to work, and are the defaults.
+
+**A Blossom server has to keep the type you upload with.** Gateways pass on the Content-Type the
+server reports, and a browser will not apply a stylesheet labelled as anything but `text/css`.
+`blossom.primal.net` guesses the type from the bytes instead and serves CSS as `text/plain`, so a
+page fetched from it can arrive without its design. It is fine for pictures, but keep it out of
+the list a site is published to. Check a server by uploading a small `.css` file and asking for it
+back.
 
 **A blob is only as durable as the servers holding it.** The manifest names hashes, not bytes.
 List several servers; every save pushes to all of them.

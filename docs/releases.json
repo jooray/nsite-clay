@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.17",
+    "released": "2026-09-25",
+    "notes": [
+      "New pages are stored on cdn.hzrd149.com and nostr.download. The second default used to be blossom.primal.net, which labels stylesheets as plain text, and a browser will not use a stylesheet labelled that way, so a page fetched from it could show up without its design. Pages published before keep the servers they were published with."
+    ]
+  },
+  {
     "version": "0.3.16",
     "released": "2026-09-25",
     "notes": [

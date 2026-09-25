@@ -38,7 +38,7 @@ const DEFAULT_RELAYS = [
   // and ten minutes before a change is visible.
   "wss://relay.nsite.lol",
 ];
-const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://blossom.primal.net"];
+const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://nostr.download"];
 
 // ---------------------------------------------------------------- arguments
 

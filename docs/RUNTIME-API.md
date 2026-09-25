@@ -19,14 +19,14 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 <html lang="en" autosave
       nc:owner="npub1…"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom"
-      nc:servers="https://cdn.hzrd149.com,https://blossom.primal.net">
+      nc:servers="https://cdn.hzrd149.com,https://nostr.download">
 ```
 
 | Attribute | Required | Meaning |
 |---|---|---|
 | `nc:owner` | yes | npub or 64-hex of the key allowed to save this document |
 | `nc:relays` | no | comma list. Default `wss://nos.lol,wss://relay.damus.io,wss://relay.primal.net` |
-| `nc:servers` | no | comma list of Blossom servers. Default `https://cdn.hzrd149.com,https://blossom.primal.net` |
+| `nc:servers` | no | comma list of Blossom servers. Default `https://cdn.hzrd149.com,https://nostr.download` |
 | `nc:site` | no | nsite `d` tag. Absent means the root site (kind 15128); set means a named site (kind 35128), 1 to 13 characters of `[a-z0-9-]` |
 | `nc:path` | no | this document's path inside the manifest. Default `/index.html` |
 | `autosave` | no | save once edits settle (2.5 s debounce, 15 s throttle). `⌘S` / `Ctrl+S` works either way |

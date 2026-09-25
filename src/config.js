@@ -7,7 +7,7 @@ import { nip19 } from "nostr-tools";
 // own relay, so a save that skips it is invisible there until the gateway's
 // next resync, and readers meanwhile get a stale page.
 const DEFAULT_RELAYS = ["wss://nos.lol", "wss://relay.primal.net", "wss://nostr.mom", "wss://relay.nsite.lol"];
-const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://blossom.primal.net"];
+const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://nostr.download"];
 
 // Signing in with a phone is NIP-46, and NIP-46 frames are kind 24133, which is
 // ephemeral. A relay that gladly stores a manifest may refuse to carry one:
