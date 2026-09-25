@@ -23,7 +23,7 @@
     "contenteditable"
   ],
   "bin": {
-    "nsite-clay": "./bin/nsite-clay.mjs"
+    "nsite-clay": "bin/nsite-clay.mjs"
   },
   "main": "./dist/nsite-clay.esm.js",
   "exports": {
