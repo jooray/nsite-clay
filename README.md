@@ -673,7 +673,7 @@ come from that run, so they show working software rather than a mock-up.
 ```bash
 npm install
 npm run build     # dist/nsite-clay.js and dist/nsite-clay.esm.js
-npm test          # 142 behaviour checks in a real browser
+npm test          # behaviour checks, most in a real browser
 ```
 
 The tests run in Chrome on purpose. Several of them are about what the HTML parser and the

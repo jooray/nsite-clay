@@ -37,6 +37,7 @@
     "src/",
     "bin/",
     "examples/",
+    "templates/",
     "icons/",
     "README.md",
     "LICENSE"
