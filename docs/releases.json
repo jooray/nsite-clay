@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.18",
+    "released": "2026-09-26",
+    "notes": [
+      "A site published with a brand new key can now be found by every gateway, not only nsite.lol. Most gateways find a site through its owner's relay list, and a new key did not have one, so they answered that the site did not exist. Publishing now writes a relay list for a key that has none, naming the relays your site went to. A key that already has a list, for example one you use in a Nostr app, keeps it unchanged."
+    ]
+  },
+  {
     "version": "0.3.17",
     "released": "2026-09-25",
     "notes": [

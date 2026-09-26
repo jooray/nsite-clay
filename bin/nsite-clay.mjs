@@ -18,6 +18,7 @@ import { useWebSocketImplementation } from "nostr-tools/pool";
 import { sha256 } from "@noble/hashes/sha2";
 import { bytesToHex } from "@noble/hashes/utils";
 import WebSocket from "ws";
+import { ensureRelayList, LOOKUP_RELAYS } from "../src/relay-list.js";
 useWebSocketImplementation(WebSocket);
 
 const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -130,7 +131,8 @@ async function getSigner() {
         if (/no permission|denied|unauthorized/i.test(msg)) {
           die(`the signer refused ${what} ("${msg}").\n` +
               `  Grant this connection: get_public_key, sign_event:24242 (Blossom uploads),\n` +
-              `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions).\n` +
+              `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions),\n` +
+              `  sign_event:10002 (a relay list, only if the key has none).\n` +
               `  In most signers that means approving the prompt in the app.\n` +
               (stored
                 ? `  This run reused the client key saved in ${BUNKER_FILE}. If the connection was\n` +
@@ -146,6 +148,9 @@ async function getSigner() {
     return {
       pubkey,
       sign: (t) => ask(`sign_event kind ${t.kind}`, () => signer.signEvent(t)),
+      // For what a deploy can live without: a refusal throws rather than ending
+      // the run, which by then has already published the site.
+      trySign: (t) => withTimeout(signer.signEvent(t)),
       close: () => signer.close().catch(() => {}),
     };
   }
@@ -155,7 +160,8 @@ async function getSigner() {
   if (s.startsWith("npub")) die("that is a public key; signing needs the nsec");
   const sec = s.startsWith("nsec") ? nip19.decode(s).data : Uint8Array.from(Buffer.from(s, "hex"));
   if (sec.length !== 32) die("secret key must be an nsec or 64 hex characters");
-  return { pubkey: getPublicKey(sec), sign: async (t) => finalizeEvent(t, sec), close: () => {} };
+  const sign = async (t) => finalizeEvent(t, sec);
+  return { pubkey: getPublicKey(sec), sign, trySign: sign, close: () => {} };
 }
 
 // ------------------------------------------------------------------ blossom
@@ -539,7 +545,20 @@ async function cmdDeploy() {
   if (!accepted) die("no relay accepted the manifest:\n  " +
     sent.map((r, i) => `${RELAYS[i]}: ${r.reason?.message || r.reason}`).join("\n  "));
   await Promise.allSettled(pool.publish(RELAYS, snap));
-  pool.close(RELAYS);
+
+  // Most gateways find a site through its owner's relay list, and a fresh key
+  // has none. Written only when it provably has none; see src/relay-list.js.
+  if (!flags["no-relay-list"]) {
+    const state = await ensureRelayList(pool, { sign: signer.trySign }, pub, RELAYS);
+    console.log({
+      written: "\n  relay list published for this key, so gateways that look one up can find the site",
+      present: "",
+      unknown: "\n  could not ask purplepag.es and user.kindpag.es whether this key has a relay list, so none was written",
+      empty: "",
+      failed: "\n  no relay accepted the relay list for this key; gateways other than nsite.lol may not find the site",
+    }[state] || "");
+  }
+  pool.close([...RELAYS, ...LOOKUP_RELAYS]);
   await signer.close();
 
   // Blossom servers are told where the blobs are; without this a gateway that
@@ -600,6 +619,9 @@ Deploy options
   --publish-secrets   publish files that look like keys (*.pem, id_rsa, env.backup…),
                       which are otherwise refused
   --dry-run           list what would be published and stop; needs no key
+  --no-relay-list     do not publish a relay list (kind 10002) for a key that has
+                      none. One is written only when both lookup relays confirm
+                      there is none, and it names the relays deployed to.
 
 Once a site is published, the owner opens it, signs in, and edits it in the page.
 Saving from the browser republishes it; this CLI is only needed for the first

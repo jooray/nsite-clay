@@ -488,12 +488,18 @@ that has never published one is findable only on relays the operator happens to 
 which is why a first deploy from a fresh key can show on nsite.lol and answer
 `404 nsite not found` elsewhere.
 
+**A key with no relay list gets one when it publishes.** The web publisher and
+`nsite-clay deploy` both check, after the manifest is out, whether your key has a relay list,
+and publish one naming the relays the site went to when it provably has none: both lookup
+relays have to answer, and no relay asked may hold one. A key you already use in a Nostr
+client usually has a list, and it is never replaced. `wss://relay.nsite.lol` is left out of
+the list itself, since it accepts only relay lists and manifests. `--no-relay-list` turns
+this off for the CLI.
+
 So, for a site every gateway can find:
 
-- **Publish a relay list for your key** that names at least one relay you deploy to, and
-  make sure it reaches `purplepag.es`. Any Nostr client that edits relays does this; a key
-  you already use in a client usually has one.
-- **Deploy to the relays on that list.** `--relays=` takes the same URLs.
+- **Deploy to relays on your relay list.** `--relays=` takes the same URLs. If your key
+  already had a list, make sure at least one relay you deploy to is on it.
 - **Keep `wss://relay.nsite.lol` in the set** for nsite.lol, which subscribes to it live
   and shows a change in about a second instead of up to ten minutes.
 

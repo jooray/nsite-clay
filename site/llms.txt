@@ -62,9 +62,10 @@ ships one that fits in a file.
 A gateway has to find the page before it can serve it. The reference gateway looks up the owner's
 relay list (kind 10002) on `wss://purplepag.es` and read the site from the
 relays on it, so a key with no relay list shows up on nsite.lol, which reads the
-default `wss://relay.nsite.lol`, and may answer 404 elsewhere. If the person's key
-is new, tell them to publish a relay list from any Nostr client and to deploy to
-the relays it names.
+default `wss://relay.nsite.lol`, and may answer 404 elsewhere. The publisher and
+`nsite-clay deploy` write a relay list for a key that provably has none, naming
+the relays deployed to. A key that already has one keeps it, so deploy to at
+least one relay on it.
 
 There is no account, no password reset, no billing relationship, and no terms of
 service between a person and their own page.

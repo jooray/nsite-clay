@@ -12,6 +12,7 @@ import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
 import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
 import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from "./blossom.js";
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
+import { ensureRelayList } from "./relay-list.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
 import { Vault } from "./vault.js";
@@ -376,7 +377,7 @@ class NsiteClay extends EventTarget {
   // The table is merged with what that key has already published, because a
   // manifest is the whole path table and one that forgets a path unpublishes it.
   // Someone adding a page at /notes/ must not lose the page at /.
-  async publishFiles(files, { site = "", title = "", servers, relays, merge = true, onProgress } = {}) {
+  async publishFiles(files, { site = "", title = "", servers, relays, merge = true, relayList = true, onProgress } = {}) {
     if (!this.signer) throw new Error("Sign in first");
     const pubkey = this.signer.pubkey;
     const to = servers?.length ? servers : this.cfg.servers;
@@ -444,8 +445,17 @@ class NsiteClay extends EventTarget {
     const version = await this.signer.sign(buildSnapshot(cfg, manifest));
     this.pool.publish(on, version).forEach((p) => p.catch(() => {}));
 
+    // A fresh key has no relay list, and most gateways find a site through one.
+    // Written only when it provably has none; see relay-list.js.
+    let relayListState = "skipped";
+    if (relayList) {
+      step({ stage: "relaylist", done, total: files.length });
+      relayListState = await ensureRelayList(this.pool, this.signer, pubkey, on);
+      step({ stage: "relaylist", state: relayListState, done, total: files.length });
+    }
+
     step({ stage: "done", done, total: files.length, uploaded: sent, reused });
-    return { pubkey, manifest, version, paths, uploaded: sent, reused, aggregate: aggregateHash(paths) };
+    return { pubkey, manifest, version, paths, uploaded: sent, reused, relayList: relayListState, aggregate: aggregateHash(paths) };
   }
 
   // Anyone's current manifest, not just this page's owner. The wizard needs it

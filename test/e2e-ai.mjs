@@ -76,6 +76,16 @@ try {
   published.link = `http://${published.npub}.localhost:${gatewayPort}/workshop/`;
   t("the page is published", !!published.npub, published.link);
 
+  // A new key has no relay list, and most gateways find a site through one.
+  // On a devnet the local relay is the whole world, so the list lands there.
+  const relayList = await wiz.evaluate(async (relay) => {
+    const ev = await nc.pool.get([relay], { kinds: [10002], authors: [nc.pubkey] });
+    return { tags: ev?.tags || null, said: [...document.querySelectorAll("#log li")].map((li) => li.textContent).join(" | ") };
+  }, `ws://127.0.0.1:${relayPort}`);
+  t("a new key gets a relay list naming the relay it published to",
+    JSON.stringify(relayList.tags) === JSON.stringify([["r", `ws://127.0.0.1:${relayPort}`]]), JSON.stringify(relayList.tags));
+  t("and the log says so", /Published a relay list/.test(relayList.said), relayList.said.slice(-200));
+
   // ---- the published page ------------------------------------------------
   const live = await browser.newPage();
   await mockAiAccount(live);
