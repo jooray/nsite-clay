@@ -491,8 +491,9 @@ which is why a first deploy from a fresh key can show on nsite.lol and answer
 **A key with no relay list gets one when it publishes.** The web publisher and
 `nsite-clay deploy` both check, after the manifest is out, whether your key has a relay list,
 and publish one naming the relays the site went to when it provably has none: both lookup
-relays have to answer, and no relay asked may hold one. A key you already use in a Nostr
-client usually has a list, and it is never replaced. `wss://relay.nsite.lol` is left out of
+relays have to answer, and no relay asked may hold one. A key made in the publisher skips
+the check: it was generated moments ago and cannot have one yet. A key you already use in a
+Nostr client usually has a list, and it is never replaced. `wss://relay.nsite.lol` is left out of
 the list itself, since it accepts only relay lists and manifests. `--no-relay-list` turns
 this off for the CLI.
 

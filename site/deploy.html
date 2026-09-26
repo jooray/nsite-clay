@@ -969,7 +969,8 @@
   $("#newkey-ok").onchange = (e) => { $("#newkey-go").disabled = !e.target.checked; };
   $("#newkey-go").onclick = async () => {
     fail("#signin-error", "");
-    try { await nc.login("nsec", { key: fresh.nsec }); signedIn(); }
+    // Made on this page a moment ago, so it has no relay list to look for.
+    try { await nc.login("nsec", { key: fresh.nsec, fresh: true }); signedIn(); }
     catch (e) { fail("#signin-error", e.message); }
   };
 

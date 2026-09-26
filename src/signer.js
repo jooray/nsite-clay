@@ -50,6 +50,9 @@ export class Nip07Signer {
 export class LocalSigner {
   constructor(secret) {
     this.kind = "local";
+    // A key made here, this moment, has never published anything, so there is
+    // no relay list to look for: see relay-list.js.
+    this.fresh = !secret;
     this.sec = typeof secret === "string" ? LocalSigner.parse(secret) : (secret || generateSecretKey());
     if (!(this.sec instanceof Uint8Array) || this.sec.length !== 32) {
       throw new Error("Secret key must be 32 bytes");

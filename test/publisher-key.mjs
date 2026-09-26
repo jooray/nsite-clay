@@ -55,6 +55,17 @@ t("when it cannot copy at all it says so rather than claiming success", /could n
 await p2.waitForTimeout(3200);
 t("and still comes back", (await p2.textContent("#newkey-copy")).trim() === "Copy");
 
+// A key made here a moment ago has published nothing, so the first publish
+// writes its relay list without looking one up, which is what keeps a slow
+// lookup relay from leaving a new site unfindable. Signing in with the key's
+// own text must not lose that.
+await p2.check("#newkey-ok");
+await p2.click("#newkey-go");
+await p2.waitForFunction(() => !!nc.signer, null, { timeout: 10000 });
+t("a key made in the publisher signs in knowing it is new", await p2.evaluate(() => nc.signer.fresh === true));
+t("and it is the key that was shown", await p2.evaluate(() =>
+  nc.nip19.nsecEncode(nc.signer.sec) === document.querySelector("#newkey-nsec").textContent.trim()));
+
 for (const [n, pass, d] of out) console.log(`  ${pass ? "ok  " : "FAIL"} ${n}${d ? "   (" + d + ")" : ""}`);
 console.log(`\n${out.filter((r) => r[1]).length}/${out.length} passed`);
 if (out.every((r) => r[1])) console.log("Publisher key: the new nsec copies, says whether it did, and the button comes back.");

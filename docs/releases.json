@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.19",
+    "released": "2026-09-26",
+    "notes": [
+      "A key made in the publisher gets its relay list on the first publish every time. It was just created, so there is nothing to look up first, and a slow lookup service can no longer leave a brand new site without one."
+    ]
+  },
+  {
     "version": "0.3.18",
     "released": "2026-09-26",
     "notes": [

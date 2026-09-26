@@ -106,6 +106,8 @@ class NsiteClay extends EventTarget {
     if (method === "nip07") this.signer = new Nip07Signer();
     else if (method === "nsec" || method === "local") {
       this.signer = await LocalSigner.fromInput(opts.key, opts.password);
+      // The caller generated this key moments ago and says so; see relay-list.js.
+      if (opts.fresh) this.signer.fresh = true;
     }
     else if (method === "bunker") this.signer = await Nip46Signer.fromBunkerUri(opts.uri);
     else if (method === "nip46") return this.connectRemote(opts);
@@ -450,7 +452,9 @@ class NsiteClay extends EventTarget {
     let relayListState = "skipped";
     if (relayList) {
       step({ stage: "relaylist", done, total: files.length });
-      relayListState = await ensureRelayList(this.pool, this.signer, pubkey, on);
+      relayListState = await ensureRelayList(this.pool, this.signer, pubkey, on, { fresh: !!this.signer.fresh });
+      // Once it has published a list it is no longer a key without one.
+      if (relayListState === "written") this.signer.fresh = false;
       step({ stage: "relaylist", state: relayListState, done, total: files.length });
     }
 

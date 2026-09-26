@@ -42,19 +42,26 @@ async function ask(pool, url, filter, ms) {
  * answered: a lookup that timed out could be hiding the list their client
  * wrote, and overwriting that would break their Nostr everywhere else.
  *
+ * `fresh` says the key was generated in this session and has published
+ * nothing, which skips the lookup: there is nothing it could find.
+ *
  * Resolves to "written", "present", "unknown" (a lookup relay did not answer,
  * so nothing was written), "empty" (no relay to list), or "failed" (nobody
  * accepted it). Never throws: a site is live whatever happens here.
  */
-export async function ensureRelayList(pool, signer, pubkey, relays, { timeout = 6000 } = {}) {
+export async function ensureRelayList(pool, signer, pubkey, relays, { timeout = 6000, fresh = false } = {}) {
   try {
     const listed = [...new Set(relays.map(norm))].filter((r) => /^wss?:\/\//.test(r) && !LIST_ONLY.has(r));
     const deployed = relays.map(norm);
     const lookups = deployed.length && deployed.every(isLocal) ? deployed : LOOKUP_RELAYS;
     const where = [...new Set([...lookups, ...deployed])];
-    const answers = await Promise.all(where.map((url) => ask(pool, url, { kinds: [10002], authors: [pubkey], limit: 1 }, timeout)));
-    if (answers.some((a) => a?.some((ev) => ev.pubkey === pubkey && ev.kind === 10002))) return "present";
-    if (lookups.some((url) => answers[where.indexOf(url)] === null)) return "unknown";
+    // A key generated moments ago provably has no list, so there is nothing to
+    // ask, and a lookup relay being slow is no reason to leave it without one.
+    if (!fresh) {
+      const answers = await Promise.all(where.map((url) => ask(pool, url, { kinds: [10002], authors: [pubkey], limit: 1 }, timeout)));
+      if (answers.some((a) => a?.some((ev) => ev.pubkey === pubkey && ev.kind === 10002))) return "present";
+      if (lookups.some((url) => answers[where.indexOf(url)] === null)) return "unknown";
+    }
     if (!listed.length) return "empty";
     const event = await signer.sign({ kind: 10002, created_at: Math.floor(Date.now() / 1000), tags: listed.map((r) => ["r", r]), content: "" });
     const sent = await Promise.allSettled(pool.publish(where, event));

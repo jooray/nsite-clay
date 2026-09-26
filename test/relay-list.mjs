@@ -85,5 +85,19 @@ const DEPLOY = ["wss://nos.lol", "wss://relay.primal.net/", "wss://relay.nsite.l
   t("nor written to", !pool.published.some((p) => p.urls.some((u) => LOOKUP_RELAYS.includes(u))));
 }
 
+{
+  // Both lookup relays silent: an ordinary key is left alone, a key generated
+  // moments ago still gets its list, without anybody being asked.
+  const pool = fakePool({ [LOOKUP_RELAYS[0]]: "silent", [LOOKUP_RELAYS[1]]: "silent" });
+  const state = await ensureRelayList(pool, signer, PK, DEPLOY, { timeout: 200, fresh: true });
+  t("a key generated this session gets its list without a lookup", state === "written" && !pool.asked.length);
+  t("still sent to the lookup relays", LOOKUP_RELAYS.every((u) => pool.published[0]?.urls.includes(u)));
+}
+{
+  const { LocalSigner } = await import("../src/signer.js");
+  t("a signer that made its own key knows the key is new", new LocalSigner().fresh === true);
+  t("one given a key does not", new LocalSigner("b".repeat(64)).fresh === false);
+}
+
 console.log(fail ? `\n${fail} failed` : "\nall passed");
 process.exit(fail ? 1 : 0);
