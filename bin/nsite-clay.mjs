@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// nsite-clay CLI: scaffold a site, and publish one.
+// nsite-clay CLI: scaffold a site, publish one, and take one down.
 //
 // Publishing is the same three steps the browser performs on save, which is why
 // this tool exists at all: something has to put the first version online before
@@ -132,7 +132,8 @@ async function getSigner() {
           die(`the signer refused ${what} ("${msg}").\n` +
               `  Grant this connection: get_public_key, sign_event:24242 (Blossom uploads),\n` +
               `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions),\n` +
-              `  sign_event:10002 (a relay list, only if the key has none).\n` +
+              `  sign_event:10002 (a relay list, only if the key has none),\n` +
+              `  and for unpublish, sign_event:5 (deletion requests).\n` +
               `  In most signers that means approving the prompt in the app.\n` +
               (stored
                 ? `  This run reused the client key saved in ${BUNKER_FILE}. If the connection was\n` +
@@ -574,6 +575,288 @@ async function cmdDeploy() {
   console.log(`\n  ${url}\n`);
 }
 
+// ---------------------------------------------------------------- unpublish
+
+// Nothing on Nostr can be deleted, only asked to be. A relay that implements
+// NIP-09 drops the events a kind-5 names and refuses them if they come back; a
+// relay that does not keeps them, and a copy nobody knows about is out of reach
+// either way. So an unpublish is two things sent as widely as possible: the
+// deletion request, and an empty manifest newer than the last one, which every
+// relay honours whether or not it reads deletions, because a replaceable event
+// replaces. Blossom is the same bargain: a server may delete, keep, or have been
+// mirrored somewhere else.
+//
+// Wide means the relays a deploy writes to, the two a gateway looks a key up on,
+// the owner's own relay list, and a set of large public relays that a gateway or
+// an aggregator may have copied the manifest from.
+const WIDE_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://relay.snort.social",
+  "wss://offchain.pub",
+  "wss://nostr.bitcoiner.social",
+  "wss://nostr.oxtr.dev",
+  "wss://relay.nostr.net",
+  "wss://nostr-pub.wellorder.net",
+  "wss://relay.ditto.pub",
+  "wss://nostr.land",
+  "wss://nostr.wine",
+];
+const QUERY_WAIT = 8000;
+
+// A version is named by its snapshot id, as hex, as a note1/nevent1, or as the
+// v<base36> label of its own address, pasted bare or as the whole URL.
+function snapshotId(input) {
+  const s = String(input).trim().replace(/^https?:\/\//, "").split(/[./]/)[0].toLowerCase();
+  if (/^[0-9a-f]{64}$/.test(s)) return s;
+  if (/^(note|nevent)1/.test(s)) {
+    try { const d = nip19.decode(s); return d.type === "note" ? d.data : d.data.id; } catch { return null; }
+  }
+  if (/^v[0-9a-z]{50}$/.test(s)) {
+    const n = [...s.slice(1)].reduce((acc, c) => acc * 36n + BigInt("0123456789abcdefghijklmnopqrstuvwxyz".indexOf(c)), 0n);
+    return n.toString(16).padStart(64, "0");
+  }
+  return null;
+}
+
+const pathsOf = (ev) => Object.fromEntries(ev.tags.filter((t) => t[0] === "path" && t[1] && t[2]).map((t) => [t[1], t[2]]));
+const serversOf = (ev) => ev.tags.filter((t) => t[0] === "server" && /^https?:\/\//.test(t[1] || "")).map((t) => t[1]);
+const norm = (url) => String(url).trim().replace(/\/+$/, "");
+
+async function blossomDelete(server, hash, ev) {
+  const raw = Buffer.from(JSON.stringify(ev));
+  let last;
+  for (const urlsafe of [true, false]) {
+    try {
+      const auth = "Nostr " + (urlsafe ? b64url(raw) : raw.toString("base64"));
+      const res = await fetch(`${server.replace(/\/+$/, "")}/${hash}`, {
+        method: "DELETE", headers: { Authorization: auth }, ...until(TIMEOUTS.put),
+      });
+      if (res.ok || res.status === 404) return res.ok ? "deleted" : "gone";
+      last = `${res.status} ${res.headers.get("x-reason") || (await res.text().catch(() => ""))}`.trim().slice(0, 160);
+      if (![400, 401].includes(res.status)) break;
+    } catch (e) {
+      last = why(e, TIMEOUTS.put);
+      if (e?.name === "TimeoutError") break;
+    }
+  }
+  throw new Error(last);
+}
+
+// Publish to every relay at once and say which took it. A relay that refuses a
+// kind or never answers is expected on a list this long, and is not a failure.
+async function broadcast(pool, relays, ev) {
+  const sent = await Promise.allSettled(pool.publish(relays, ev, { maxWait: QUERY_WAIT }));
+  return relays.filter((_, i) => sent[i].status === "fulfilled");
+}
+
+async function cmdUnpublish() {
+  const site = flags.site ? String(flags.site) : "";
+  const kind = site ? 35128 : 15128;
+  const pagesToDrop = argv.filter((a) => a.startsWith("--path=")).flatMap((a) => a.slice(7).split(","))
+    .map((p) => p.trim()).filter(Boolean).map((p) => (p.startsWith("/") ? p : "/" + p));
+  const version = flags.version ? snapshotId(flags.version) : null;
+  if (flags.version && !version) die("--version takes a snapshot id: hex, note1…, nevent1…, or the v… address of a version");
+  if (version && pagesToDrop.length) die("--version and --path do different things; pass one of them");
+  const go = !!flags.yes;
+
+  // Reading needs only the public key, so a plan can be shown without the
+  // signer. Sending anything needs the signer, and it has to be the owner.
+  let signer = null, pub;
+  if (flags.npub && !go) {
+    try { pub = nip19.decode(String(flags.npub)).data; } catch { die("--npub is not an npub"); }
+  } else {
+    signer = await getSigner();
+    pub = signer.pubkey;
+    if (flags.npub && nip19.npubEncode(pub) !== String(flags.npub)) {
+      await signer.close();
+      die(`the signer holds ${nip19.npubEncode(pub)}, not ${flags.npub}; only a site's owner can unpublish it`);
+    }
+  }
+  const coord = `${kind}:${pub}:${site}`;
+
+  // --relays pins the list, which is what a devnet needs: nothing is looked up
+  // or sent anywhere else. Otherwise the list starts wide and grows by whatever
+  // relay list the owner has published.
+  const pinned = typeof flags.relays === "string";
+  let relays = [...new Set((pinned ? RELAYS : [...RELAYS, ...LOOKUP_RELAYS, ...WIDE_RELAYS]).map(norm))];
+  const pool = new SimplePool();
+  const seen = new Map();
+  const filter = { kinds: [15128, 35128, 5128, 10002, 10063], authors: [pub] };
+  const gather = async (urls) => {
+    const found = await pool.querySync(urls, filter, { maxWait: QUERY_WAIT }).catch(() => []);
+    for (const ev of found) if (ev.pubkey === pub) seen.set(ev.id, ev);
+  };
+  process.stderr.write(`asking ${relays.length} relays what they hold for this key…\n`);
+  await gather(relays);
+  const all = [...seen.values()];
+  const newest = (k) => all.filter((e) => e.kind === k).sort((a, b) => b.created_at - a.created_at)[0];
+  const own = newest(10002);
+  if (own && !pinned) {
+    const more = own.tags.filter((t) => t[0] === "r" && /^wss?:\/\//.test(t[1] || "")).map((t) => norm(t[1]))
+      .filter((r) => !relays.includes(r));
+    if (more.length) { relays.push(...more); await gather(more); }
+  }
+
+  const events = [...seen.values()];
+  const dOf = (e) => e.tags.find((t) => t[0] === "d")?.[1] ?? "";
+  const isThis = (e) => e.kind === kind && (kind === 15128 || dOf(e) === site);
+  const manifests = events.filter(isThis).sort((a, b) => b.created_at - a.created_at);
+  const snapshots = events.filter((e) => e.kind === 5128 && e.tags.some((t) => t[0] === "a" && t[1] === coord))
+    .sort((a, b) => b.created_at - a.created_at);
+  const live = manifests[0];
+  const label = site ? `the site "${site}"` : "the root site";
+
+  const servers = [...new Set([
+    ...SERVERS, ...[...manifests, ...snapshots].flatMap(serversOf),
+    ...(pinned ? [] : (newest(10063)?.tags || []).filter((t) => t[0] === "server").map((t) => t[1])),
+  ].filter((s) => /^https?:\/\//.test(s || "")).map(norm))];
+
+  const finish = async () => { pool.close(relays); await signer?.close(); };
+  const plan = (lines) => {
+    console.log(lines.join("\n"));
+    if (!go) {
+      console.log(`\nNothing was sent. Run it again with --yes to do this.`);
+      return false;
+    }
+    return true;
+  };
+  const caveat = () => console.log(
+    `\nA deletion is a request. Relays that implement NIP-09 drop what it names; others keep it.\n` +
+    `A gateway may serve a cached copy for a while, and anyone who saved a copy still has one.`);
+
+  // ---- one page out of the site: a new version without it
+  if (pagesToDrop.length) {
+    if (!live) { await finish(); die(`no relay has a manifest for ${label}`); }
+    const paths = pathsOf(live);
+    const absent = pagesToDrop.filter((p) => !paths[p]);
+    if (absent.length) {
+      await finish();
+      die(`${absent.join(", ")} not in ${label}. It has:\n  ${Object.keys(paths).sort().join("\n  ")}`);
+    }
+    for (const p of pagesToDrop) delete paths[p];
+    if (!Object.keys(paths).length) { await finish(); die("that would leave the site empty; unpublish the whole site instead (no --path)"); }
+    if (!plan([
+      `Remove from ${label}:`, ...pagesToDrop.map((p) => `  ${p}`),
+      `A new version is published without ${pagesToDrop.length === 1 ? "it" : "them"}, with the other ${Object.keys(paths).length} paths as they are.`,
+      `Earlier versions in the history still hold ${pagesToDrop.length === 1 ? "it" : "them"}. Delete those with --version, or unpublish the whole site.`,
+    ])) return finish();
+    const now = Math.max(Math.floor(Date.now() / 1000), live.created_at + 1);
+    const tags = [
+      ...live.tags.filter((t) => t[0] === "d"),
+      ...Object.entries(paths).map(([p, h]) => ["path", p, h]),
+      ["x", aggregate(paths), "aggregate"],
+      ...live.tags.filter((t) => ["server", "title", "description", "source"].includes(t[0])),
+    ];
+    const manifest = await signer.sign({ kind, created_at: now, tags, content: "" });
+    const snap = await signer.sign({ kind: 5128, created_at: now, content: "", tags: [["a", coord], ...tags.filter((t) => t[0] !== "d")] });
+    const took = await broadcast(pool, relays, manifest);
+    await broadcast(pool, relays, snap);
+    console.log(`\n  new manifest  ${manifest.id}  ${took.length}/${relays.length} relays accepted it`);
+    await finish();
+    if (!took.length) die("no relay accepted the new manifest");
+    return;
+  }
+
+  // Every hash something else still points at, so a blob shared with a page that
+  // stays up (another named site, the runtime every page links) is never asked
+  // to go. `keep` is the set of events that are not being deleted.
+  const protectedBy = (keep) => new Set(keep.flatMap((e) => Object.values(pathsOf(e))));
+
+  // ---- one version out of the history
+  if (version) {
+    const snap = snapshots.find((e) => e.id === version) || events.find((e) => e.id === version && e.kind === 5128);
+    if (!snap) { await finish(); die(`no relay asked has a version ${version.slice(0, 12)}… of ${label}. Is --site right?`); }
+    const keep = events.filter((e) => e.id !== snap.id && (e.kind === 5128 || e.kind === 15128 || e.kind === 35128));
+    const guarded = protectedBy(keep);
+    const blobs = [...new Set(Object.values(pathsOf(snap)))].filter((h) => !guarded.has(h));
+    const when = new Date(snap.created_at * 1000).toISOString().replace("T", " ").slice(0, 16);
+    if (!plan([
+      `Delete the version of ${label} from ${when} UTC (${snap.id.slice(0, 12)}…).`,
+      `  ${Object.keys(pathsOf(snap)).length} paths; ${blobs.length} of their blobs are used by no other version and will be deleted${flags["keep-blobs"] ? " (not with --keep-blobs)" : ""}.`,
+      `  the deletion goes to ${relays.length} relays, the blob deletes to ${servers.length} Blossom servers.`,
+    ])) return finish();
+    const del = await signer.sign({
+      kind: 5, created_at: Math.floor(Date.now() / 1000), content: "Deleted version of an nsite",
+      tags: [["e", snap.id], ["k", "5128"]],
+    });
+    const took = await broadcast(pool, relays, del);
+    console.log(`\n  deletion  ${took.length}/${relays.length} relays accepted it`);
+    if (!flags["keep-blobs"]) await deleteBlobs(blobs, servers, signer);
+    caveat();
+    return finish();
+  }
+
+  // ---- the whole site
+  const others = events.filter((e) => (e.kind === 15128 || e.kind === 35128) ? !isThis(e)
+    : e.kind === 5128 && !snapshots.includes(e));
+  const guarded = protectedBy(others);
+  const hashes = new Set([...manifests, ...snapshots].flatMap((e) => Object.values(pathsOf(e))));
+  const blobs = [...hashes].filter((h) => !guarded.has(h));
+  const shared = hashes.size - blobs.length;
+  if (!live && !snapshots.length) { await finish(); die(`no relay asked has anything for ${label}. Is --site right?`); }
+  if (!plan([
+    `Unpublish ${label} of ${nip19.npubEncode(pub)}:`,
+    `  ${live ? Object.keys(pathsOf(live)).length + " paths in the current version" : "no current manifest found, only history"}, ${snapshots.length} version${snapshots.length === 1 ? "" : "s"} in the history.`,
+    `  an empty manifest replaces the current one, and a deletion request names all of it,`,
+    `  on ${relays.length} relays.`,
+    flags["keep-blobs"]
+      ? `  blobs are left on the servers (--keep-blobs).`
+      : `  ${blobs.length} blob${blobs.length === 1 ? "" : "s"} to delete from ${servers.length} Blossom server${servers.length === 1 ? "" : "s"}` +
+        (shared ? `; ${shared} more are kept because another site or version of this key still uses them.` : "."),
+    `  your relay list and your other sites are left alone.`,
+  ])) return finish();
+
+  // The empty manifest and the deletion share a timestamp. A relay that reads
+  // deletions removes both; one that does not keeps the empty manifest, which is
+  // newer than anything it held, so either way no gateway finds the old pages.
+  const now = Math.max(Math.floor(Date.now() / 1000), (live?.created_at ?? 0) + 1);
+  const tombstone = await signer.sign({ kind, created_at: now, content: "", tags: site ? [["d", site]] : [] });
+  const took = await broadcast(pool, relays, tombstone);
+  console.log(`\n  empty manifest  ${took.length}/${relays.length} relays accepted it`);
+
+  // One deletion per few hundred ids: a relay caps the size of a message, and a
+  // site with a long history can name more events than fit in one.
+  const ids = [...manifests, ...snapshots].map((e) => e.id);
+  const batches = [];
+  for (let i = 0; i < Math.max(ids.length, 1); i += 300) batches.push(ids.slice(i, i + 300));
+  let accepted = 0;
+  for (const [i, batch] of batches.entries()) {
+    const del = await signer.sign({
+      kind: 5, created_at: now, content: "Unpublished nsite",
+      tags: [...(i === 0 ? [["a", coord]] : []), ...batch.map((id) => ["e", id]), ["k", String(kind)], ["k", "5128"]],
+    });
+    accepted = Math.max(accepted, (await broadcast(pool, relays, del)).length);
+  }
+  console.log(`  deletion        ${accepted}/${relays.length} relays accepted it`);
+  if (!flags["keep-blobs"]) await deleteBlobs(blobs, servers, signer);
+  caveat();
+  await finish();
+  if (!took.length && !accepted) die("no relay accepted anything");
+}
+
+// Ask each server that still has a blob to drop it. One signature per blob,
+// shared by every server, and none at all for a blob no server holds.
+async function deleteBlobs(hashes, servers, signer) {
+  let deleted = 0, gone = 0;
+  const refused = [];
+  for (const hash of hashes) {
+    const holders = (await Promise.all(servers.map(async (s) => ((await served(s, hash)) ? s : null)))).filter(Boolean);
+    if (!holders.length) { gone++; continue; }
+    const ev = await signer.sign({
+      kind: 24242, created_at: Math.floor(Date.now() / 1000), content: "Delete site file",
+      tags: [["t", "delete"], ["expiration", String(Math.floor(Date.now() / 1000) + 600)], ["x", hash]],
+    });
+    const results = await Promise.allSettled(holders.map((s) => blossomDelete(s, hash, ev)));
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") deleted++;
+      else refused.push(`${holders[i]} ${hash.slice(0, 12)}…: ${r.reason?.message || r.reason}`);
+    });
+  }
+  console.log(`  blobs           ${deleted} deleted, ${gone} already on no server, ${refused.length} refused`);
+  for (const r of refused.slice(0, 20)) console.log(`    ${r}`);
+  if (refused.length > 20) console.log(`    and ${refused.length - 20} more`);
+}
+
 // ------------------------------------------------------------------- keygen
 
 function cmdKeygen() {
@@ -596,6 +879,9 @@ function cmdHelp() {
                                server are not uploaded again, and a site whose
                                path table has not changed is not republished.
                                --force publishes regardless.
+  nsite-clay unpublish         take a site down: an empty manifest and a deletion request
+                               to every relay it can find, and its blobs deleted from the
+                               Blossom servers. Shows what it would do; --yes does it.
   nsite-clay keygen            print a fresh keypair and the URL it would live at
 
 Signing
@@ -623,13 +909,28 @@ Deploy options
                       none. One is written only when both lookup relays confirm
                       there is none, and it names the relays deployed to.
 
+Unpublish options
+  --site=name         the named site to take down; without it, the root site
+  --path=/about.html  take only these pages out (a new version without them);
+                      repeat it or separate with commas
+  --version=<id>      delete one version from the history: its snapshot id, as hex,
+                      note1…, nevent1…, or its v….nsite.lol address
+  --keep-blobs        leave the files on the Blossom servers
+  --npub=npub1…       show the plan without connecting a signer
+  --relays=a,b,c      send only to these, and look nothing else up. By default it
+                      goes to the deploy relays, the lookup relays, your own relay
+                      list and a set of large public relays.
+  --yes               do it. Without this nothing is signed or sent.
+  Relays that implement NIP-09 drop what a deletion names, and Blossom servers
+  delete when asked, but neither is obliged to, and copies elsewhere remain.
+
 Once a site is published, the owner opens it, signs in, and edits it in the page.
 Saving from the browser republishes it; this CLI is only needed for the first
 version and for changes made outside the browser.
 `);
 }
 
-const commands = { init: cmdInit, deploy: cmdDeploy, keygen: cmdKeygen, help: cmdHelp };
+const commands = { init: cmdInit, deploy: cmdDeploy, unpublish: cmdUnpublish, keygen: cmdKeygen, help: cmdHelp };
 const run = commands[cmd] || cmdHelp;
 await run();
 process.exit(0);

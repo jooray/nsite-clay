@@ -415,6 +415,7 @@ A gateway resolves your manifest, fetches the blobs, and serves them over HTTP.
 ```bash
 nsite-clay init [dir] [--npub=npub1…]
 nsite-clay deploy <dir> [--sec=… | --bunker=…] [--site=name] [--title=…] [--description=…]
+nsite-clay unpublish [--site=name] [--path=/page.html] [--version=<id>] [--yes]
 nsite-clay keygen
 ```
 
@@ -446,6 +447,45 @@ Files that look like keys are refused even without an ignore file: `*.pem`, `*.k
 `*.pfx`, `*.ppk`, `*.macaroon`, `id_rsa` and its siblings, `npmrc`, and names like `env.backup`
 or `nsec.txt`. A web asset is never refused by its name alone, so `what-is-nsec.html` publishes.
 `--publish-secrets` overrides the rule.
+
+### Taking it down
+
+```bash
+nsite-clay unpublish                          # the root site: current version and history
+nsite-clay unpublish --site=blog              # a named site
+nsite-clay unpublish --path=/old-offer.html   # one page, as a new version without it
+nsite-clay unpublish --version=v…             # one version out of the history
+```
+
+Each prints what it would do and sends nothing until it is run again with `--yes`. `--npub=npub1…`
+shows the plan without connecting a signer.
+
+Nothing published to Nostr can be deleted outright, only asked to be. Unpublishing a site
+therefore does three things, each as widely as it can:
+
+1. **An empty manifest replaces the current one.** A manifest is a replaceable event, so every
+   relay keeps only the newest, whether or not it knows anything about deletions. A gateway
+   reading it finds no pages.
+2. **A [NIP-09](https://github.com/nostr-protocol/nips/blob/master/09.md) deletion request**
+   names the manifest, every version in the history, and the site's address. Relays that
+   implement it drop all of it, including the empty manifest, and refuse the events if anyone
+   sends them back.
+3. **Each file is deleted from the Blossom servers** that still hold it
+   ([BUD-02](https://github.com/hzrd149/blossom/blob/master/buds/02.md)). A file that another of
+   your sites or another version still uses is kept. `--keep-blobs` leaves all of them.
+
+Both events go to the deploy relays, the two lookup relays gateways use, every relay on your own
+relay list, and a set of large public relays a gateway may have copied the site from. `--relays`
+replaces all of that with a list of your own, which is how to point it at the devnet. Your relay
+list and your other sites are not touched.
+
+What it cannot reach: a relay that ignores deletions and was never sent the empty manifest, a
+gateway's cache until it expires, a Blossom mirror nobody told about, and anyone who saved a copy.
+`--path` and `--version` say what they leave behind: a page taken out of the current version is
+still in the older versions until those are deleted too.
+
+The signer needs `sign_event:5` for the deletion, `15128`/`35128` and `5128` for the empty manifest
+and a new version, and `24242` for the Blossom deletes.
 
 ### Where your site ends up
 

@@ -464,6 +464,23 @@ gateways hold a wildcard for their own domain only, so a browser asking for
 `https://blog.example.com` gets a TLS `unrecognized name` alert. Say plain HTTP,
 or a gateway they run themselves.
 
+If they want a page or the whole site gone, that is a terminal job too:
+
+```bash
+npx nsite-clay unpublish                          # the whole root site
+npx nsite-clay unpublish --site=blog              # a named site
+npx nsite-clay unpublish --path=/old-offer.html   # one page, as a new version without it
+npx nsite-clay unpublish --version=v…             # one version out of the history
+```
+
+It prints what it would do and sends nothing until it is run again with `--yes`.
+Be honest with them about what it can do: on Nostr a deletion is a request.
+Relays that implement NIP-09 drop what it names, and Blossom servers delete a
+file when its uploader asks, but neither has to, and a copy somebody saved stays
+saved. To make that as good as it gets, the site is replaced with an empty
+manifest, which every relay honours because a newer one replaces the old, and
+both that and the deletion go to every relay it can find for the key.
+
 Develop against the local stack rather than public infrastructure:
 
 ```bash

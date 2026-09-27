@@ -6,8 +6,8 @@
 // gateway. None of these three services is complicated enough to justify that,
 // so here they are, in memory, gone when you stop the process.
 //
-//   relay    ws://127.0.0.1:4869    NIP-01 REQ/EVENT/CLOSE, replaceable kinds
-//   blossom  http://127.0.0.1:4870  BUD-01 GET, BUD-02 PUT /upload
+//   relay    ws://127.0.0.1:4869    NIP-01 REQ/EVENT/CLOSE, replaceable kinds, NIP-09
+//   blossom  http://127.0.0.1:4870  BUD-01 GET, BUD-02 PUT /upload and DELETE
 //   gateway  http://127.0.0.1:4871  NIP-5A resolution, ?npub= or a Host label
 //
 // Nothing here is hardened. It is a development fixture, it trusts its caller,
@@ -53,8 +53,35 @@ function stored() {
   return [...events, ...replaceable.values()];
 }
 
+// NIP-09, the way a relay that honours it behaves: the author's events named by
+// `e` go, every version of an `a` coordinate up to the deletion's timestamp
+// goes, and a deleted event that comes back later is refused.
+const deleted = new Set();          // event ids
+const deletedUntil = new Map();     // "kind:pubkey:d" -> created_at
+
+function applyDeletion(del) {
+  for (const [name, value] of del.tags) {
+    if (name === "e") {
+      deleted.add(value);
+      const i = events.findIndex((e) => e.id === value && e.pubkey === del.pubkey);
+      if (i >= 0) events.splice(i, 1);
+      for (const [key, ev] of replaceable) if (ev.id === value && ev.pubkey === del.pubkey) replaceable.delete(key);
+    }
+    if (name === "a" && value?.split(":")[1] === del.pubkey) {
+      deletedUntil.set(value, Math.max(deletedUntil.get(value) ?? 0, del.created_at));
+      const ev = replaceable.get(value);
+      if (ev && ev.created_at <= del.created_at) replaceable.delete(value);
+    }
+  }
+}
+
+const isDeleted = (ev) => deleted.has(ev.id) ||
+  (isReplaceable(ev.kind) && ev.created_at <= (deletedUntil.get(`${ev.kind}:${ev.pubkey}:${dTag(ev)}`) ?? -1));
+
 function store(ev) {
   if (isEphemeral(ev.kind)) return true;
+  if (isDeleted(ev)) return false;
+  if (ev.kind === 5) applyDeletion(ev);
   if (isReplaceable(ev.kind)) {
     const key = `${ev.kind}:${ev.pubkey}:${dTag(ev)}`;
     const prev = replaceable.get(key);
@@ -176,6 +203,33 @@ createServer(async (req, res) => {
       sha256: hash, size: body.length,
       type: blobs.get(hash).type, uploaded: Math.floor(Date.now() / 1000),
     }));
+  }
+
+  // BUD-02: the uploader may delete their own blob, with a kind-24242 token
+  // saying "delete" and naming the hash.
+  if (req.method === "DELETE") {
+    const hash = (req.url || "").slice(1).split(/[.?]/)[0];
+    const auth = req.headers.authorization || "";
+    let token = null;
+    try {
+      const b64 = auth.slice(6).replace(/-/g, "+").replace(/_/g, "/");
+      token = JSON.parse(Buffer.from(b64, "base64").toString());
+    } catch {}
+    const says = (name, value) => token?.tags?.some((t) => t[0] === name && t[1] === value);
+    if (!token || !verifyEvent(token) || token.kind !== 24242 || !says("t", "delete") || !says("x", hash)) {
+      res.writeHead(401, { ...CORS, "X-Reason": "Invalid delete authorization" });
+      return res.end("Invalid delete authorization");
+    }
+    const blob = blobs.get(hash);
+    if (!blob) { res.writeHead(404, CORS); return res.end("not found"); }
+    if (blob.uploader && blob.uploader !== token.pubkey) {
+      res.writeHead(403, { ...CORS, "X-Reason": "Not the uploader" });
+      return res.end("Not the uploader");
+    }
+    blobs.delete(hash);
+    log(`  blossom x  ${hash.slice(0, 12)} deleted`);
+    res.writeHead(200, CORS);
+    return res.end();
   }
 
   // BUD-12: what this pubkey has uploaded.

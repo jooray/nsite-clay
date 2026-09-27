@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.20",
+    "released": "2026-09-27",
+    "notes": [
+      "A site, a single page, or one version from the history can now be taken down with the command line tool: npx nsite-clay unpublish. It shows what it would do first and does nothing until you confirm. Nostr has no true delete, so it asks every relay and file server it can find to remove the site and replaces it with an empty one, which is as close as it gets. Copies somebody else saved are out of its reach."
+    ]
+  },
+  {
     "version": "0.3.19",
     "released": "2026-09-26",
     "notes": [
