@@ -29,6 +29,22 @@ needs no domain, no server and no renewal.</sub></p>
 
 ---
 
+<!-- jooray-links:start -->
+### More from me
+
+**Related projects**
+
+- [nostr-emanator](https://github.com/jooray/nostr-emanator): schedule Nostr posts, paired over NIP-46 and Amber
+- [nostrautica](https://github.com/jooray/nostrautica): Nostr-native event organizer with end-to-end encrypted data
+- [oracolo](https://github.com/jooray/oracolo): a Nostr blog in a single HTML file
+- [anonmicroblog](https://github.com/jooray/anonmicroblog): anonymous microblogs on Nostr
+- [lievik](https://github.com/jooray/lievik): Nostr-first content curation for creators with several audiences
+
+**Full project showcase:** [nsite-clay in my project showcase](https://juraj.bednar.io/showcase/#PUB-01), or [all my projects](https://juraj.bednar.io/showcase/).
+
+I write about building things on [my blog](https://juraj.bednar.io/en/blog-en/). I also wrote a cypherpunk novel, [Tamers of Entropy](https://tamersofentropy.net/), and there is a [trailer](https://tamersofentropy.net/#trailer).
+<!-- jooray-links:end -->
+
 Open the page, sign in with your key, and type into it. The document serialises its own DOM,
 pushes those bytes to a [Blossom](https://github.com/hzrd149/blossom) server as one
 content-addressed blob, and republishes the [NIP-5A](https://github.com/nostr-protocol/nips/blob/master/5A.md)
