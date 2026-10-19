@@ -61,7 +61,7 @@ try {
     await page.click("#ai-generate");
     await page.waitForSelector("#ai-result:not([hidden])");
     assert.equal(await page.evaluate(() => window.published), undefined);
-    assert.equal(requests.at(-1).model, "deepseek-v4-1-flash");
+    assert.equal(requests.at(-1).model, "deepseek-v4-1-flash-1017");
     // Nothing about a description predicts how long the page will be, so
     // generating asks for the ceiling; the client comes down if an endpoint
     // says that is more than it allows.

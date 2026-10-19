@@ -1067,7 +1067,7 @@ const results = await page.evaluate(async ({ evs, NSEC, HEX, PUB }) => {
   }
 
   {
-    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today", model: "deepseek-v4-1-flash", key: "sk-test-never-publish" });
+    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today", model: "deepseek-v4-1-flash-1017", key: "sk-test-never-publish" });
     const pending = nc.ai.settings();
     const panel = [...document.querySelectorAll(".nc-ui")].at(-1);
     const endpoint = panel.querySelector('input[type="text"]');

@@ -38,7 +38,7 @@ requests; every other case makes one. Nothing is published.
 ```sh
 npm run build
 # Set NSITE_AI_KEY using your usual secret-management method.
-node tools/ai-evaluate.mjs --live --case=cafe-en --model=deepseek-v4-1-flash
+node tools/ai-evaluate.mjs --live --case=cafe-en --model=deepseek-v4-1-flash-1017
 ```
 
 Optional arguments: `--base=https://your-node.example/v1`, `--mode=byok`,

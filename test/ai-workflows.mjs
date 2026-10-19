@@ -58,7 +58,7 @@ try {
     await nc.ready;
     nc.vault = { usable: true, load: async () => ({}), save: async () => false };
     await nc.login("nsec", { key: nsec });
-    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash", key: "fixture" });
+    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash-1017", key: "fixture" });
   }, NSEC);
   await setup();
 
@@ -68,7 +68,7 @@ try {
     nc.vault = { usable: true, load: async () => data, save: async (patch) => { data = { ...data, ...patch }; return true; } };
     const custom = { mode: "byok", base: "https://provider.example/api", model: "custom-model", key: "custom-key" };
     nc.ai.client.configure(custom); await nc.ai.keepOnRelays();
-    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash", key: "" });
+    nc.ai.client.configure({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash-1017", key: "" });
     const found = await nc.ai.adopt({ force: true });
     return { found, config: nc.ai.client.session(), data };
   });

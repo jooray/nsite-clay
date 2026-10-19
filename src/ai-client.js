@@ -1,6 +1,6 @@
 // Routstr is the payment service as well as the inference endpoint. There is no
 // discovery or automatic failover here: the owner chooses who receives a request.
-export const AI_DEFAULTS = Object.freeze({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash" });
+export const AI_DEFAULTS = Object.freeze({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash-1017" });
 const STORAGE = "nsite-clay.ai";
 
 // Estimates include room for reasoning. They are a planning range, not a quote

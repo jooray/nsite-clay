@@ -102,7 +102,7 @@ under Advanced and backup/recovery in its own section. `nc.ai.addCredit()` opens
 the focused Lightning/Cashu flow; `nc.ai.withdraw()` opens withdrawal. `nc.ai.client`
 is the OpenAI-compatible client; its default base is
 `https://routstr.cypherpunk.today/v1` and its default model is
-`deepseek-v4-1-flash`. Settings and endpoint-bound credentials are kept locally
+`deepseek-v4-1-flash-1017`. Settings and endpoint-bound credentials are kept locally
 and backed up by `nc.ai.keepOnRelays()` to the owner's encrypted vault. The vault
 keeps the legacy `ai[endpoint]` key map plus `aiProfiles[endpoint]` with `mode`,
 `base` and `model`, and `aiSelected` for fresh-device restoration. `nc.ai.adopt()`

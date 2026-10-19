@@ -70,7 +70,7 @@ const storage = { getItem: (k) => stored.get(k), setItem: (k, v) => stored.set(k
 const client = new AiClient(storage);
 try {
   assert.equal(client.config.base, AI_DEFAULTS.base);
-  assert.equal(client.config.model, "deepseek-v4-1-flash");
+  assert.equal(client.config.model, "deepseek-v4-1-flash-1017");
   client.configure({ ...AI_DEFAULTS, base });
   assert.equal((await client.models())[0].id, AI_DEFAULTS.model);
   await client.cashu("cashuA-test-token");
