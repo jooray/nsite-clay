@@ -8,6 +8,7 @@
 // and would not fit in a draft at all.
 import { hashBytes } from "./blossom.js";
 import { aspectFor } from "./ai-client.js";
+import { manifestPaths } from "./manifest.js";
 
 export const PICTURE_PATH = /^(?:\.\/)?(images\/[0-9a-f]{64}\.(?:webp|jpg))$/;
 export const pictureName = (src) => PICTURE_PATH.exec(String(src || "").trim())?.[1] || null;
@@ -205,11 +206,13 @@ export async function uploadPictures(ai, html) {
     const name = pictureName(el.getAttribute("src"));
     if (!name) continue;
     if (!sent.has(name)) {
-      const blob = await ai.images.get(name);
-      if (!blob) { el.removeAttribute("src"); continue; }
-      sent.set(name, (await ai.nc.media.upload(new File([blob], name.split("/").pop(), { type: blob.type }))).url);
+      // Only what this browser made is new. A picture it does not hold is one
+      // the page already had, published next to it from wherever the page was
+      // built, and it stays exactly as it is.
+      const blob = await ai.images.get(name).catch(() => null);
+      sent.set(name, blob ? (await ai.nc.media.upload(new File([blob], name.split("/").pop(), { type: blob.type }))).url : null);
     }
-    el.setAttribute("src", sent.get(name));
+    if (sent.get(name)) el.setAttribute("src", sent.get(name));
   }
   return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
 }
@@ -220,15 +223,32 @@ export async function uploadPictures(ai, html) {
  * One the browser no longer has is taken out of the page rather than published
  * as a broken link: its frame is empty again and the content form can fill it.
  */
-export async function pictureFiles(ai, html, dir = "/") {
+export async function pictureFiles(ai, html, dir = "/", { site = "", owner } = {}) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const files = new Map();
-  let missing = 0;
+  let missing = 0, live;
+  // What the site already serves. Publishing merges with it, so a picture
+  // published before, from another browser, is still there afterwards.
+  const published = async () => {
+    if (live === undefined) {
+      try {
+        const ev = await ai.nc.manifestOf(owner || ai.nc.signer?.pubkey || ai.nc.pubkey, site);
+        live = ev ? manifestPaths(ev) : {};
+      } catch { live = {}; }
+    }
+    return live;
+  };
   for (const el of doc.querySelectorAll("img[src]")) {
     const name = pictureName(el.getAttribute("src"));
     if (!name) continue;
     const blob = await ai.images.get(name).catch(() => null);
-    if (!blob) { el.removeAttribute("src"); missing++; continue; }
+    if (!blob) {
+      // The name is the picture's hash, so the site serving that hash at that
+      // path is the picture itself, already published.
+      const hash = name.slice("images/".length).replace(/\.(webp|jpg)$/, "");
+      if ((await published())[dir + name] === hash) continue;
+      el.removeAttribute("src"); missing++; continue;
+    }
     if (!files.has(name)) files.set(name, { path: dir + name, bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type });
   }
   return { html: missing ? "<!DOCTYPE html>\n" + doc.documentElement.outerHTML : html, files: [...files.values()], missing };

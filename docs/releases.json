@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.24",
+    "released": "2026-10-19",
+    "notes": [
+      "Fixed: changing a page with Edit with AI could empty every picture except the one it had just made, when the page had been built in the publisher and edited in another browser. Pictures already on the page now always stay as they are; only new ones are uploaded.",
+      "Fixed: publishing a page again from another browser no longer drops pictures the site already serves."
+    ]
+  },
+  {
     "version": "0.3.23",
     "released": "2026-10-19",
     "notes": [

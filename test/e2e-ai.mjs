@@ -280,6 +280,97 @@ try {
   t("keeping it uploads the new picture and puts it in the page",
     /^http:\/\/127\.0\.0\.1:/.test(redrawn.src) && !redrawn.marker, JSON.stringify(redrawn));
   t("with the description it was made from", redrawn.prompt === "The same bench at sunset, warm light");
+
+  // ---- pictures made in the publisher, edited from another browser -------
+  // The publisher and the page are different origins, so the page's browser
+  // never holds the pictures the publisher made. 0.3.23 took that to mean they
+  // did not exist, and a rewrite that redrew one picture emptied all the rest.
+  const GALLERY = '<!DOCTYPE html><html><head><title>Gallery</title><style>body{font-family:system-ui;margin:2rem}img{width:20rem}</style></head><body><main nc:blocks><section><h1>Our gallery</h1><p>Two pictures.</p><img id="one" nc:crop="16:9" alt="Bench" nc:prompt="A bench"><img id="two" nc:crop="1:1" alt="Pump" nc:prompt="A pump"></section></main></body></html>';
+  const imageRoutes = async (page, log) => {
+    await mockAiAccount(page, { balance: 1000000 });
+    await page.route("https://routstr.cypherpunk.today/v1/models", (route) => route.fulfill({ contentType: "application/json",
+      body: JSON.stringify({ data: [{ id: "deepseek-v4-1-flash-1017", sats_pricing: { prompt: .000439, completion: .001756 } }, QWEN] }) }));
+    await page.route("https://routstr.cypherpunk.today/v1/image/generate", (route) => {
+      log.push(route.request().postDataJSON());
+      route.fulfill({ contentType: "application/json", body: JSON.stringify({ images: [squares[(log.length - 1) % squares.length]] }) });
+    });
+  };
+  const builder = await (await browser.newContext()).newPage();
+  builder.on("pageerror", (e) => t("pageerror(gallery publisher)", false, e.message));
+  const galleryMade = [];
+  await imageRoutes(builder, galleryMade);
+  await builder.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => route.fulfill({ contentType: "text/event-stream",
+    body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: GALLERY }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` }));
+  await builder.goto(`http://127.0.0.1:${publisherPort}/deploy.html`);
+  await builder.evaluate(async () => { await nc.ready; nc.ai.client.configure({ ...nc.ai.client.config, key: "sk-local-e2e" }); });
+  await builder.click("#way-key"); await builder.fill("#key", NSEC); await builder.click("#key-go");
+  await builder.waitForSelector("#tpls .tpl");
+  await builder.waitForFunction(() => !document.querySelector("#ai-generate").disabled, null, { timeout: 15000 });
+  await builder.fill("#ai-description", "A gallery page with two pictures.");
+  await builder.click("#ai-generate");
+  await builder.waitForFunction(() => document.querySelector("#ai-status").textContent === "The preview is ready." && document.querySelector("#ai-cancel").hidden, null, { timeout: 30000 });
+  await builder.click("#ai-use");
+  await builder.fill("#path", "/gallery/");
+  await builder.click("#where-go");
+  await builder.waitForSelector("#done-card:not([hidden])", { timeout: 60000 });
+  t("the publisher made both pictures", galleryMade.length === 2, String(galleryMade.length));
+  const galleryLink = `http://${published.npub}.localhost:${gatewayPort}/gallery/`;
+
+  const elsewhere = await (await browser.newContext()).newPage();
+  elsewhere.on("pageerror", (e) => t("pageerror(gallery page)", false, e.message));
+  const redrew = [];
+  await imageRoutes(elsewhere, redrew);
+  await elsewhere.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => {
+    const page = route.request().postDataJSON().messages[1].content.split("The page as it is now:\n")[1];
+    const out = page.replace(/<img ([^>]*?)id="one"/, '<img nc:redraw="" nc:prompt="A bench at sunset" $1id="one"');
+    route.fulfill({ contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: out }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` });
+  });
+  await elsewhere.goto(galleryLink + "#edit");
+  await elsewhere.evaluate(async () => { await nc.ready; });
+  const before = await elsewhere.evaluate(() => Object.fromEntries([...document.querySelectorAll("img")].map((i) => [i.id, i.getAttribute("src")])));
+  t("the gallery is published with its pictures as site files", /^images\/[0-9a-f]{64}\.webp$/.test(before.one || "") && /^images\/[0-9a-f]{64}\.webp$/.test(before.two || ""),
+    JSON.stringify(before));
+  await elsewhere.evaluate((n) => nc.login("nsec", { key: n }), NSEC);
+  await elsewhere.waitForSelector("[data-nc-ai]", { timeout: 10000 });
+  await elsewhere.click("[data-nc-ai]");
+  await elsewhere.waitForFunction(() => { const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    return p && p.querySelector("textarea") && !p.querySelector("button[type=submit]").disabled; }, null, { timeout: 15000 });
+  await elsewhere.evaluate(() => {
+    const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    p.querySelector("textarea").value = "Make the bench picture warmer.";
+    p.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  await elsewhere.waitForSelector(".nc-ui iframe", { timeout: 30000 });
+  await elsewhere.evaluate(() => {
+    const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    p.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  await elsewhere.waitForFunction((old) => document.querySelector("#one")?.getAttribute("src") !== old, before.one, { timeout: 30000 });
+  await elsewhere.waitForTimeout(1500);
+  const after = await elsewhere.evaluate(() => Object.fromEntries([...document.querySelectorAll("img")].map((i) =>
+    [i.id, { src: i.getAttribute("src"), loaded: i.complete && i.naturalWidth > 0 }])));
+  t("only the picture asked about was redrawn", redrew.length === 1 && /^http:\/\/127\.0\.0\.1:/.test(after.one?.src || ""), JSON.stringify(after.one));
+  t("every other picture keeps its published file", after.two?.src === before.two, JSON.stringify(after.two));
+  t("and still loads", after.two?.loaded === true);
+
+  // Publishing again from a browser that never held the pictures.
+  const again2 = await (await browser.newContext()).newPage();
+  again2.on("pageerror", (e) => t("pageerror(republish)", false, e.message));
+  await again2.goto(`http://127.0.0.1:${publisherPort}/deploy.html`);
+  await again2.evaluate(async () => { await nc.ready; });
+  await again2.click("#way-key"); await again2.fill("#key", NSEC); await again2.click("#key-go");
+  await again2.waitForSelector("#tpls .tpl");
+  const ghost = "images/" + "0".repeat(64) + ".webp";
+  const kept = await again2.evaluate(async ({ one, two, ghost }) => {
+    const html = `<!DOCTYPE html><html><head></head><body><img src="${one}"><img src="${two}"><img src="${ghost}"></body></html>`;
+    const out = await nc.ai.pictureFiles(html, "/gallery/");
+    const doc = new DOMParser().parseFromString(out.html, "text/html");
+    return { srcs: [...doc.querySelectorAll("img")].map((i) => i.getAttribute("src")), missing: out.missing, files: out.files.length };
+  }, { one: before.one, two: before.two, ghost });
+  t("publishing again from another browser keeps pictures the site already serves",
+    kept.srcs[0] === before.one && kept.srcs[1] === before.two && kept.files === 0, JSON.stringify(kept));
+  t("and only a picture the site does not have is dropped", kept.srcs[2] === null && kept.missing === 1, JSON.stringify(kept));
 } catch (e) {
   t("the run completed", false, e.message);
 } finally {
