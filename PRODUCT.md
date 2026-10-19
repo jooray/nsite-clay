@@ -62,6 +62,11 @@ the hosted wizard is a lock-in.
 - Measured cost of the default model: 17 to 22 sats for a generated page, well
   under a sat for editing a paragraph. So 1000 sats is roughly 45 pages or
   hundreds of edits.
+- Pictures for a generated page are made with the default picture model,
+  `qwen-image-2-1-turbo`, at about 24 sats each (Venice list price), up to 4
+  per page by default. The builder leaves 150 sats of credit unspent by
+  pictures so the next page or change can still be reserved. 1000 sats covers
+  a page with its pictures several times over.
 - The AI key must be recoverable without a downloaded file: stored on the user's
   own relays, encrypted to their own key.
 - Advanced use, another node or an OpenAI-compatible key of their own, stays

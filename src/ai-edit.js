@@ -68,8 +68,16 @@ function cleanElement(nc, element) {
   return copy.outerHTML;
 }
 
-export function previewHTML(html, { base = "" } = {}) {
+export function previewHTML(html, { base = "", images = null } = {}) {
   const doc = new DOMParser().parseFromString(html, "text/html");
+  // Pictures made in this browser and not published yet. Their path means
+  // nothing until they are, so the preview shows the bytes instead.
+  if (images) {
+    for (const el of doc.querySelectorAll("img[src]")) {
+      const shown = images(el.getAttribute("src"));
+      if (shown) el.setAttribute("src", shown);
+    }
+  }
   doc.querySelectorAll("script, iframe, object, embed, base, meta[http-equiv], form").forEach((el) => el.remove());
   // The toolbar is not part of the page being previewed. Unstyled, which it is
   // here because its stylesheet is a root-relative link that resolves to

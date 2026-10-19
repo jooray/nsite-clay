@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { AiClient, AI_DEFAULTS } from "../src/ai-client.js";
+import { AiClient, AI_DEFAULTS, imagePrice, aspectFor } from "../src/ai-client.js";
+
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+const WEBP_BYTES = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WEBPVP8 ")]).toString("base64");
+const QWEN = { id: "qwen-image-2-1-turbo", enabled: true, architecture: { output_modalities: ["image"] },
+  sats_pricing: { image_output: 24.3 }, image_pricing: { max_usd: 0.02, tiers: [{ resolution: "1K", usd: 0.02 }, { resolution: "2K", usd: 0.02 }], default_resolution: "1K" } };
+let native = "ok", openai = "b64";
 
 const calls = [];
 let finish = "stop", payment = "pending", split = false;
@@ -9,7 +15,16 @@ const server = createServer(async (req, res) => {
   const body = raw ? JSON.parse(raw) : undefined;
   calls.push({ url: req.url, auth: req.headers.authorization, body });
   res.setHeader("Content-Type", "application/json");
-  if (req.url.endsWith("/models")) return res.end(JSON.stringify({ data: [{ id: AI_DEFAULTS.model, enabled: true }] }));
+  if (req.url.endsWith("/models")) return res.end(JSON.stringify({ data: [{ id: AI_DEFAULTS.model, enabled: true }, QWEN] }));
+  if (req.url.endsWith("/image/generate")) {
+    if (native === "refuse") { res.statusCode = 400; return res.end(JSON.stringify({ error: { message: "width and height are not supported" } })); }
+    if (native === "broke") { res.statusCode = 402; return res.end("{}"); }
+    return res.end(JSON.stringify({ images: [WEBP_BYTES] }));
+  }
+  if (req.url.endsWith("/images/generations")) {
+    if (openai === "strict" && "response_format" in body) { res.statusCode = 400; return res.end(JSON.stringify({ error: { message: "Unknown parameter: 'response_format'." } })); }
+    return res.end(JSON.stringify({ created: 1, data: [{ b64_json: PNG }] }));
+  }
   if (req.url.endsWith("/balance/create")) return res.end(JSON.stringify({ api_key: "sk-created", balance: 100000 }));
   if (req.url.endsWith("/balance/topup")) return res.end(JSON.stringify({ msats: 10000 }));
   if (req.url.endsWith("/balance/info")) return res.end(JSON.stringify({ balance: 100000, reserved: 0 }));
@@ -151,10 +166,81 @@ try {
     "reasoning must show progress before any page text exists");
   assert.equal(seen.at(-1)[0], "<p>done</p>".length, "and the text is still what is returned");
 
+  // Pictures. Our node's model is the default on a Routstr node, and an old
+  // profile with no picture settings gets it; somebody else's endpoint does not.
+  assert.equal(client.session().imageModel, "qwen-image-2-1-turbo");
+  assert.equal(client.session().pictures, 4);
+  {
+    const old = new Map([["nsite-clay.ai", JSON.stringify({ config: { mode: "routstr", base: AI_DEFAULTS.base, model: "m" }, nodes: {} })]]);
+    const c = new AiClient({ getItem: (k) => old.get(k), setItem: (k, v) => old.set(k, v) });
+    assert.equal(c.config.imageModel, AI_DEFAULTS.imageModel, "a profile from before pictures gets the default");
+    c.configure({ mode: "byok", base: "https://api.example.com/v1", model: "m" });
+    assert.equal(c.config.imageModel, "", "a picture model must not be guessed for a stranger's endpoint");
+    c.configure({ mode: "byok", base: "https://api.example.com/v1", model: "m", imageModel: " pic ", pictures: "99" });
+    assert.equal(c.config.imageModel, "pic"); assert.equal(c.config.pictures, 8, "pictures are capped");
+    assert.equal(new AiClient({ getItem: (k) => old.get(k) }).config.imageModel, "pic", "picture settings persist");
+  }
+  // The text model list never offers a picture model, and the picture list
+  // never offers a text one.
+  assert.deepEqual((await client.models()).map((m) => m.id), [AI_DEFAULTS.model]);
+  assert.deepEqual((await client.imageModels()).map((m) => m.id), [QWEN.id]);
+  assert(Math.abs(imagePrice(QWEN) - 24.3) < 1e-9);
+  assert(Math.abs(imagePrice({ sats_pricing: { image_output: 100 }, image_pricing: { max_usd: 0.2, default_resolution: "1K", default_quality: "high",
+    tiers: [{ resolution: "1K", quality: "high", usd: 0.05 }, { resolution: "4K", usd: 0.2 }] } }) - 25) < 1e-9, "the default tier, not the ceiling");
+  assert.equal(imagePrice({ sats_pricing: { image_output: 0 } }), null);
+  assert.equal(aspectFor("16:9"), "16:9"); assert.equal(aspectFor("4:3"), "3:2"); assert.equal(aspectFor("1:1"), "1:1");
+  assert.equal(aspectFor("9:16"), "9:16"); assert.equal(aspectFor(""), "1:1");
+  const checked = await client.check();
+  assert.equal(checked.image.model, QWEN.id); assert.equal(checked.state, "ready");
+  // The native route first, with the frame's shape.
+  {
+    const before = calls.length;
+    const blob = await client.generateImage("a bench", { aspect: "16:9" });
+    assert.equal(blob.type, "image/webp");
+    assert.deepEqual(calls.slice(before).map((c) => c.url), ["/v1/image/generate"]);
+    assert.deepEqual(calls.at(-1).body, { model: QWEN.id, prompt: "a bench", aspect_ratio: "16:9", format: "webp" });
+    assert.equal(calls.at(-1).auth, "Bearer sk-paid");
+  }
+  // A model the native route refuses is asked on the OpenAI route, and is not
+  // asked natively again.
+  native = "refuse";
+  {
+    const before = calls.length;
+    assert.equal((await client.generateImage("a bench")).type, "image/png");
+    assert.deepEqual(calls.slice(before).map((c) => c.url), ["/v1/image/generate", "/v1/images/generations"]);
+    assert.deepEqual(calls.at(-1).body, { model: QWEN.id, prompt: "a bench", n: 1, response_format: "b64_json" });
+    const again = calls.length;
+    await client.generateImage("a bench");
+    assert.deepEqual(calls.slice(again).map((c) => c.url), ["/v1/images/generations"]);
+  }
+  client.native.clear();
+  // Credit is not a shape problem: it is never asked again elsewhere.
+  native = "broke";
+  {
+    const before = calls.length;
+    await assert.rejects(client.generateImage("a bench"), /credit is too low/);
+    assert.equal(calls.length, before + 1, "a paid refusal must not be retried");
+  }
+  native = "ok";
+  // With somebody's own key, only the OpenAI route, and one that refuses to be
+  // asked for base64 is asked without it.
+  {
+    const own = new AiClient(null);
+    own.config = { mode: "byok", base, model: "m", imageModel: "pic", pictures: 2 }; own.data.nodes[base] = { key: "sk-own" };
+    openai = "strict";
+    const before = calls.length;
+    assert.equal((await own.generateImage("a bench", { aspect: "16:9" })).type, "image/png");
+    assert.deepEqual(calls.slice(before).map((c) => c.url), ["/v1/images/generations", "/v1/images/generations"]);
+    assert.equal("response_format" in calls.at(-1).body, false);
+    openai = "b64";
+    own.config.imageModel = "";
+    await assert.rejects(own.generateImage("a bench"), /picture model/);
+  }
+
   const refund = await client.refund();
   assert.equal(refund.token, "cashuA-refund");
   assert.equal(new AiClient(storage).record().refund.token, refund.token);
   assert.throws(() => client.configure({ mode: "routstr", base: "http://public.example", model: "x" }), /HTTPS/);
   assert.throws(() => client.configure({ mode: "byok", base: "https://user:secret@example.com/v1", model: "x" }), /credentials/);
-  console.log("AI client: defaults, endpoint-bound keys, Cashu, Lightning, refunds, streaming, start and stall watchdogs, cancellation and payment errors passed.");
+  console.log("AI client: defaults, endpoint-bound keys, Cashu, Lightning, refunds, streaming, start and stall watchdogs, cancellation, payment errors and pictures passed.");
 } finally { server.closeAllConnections(); await new Promise((r) => server.close(r)); }

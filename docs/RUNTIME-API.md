@@ -42,6 +42,14 @@ the initial crop mode in its image picker. This affects new file uploads only.
 height, dataURL }`, or `null` on cancellation. Crops are capped at 2560 pixels
 on either axis. The original file stays untouched.
 
+An image can also carry `nc:prompt`, a description of the picture for an image
+generator. The publisher's AI builder asks the model for one on every frame it
+leaves empty when pictures are on, and the image picker offers "Make it with AI"
+prefilled with it (falling back to `alt`) when an AI key and a picture model are
+set. `await nc.ai.picture(prompt, crop)` makes one picture cut to `crop` and
+returns `{ name, blob }`, where `name` is `images/<sha256>.webp` (or `.jpg` on a
+browser that cannot write WebP).
+
 The runtime writes these back onto `<html>` for the document's own CSS and logic, and strips
 every one of them from anything it saves:
 

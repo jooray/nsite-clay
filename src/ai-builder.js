@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { AI_WRITING, unfence } from "./ai-edit.js";
 
-const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop"];
+const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop", "nc:prompt"];
 const CHROME = `<div class="nc-bar nc-ui-chrome"><span class="nc-dot"></span><span class="nc-who" data-nc-who>read-only</span><button data-nc-signin>Sign in</button><button class="nc-owner-only" data-nc-write>Write</button><button class="nc-owner-only" data-nc-cms>Edit content</button><button class="nc-owner-only" data-nc-settings>Settings</button><button class="nc-owner-only" data-nc-history>History</button><button class="nc-primary nc-owner-only" data-nc-save>Save</button></div><p class="nc-edit-hint">add #edit to the URL to edit this page</p>`;
 
 /**
@@ -191,11 +191,20 @@ export const ranOut = (e) => e?.reason === "length";
 // literals until the stylesheet rule had to change in both and only one moved.
 const BUILD_RULES = `Return <!DOCTYPE html> through </html> only. The page carries its own design and nothing supplies one for it: write the whole stylesheet yourself, in one <style> in the head, covering layout, spacing, colour, type and every class the markup uses. A stylesheet is linked into the page afterwards, but that one draws the editing toolbar and dialogs and sets nothing a reader sees, so a page that leaves its design to it renders as unstyled text. Use system fonts, responsive layouts, accessible labels and visible focus styles. Use no scripts, forms, external CSS, CSS imports or CSS URLs. Use actual supplied content; do not invent businesses, prices or contact details. Mark headings editable="single-line", prose editable, and do the same for table cells and list items that hold real content. Put sections in <main nc:blocks> and include inert <template nc:block="text" nc:label="Text"> block shapes. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout (\"16:9\", \"4:3\" or \"1:1\"), and no src: the owner supplies the file afterwards through the content form, and the page must lay out correctly before they do. Do not invent image URLs and do not use placeholder image services. The publisher adds ownership, runtime scripts, toolbar and CMS rules itself, and nothing else: it does not style the page. Keep the page useful as plain static HTML.`;
 
-export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress } = {}) {
+/**
+ * Said only when pictures are going to be made. Without them the prompt is the
+ * one it has always been, word for word, so turning pictures off, or using an
+ * endpoint that has none, changes nothing about how a page is written.
+ */
+export function pictureRule(n) {
+  return n > 0 ? ` Pictures are made for this page automatically. Give every <img> you write without a src an nc:prompt attribute holding a detailed description of that picture for an image generator: the subject, the setting, the light, and a style that suits the page's colours, with no words, letters or logos in the picture. Write at most ${n} such pictures.` : "";
+}
+
+export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress, pictures = 0 } = {}) {
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Build a complete static HTML page for nsite-clay. ${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Build a complete static HTML page for nsite-clay. ${BUILD_RULES}${pictureRule(pictures)} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `${description}${template ? "\n\nStarting page (adapt its design and content):\n" + template : "\n\nStart from scratch: there is no existing page and no existing stylesheet."}` },
   ], { signal, onProgress, maxTokens: ROOM_MAX }).catch((e) => {
     // Nothing here predicts the size of the answer, so there is no cap to
@@ -260,11 +269,11 @@ const KEEP_RULE = `An empty <div nc:keep="N"></div> is a live part of the page, 
  * This keeps the page and changes the one thing asked for, which is both what
  * somebody means and the cheaper of the two.
  */
-export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress, keep = false } = {}) {
+export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress, keep = false, pictures = 0 } = {}) {
   if (!instruction.trim()) throw new Error("Say what should be different.");
   if (instruction.length > 20000 || page.length > 300000) throw new Error("Use a shorter instruction or a smaller page.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${keep ? KEEP_RULE : ""}${BUILD_RULES} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${keep ? KEEP_RULE : ""}${BUILD_RULES}${pictureRule(pictures)} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
     // The answer has to hold the whole page again, so the page is what sizes it.
   ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });

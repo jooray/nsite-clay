@@ -420,6 +420,31 @@ export class Media {
         }
         drop.addEventListener("drop", (e) => take(e.dataTransfer?.files?.[0]));
 
+        // Or have AI make one, to the shape of the space, from the description
+        // the page already carries for it. Offered only when there is a key and
+        // a picture model to ask, and paid from the same AI credit as the text.
+        const ai = this.nc.ai;
+        if (ai?.canPicture?.()) {
+          const ask = field(body, { label: ai.say("pictureDescribe"), rows: 2,
+            value: has ? (target.getAttribute("nc:prompt") || target.getAttribute("alt") || "") : "" });
+          const make = doc.createElement("button"); make.type = "button"; make.textContent = ai.say("pictureGenerate");
+          body.append(make);
+          make.onclick = async () => {
+            if (taking) return;
+            if (!ask.value.trim()) { h.status(ai.say("pictureEmpty"), true); ask.focus(); return; }
+            taking = true; h.busy(true); make.disabled = true; h.status(ai.say("pictureMaking"));
+            try {
+              const { name, blob } = await ai.picture(ask.value, fits || "16:9");
+              if (!body.isConnected) return;
+              const r = await this.upload(new File([blob], name.split("/").pop(), { type: blob.type }));
+              if (!body.isConnected) return;
+              url.value = r.url; preview(r.url);
+              h.status(ai.say("pictureMade"));
+            } catch (e) { h.status(e.message, true); }
+            finally { taking = false; make.disabled = false; h.busy(false); }
+          };
+        }
+
         // Everything this key has uploaded before, as a grid to click.
         const galleryLabel = doc.createElement("label");
         galleryLabel.textContent = "Already uploaded";
@@ -479,7 +504,9 @@ export class Media {
       onSubmit: () => {
         const src = url.value.trim();
         if (!src) throw new Error("Drop a file, pick one, or paste a URL");
-        if (!/^https?:\/\//i.test(src)) throw new Error("Only http(s) URLs can be used");
+        // A picture already published next to the page keeps its relative path.
+        const kept = has && src === (target.getAttribute("src") || "").trim();
+        if (!kept && !/^https?:\/\//i.test(src)) throw new Error("Only http(s) URLs can be used");
         return { url: src, alt: alt.value.trim(), caption: cap.value.trim() };
       },
     });

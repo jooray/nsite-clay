@@ -468,6 +468,7 @@
       aiChangeEmpty: "Di qué debería ser distinto.",
       aiChanging: "Haciendo ese cambio…",
       aiChanged: "Cambiado. Vuelve a mirarlo abajo.",
+      aiPictures: "Creando imágenes…", aiPicturesFailed: "Algunas imágenes no se pudieron crear. La página está lista y los marcos vacíos se pueden llenar después desde el formulario de contenido.", aiPicturesCredit: "No queda saldo de IA suficiente para las imágenes. Los marcos vacíos se pueden llenar después desde el formulario de contenido.", logPicturesMissing: "Algunas imágenes ya no están en este navegador, así que sus marcos quedaron vacíos: ",
       aiEditDescription: "Cambia la descripción y genera una vista previa nueva.",
       buyDonating: "Enviando la mitad que apoya a nsite-clay…",
       buySaving: "Guardando tu clave en tus relays de Nostr…",
@@ -564,6 +565,7 @@
       aiChangeEmpty: "Povedz, čo má byť inak.",
       aiChanging: "Robím tú zmenu…",
       aiChanged: "Zmenené. Pozri sa na to nižšie znova.",
+      aiPictures: "Vytvárajú sa obrázky…", aiPicturesFailed: "Niektoré obrázky sa nepodarilo vytvoriť. Stránka je pripravená a prázdne rámčeky môžeš neskôr vyplniť vo formulári obsahu.", aiPicturesCredit: "Na obrázky už nezostal dosť AI kreditu. Prázdne rámčeky môžeš neskôr vyplniť vo formulári obsahu.", logPicturesMissing: "Niektoré obrázky už v tomto prehliadači nie sú, preto ich rámčeky zostali prázdne: ",
       aiEditDescription: "Zmeň opis a vytvor nový náhľad.",
       buyDonating: "Posielam polovicu, ktorá podporí nsite-clay…",
       buySaving: "Ukladám kľúč na tvoje Nostr relaye…",
@@ -660,6 +662,7 @@
       aiChangeEmpty: "Řekni, co má být jinak.",
       aiChanging: "Dělám tu změnu…",
       aiChanged: "Změněno. Podívej se na to níž znovu.",
+      aiPictures: "Vytvářejí se obrázky…", aiPicturesFailed: "Některé obrázky se nepodařilo vytvořit. Stránka je připravená a prázdné rámečky můžeš později vyplnit ve formuláři obsahu.", aiPicturesCredit: "Na obrázky už nezbylo dost AI kreditu. Prázdné rámečky můžeš později vyplnit ve formuláři obsahu.", logPicturesMissing: "Některé obrázky už v tomto prohlížeči nejsou, proto jejich rámečky zůstaly prázdné: ",
       aiEditDescription: "Změň popis a vytvoř nový náhled.",
       buyDonating: "Posílám polovinu, která podpoří nsite-clay…",
       buySaving: "Ukládám klíč na tvoje Nostr relaye…",
@@ -1061,6 +1064,9 @@
     try {
       generated = nc.ai.preparePage(version.html, { owner: nc.npub, lang: LANG, relays: nc.cfg.relays, servers: nc.cfg.servers });
       reviewGenerated(false); $("#ai-draft-status").textContent = nc.ai.say("draftRecovered");
+      // Pictures made before a reload wait in this browser's storage.
+      const shown = generated;
+      nc.ai.images.load(shown).then(() => { if (generated === shown) $("#ai-preview").srcdoc = nc.ai.previewHTML(generated); });
     } catch (e) { $("#ai-draft-status").textContent = e.message; }
   }
   const rememberVersion = (html, prompt) => {
@@ -1309,6 +1315,27 @@
       e.preventDefault(); e.returnValue = "";
     }
   });
+  // Pictures for the frames a fresh preview left empty. The page is already
+  // usable without them, so nothing here can take it away: a failure leaves
+  // the frame empty for the content form, and the preview stays.
+  async function makePictures(controller, asked) {
+    if (!asked || !generated || controller.signal.aborted) return "";
+    const status = await nc.ai.client.check().catch(() => null);
+    const limit = Math.min(asked, nc.ai.pictureAllowance(status));
+    if (!limit) return status?.image ? say("aiPicturesCredit", "There is not enough AI credit left for pictures. The empty frames can be filled later from the content form.") : "";
+    const label = say("aiPictures", "Making pictures…");
+    const out = await nc.ai.fillPictures(generated, { limit, signal: controller.signal,
+      onProgress: (done, total) => { $("#ai-status").textContent = `${label} ${done}/${total}`; } });
+    if (out.made) {
+      generated = out.html;
+      const version = builderDraft.versions.find((v) => v.number === builderDraft.selected);
+      if (version) { version.html = generated; saveBuilderDraft(); }
+      $("#ai-preview").srcdoc = nc.ai.previewHTML(generated);
+    }
+    if (controller.signal.aborted) return say("aiCancelled", "Generation cancelled.");
+    return out.error ? `${say("aiPicturesFailed", "Some pictures could not be made. The page is ready, and the empty frames can be filled later from the content form.")} ${out.error.message}` : "";
+  }
+
   $("#ai-cancel").onclick = () => generation?.abort();
   $("#ai-generate").onclick = async () => {
     if (generation || settingUp) return;
@@ -1324,7 +1351,8 @@
         if (!response.ok) throw new Error(`${template.name}: ${response.status}`);
         html = anonymise(await response.text(), template.owner);
       }
-      const result = await nc.ai.buildPage($("#ai-description").value, { template: html, lang: LANG, signal: controller.signal,
+      const pictures = nc.ai.pictureAllowance(aiReady, { chars: $("#ai-description").value.length });
+      const result = await nc.ai.buildPage($("#ai-description").value, { template: html, lang: LANG, signal: controller.signal, pictures,
         onProgress: (text, info) => {
           // A reasoning model writes nothing the page will ever show for the first
           // minute, so count that too rather than showing a frozen zero.
@@ -1336,6 +1364,8 @@
       generated = result; generatedTemplate = template;
       rememberVersion(result, $("#ai-description").value);
       reviewGenerated(); $("#ai-status").textContent = say("aiReady", "The preview is ready.");
+      const note = await makePictures(controller, pictures);
+      $("#ai-status").textContent = note || say("aiReady", "The preview is ready.");
     } catch (e) {
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
@@ -1353,7 +1383,8 @@
     generationBusy(true);
     $("#ai-status").textContent = say("aiChanging", "Making that change…");
     try {
-      const result = await nc.ai.refinePage(generated, instruction, { lang: LANG, signal: controller.signal,
+      const pictures = nc.ai.pictureAllowance(aiReady, { chars: generated.length + instruction.length });
+      const result = await nc.ai.refinePage(generated, instruction, { lang: LANG, signal: controller.signal, pictures,
         onProgress: (text, info) => {
           $("#ai-status").textContent = text.length
             ? `${say("aiChanging", "Making that change…")} ${text.length}`
@@ -1366,6 +1397,8 @@
       $("#ai-change").value = "";
       saveBuilderDraft();
       $("#ai-status").textContent = say("aiChanged", "Changed. Check it again below.");
+      const note = await makePictures(controller, pictures);
+      $("#ai-status").textContent = note || say("aiChanged", "Changed. Check it again below.");
     } catch (e) {
       $("#ai-status").textContent = controller.signal.aborted ? say("aiCancelled", "Generation cancelled.") : e.message;
     } finally {
@@ -1624,6 +1657,14 @@
         : personalise(tplHtml, t.owner, nc.npub, docPath);
       for (const [from, to] of renames.sort((a, b) => b[0].length - a[0].length)) {
         html = html.split(from).join(to);
+      }
+      // Pictures AI made for the page, published next to it under the path the
+      // page already names them by.
+      if (state.generated) {
+        const pictures = await nc.ai.pictureFiles(html, dir);
+        html = pictures.html;
+        files.push(...pictures.files);
+        if (pictures.missing) line(say("logPicturesMissing", "Some pictures are no longer in this browser, so their frames were left empty: ") + pictures.missing);
       }
       files.push(...extras);
       files.unshift({ path: docPath, bytes: enc.encode(html), type: "text/html" });

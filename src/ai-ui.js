@@ -1,4 +1,5 @@
-import { AiClient, aiEndpoint } from "./ai-client.js";
+import { AiClient, aiEndpoint, AI_DEFAULTS, MAX_PICTURES, estimateAiCost, imagePrice as imagePriceOf } from "./ai-client.js";
+import { ImageStore, makePicture, fillPictures, pictureFiles, pictureName } from "./ai-images.js";
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
 import { installEditing, editDialog, propose, proposePage, accept } from "./ai-edit.js";
@@ -78,8 +79,20 @@ const WORDS = {
   adopted: ["Found the credit you bought. It is ready here.", "Encontramos el saldo que compraste. Ya está listo aquí.", "Našiel sa kredit, ktorý si kúpil. Je pripravený aj tu.", "Našel se kredit, který sis koupil. Je připravený i tady."],
   before: ["Now", "Ahora", "Teraz", "Teď"],
   after: ["After this change", "Después del cambio", "Po zmene", "Po změně"],
+  pictureModel: ["Picture model ID", "ID del modelo de imágenes", "ID modelu na obrázky", "ID modelu pro obrázky"],
+  picturesPerPage: ["Pictures to make for a new page (0 turns them off)", "Imágenes que crear para una página nueva (0 las desactiva)", "Počet obrázkov pre novú stránku (0 ich vypne)", "Počet obrázků pro novou stránku (0 je vypne)"],
+  pictureCost: ["Pictures: about {n} sats each.", "Imágenes: unos {n} sats cada una.", "Obrázky: približne {n} sats za kus.", "Obrázky: přibližně {n} sats za kus."],
+  pictureDescribe: ["Or describe a picture, and AI makes it", "O describe una imagen y la IA la crea", "Alebo opíš obrázok a AI ho vytvorí", "Nebo popiš obrázek a AI ho vytvoří"],
+  pictureGenerate: ["Make it with AI", "Crearla con IA", "Vytvoriť s AI", "Vytvořit s AI"],
+  pictureMaking: ["Making the picture…", "Creando la imagen…", "Vytvára sa obrázok…", "Vytváří se obrázek…"],
+  pictureMade: ["Picture made and uploaded.", "Imagen creada y subida.", "Obrázok je vytvorený a nahraný.", "Obrázek je vytvořený a nahraný."],
+  pictureEmpty: ["Describe the picture first.", "Describe primero la imagen.", "Najprv opíš obrázok.", "Nejdřív popiš obrázek."],
   review: ["Review the result before keeping it. Save the page when you are ready to publish.", "Revisa el resultado antes de aceptarlo. Guarda la página cuando quieras publicarlo.", "Pred prijatím si výsledok skontroluj. Keď ho chceš zverejniť, ulož stránku.", "Před přijetím si výsledek zkontroluj. Až ho chceš zveřejnit, ulož stránku."],
 };
+
+// Sats left on the node after pictures, so the next page or change can still
+// be reserved. A rewrite of a whole page reserves about this much.
+export const HEADROOM = 150;
 
 export class Ai {
   constructor(nc) {
@@ -87,6 +100,7 @@ export class Ai {
     let storage; try { storage = this.doc.defaultView.localStorage; } catch {}
     this.client = new AiClient(storage);
     this.drafts = new AiDrafts(nc, storage);
+    this.images = new ImageStore(this.doc.defaultView || globalThis);
   }
   say(key) {
     const lang = ["en", "es", "sk", "cs"].indexOf(this.doc.documentElement.lang.slice(0, 2));
@@ -110,6 +124,32 @@ export class Ai {
   accept(proposal) { return accept(this, proposal); }
   buildPage(description, options) { return buildPage(this, description, options); }
   refinePage(page, instruction, options) { return refinePage(this, page, instruction, options); }
+
+  /** Whether a picture can be asked for at all with the current settings. */
+  canPicture() { const s = this.client.session(); return !!(s.key && s.imageModel); }
+  picture(prompt, crop, options) { return makePicture(this, prompt, crop, options); }
+  fillPictures(html, options) { return fillPictures(this, html, options); }
+  pictureFiles(html, dir) { return pictureFiles(this, html, dir); }
+
+  /**
+   * How many pictures to make for a page, given what a readiness check found.
+   *
+   * Zero whenever pictures are switched off, or the node does not sell the
+   * model. On a Routstr node it is also what the credit pays for while leaving
+   * `HEADROOM` for the next page or change, whose reservation would otherwise
+   * be refused, and `chars` sizes the page about to be written out of it too.
+   */
+  pictureAllowance(status, { chars = 0, kind = "page" } = {}) {
+    const s = this.client.session();
+    const want = Math.max(0, Math.min(MAX_PICTURES, Number(s.pictures) || 0));
+    if (!want || !s.imageModel || !s.key) return 0;
+    if (s.mode !== "routstr") return want;
+    const image = status?.image;
+    if (!image || image.model !== s.imageModel) return 0;
+    if (status.available === undefined || !(image.price > 0)) return want;
+    const page = chars ? estimateAiCost(status.pricing, chars, kind)?.high || 0 : 0;
+    return Math.max(0, Math.min(want, Math.floor((status.available - HEADROOM - page) / image.price)));
+  }
 
   /**
    * Bring the credit somebody already paid for into whatever browser they are in.
@@ -221,7 +261,10 @@ export class Ai {
     return !!this.client.session().key;
   }
   preparePage(html, options) { return preparePage(html, options); }
-  previewHTML(html, options) { return previewHTML(html, { base: this.doc.baseURI, ...options }); }
+  previewHTML(html, options) {
+    const images = (src) => { const name = pictureName(src); return name ? this.images.url(name) : null; };
+    return previewHTML(html, { base: this.doc.baseURI, images, ...options });
+  }
 
   async settings() {
     const client = this.client, say = (key) => this.say(key);
@@ -229,7 +272,7 @@ export class Ai {
     // rather than being empty next to a button called "Restore from my relays".
     // Bounded by the vault's own timeouts, and a failure just leaves it empty.
     if (this.nc.isOwner) await this.adopt().catch(() => false);
-    let mode, base, key, model, backedUp = true;
+    let mode, base, key, model, imageModel, pictures, backedUp = true;
     const result = await modal({ doc: this.doc, title: say("settings"), hint: say("hint"), submitLabel: say("apply"),
       build: (body, h) => {
         const current = client.session();
@@ -254,8 +297,15 @@ export class Ai {
         const options = this.doc.createElement("datalist"); options.id = model.id + "-models";
         model.setAttribute("list", options.id); advanced.append(options);
         const rates = this.doc.createElement("p"); rates.className = "nc-hint"; advanced.append(rates);
-        let models = [], working = false;
-        const session = () => ({ mode: mode.value, base: aiEndpoint(base.value, mode.value), key: key.value.trim(), model: model.value.trim() });
+        imageModel = field(advanced, { label: say("pictureModel"), value: current.imageModel || "" });
+        const imageOptions = this.doc.createElement("datalist"); imageOptions.id = imageModel.id + "-models";
+        imageModel.setAttribute("list", imageOptions.id); advanced.append(imageOptions);
+        const imageRates = this.doc.createElement("p"); imageRates.className = "nc-hint"; advanced.append(imageRates);
+        pictures = field(advanced, { label: say("picturesPerPage"), type: "number", value: String(current.pictures ?? AI_DEFAULTS.pictures) });
+        pictures.min = "0"; pictures.max = String(MAX_PICTURES); pictures.step = "1";
+        let models = [], images = [], working = false;
+        const session = () => ({ mode: mode.value, base: aiEndpoint(base.value, mode.value), key: key.value.trim(), model: model.value.trim(),
+          imageModel: imageModel.value.trim(), pictures: pictures.value });
         const apply = () => client.configure(session());
         const button = (parent, name, fn) => {
           const b = this.doc.createElement("button"); b.type = "button"; b.textContent = say(name);
@@ -275,11 +325,20 @@ export class Ai {
           const p = models.find((m) => m.id === model.value)?.sats_pricing;
           rates.textContent = p ? `${(p.prompt * 1000).toFixed(3)} / ${(p.completion * 1000).toFixed(3)} ${say("rates")}` : "";
         };
+        const imagePrice = () => {
+          const p = imagePriceOf(images.find((m) => m.id === imageModel.value.trim()));
+          imageRates.textContent = p ? say("pictureCost").replace("{n}", Number(p.toFixed(2)).toLocaleString(this.doc.documentElement.lang || "en")) : "";
+        };
         model.addEventListener("input", price);
+        imageModel.addEventListener("input", imagePrice);
         button(advanced, "models", async () => {
-          const selected = session(); models = await client.models(selected); options.replaceChildren();
+          const selected = session(); const all = await client.catalogue(selected);
+          models = all.filter((m) => !m.architecture?.output_modalities || m.architecture.output_modalities.includes("text"));
+          images = all.filter((m) => m.architecture?.output_modalities?.includes("image"));
+          options.replaceChildren(); imageOptions.replaceChildren();
           for (const m of models) { const o = this.doc.createElement("option"); o.value = m.id; o.label = m.name || m.id; options.append(o); }
-          price();
+          for (const m of images) { const o = this.doc.createElement("option"); o.value = m.id; o.label = m.name || m.id; imageOptions.append(o); }
+          price(); imagePrice();
         });
         const backups = section("backups");
         const note = this.doc.createElement("p"); note.className = "nc-hint"; note.textContent = say("local"); backups.append(note);
@@ -299,6 +358,7 @@ export class Ai {
           if (!await this.adopt({ force: true })) throw new Error(say("restoreFailed"));
           const found = client.session();
           mode.value = found.mode; base.value = found.base; key.value = found.key; model.value = found.model;
+          imageModel.value = found.imageModel || ""; pictures.value = String(found.pictures ?? AI_DEFAULTS.pictures);
           advanced.open = true; gate(); await readiness.refresh();
           return say("restored");
         });
@@ -335,6 +395,10 @@ export class Ai {
         const changed = () => {
           try { key.value = client.record(aiEndpoint(base.value, mode.value)).key || ""; } catch { key.value = ""; }
           models = []; options.replaceChildren(); rates.textContent = "";
+          images = []; imageOptions.replaceChildren(); imageRates.textContent = "";
+          // Our node's picture model means nothing to somebody else's endpoint.
+          if (mode.value === "byok" && imageModel.value.trim() === AI_DEFAULTS.imageModel) imageModel.value = "";
+          if (mode.value === "routstr" && !imageModel.value.trim()) imageModel.value = AI_DEFAULTS.imageModel;
           gate();
         };
         base.addEventListener("input", changed); mode.addEventListener("change", changed);
@@ -342,7 +406,8 @@ export class Ai {
         gate();
       },
       onSubmit: async () => {
-        const selected = client.configure({ mode: mode.value, base: base.value, key: key.value, model: model.value });
+        const selected = client.configure({ mode: mode.value, base: base.value, key: key.value, model: model.value,
+          imageModel: imageModel.value, pictures: pictures.value });
         if (selected.key) backedUp = await this.keepOnRelays();
         return selected;
       },

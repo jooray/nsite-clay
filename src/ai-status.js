@@ -5,8 +5,11 @@ export function readinessPanel(ai, parent, { kind = () => "page", chars = () => 
   const status = doc.createElement("p"); status.className = "nc-hint"; status.setAttribute("role", "status");
   const cost = doc.createElement("p"); cost.className = "nc-hint";
   cost.hidden = !showCost;
+  // What a picture costs, said once there is a picture model on offer. Kept out
+  // of the line above so that line reads the same as it always has.
+  const pictures = doc.createElement("p"); pictures.className = "nc-hint"; pictures.hidden = true;
   const retry = doc.createElement("button"); retry.type = "button"; retry.textContent = ai.say("balance");
-  box.append(status, cost, retry); parent.append(box);
+  box.append(status, cost, pictures, retry); parent.append(box);
   let checkId = 0, result;
   const fmt = (n) => Number(n.toFixed(2)).toLocaleString(doc.documentElement.lang || "en");
   const draw = () => {
@@ -19,6 +22,9 @@ export function readinessPanel(ai, parent, { kind = () => "page", chars = () => 
     cost.textContent = estimate ? `${ai.say("estimate")}: ${fmt(estimate.low)} … ${fmt(estimate.high)} sats. ` +
       `${fmt(estimate.inputPerK)} / ${fmt(estimate.outputPerK)} ${ai.say("rates")}. ${ai.say("estimateHint")}` +
       (result.available !== undefined && result.available < estimate.low ? ` ${ai.say("lowCredit")}` : "") : ai.say("noPrices");
+    const price = result.image?.price;
+    pictures.hidden = !(showCost && price > 0 && Number(result.session?.pictures) > 0);
+    pictures.textContent = pictures.hidden ? "" : ai.say("pictureCost").replace("{n}", fmt(price));
     onChange(result);
   };
   const refresh = async () => {

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.22",
+    "released": "2026-10-19",
+    "notes": [
+      "A page built with AI now comes with pictures. Each empty frame the page describes gets a picture made for it, cut to the frame's shape, at about 24 sats each from your AI credit. They are published next to the page, so they load as fast as the page does.",
+      "In the picture dialog, Make it with AI creates a picture for that one frame from a description you can change.",
+      "AI settings have a picture model and the number of pictures to make for a new page. Set it to 0 to turn pictures off. With your own API key, pictures stay off until you name a picture model."
+    ]
+  },
+  {
     "version": "0.3.21",
     "released": "2026-10-19",
     "notes": [

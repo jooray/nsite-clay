@@ -73,7 +73,9 @@ try {
     return { found, config: nc.ai.client.session(), data };
   });
   assert.equal(restored.found, true);
-  assert.deepEqual(restored.config, { mode: "byok", base: "https://provider.example/api", model: "custom-model", key: "custom-key" });
+  // A stranger's endpoint gets no picture model unless one is named for it.
+  assert.deepEqual(restored.config, { mode: "byok", base: "https://provider.example/api", model: "custom-model",
+    imageModel: "", pictures: 4, key: "custom-key" });
   assert.equal(restored.data.aiProfiles[restored.config.base].mode, "byok");
   assert.equal(restored.data.ai[restored.config.base], "custom-key", "legacy readers retain their endpoint-bound key");
   const fresh = await browser.newPage(); await fresh.routeWebSocket("**", (ws) => ws.close());

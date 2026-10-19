@@ -1,7 +1,73 @@
 // Routstr is the payment service as well as the inference endpoint. There is no
 // discovery or automatic failover here: the owner chooses who receives a request.
-export const AI_DEFAULTS = Object.freeze({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash-1017" });
+export const AI_DEFAULTS = Object.freeze({ mode: "routstr", base: "https://routstr.cypherpunk.today/v1", model: "deepseek-v4-1-flash-1017",
+  imageModel: "qwen-image-2-1-turbo", pictures: 4 });
 const STORAGE = "nsite-clay.ai";
+export const MAX_PICTURES = 8;
+
+// Pictures are settings of their own, and a profile saved before they existed
+// has neither. A Routstr node is ours to know the default of; somebody else's
+// OpenAI-compatible endpoint is not, so pictures there stay off until a model
+// is named for them.
+function pictureSettings(c, mode) {
+  const imageModel = c.imageModel === undefined || c.imageModel === null
+    ? (mode === "routstr" ? AI_DEFAULTS.imageModel : "") : String(c.imageModel).trim();
+  const n = c.pictures === undefined || c.pictures === null || c.pictures === "" ? AI_DEFAULTS.pictures : Number(c.pictures);
+  return { imageModel, pictures: Number.isFinite(n) ? Math.max(0, Math.min(MAX_PICTURES, Math.floor(n))) : AI_DEFAULTS.pictures };
+}
+
+/**
+ * Sats for one picture at the tier a request that names none is billed at.
+ *
+ * `sats_pricing.image_output` is the dearest tier the model has. The node
+ * prices a request at the model's default tier, so the price book scales the
+ * ceiling down by that tier's share of it, exactly as the node does.
+ */
+export function imagePrice(model) {
+  const ceiling = Number(model?.sats_pricing?.image_output);
+  if (!Number.isFinite(ceiling) || ceiling <= 0) return null;
+  const book = model.image_pricing, max = Number(book?.max_usd);
+  if (!book || !(max > 0)) return ceiling;
+  const tiers = Array.isArray(book.tiers) ? book.tiers : [];
+  const r = book.default_resolution ?? null, q = book.default_quality ?? null;
+  const tier = tiers.find((t) => (t.resolution ?? null) === r && (t.quality ?? null) === q)
+    || tiers.find((t) => (t.resolution ?? null) === r && (t.quality ?? null) === null);
+  const usd = Number(tier?.usd ?? max);
+  return Number.isFinite(usd) && usd > 0 ? ceiling * usd / max : ceiling;
+}
+
+// The shapes image models commonly accept. A frame of any other shape asks for
+// the nearest of these and is cropped to its own shape afterwards.
+const ASPECTS = ["1:1", "3:2", "16:9", "21:9", "9:16", "2:3", "3:4", "4:5"];
+export function aspectFor(crop) {
+  const parts = String(crop || "").split(":").map(Number);
+  const ratio = parts.length === 2 && parts.every((n) => Number.isFinite(n) && n > 0) ? parts[0] / parts[1] : 1;
+  let best = "1:1", gap = Infinity;
+  for (const a of ASPECTS) {
+    const [w, h] = a.split(":").map(Number), d = Math.abs(Math.log(ratio / (w / h)));
+    if (d < gap) { gap = d; best = a; }
+  }
+  return best;
+}
+
+function sniff(bytes) {
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) return "image/png";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
+  if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49) return "image/gif";
+  return "application/octet-stream";
+}
+function fromBase64(b64) {
+  const text = String(b64).replace(/^data:[^,]*,/, "");
+  const raw = atob(text);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  if (!bytes.length) throw new Error("The AI endpoint returned an empty picture.");
+  return new Blob([bytes], { type: sniff(bytes) });
+}
+// A refusal of the request's shape, as opposed to of the key, the credit, or
+// the connection. Only these are worth asking again in another dialect.
+const shapeRefused = (e) => e?.status >= 400 && e.status < 500 && ![401, 402, 403, 429].includes(e.status);
 
 // Estimates include room for reasoning. They are a planning range, not a quote
 // or the provider's reservation, and never a reason to refuse a paid request.
@@ -40,6 +106,9 @@ function overLimit(error) {
   return /max_tokens|max_completion_tokens|maximum.{0,20}tokens|output.{0,20}too (large|long)/i.test(error?.message || "");
 }
 
+const textModels = (list) => list.filter((m) => !m.architecture?.output_modalities || m.architecture.output_modalities.includes("text"));
+const imageModels = (list) => list.filter((m) => m.architecture?.output_modalities?.includes("image"));
+
 export class AiClient {
   constructor(storage = null) {
     this.storage = storage;
@@ -48,8 +117,10 @@ export class AiClient {
     if (!this.data.nodes || typeof this.data.nodes !== "object" || Array.isArray(this.data.nodes)) this.data.nodes = {};
     try {
       const c = { ...AI_DEFAULTS, ...this.data.config };
-      this.config = { mode: c.mode === "byok" ? "byok" : "routstr", base: aiEndpoint(c.base, c.mode), model: String(c.model) };
+      const mode = c.mode === "byok" ? "byok" : "routstr";
+      this.config = { mode, base: aiEndpoint(c.base, c.mode), model: String(c.model), ...pictureSettings(this.data.config || {}, mode) };
     } catch { this.config = { ...AI_DEFAULTS }; }
+    this.native = new Set();
   }
 
   persist() {
@@ -61,8 +132,10 @@ export class AiClient {
   profile(base = this.config.base) {
     return { ...(base === this.config.base ? this.config : this.record(base).profile), base };
   }
-  configure({ mode, base, model, key } = {}) {
-    const next = { mode: mode === "byok" ? "byok" : "routstr", base: aiEndpoint(base || AI_DEFAULTS.base, mode), model: String(model || "").trim() };
+  configure({ mode, base, model, key, imageModel, pictures } = {}) {
+    const kind = mode === "byok" ? "byok" : "routstr";
+    const next = { mode: kind, base: aiEndpoint(base || AI_DEFAULTS.base, mode), model: String(model || "").trim(),
+      ...pictureSettings({ imageModel, pictures }, kind) };
     if (!next.model) throw new Error("Choose a model or enter its model ID.");
     this.config = next; this.data.config = next;
     this.record(next.base).profile = { ...next };
@@ -121,10 +194,16 @@ export class AiClient {
     }
   }
 
-  async models(session = this.session(), options = {}) {
+  async catalogue(session = this.session(), options = {}) {
     const data = await this.request("/models", { ...options, session, publicRequest: session.mode === "routstr" });
     if (!Array.isArray(data.data)) throw new Error("The endpoint did not return a model list. Enter the model ID manually.");
-    return data.data.filter((m) => m.id && m.enabled !== false && (!m.architecture?.output_modalities || m.architecture.output_modalities.includes("text")));
+    return data.data.filter((m) => m.id && m.enabled !== false);
+  }
+  async models(session = this.session(), options = {}) {
+    return textModels(await this.catalogue(session, options));
+  }
+  async imageModels(session = this.session(), options = {}) {
+    return imageModels(await this.catalogue(session, options));
   }
   routstr(session) { if (session.mode !== "routstr") throw new Error("Credit controls are available for Routstr nodes."); }
   balance(session = this.session(), options = {}) { this.routstr(session); return this.request("/balance/info", { ...options, session }); }
@@ -133,13 +212,20 @@ export class AiClient {
   async check(session = this.session()) {
     // OpenAI-compatible APIs have no standard balance endpoint. A configured key
     // is not proof of either its validity or available funds.
-    if (session.mode !== "routstr") return { state: session.key ? "configured" : "noKey", session, canGenerate: !!session.key };
-    const [funds, models] = await Promise.allSettled([
+    if (session.mode !== "routstr") return { state: session.key ? "configured" : "noKey", session, canGenerate: !!session.key,
+      image: session.imageModel ? { model: session.imageModel, price: null } : null };
+    const [funds, listed] = await Promise.allSettled([
       session.key ? this.balance(session, { timeout: 8000 }) : Promise.resolve(null),
-      this.models(session, { timeout: 8000 }),
+      this.catalogue(session, { timeout: 8000 }),
     ]);
+    const models = listed.status === "fulfilled" ? { status: "fulfilled", value: textModels(listed.value) } : listed;
     const model = models.status === "fulfilled" ? models.value.find((m) => m.id === session.model) : null;
-    const result = { session, pricing: model?.sats_pricing || null, checkedAt: Date.now(), canGenerate: false };
+    // Pictures are on offer only when the node sells the model asked for. A
+    // node that does not is a node without pictures, never one without pages.
+    const drawn = listed.status === "fulfilled" && session.imageModel
+      ? imageModels(listed.value).find((m) => m.id === session.imageModel) : null;
+    const image = drawn ? { model: drawn.id, price: imagePrice(drawn) } : null;
+    const result = { session, pricing: model?.sats_pricing || null, image, checkedAt: Date.now(), canGenerate: false };
     if (!session.key) return { ...result, state: "noKey" };
     if (funds.status === "rejected") return { ...result,
       state: funds.reason.status === 401 ? "invalidKey" : "unavailable", canGenerate: funds.reason.status !== 401 };
@@ -204,6 +290,57 @@ export class AiClient {
     });
     this.record(session.base).refund = result; this.persist();
     return result;
+  }
+
+  /**
+   * One picture, as the bytes the endpoint sent.
+   *
+   * A Routstr node is asked on its native image route first, because that is
+   * the one that honours the frame's shape: the OpenAI route answers a square
+   * whatever it is asked for, at several times the size. A node or model that
+   * refuses the native request is asked again on the OpenAI route, which every
+   * OpenAI-compatible endpoint has, and that one is all that is used with
+   * somebody's own key. Only a refusal of the request's shape is retried: a
+   * timeout may still have been billed, and asking again would pay twice.
+   */
+  async generateImage(prompt, { aspect = "1:1", signal, session = this.session(), timeout = 180000 } = {}) {
+    if (!session.key) throw new Error("Add AI credit or enter your API key in AI settings first.");
+    if (!session.imageModel) throw new Error("Choose a picture model in AI settings first.");
+    const text = String(prompt || "").trim().slice(0, 1500);
+    if (!text) throw new Error("Describe the picture first.");
+    const id = session.base + " " + session.imageModel;
+    if (session.mode === "routstr" && !this.native.has(id)) {
+      try {
+        const out = await this.request("/image/generate", { session, signal, timeout,
+          body: { model: session.imageModel, prompt: text, aspect_ratio: aspect, format: "webp" } });
+        const b64 = Array.isArray(out?.images) ? out.images[0] : null;
+        if (typeof b64 === "string" && b64) return fromBase64(b64);
+        this.native.add(id);
+      } catch (e) {
+        if (signal?.aborted || !shapeRefused(e)) throw e;
+        this.native.add(id);
+      }
+    }
+    const body = { model: session.imageModel, prompt: text, n: 1, response_format: "b64_json" };
+    let out;
+    try { out = await this.request("/images/generations", { session, signal, timeout, body }); }
+    catch (e) {
+      // Some endpoints always answer in base64 and refuse to be asked for it.
+      if (signal?.aborted || !shapeRefused(e) || !/response_format/i.test(e.message)) throw e;
+      delete body.response_format;
+      out = await this.request("/images/generations", { session, signal, timeout, body });
+    }
+    const item = Array.isArray(out?.data) ? out.data[0] : null;
+    if (typeof item?.b64_json === "string" && item.b64_json) return fromBase64(item.b64_json);
+    if (typeof item?.url === "string" && /^(https:|data:)/i.test(item.url)) {
+      if (item.url.startsWith("data:")) return fromBase64(item.url);
+      let response;
+      try { response = await fetch(item.url, { credentials: "omit", signal }); }
+      catch { throw new Error("The picture was made, but this browser could not download it from the address the endpoint gave."); }
+      if (!response.ok) throw new Error(`The picture could not be downloaded (HTTP ${response.status}).`);
+      return await response.blob();
+    }
+    throw new Error("The AI endpoint returned no picture.");
   }
 
   // Two watchdogs rather than one clock on the answer. A page built from a whole

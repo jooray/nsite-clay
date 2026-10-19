@@ -93,7 +93,8 @@ You pay for AI in one of three ways:
 
 1. **Support the project.** The default. Pay one 2000 sat Lightning invoice and
    everything works: 1000 sats fund nsite-clay, and 1000 become your AI credit
-   on our Routstr node, `routstr.cypherpunk.today`. The key is kept encrypted on
+   on our Routstr node, `routstr.cypherpunk.today`. The credit pays for the
+   page and for the pictures AI makes for it, about 24 sats each. The key is kept encrypted on
    your own Nostr relays, so it follows you to every device you sign in on, and
    credit you do not spend can be withdrawn.
 2. **Your own Routstr node.** Point **AI settings** at any other Routstr node and
