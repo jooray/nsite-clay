@@ -186,10 +186,14 @@ export async function proposePage(ai, prompt, options = {}) {
     if (!['lang', 'dir', 'class', 'style'].includes(a.name)) input.documentElement.removeAttribute(a.name);
   }
   let page;
+  // Pictures only when the instruction is about them; otherwise this is the
+  // same request it has always been.
+  const pictures = options.pictures ?? await ai.picturesFor?.(prompt, before.length) ?? 0;
   try {
     page = await keepFeeds(ai, "<!DOCTYPE html>" + input.documentElement.outerHTML, (html, keep) => ai.refinePage(html, prompt, {
-      lang: nc.doc.documentElement.lang.slice(0, 2) || "en", ...options, keep,
+      lang: nc.doc.documentElement.lang.slice(0, 2) || "en", ...options, keep, ...(pictures > 0 ? { pictures, redraw: true } : {}),
     }));
+    if (pictures > 0) page = await redrawPictures(ai, page, pictures, options);
   } catch (e) {
     // "Ask for less" is not advice unless it says how. A whole-page rewrite has
     // exactly one smaller version of itself, and it is reachable from this same
@@ -198,6 +202,14 @@ export async function proposePage(ai, prompt, options = {}) {
     throw e;
   }
   return { page, before };
+}
+
+/** Make the pictures a rewrite asked for, saying how far along it is. */
+async function redrawPictures(ai, page, limit, { signal, onProgress } = {}) {
+  const out = await ai.fillPictures(page, { limit, signal,
+    onProgress: (done, total) => onProgress?.("", { picture: `${ai.say("pictureMaking")} ${done}/${total}` }) });
+  if (out.error && !signal?.aborted) ai.nc.toast?.(out.error.message);
+  return out.html;
 }
 
 export async function editDialog(ai, target) {
@@ -288,9 +300,9 @@ export async function editDialog(ai, target) {
       draft.selector = locator(part); save();
       controller = new AbortController();
       const options = { signal: controller.signal,
-        onProgress: (text, info) => h.status(text.length
+        onProgress: (text, info) => h.status(info?.picture || (text.length
           ? `${ai.say("generating")} ${text.length}`
-          : `${ai.say("thinking")} ${info?.thinking || 0}`) };
+          : `${ai.say("thinking")} ${info?.thinking || 0}`)) };
       return part && scope?.value === "element"
         ? propose(ai, part, prompt.value, options)
         : proposePage(ai, prompt.value, options);
@@ -358,7 +370,7 @@ export async function editDialog(ai, target) {
         }
         const frame = ai.doc.createElement("iframe"); frame.setAttribute("sandbox", ""); frame.title = label || ai.say("after");
         frame.style.cssText = `display:block;width:100%;height:${whole ? "42vh" : "11rem"};border:1px solid var(--nc-edge);background:white`;
-        frame.srcdoc = previewHTML(html, { base: ai.doc.baseURI });
+        frame.srcdoc = ai.previewHTML(html);
         body.append(frame); frames.push(frame);
       }
       const change = field(body, { label: ai.say("refineLabel"), rows: 2, value: draft.change || "" });
@@ -400,10 +412,13 @@ export async function editDialog(ai, target) {
         if (!change.value.trim()) { change.focus(); return; }
         const instruction = change.value.trim(); refining = true; gate();
         controller = new AbortController();
-        const options = { signal: controller.signal, onProgress: (text) => h.status(`${ai.say("generating")} ${text.length}`) };
+        const options = { signal: controller.signal, onProgress: (text, info) => h.status(info?.picture || `${ai.say("generating")} ${text.length}`) };
         try {
-          const next = whole ? { before: draft.before, page: await keepFeeds(ai, proposal.page, (html, keep) => ai.refinePage(html, instruction, {
-            ...options, lang: ai.doc.documentElement.lang.slice(0, 2) || "en", keep })) }
+          const pictures = whole ? await ai.picturesFor(instruction, proposal.page.length) : 0;
+          let page = whole ? await keepFeeds(ai, proposal.page, (html, keep) => ai.refinePage(html, instruction, {
+            ...options, lang: ai.doc.documentElement.lang.slice(0, 2) || "en", keep, ...(pictures > 0 ? { pictures, redraw: true } : {}) })) : null;
+          if (page && pictures > 0) page = await redrawPictures(ai, page, pictures, options);
+          const next = whole ? { before: draft.before, page }
             : { ...await propose(ai, target, instruction, { ...options, previous: proposal.element.outerHTML }), before: draft.before };
           if (controller.signal.aborted) return;
           proposal = next;

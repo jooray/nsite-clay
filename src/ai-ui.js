@@ -1,9 +1,9 @@
 import { AiClient, aiEndpoint, AI_DEFAULTS, MAX_PICTURES, estimateAiCost, imagePrice as imagePriceOf } from "./ai-client.js";
-import { ImageStore, makePicture, fillPictures, pictureFiles, pictureName } from "./ai-images.js";
+import { ImageStore, makePicture, fillPictures, pictureFiles, pictureName, uploadPictures } from "./ai-images.js";
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
 import { installEditing, editDialog, propose, proposePage, accept } from "./ai-edit.js";
-import { buildPage, refinePage, applyPage, preparePage } from "./ai-builder.js";
+import { buildPage, refinePage, applyPage, preparePage, mentionsPictures } from "./ai-builder.js";
 import { previewHTML } from "./ai-edit.js";
 import { FLOW_WORDS } from "./ai-flow-words.js";
 import { creditDialog, withdrawalDialog } from "./ai-credit.js";
@@ -86,6 +86,9 @@ const WORDS = {
   pictureGenerate: ["Make it with AI", "Crearla con IA", "Vytvoriť s AI", "Vytvořit s AI"],
   pictureMaking: ["Making the picture…", "Creando la imagen…", "Vytvára sa obrázok…", "Vytváří se obrázek…"],
   pictureMade: ["Picture made and uploaded.", "Imagen creada y subida.", "Obrázok je vytvorený a nahraný.", "Obrázek je vytvořený a nahraný."],
+  pictureSetup: ["AI can make a picture for this frame once AI is set up here. Add credit, or open AI settings to restore the credit you already have.", "La IA puede crear una imagen para este marco cuando la IA esté configurada aquí. Añade saldo o abre los ajustes de IA para recuperar el saldo que ya tienes.", "AI môže vytvoriť obrázok pre tento rámček, keď tu bude AI nastavená. Pridaj kredit alebo otvor nastavenia AI a obnov kredit, ktorý už máš.", "AI může vytvořit obrázek pro tento rámeček, až tu bude AI nastavená. Přidej kredit nebo otevři nastavení AI a obnov kredit, který už máš."],
+  pictureNoModel: ["Name a picture model in AI settings to make pictures with AI.", "Indica un modelo de imágenes en los ajustes de IA para crear imágenes con IA.", "Zadaj model na obrázky v nastaveniach AI a AI ti ich vytvorí.", "Zadej model pro obrázky v nastavení AI a AI ti je vytvoří."],
+  pictureUnsold: ["This AI node does not offer the picture model in your AI settings. Choose another one there.", "Este nodo de IA no ofrece el modelo de imágenes de tus ajustes. Elige otro allí.", "Tento AI node neponúka model na obrázky z tvojich nastavení. Vyber tam iný.", "Tento AI node nenabízí model pro obrázky z tvého nastavení. Vyber tam jiný."],
   pictureEmpty: ["Describe the picture first.", "Describe primero la imagen.", "Najprv opíš obrázok.", "Nejdřív popiš obrázek."],
   review: ["Review the result before keeping it. Save the page when you are ready to publish.", "Revisa el resultado antes de aceptarlo. Guarda la página cuando quieras publicarlo.", "Pred prijatím si výsledok skontroluj. Keď ho chceš zverejniť, ulož stránku.", "Před přijetím si výsledek zkontroluj. Až ho chceš zveřejnit, ulož stránku."],
 };
@@ -120,7 +123,8 @@ export class Ai {
   readiness(parent, options) { return readinessPanel(this, parent, options); }
   propose(target, prompt, options) { return propose(this, target, prompt, options); }
   proposePage(prompt, options) { return proposePage(this, prompt, options); }
-  applyPage(html, options) { return applyPage(this, html, options); }
+  // Pictures a rewrite made are uploaded only when the owner keeps it.
+  async applyPage(html, options) { return applyPage(this, await uploadPictures(this, html), options); }
   accept(proposal) { return accept(this, proposal); }
   buildPage(description, options) { return buildPage(this, description, options); }
   refinePage(page, instruction, options) { return refinePage(this, page, instruction, options); }
@@ -130,6 +134,19 @@ export class Ai {
   picture(prompt, crop, options) { return makePicture(this, prompt, crop, options); }
   fillPictures(html, options) { return fillPictures(this, html, options); }
   pictureFiles(html, dir) { return pictureFiles(this, html, dir); }
+  mentionsPictures(text) { return mentionsPictures(text); }
+
+  /**
+   * How many pictures a rewrite of a published page may make, for an
+   * instruction. Zero unless the instruction is about pictures, which keeps a
+   * change to the words exactly what it always was, and zero unless the credit
+   * pays for them on the rules a new page is held to.
+   */
+  async picturesFor(instruction, chars = 0) {
+    if (!mentionsPictures(instruction) || !this.canPicture()) return 0;
+    const status = await this.client.check().catch(() => null);
+    return this.pictureAllowance(status, { chars });
+  }
 
   /**
    * How many pictures to make for a page, given what a readiness check found.

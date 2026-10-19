@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.23",
+    "released": "2026-10-19",
+    "notes": [
+      "Make it with AI now appears in the picture dialog on a published page too, also for a picture that is already there. It used to be missing when the page had not yet fetched your AI key from your relays; it now waits for it, and if AI is not set up, it offers to set it up.",
+      "The dialog shows what a picture costs, starts from the description the picture was made from, and lets you change it before making a new one.",
+      "Edit with AI can change pictures: ask for a warmer photo or new pictures, and only the pictures you asked about are made again, within your credit. A change that is not about pictures works exactly as before."
+    ]
+  },
+  {
     "version": "0.3.22",
     "released": "2026-10-19",
     "notes": [

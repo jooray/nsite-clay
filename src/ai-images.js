@@ -156,10 +156,19 @@ export async function makePicture(ai, prompt, crop, { signal } = {}) {
 export async function fillPictures(ai, html, { limit = 0, signal, onProgress = () => {}, concurrency = 2 } = {}) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const prompt = (el) => (el.getAttribute("nc:prompt") || el.getAttribute("alt") || "").trim();
+  // An empty frame, or one the model marked to be redrawn. A redrawn frame
+  // keeps the picture it had until a new one has arrived, so a failure, or the
+  // credit running out, leaves the old picture rather than a hole.
+  const marked = [...doc.body.querySelectorAll("img[nc\\:redraw]")];
   const frames = [...doc.body.querySelectorAll("img")]
-    .filter((el) => !el.closest("template") && !(el.getAttribute("src") || "").trim() && prompt(el))
+    .filter((el) => !el.closest("template") && (!(el.getAttribute("src") || "").trim() || el.hasAttribute("nc:redraw")) && prompt(el))
     .slice(0, Math.max(0, limit));
-  if (!frames.length) return { html, made: 0, failed: 0, error: null };
+  const done_ = (out) => {
+    if (!marked.length) return out;
+    for (const el of marked) el.removeAttribute("nc:redraw");
+    return { ...out, html: "<!DOCTYPE html>\n" + doc.documentElement.outerHTML };
+  };
+  if (!frames.length) return done_({ html, made: 0, failed: 0, error: null });
   let done = 0, made = 0, error = null, stop = false;
   const queue = [...frames];
   onProgress(0, frames.length);
@@ -179,7 +188,30 @@ export async function fillPictures(ai, html, { limit = 0, signal, onProgress = (
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, frames.length) }, worker));
-  return { html: made ? "<!DOCTYPE html>\n" + doc.documentElement.outerHTML : html, made, failed: frames.length - made, error };
+  return done_({ html: made ? "<!DOCTYPE html>\n" + doc.documentElement.outerHTML : html, made, failed: frames.length - made, error });
+}
+
+/**
+ * Swap the pictures a rewrite made for addresses on the owner's Blossom
+ * servers, the way any picture added to a published page is stored. Done when
+ * the owner keeps the change, not before, so a rewrite they throw away costs
+ * them no uploads.
+ */
+export async function uploadPictures(ai, html) {
+  if (!/images\/[0-9a-f]{64}\./.test(html)) return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const sent = new Map();
+  for (const el of doc.querySelectorAll("img[src]")) {
+    const name = pictureName(el.getAttribute("src"));
+    if (!name) continue;
+    if (!sent.has(name)) {
+      const blob = await ai.images.get(name);
+      if (!blob) { el.removeAttribute("src"); continue; }
+      sent.set(name, (await ai.nc.media.upload(new File([blob], name.split("/").pop(), { type: blob.type }))).url);
+    }
+    el.setAttribute("src", sent.get(name));
+  }
+  return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
 }
 
 /**

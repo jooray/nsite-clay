@@ -90,7 +90,8 @@ try {
   const live = await browser.newPage();
   await mockAiAccount(live);
   live.on("pageerror", (e) => t("pageerror(page)", false, e.message));
-  await live.route("https://routstr.cypherpunk.today/v1/chat/completions", reply);
+  const asked = [];
+  await live.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => { asked.push(route.request().postDataJSON()); reply(route); });
   const url = published.link + "#edit";
   await live.goto(url);
   await live.evaluate(async () => { await nc.ready; });
@@ -186,6 +187,99 @@ try {
   t("with its design", /16, 16, 20/.test(persisted.bg), persisted.bg);
   t("and exactly one toolbar and one runtime, not two", persisted.toolbarOnce === 1 && persisted.scriptsOnce === 1,
     JSON.stringify(persisted));
+  t("a rewrite that is not about pictures asks exactly what it always did",
+    asked.length > 0 && asked.every((b) => !/nc:prompt|nc:redraw/.test(b.messages[0].content)));
+
+  // ---- pictures on the published page -------------------------------------
+  // A fresh tab on the published page: the key is on the owner's relays, not in
+  // this browser, which is where 0.3.22's picture dialog decided there was no
+  // AI and left the option out.
+  // A different picture each time it is asked, as a model would make.
+  const squares = await again.evaluate(() => ["#d84", "#e52", "#fa3"].map((colour) => {
+    const c = document.createElement("canvas"); c.width = 600; c.height = 600;
+    const x = c.getContext("2d"); x.fillStyle = colour; x.fillRect(0, 0, 600, 600); x.fillStyle = "#246"; x.fillRect(0, 0, 300, 600);
+    return c.toDataURL("image/png").split(",")[1];
+  }));
+  const pic = await browser.newPage();
+  await mockAiAccount(pic, { balance: 1000000 });
+  pic.on("pageerror", (e) => t("pageerror(pictures)", false, e.message));
+  const QWEN = { id: "qwen-image-2-1-turbo", architecture: { output_modalities: ["image"] },
+    sats_pricing: { image_output: 24.33 }, image_pricing: { max_usd: 0.02, tiers: [], default_resolution: "1K" } };
+  await pic.route("https://routstr.cypherpunk.today/v1/models", (route) => route.fulfill({ contentType: "application/json",
+    body: JSON.stringify({ data: [{ id: "deepseek-v4-1-flash-1017", sats_pricing: { prompt: .000439, completion: .001756 } }, QWEN] }) }));
+  const drawn = [];
+  await pic.route("https://routstr.cypherpunk.today/v1/image/generate", (route) => {
+    drawn.push(route.request().postDataJSON());
+    route.fulfill({ contentType: "application/json", body: JSON.stringify({ images: [squares[(drawn.length - 1) % squares.length]] }) });
+  });
+  const chats = [];
+  await pic.route("https://routstr.cypherpunk.today/v1/chat/completions", (route) => {
+    const body = route.request().postDataJSON(); chats.push(body);
+    // The model does what it is told: the picture asked about is marked to be
+    // redrawn, with a new description, and nothing else changes.
+    const page = body.messages[1].content.split("The page as it is now:\n")[1];
+    const out = page.replace(/<img /, '<img nc:redraw="" nc:prompt="The same bench at sunset, warm light" ');
+    route.fulfill({ contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: out }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` });
+  });
+  await pic.goto(published.link + "?p=" + Date.now() + "#edit");
+  await pic.evaluate(async () => { await nc.ready; });
+  await pic.evaluate((n) => nc.login("nsec", { key: n }), NSEC);
+  await pic.waitForSelector("[data-nc-ai]", { timeout: 10000 });
+  const first = await pic.evaluate(() => {
+    const had = nc.ai.client.session().key;
+    const img = document.createElement("img"); img.id = "bench"; img.setAttribute("nc:crop", "16:9");
+    img.alt = "The bench"; img.setAttribute("nc:prompt", "A wooden workshop bench with tools");
+    img.src = "https://example.invalid/old-bench.webp";
+    document.querySelector("main section").append(img);
+    window.picked = nc.media.promptImage({ target: img });
+    return { had: !!had };
+  });
+  const box = pic.locator("dialog.nc-ui").last();
+  await box.getByText(await pic.evaluate(() => nc.ai.say("pictureGenerate"))).waitFor({ timeout: 20000 });
+  t("the picture dialog offers AI once the owner's credit is found", true, first.had ? "key was already here" : "key fetched from relays");
+  t("prefilled from the frame's own description", await box.locator(".nc-ai-picture textarea").inputValue() === "A wooden workshop bench with tools");
+  await pic.waitForFunction(() => /24\.33/.test(document.querySelector("dialog.nc-ui .nc-ai-picture")?.textContent || ""), null, { timeout: 10000 });
+  t("with what a picture costs", true);
+  await box.locator(".nc-ai-picture textarea").fill("A wooden workshop bench in morning light");
+  await box.locator(".nc-ai-picture button").click();
+  await pic.waitForFunction(() => /^https?:/.test([...document.querySelectorAll("dialog.nc-ui input")].find((i) => i.placeholder === "https://…")?.value || "")
+    && !/old-bench/.test([...document.querySelectorAll("dialog.nc-ui input")].find((i) => i.placeholder === "https://…").value), null, { timeout: 30000 });
+  await box.locator("button[type=submit]").click();
+  await pic.evaluate(() => window.picked);
+  const replaced = await pic.evaluate(() => ({ src: document.querySelector("#bench").getAttribute("src"),
+    prompt: document.querySelector("#bench").getAttribute("nc:prompt") }));
+  t("a picture that was there is replaced by one AI made, on the owner's Blossom server",
+    /^http:\/\/127\.0\.0\.1:/.test(replaced.src) && drawn.at(-1)?.aspect_ratio === "16:9", JSON.stringify(replaced));
+  t("and the frame remembers what it was made from", replaced.prompt === "A wooden workshop bench in morning light");
+
+  // The whole page, asked to change a picture.
+  await pic.click("[data-nc-ai]");
+  await pic.waitForFunction(() => { const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    return p && p.querySelector("textarea") && !p.querySelector("button[type=submit]").disabled; }, null, { timeout: 15000 });
+  const made = drawn.length;
+  await pic.evaluate(() => {
+    const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    p.querySelector("textarea").value = "Make the bench picture warmer, like a sunset.";
+    p.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  await pic.waitForSelector(".nc-ui iframe", { timeout: 30000 });
+  t("a rewrite about pictures is told how to redraw them", /nc:redraw/.test(chats.at(-1).messages[0].content));
+  t("and only the marked picture is redrawn", drawn.length === made + 1 && drawn.at(-1).prompt === "The same bench at sunset, warm light",
+    `${drawn.length - made} pictures`);
+  t("the preview shows it before anything is uploaded",
+    (await pic.evaluate(() => [...document.querySelectorAll(".nc-ui iframe")].at(-1).srcdoc)).includes("data:image/webp"));
+  await pic.evaluate(() => {
+    const p = [...document.querySelectorAll(".nc-ui")].at(-1);
+    p.querySelector("form, .nc-ui-card").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  await pic.waitForFunction((old) => { const el = document.querySelector("#bench"); return el && el.getAttribute("src") !== old; },
+    replaced.src, { timeout: 30000 });
+  const redrawn = await pic.evaluate(() => { const el = document.querySelector("#bench");
+    return { src: el.getAttribute("src"), prompt: el.getAttribute("nc:prompt"), marker: el.hasAttribute("nc:redraw") }; });
+  t("keeping it uploads the new picture and puts it in the page",
+    /^http:\/\/127\.0\.0\.1:/.test(redrawn.src) && !redrawn.marker, JSON.stringify(redrawn));
+  t("with the description it was made from", redrawn.prompt === "The same bench at sunset, warm light");
 } catch (e) {
   t("the run completed", false, e.message);
 } finally {

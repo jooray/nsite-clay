@@ -1385,6 +1385,7 @@
     try {
       const pictures = nc.ai.pictureAllowance(aiReady, { chars: generated.length + instruction.length });
       const result = await nc.ai.refinePage(generated, instruction, { lang: LANG, signal: controller.signal, pictures,
+        redraw: nc.ai.mentionsPictures(instruction),
         onProgress: (text, info) => {
           $("#ai-status").textContent = text.length
             ? `${say("aiChanging", "Making that change…")} ${text.length}`

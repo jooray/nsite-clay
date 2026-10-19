@@ -50,6 +50,12 @@ set. `await nc.ai.picture(prompt, crop)` makes one picture cut to `crop` and
 returns `{ name, blob }`, where `name` is `images/<sha256>.webp` (or `.jpg` on a
 browser that cannot write WebP).
 
+A rewrite asked to change pictures marks each frame to redraw with
+`nc:redraw` and a new `nc:prompt`. Only marked frames, and empty ones, are
+drawn again, within the credit; the marker never stays in the page. The redraw
+instruction is sent only when the request mentions pictures, so a change to
+the words is sent exactly as before.
+
 The runtime writes these back onto `<html>` for the document's own CSS and logic, and strips
 every one of them from anything it saves:
 

@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { AI_WRITING, unfence } from "./ai-edit.js";
 
-const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop", "nc:prompt"];
+const MARKERS = ["editable", "nc:blocks", "nc:block-type", "nc:block", "nc:label", "nc:icon", "nc:group", "nc:hint", "nc:slot", "nc:on-add", "nc:crop", "nc:prompt", "nc:redraw"];
 const CHROME = `<div class="nc-bar nc-ui-chrome"><span class="nc-dot"></span><span class="nc-who" data-nc-who>read-only</span><button data-nc-signin>Sign in</button><button class="nc-owner-only" data-nc-write>Write</button><button class="nc-owner-only" data-nc-cms>Edit content</button><button class="nc-owner-only" data-nc-settings>Settings</button><button class="nc-owner-only" data-nc-history>History</button><button class="nc-primary nc-owner-only" data-nc-save>Save</button></div><p class="nc-edit-hint">add #edit to the URL to edit this page</p>`;
 
 /**
@@ -200,6 +200,21 @@ export function pictureRule(n) {
   return n > 0 ? ` Pictures are made for this page automatically. Give every <img> you write without a src an nc:prompt attribute holding a detailed description of that picture for an image generator: the subject, the setting, the light, and a style that suits the page's colours, with no words, letters or logos in the picture. Write at most ${n} such pictures.` : "";
 }
 
+/**
+ * Whether a change someone asked for is about the page's pictures. Only then
+ * is a rewrite told how to ask for new ones, so a change to the words is sent
+ * exactly as it always was. Generous on purpose: a false match costs a
+ * sentence in the prompt, never a picture, since nothing is redrawn unless the
+ * model marks it.
+ */
+export function mentionsPictures(text) {
+  return /pictur|photo|image|imág|illustr|\bpics?\b|foto|ilustr|obráz|obraz|snímk|banner/i.test(String(text || ""));
+}
+
+export function redrawRule(on) {
+  return on ? ` When the user asks for a picture the page already has to change, or for new pictures, mark each <img> to be redrawn with nc:redraw="" and give it a new nc:prompt describing the picture it should now show; keep its id. Mark only the pictures the user asked to change.` : "";
+}
+
 export async function buildPage(ai, description, { template = "", lang = "en", signal, onProgress, pictures = 0 } = {}) {
   if (!description.trim()) throw new Error("Describe the page you want to build.");
   if (description.length > 20000 || template.length > 300000) throw new Error("Use a shorter description or a smaller template.");
@@ -269,16 +284,22 @@ const KEEP_RULE = `An empty <div nc:keep="N"></div> is a live part of the page, 
  * This keeps the page and changes the one thing asked for, which is both what
  * somebody means and the cheaper of the two.
  */
-export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress, keep = false, pictures = 0 } = {}) {
+export async function refinePage(ai, page, instruction, { lang = "en", signal, onProgress, keep = false, pictures = 0, redraw = false } = {}) {
   if (!instruction.trim()) throw new Error("Say what should be different.");
   if (instruction.length > 20000 || page.length > 300000) throw new Error("Use a shorter instruction or a smaller page.");
   const reply = await ai.client.complete([
-    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${keep ? KEEP_RULE : ""}${BUILD_RULES}${pictureRule(pictures)} Language: ${lang}. ${AI_WRITING}` },
+    { role: "system", content: `Rewrite one page of static HTML for nsite-clay so that it satisfies the change the user asks for. Make that change and keep everything else as it is: the same wording, the same structure, the same design, wherever the change does not require otherwise. Keeping the design means returning the page's <style> in full with the markup it styles. An <img> that already has a src is a photograph its owner uploaded: keep that src and that id exactly as they are, even when you rewrite the alt text around them. Only an image the page does not have yet is written without a src. ${keep ? KEEP_RULE : ""}${BUILD_RULES}${pictureRule(pictures)}${redrawRule(pictures > 0 && redraw)} Language: ${lang}. ${AI_WRITING}` },
     { role: "user", content: `Change to make:\n${instruction}\n\nThe page as it is now:\n${page}` },
     // The answer has to hold the whole page again, so the page is what sizes it.
   ], { signal, onProgress, maxTokens: room(page.length + instruction.length) });
-  return preparePage(reply, { owner: ai.nc.npub, lang, previous: page, keep,
+  const out = preparePage(reply, { owner: ai.nc.npub, lang, previous: page, keep,
     relays: ai.nc.cfg?.relays || [], servers: ai.nc.cfg?.servers || [] });
+  // A picture is redrawn only when redrawing was offered. A mark the model
+  // made unasked would spend credit on a change nobody asked for.
+  if ((pictures > 0 && redraw) || !out.includes("nc:redraw")) return out;
+  const doc = new DOMParser().parseFromString(out, "text/html");
+  for (const el of doc.querySelectorAll("[nc\\:redraw]")) el.removeAttribute("nc:redraw");
+  return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
 }
 
 /**

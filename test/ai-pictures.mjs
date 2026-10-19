@@ -26,15 +26,17 @@ const errors = [];
 
 // A square PNG of a couple of hundred kilobytes, as the OpenAI route answers.
 const scratch = await browser.newPage();
-const PNG = await scratch.evaluate(() => {
+// Different every time it is asked, as a model's would be.
+const PNGS = await scratch.evaluate(() => [0, 120, 240].map((shift) => {
   const c = document.createElement("canvas"); c.width = 900; c.height = 900;
   const x = c.getContext("2d");
-  for (let i = 0; i < 900; i += 30) { x.fillStyle = `hsl(${i % 360},60%,50%)`; x.fillRect(i, 0, 30, 900); }
+  for (let i = 0; i < 900; i += 30) { x.fillStyle = `hsl(${(i + shift) % 360},60%,50%)`; x.fillRect(i, 0, 30, 900); }
   return c.toDataURL("image/png").split(",")[1];
-});
+}));
+const PNG = PNGS[0];
 await scratch.close();
 
-async function open({ balance = 1000000, models = [TEXT, QWEN], native = "ok" } = {}) {
+async function open({ balance = 1000000, models = [TEXT, QWEN], native = "ok", reply = () => PAGE } = {}) {
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.routeWebSocket("**", (ws) => ws.close());
@@ -42,13 +44,13 @@ async function open({ balance = 1000000, models = [TEXT, QWEN], native = "ok" } 
   await page.route(`${NODE}/models`, (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ data: models }) }));
   await page.route(`${NODE}/balance/info`, (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ balance, reserved: 0 }) }));
   await page.route(`${NODE}/chat/completions`, (r) => {
-    seen.chat.push(r.request().postDataJSON());
-    r.fulfill({ contentType: "text/event-stream", body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: PAGE }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` });
+    const body = r.request().postDataJSON(); seen.chat.push(body);
+    r.fulfill({ contentType: "text/event-stream", body: `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: reply(body) }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n` });
   });
   await page.route(`${NODE}/image/generate`, (r) => {
     seen.native.push(r.request().postDataJSON());
     if (native === "refuse") return r.fulfill({ status: 400, contentType: "application/json", body: '{"error":{"message":"aspect_ratio is not supported"}}' });
-    r.fulfill({ contentType: "application/json", body: JSON.stringify({ images: [PNG] }) });
+    r.fulfill({ contentType: "application/json", body: JSON.stringify({ images: [PNGS[seen.native.length % PNGS.length]] }) });
   });
   await page.route(`${NODE}/images/generations`, (r) => {
     seen.openai.push(r.request().postDataJSON());
@@ -146,6 +148,43 @@ try {
     await page.close();
   }
 
+  // ---- changing a picture from the preview --------------------------------
+  {
+    // The model marks the picture asked about, and keeps every src it was given.
+    const { page, seen } = await open({ reply: (body) => {
+      const sent = body.messages[1].content.split("The page as it is now:\n")[1];
+      if (!sent) return PAGE;
+      // Asked about a picture, it marks one with a new description. Asked
+      // about words, it marks one anyway, which must not cost a picture.
+      if (/picture/.test(body.messages[1].content.split("The page as it is now:")[0])) {
+        return sent.replace(/<img ([^>]*?)nc:prompt="A wooden[^"]*"/, '<img nc:redraw="" nc:prompt="The bench at sunset" $1');
+      }
+      return sent.replace(/<img ([^>]*?)(nc:prompt="A wooden)/, '<img nc:redraw="" $1$2');
+    } });
+    await generate(page);
+    const first = await page.evaluate(() => [...nc.ai.drafts.read("builder").versions.at(-1).html.matchAll(/src="(images\/[^"]+)"/g)].map((m) => m[1]));
+    const asked = seen.native.length;
+    // A change to the words: no picture is made, and the model is not told
+    // how to redraw any.
+    await page.fill("#ai-change", "Put the opening hours at the top.");
+    await page.click("#ai-refine");
+    await ready(page, "Changed. Check it again below.");
+    assert(!/nc:redraw/.test(seen.chat.at(-1).messages[0].content), "a change to the words was told about redrawing");
+    assert.equal(seen.native.length, asked, "a change to the words made a picture");
+    await page.fill("#ai-change", "Make the bench picture warmer.");
+    await page.click("#ai-refine");
+    await ready(page, "Changed. Check it again below.");
+    assert(/nc:redraw/.test(seen.chat.at(-1).messages[0].content), "a change to a picture was not told how to redraw it");
+    assert.equal(seen.native.length, asked + 1, `redrew ${seen.native.length - asked} pictures`);
+    assert.equal(seen.native.at(-1).prompt, "The bench at sunset");
+    const after = await page.evaluate(() => nc.ai.drafts.read("builder").versions.at(-1).html);
+    const now = [...after.matchAll(/src="(images\/[^"]+)"/g)].map((m) => m[1]);
+    assert.equal(now.length, 2);
+    assert.equal(now.filter((n) => first.includes(n)).length, 1, "exactly one picture should have changed");
+    assert(!after.includes("nc:redraw"), "the redraw marker was left in the page");
+    await page.close();
+  }
+
   // ---- a model the native route refuses: the OpenAI route, cropped -------
   {
     const { page, seen } = await open({ native: "refuse" });
@@ -178,6 +217,22 @@ try {
     await page.close();
   }
 
+  // ---- the picture dialog with no AI set up: a way to set it up ----------
+  {
+    const { page } = await open();
+    await page.evaluate(() => {
+      nc.ai.client.configure({ ...nc.ai.client.config, key: "" });
+      nc.vault = { usable: true, load: async () => ({}), save: async () => true };
+      const img = document.createElement("img"); img.src = "https://example.invalid/a.webp"; img.alt = "A bench";
+      document.body.append(img);
+      nc.media.promptImage({ target: img });
+    });
+    await page.waitForFunction(() => /set up here/.test(document.querySelector("dialog.nc-ui .nc-ai-picture")?.textContent || ""), null, { timeout: 15000 });
+    const buttons = await page.evaluate(() => [...document.querySelectorAll("dialog.nc-ui .nc-ai-picture button")].map((b) => b.textContent));
+    assert.deepEqual(buttons, ["Add AI credit", "AI settings"]);
+    await page.close();
+  }
+
   // ---- one frame, from the picture dialog --------------------------------
   {
     const { page, seen } = await open();
@@ -198,6 +253,7 @@ try {
     const dialog = page.locator("dialog.nc-ui").last();
     await dialog.getByText("Make it with AI").waitFor();
     assert.equal(await dialog.locator("textarea").first().inputValue(), "A bench in the sun");
+    await page.waitForFunction(() => /about 24\.33 sats each/.test(document.querySelector("dialog.nc-ui .nc-ai-picture").textContent));
     await dialog.getByText("Make it with AI").click();
     await page.waitForFunction(() => /Picture made and uploaded/.test([...document.querySelectorAll(".nc-status")].map((e) => e.textContent).join(" ")), null, { timeout: 15000 });
     const up = await page.evaluate(() => window.uploads);
@@ -236,5 +292,5 @@ try {
   }
 
   assert.deepEqual(errors, []);
-  console.log("AI pictures: made for a new page on the native route or the OpenAI one, cut to their frames, kept across a reload, published as site files, and left alone when off, unsold or unaffordable; one frame from the picture dialog.");
+  console.log("AI pictures: made for a new page on the native route or the OpenAI one, cut to their frames, kept across a reload, published as site files, and left alone when off, unsold or unaffordable; a change to one picture redraws only it; the picture dialog makes or replaces one, and offers setup when there is no AI.");
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }

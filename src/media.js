@@ -358,7 +358,7 @@ export class Media {
   }
 
   async promptImage({ target = null } = {}) {
-    let url, alt, cap;
+    let url, alt, cap, prompted = "";
     const has = target?.tagName === "IMG";
     const out = await modal({
       doc: this.doc,
@@ -421,28 +421,90 @@ export class Media {
         drop.addEventListener("drop", (e) => take(e.dataTransfer?.files?.[0]));
 
         // Or have AI make one, to the shape of the space, from the description
-        // the page already carries for it. Offered only when there is a key and
-        // a picture model to ask, and paid from the same AI credit as the text.
+        // the page carries for it, whether the frame is empty or already has a
+        // picture to replace. Paid from the same AI credit as the text.
+        //
+        // The key is not in this page's storage the first time: it is on the
+        // owner's relays, put there by the publisher, and fetched and decrypted
+        // in the background once editing starts. So this section waits for that
+        // rather than deciding at once, and when there is still no AI it says
+        // how to set it up instead of leaving the option out.
         const ai = this.nc.ai;
-        if (ai?.canPicture?.()) {
-          const ask = field(body, { label: ai.say("pictureDescribe"), rows: 2,
-            value: has ? (target.getAttribute("nc:prompt") || target.getAttribute("alt") || "") : "" });
-          const make = doc.createElement("button"); make.type = "button"; make.textContent = ai.say("pictureGenerate");
-          body.append(make);
-          make.onclick = async () => {
-            if (taking) return;
-            if (!ask.value.trim()) { h.status(ai.say("pictureEmpty"), true); ask.focus(); return; }
-            taking = true; h.busy(true); make.disabled = true; h.status(ai.say("pictureMaking"));
-            try {
-              const { name, blob } = await ai.picture(ask.value, fits || "16:9");
+        if (ai) {
+          const box = doc.createElement("div"); box.className = "nc-ai-picture"; body.append(box);
+          const hint = (text) => { const p = doc.createElement("p"); p.className = "nc-hint"; p.textContent = text; box.append(p); return p; };
+          const draw = async () => {
+            box.replaceChildren(hint(ai.say("looking")));
+            // The dialog is built before it is put on screen, so let it get there
+            // before asking whether it is still open.
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            // Whichever comes first: the lookup finishing, or the key turning up
+            // from the lookup editing already started, which can be the slower
+            // of two relay round trips.
+            const keyed = () => !!ai.client.session().key;
+            if (!keyed()) {
+              await Promise.race([
+                (async () => {
+                  if (!keyed()) await ai.adopt().catch(() => false);
+                  if (!keyed()) await ai.adopt({ force: true }).catch(() => false);
+                })(),
+                new Promise((resolve) => {
+                  const started = Date.now();
+                  const tick = setInterval(() => {
+                    if (keyed() || !body.isConnected || Date.now() - started > 8000) { clearInterval(tick); resolve(); }
+                  }, 250);
+                }),
+              ]);
+            }
+            // Still nothing: say how to set it up, and keep watching, since a
+            // signer on a phone can answer after that.
+            if (!keyed() && body.isConnected) {
+              const watch = setInterval(() => {
+                if (!body.isConnected) clearInterval(watch);
+                else if (keyed()) { clearInterval(watch); draw(); }
+              }, 500);
+            }
+            if (!body.isConnected) return;
+            box.replaceChildren();
+            const s = ai.client.session();
+            if (!ai.canPicture()) {
+              hint(ai.say(s.key ? "pictureNoModel" : "pictureSetup"));
+              const row = doc.createElement("div"); row.className = "nc-row"; box.append(row);
+              for (const name of [...(s.key || s.mode !== "routstr" ? [] : ["addCredit"]), "settings"]) {
+                const b = doc.createElement("button"); b.type = "button"; b.textContent = ai.say(name); row.append(b);
+                b.onclick = async () => {
+                  await (name === "addCredit" ? ai.addCredit() : ai.settings()).catch((e) => h.status(e.message, true));
+                  if (body.isConnected) draw();
+                };
+              }
+              return;
+            }
+            const ask = field(box, { label: ai.say("pictureDescribe"), rows: 2,
+              value: has ? (target.getAttribute("nc:prompt") || target.getAttribute("alt") || "") : "" });
+            const cost = hint("");
+            const make = doc.createElement("button"); make.type = "button"; make.textContent = ai.say("pictureGenerate");
+            box.append(make);
+            ai.client.check().then((status) => {
               if (!body.isConnected) return;
-              const r = await this.upload(new File([blob], name.split("/").pop(), { type: blob.type }));
-              if (!body.isConnected) return;
-              url.value = r.url; preview(r.url);
-              h.status(ai.say("pictureMade"));
-            } catch (e) { h.status(e.message, true); }
-            finally { taking = false; make.disabled = false; h.busy(false); }
+              if (status?.image?.price > 0) cost.textContent = ai.say("pictureCost").replace("{n}", Number(status.image.price.toFixed(2)).toLocaleString(doc.documentElement.lang || "en"));
+              else if (s.mode === "routstr" && status && !status.image) cost.textContent = ai.say("pictureUnsold");
+            }).catch(() => {});
+            make.onclick = async () => {
+              if (taking) return;
+              if (!ask.value.trim()) { h.status(ai.say("pictureEmpty"), true); ask.focus(); return; }
+              taking = true; h.busy(true); make.disabled = true; h.status(ai.say("pictureMaking"));
+              try {
+                const { name, blob } = await ai.picture(ask.value, fits || "16:9");
+                if (!body.isConnected) return;
+                const r = await this.upload(new File([blob], name.split("/").pop(), { type: blob.type }));
+                if (!body.isConnected) return;
+                url.value = r.url; preview(r.url); prompted = ask.value.trim();
+                h.status(ai.say("pictureMade"));
+              } catch (e) { h.status(e.message, true); }
+              finally { taking = false; make.disabled = false; h.busy(false); }
+            };
           };
+          draw();
         }
 
         // Everything this key has uploaded before, as a grid to click.
@@ -510,7 +572,13 @@ export class Media {
         return { url: src, alt: alt.value.trim(), caption: cap.value.trim() };
       },
     });
-    return out ? this.image({ ...out, target }) : null;
+    if (!out) return null;
+    const placed = await this.image({ ...out, target });
+    // The description a picture was made from stays with the frame, so the next
+    // replacement starts from it. Only for a picture that was just made.
+    const frame = placed?.tagName === "IMG" ? placed : placed?.querySelector?.("img") || null;
+    if (prompted && frame?.isConnected && frame.getAttribute("src") === out.url) frame.setAttribute("nc:prompt", prompted);
+    return placed;
   }
 
   async promptVideo({ target = null } = {}) {
