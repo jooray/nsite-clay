@@ -530,6 +530,11 @@ https://<their npub>.nsite.lol/#edit
 Put it in the handover note. `nc.settings.open()` turns the gate off for someone
 who would rather have the toolbar always visible.
 
+After the owner has signed in once, their browser remembers it, and later visits
+to that site open the toolbar without `#edit`. Nobody else's browser changes.
+Signing out forgets it. `#edit` is still the way in on a new device, so it still
+goes in the handover note.
+
 Autosave is off, deliberately: every save stores the whole page again and files a
 version, so a timer publishes a dozen versions of one paragraph. Leaving with
 unsaved work already warns them.

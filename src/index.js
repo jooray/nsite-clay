@@ -32,6 +32,11 @@ import { qrSvg, qrElement } from "./qr.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
+// "This browser has signed in here as the owner", per site. Read by the edit
+// gate, so a page that remembers its editor opens as though the URL ended in
+// #edit. The tab-only twin records a "not now" for the rest of this tab.
+const EDITOR = "nsite-clay.editor";
+const EDITOR_NOT_NOW = "nsite-clay.editor-not-now";
 
 // The two files a page needs in order to still be editable after the save.
 const ENGINE = new Set(["/nsite-clay.js", "/nsite-clay-chrome.js"]);
@@ -143,6 +148,9 @@ class NsiteClay extends EventTarget {
     html.setAttribute("nc:owner-here", String(this.isOwner));
     html.setAttribute("nc:editmode", String(this.isOwner));
     try { localStorage.setItem(STORAGE, JSON.stringify({ kind: this.signer.kind, pubkey: this.pubkey })); } catch {}
+    // Only the owner is remembered. Somebody else signing in has no controls to
+    // come back to, and a reader of their own browser's history learns nothing.
+    if (this.isOwner) this.rememberEditor(true, { quiet: true });
     if (this.isOwner && this.editRequested) this.editable.enable();
     this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner });
   }
@@ -155,8 +163,69 @@ class NsiteClay extends EventTarget {
     html.setAttribute("nc:editmode", "false");
     this.editable.disable();
     try { localStorage.removeItem(STORAGE); } catch {}
+    // Signing out is how a browser stops being the editor's. Without #edit in
+    // the URL the controls go with it, as they would for any reader.
+    this.rememberEditor(false, { quiet: true });
     this._emit("nsiteclay:logout", {});
+    this.applyEditGate();
   }
+
+  // ---- the remembered editor ---------------------------------------------
+  //
+  // Once the owner has signed in on this site in this browser, the browser keeps
+  // a note of it, and later visits open the edit gate as #edit would: the
+  // toolbar and its Sign in button, nothing more. No key is kept and nothing
+  // signs in by itself. A browser that never signed in here reads nothing and
+  // sees the page exactly as before.
+  //
+  // Keyed by owner and site rather than by page, so signing in on the front page
+  // also brings the controls to the other pages of the same site.
+  _editorKey(base = EDITOR) { return `${base}:${this.cfg.owner || ""}:${this.cfg.site || ""}`; }
+
+  get editorRemembered() {
+    if (!this.cfg.owner) return false;
+    const key = this._editorKey();
+    if (this._editorMemo?.key !== key) {
+      let on = false;
+      try { on = JSON.parse(localStorage.getItem(key) || "null")?.pubkey === this.cfg.owner; } catch { /* private mode */ }
+      this._editorMemo = { key, on };
+    }
+    return this._editorMemo.on;
+  }
+
+  // `quiet` leaves the gate alone, for callers that apply it themselves.
+  rememberEditor(on = true, { quiet = false } = {}) {
+    if (!this.cfg.owner) return false;
+    const key = this._editorKey();
+    try {
+      if (on) localStorage.setItem(key, JSON.stringify({ pubkey: this.cfg.owner, at: Date.now() }));
+      else localStorage.removeItem(key);
+    } catch { /* still true for this tab, which is all a full storage can offer */ }
+    try { sessionStorage.removeItem(this._editorKey(EDITOR_NOT_NOW)); } catch { /* nothing to clear */ }
+    this._editorMemo = { key, on: !!on };
+    if (!quiet) this.applyEditGate();
+    return !!on;
+  }
+
+  // "Not now": close a gate that only the remembered sign-in opened, for the
+  // rest of this tab. The chrome calls it when the sign-in dialog is dismissed,
+  // so whoever else uses this browser can put the controls away, and the page
+  // does not offer them again on every reload. #edit still opens the gate.
+  dismissRememberedEditor() {
+    if (this.cfg.editGate !== "hash" || this._hashAsksForEdit || !this.editorRemembered || this.pubkey) return false;
+    try { sessionStorage.setItem(this._editorKey(EDITOR_NOT_NOW), "1"); } catch { /* closes for now, not for the tab */ }
+    this._editorNotNow = this._editorKey(EDITOR_NOT_NOW);
+    this.applyEditGate();
+    return true;
+  }
+
+  get _editorDismissed() {
+    const key = this._editorKey(EDITOR_NOT_NOW);
+    if (this._editorNotNow === key) return true;
+    try { return sessionStorage.getItem(key) === "1"; } catch { return false; }
+  }
+
+  get _hashAsksForEdit() { return /^#edit\b/i.test(this.doc.location.hash || ""); }
 
   // ---- saving --------------------------------------------------------------
 
@@ -600,10 +669,13 @@ class NsiteClay extends EventTarget {
 
   // Editing controls appear when the gate is open. With nc:edit-gate="hash"
   // that means the URL ends in #edit, so a reader gets the page and nothing to
-  // click, and the owner gets the controls by asking for them.
+  // click, and the owner gets the controls by asking for them. A browser the
+  // owner has signed in on asks for them by itself (see rememberEditor), unless
+  // this tab said "not now".
   get editRequested() {
     if (this.cfg.editGate !== "hash") return true;
-    return /^#edit\b/i.test(this.doc.location.hash || "");
+    if (this._hashAsksForEdit) return true;
+    return this.editorRemembered && !this._editorDismissed;
   }
 
   applyEditGate() {

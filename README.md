@@ -336,6 +336,11 @@ Worth remembering, because a page with no visible way in looks broken to someone
 who has forgotten. `nc.settings.open()` turns the gate off if you would rather
 have the toolbar always there.
 
+Once you have signed in on your site in a browser, that browser remembers it and
+opens the toolbar on later visits without `#edit`. It keeps no key, so you still
+sign in each time, and signing out forgets it. Visitors who never signed in see
+nothing different.
+
 Autosave is off by default. Every save stores the whole page again and files a
 version, so saving on a timer publishes a dozen versions of one paragraph.
 Turn it on in the same settings panel. Both settings are attributes on `<html>`,

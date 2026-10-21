@@ -9,6 +9,20 @@
 // Nothing private goes here. Anyone can read a published page.
 import { modal, checkbox, toast } from "./ui.js";
 
+// The one line here that is about this browser rather than this page. It is
+// drawn in the page's language, as the AI settings button below it is.
+// Order: en, es, sk, cs.
+const WORDS = {
+  remember: ["Open the editing controls in this browser without #edit",
+    "Abrir los controles de edición en este navegador sin #edit",
+    "Zobrazovať ovládanie úprav v tomto prehliadači aj bez #edit",
+    "Zobrazovat ovládání úprav v tomto prohlížeči i bez #edit"],
+  rememberNote: ["This browser remembers that the owner signed in here. It keeps no key, and signing out forgets it.",
+    "Este navegador recuerda que el propietario inició sesión aquí. No guarda ninguna clave, y al cerrar sesión lo olvida.",
+    "Tento prehliadač si pamätá, že sa tu prihlásil vlastník. Žiadny kľúč neuchováva a odhlásenie to zruší.",
+    "Tento prohlížeč si pamatuje, že se tu přihlásil vlastník. Žádný klíč neuchovává a odhlášení to zruší."],
+};
+
 export class Settings {
   constructor(nc) {
     this.nc = nc;
@@ -16,6 +30,11 @@ export class Settings {
   }
 
   get root() { return this.doc.documentElement; }
+
+  say(key) {
+    const lang = ["en", "es", "sk", "cs"].indexOf((this.root.lang || "en").slice(0, 2).toLowerCase());
+    return WORDS[key]?.[Math.max(lang, 0)] || key;
+  }
 
   // Save once edits settle. Off by default: every save is a new Blossom blob
   // and a new version event, so saving on a timer turns a paragraph of typing
@@ -71,7 +90,7 @@ export class Settings {
 
   async open() {
     const before = { autosave: this.autosave, editGate: this.editGate };
-    let autosave, gate;
+    let autosave, gate, remember;
     const out = await modal({
       doc: this.doc,
       title: "Page settings",
@@ -85,14 +104,23 @@ export class Settings {
           checked: this.editGate === "hash", note:
           "Readers get the page with nothing to click. Add #edit to the address to bring the " +
           "controls back." });
+        // Only means anything behind the gate, so it is only offered there.
+        if (this.editGate === "hash" && this.nc.cfg.owner && typeof this.nc.rememberEditor === "function") {
+          remember = checkbox(body, { label: this.say("remember"), checked: this.nc.editorRemembered,
+            note: this.say("rememberNote") });
+        }
         this.runtimeRow(body);
         const ai = this.doc.createElement("button"); ai.type = "button";
         ai.textContent = this.nc.ai.say("settings"); ai.onclick = () => this.nc.ai.settings();
         body.append(ai);
       },
-      onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always" }),
+      onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always",
+        remember: remember ? remember.checked : undefined }),
     });
     if (!out) return null;
+    // A browser preference, not a page attribute: it takes effect now and there
+    // is nothing to save.
+    if (out.remember !== undefined && out.remember !== this.nc.editorRemembered) this.nc.rememberEditor(out.remember);
     if (out.autosave !== before.autosave) this.autosave = out.autosave;
     if (out.editGate !== before.editGate) this.editGate = out.editGate;
     if (out.autosave !== before.autosave || out.editGate !== before.editGate) {

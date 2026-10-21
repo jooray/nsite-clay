@@ -177,7 +177,12 @@ await nc.login("auto")             // "nip07" | "nip46" | "bunker" | "nsec"
 await nc.login("nsec", { key, password })     // nsec1…, 64 hex, or ncryptsec1… + password
 await nc.login("bunker", { uri })             // bunker://…
 const { uri, ready } = nc.connectRemote()     // nostrconnect:// for Amber; await ready
-await nc.logout()
+await nc.logout()                  // also forgets this browser as the editor's
+
+nc.editRequested                   // is the edit gate open (always true without nc:edit-gate="hash")
+nc.editorRemembered                // has the owner signed in on this site in this browser
+nc.rememberEditor(true | false)    // set or forget that, and re-apply the gate
+nc.dismissRememberedEditor()       // close a gate only the memory opened, for this tab
 
 nc.getHTML()                       // the exact string a save would store
 await nc.save()                    // → { hash, bytes, manifest, version, aggregate }
@@ -236,6 +241,23 @@ nc.addEventListener("nsiteclay:status", handler)
 
 Helpers re-exported for convenience: `nc.nip19`, `nc.verifyEvent`, `nc.sanitize`,
 `nc.sanitizeAs`, `nc.hashText`, `nc.fetchVerified`, `nc.LocalSigner`.
+
+## The edit gate and the remembered editor
+
+With `nc:edit-gate="hash"` the editing controls stay shut until the URL ends in `#edit`. Once the
+owner has signed in on a site in a browser, that browser keeps a note in `localStorage`
+(`nsite-clay.editor:<owner hex>:<nc:site>`, holding the owner's pubkey and a time, never a key),
+and later visits to any page of that site open the gate exactly as `#edit` would: the toolbar with
+its Sign in button. Nothing signs in by itself. A browser that never signed in as the owner reads
+nothing and sees the page as before, and signing in with some other key is not remembered.
+
+The note goes when the owner signs out, or when they untick "Open the editing controls in this
+browser without #edit" in Settings, which is the one line there that belongs to the browser rather
+than the page and needs no save. Dismissing the sign-in dialog on a page the note opened puts the
+controls away for the rest of that tab (`sessionStorage`), so whoever else uses the browser gets the
+page as a reader does and is not offered the controls on every reload; `#edit` still opens them, and
+signing in again lifts it. Every storage access is guarded, so a browser that refuses storage behaves
+as one that never signed in.
 
 ## Upgrading a published page
 

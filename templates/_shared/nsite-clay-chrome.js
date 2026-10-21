@@ -310,6 +310,11 @@
     if (onVisible) document.removeEventListener("visibilitychange", onVisible);
     if (!attempt?.done) attempt?.cancel?.();
     if (how) who();
+    // Dismissed, on a page whose controls are only open because this browser
+    // once signed in here: put them away for the rest of this tab. Whoever is
+    // using the browser now gets the page as any reader does, and #edit still
+    // brings the controls back. An older engine has no such thing to call.
+    else if (!nc.pubkey) nc.dismissRememberedEditor?.();
   });
 
   // A save that failed, and a save that went through with a dead link in it,
