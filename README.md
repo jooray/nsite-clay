@@ -693,9 +693,10 @@ publishes your copy anyway.
 
 A deploy of a directory that did not come from `pull` refuses to take down
 published pages it does not have, and names them. `--keep-missing` keeps them,
-`--prune` takes them down. Every deploy also refuses a page whose `nc:path`,
-`nc:site` or `nc:owner` does not fit where it is going, and a page that would
-lose `/nsite-clay.js`; `--no-check` publishes regardless.
+`--prune` takes them down. Every deploy also refuses a page whose `nc:path` or
+`nc:site` does not fit where it is going, and a page that would lose
+`/nsite-clay.js`; `--no-check` publishes regardless. A page whose `nc:owner` is
+another key is published with a note, since only that key can save it.
 
 ## Version history
 

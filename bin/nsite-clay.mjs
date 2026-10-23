@@ -627,11 +627,14 @@ async function cmdDeploy() {
     await quit(`${dir} was pulled from ${record.owner}, but the signer holds ${nip19.npubEncode(pub)}.\n` +
       `  Only the owner's key can publish that site. Connect the owner's signer.`);
   }
+  // A page owned by another key is said, not refused: a site can carry pages
+  // that are deliberately somebody else's, such as template previews, and a
+  // pulled directory is already held to its owner above.
   const strangers = docs.owners.filter(([, o]) => o !== pub);
-  if (strangers.length && !noCheck) {
-    await quit(`these pages name another owner than the signer (${nip19.npubEncode(pub)}):\n  ` +
-      strangers.map(([p, o]) => `${p}: nc:owner is ${nip19.npubEncode(o)}`).join("\n  ") +
-      `\n  A page can only be saved in the browser by the key in its nc:owner. Fix nc:owner, or sign with that key.`);
+  if (strangers.length) {
+    console.log(`  note: ${strangers.length} page${strangers.length === 1 ? " names" : "s name"} another owner than the signer, ` +
+      `so only that key can save ${strangers.length === 1 ? "it" : "them"} in the browser:\n    ` +
+      strangers.map(([p, o]) => `${p}: ${nip19.npubEncode(o)}`).join("\n    "));
   }
 
   // The site as it is now. A manifest is the whole path table, so whatever is
@@ -1347,8 +1350,8 @@ Deploy options
   --no-relay-list     do not publish a relay list (kind 10002) for a key that has
                       none. One is written only when both lookup relays confirm
                       there is none, and it names the relays deployed to.
-  A deploy refuses pages whose nc:path, nc:site or nc:owner does not fit where it is
-  publishing, and pages that would lose /nsite-clay.js. --no-check publishes anyway.
+  A deploy refuses pages whose nc:path or nc:site does not fit where it is publishing,
+  and pages that would lose /nsite-clay.js. --no-check publishes anyway.
   From a pulled directory, a file changed only in the browser since the pull is kept,
   and one changed in both places stops the deploy; --overwrite publishes this copy.
   Elsewhere, a published page the directory does not have stops the deploy, because
