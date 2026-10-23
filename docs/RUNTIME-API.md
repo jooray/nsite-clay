@@ -354,6 +354,25 @@ nc.pages.shell({ title, path, menu, content })   // the new document, as text
 await nc.pages.newPage({ ai })       // the dialog; publishes and opens the page
 ```
 
+## Old copies in the browser's cache
+
+A gateway serves pages with a cache lifetime (an hour on nsite.lol, and the site has no say in it),
+so after a save the plain address of a page, or Back, can show it as it was. At its canonical
+address, unless `nc:autoreload="false"`, the runtime handles three cases:
+
+- **An old copy as the page opens.** It compares the bytes the browser holds for this address (not a
+  fresh fetch, which would always look current) with the manifest. When they differ and nothing is
+  unsaved, it asks the gateway until it serves the new bytes, then reloads at the same address.
+  Back and Forward from memory (`pageshow` with `persisted`) are checked the same way. This happens
+  once per version per tab; if the old bytes come back again, the reader gets the banner instead
+  of a loop.
+- **The browser that saved.** After a save or a restore, each changed page's addresses
+  (`/about/index.html` and `/about/`, and this tab's own) are fetched with `cache: "reload"` until
+  the gateway serves the new bytes, which leaves the cache holding them.
+- **A save from an old copy.** It is refused when the manifest names bytes for this path that this
+  tab was neither served nor saved itself, because publishing it would put the old text back over
+  the new.
+
 ## Upgrading a published page
 
 A deployed document hardcodes the URLs of the three shared files it runs on, and a gateway serves

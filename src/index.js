@@ -28,7 +28,7 @@ import { Cms } from "./cms.js";
 import { Blocks } from "./blocks.js";
 import { Undo } from "./undo.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
-import { Pages } from "./pages.js";
+import { Pages, hrefOf } from "./pages.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { agentInstructions, siteFacts } from "./agent-brief.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
@@ -437,6 +437,16 @@ class NsiteClay extends EventTarget {
     this._set("saving");
     try {
       const live = await this._currentPaths();
+      // A copy the browser kept from before this page was last saved can still
+      // be edited, and saving it would publish the old text over the new. The
+      // table says what this path is now; the bytes this tab was served say what
+      // it started from. Neither, and somebody else's save would be lost.
+      const now = live[this.cfg.path];
+      if (now && this._servedHash && now !== this._servedHash && now !== this._ownHash) {
+        throw new Error(
+          "A newer version of this page was published after this copy was opened, so nothing " +
+          "was published. Reload the page to get it, then make the change again.");
+      }
       const changed = Object.keys(expect).filter((p) => live[p] !== expect[p]);
       if (changed.length) {
         throw new Error(
@@ -485,6 +495,7 @@ class NsiteClay extends EventTarget {
       this._ownHash = hash;
       this.source.adopt(html);
       this._manifest = manifest;
+      this._refreshCached(Object.fromEntries(Object.entries(paths).filter(([p, h]) => live[p] !== h)));
       this._touchSession(true);
       this._set("saved", { hash, manifest, version, missing: report ? missing : null });
       return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths), missing };
@@ -718,11 +729,13 @@ class NsiteClay extends EventTarget {
   async restore(snapshotEvent) {
     if (!this.isOwner) throw new Error("Only the site owner can restore");
     const paths = manifestPaths(snapshotEvent);
+    const before = this._manifest ? manifestPaths(this._manifest) : {};
     const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
     await publishToAny(this.pool, this.cfg.relays, manifest);
     const version = await this.signer.sign(buildSnapshot(this.cfg, manifest));
     this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
     this._manifest = manifest;
+    this._refreshCached(Object.fromEntries(Object.entries(paths).filter(([p, h]) => before[p] !== h)));
     return { manifest, version };
   }
 
@@ -749,8 +762,19 @@ class NsiteClay extends EventTarget {
     // channel. A local copy, a fork on another host, or a file opened from disk
     // is a different artifact, not an outdated version of this one.
     if (!this.onCanonicalHost()) return;
+    this._watchedAt = Date.now();
+    // Back and Forward can hand back the page from memory, as it was, and
+    // nothing above runs again for it. Ask the relays what is current instead.
+    this.doc.defaultView?.addEventListener("pageshow", (e) => {
+      if (!e.persisted) return;
+      this._watchedAt = Date.now();
+      this.currentManifest().then((ev) => { if (ev) this._onManifest(ev); }).catch(() => {});
+    });
+    // The bytes on screen, which are what the browser keeps under this address,
+    // not what the gateway would serve now. Asking the network here made a copy
+    // kept from before a save look current, which is the copy this is for.
     try {
-      const res = await fetch(this.doc.location.href, { cache: "reload" });
+      const res = await fetch(this.doc.location.href, { cache: "force-cache" });
       this._servedHash = hashText(await res.text());
     } catch { return; }
     const f = this.cfg.site
@@ -766,11 +790,74 @@ class NsiteClay extends EventTarget {
     this._manifest = ev;
     const latest = manifestPaths(ev)[this.cfg.path];
     if (!latest || !this._servedHash) return;
-    if (latest === this._servedHash) return;   // we are the current version
+    const tried = `nsite-clay.stale:${this.cfg.path}:${latest}`;
+    if (latest === this._servedHash) {         // we are the current version
+      try { this.doc.defaultView.sessionStorage.removeItem(tried); } catch {}
+      return;
+    }
     if (latest === this._ownHash) return;      // our own save; this tab is ahead
     this.doc.documentElement.setAttribute("nc:outdated", "true");
     this._emit("nsiteclay:outdated", { served: this._servedHash, latest });
+    // Found as the page opened, this is an old copy the browser kept rather
+    // than news arriving while somebody reads, so there is nothing to finish
+    // reading first: fetch the new one and show it. Once per version per tab,
+    // so a cache that keeps answering with the old bytes ends in the banner and
+    // not in a loop.
+    if (!this.dirty && Date.now() - this._watchedAt < 15000) {
+      let again = true;
+      try {
+        const store = this.doc.defaultView.sessionStorage;
+        again = !!store.getItem(tried); store.setItem(tried, "1");
+      } catch {}
+      if (!again && !this._reloadOffered) {
+        this._reloadOffered = true;
+        this._refreshOne(this.doc.location.href, latest, 20000).then((ok) => {
+          if (ok && !this.dirty) return this.doc.location.reload();
+          this._reloadOffered = false;
+          this._offerReload(latest);
+        });
+        return;
+      }
+    }
     this._offerReload(latest);
+  }
+
+  // A save changes what each of its pages' addresses should serve, while the
+  // browser that made it keeps the old bytes under those addresses for as long
+  // as the gateway's cache lifetime says, an hour on nsite.lol. Going back to
+  // the page, or to its plain address, would then show it as it was before the
+  // save. A fetch with cache: "reload" stores what it gets, so asking each
+  // address until the gateway serves the new bytes leaves the cache holding
+  // them. Background work: the save is already done whatever this finds.
+  _refreshCached(paths) {
+    if (!this.onCanonicalHost()) return;
+    const { origin, pathname, href } = this.doc.location;
+    for (const [path, hash] of Object.entries(paths)) {
+      if (!hash || !/\.html?$/i.test(path)) continue;
+      const urls = new Set([path, hrefOf(path)]);
+      if (path === this.cfg.path) urls.add(pathname).add(href);
+      for (const u of urls) this._refreshOne(new URL(u, origin).toString(), hash);
+    }
+  }
+
+  // Ask `url` for `hash`, with a widening gap, until the gateway serves it.
+  // True once the browser's cache holds those bytes under that address. A later
+  // call for the same address takes over, so two saves do not race.
+  async _refreshOne(url, hash, waitMs = 180000) {
+    const pending = this._refreshing ||= new Map();
+    pending.set(url, hash);
+    const until = Date.now() + waitMs;
+    let ok = false;
+    for (let attempt = 0; Date.now() < until && pending.get(url) === hash; attempt++) {
+      try {
+        const res = await fetch(url, { cache: "reload", credentials: "same-origin" });
+        if (res.status === 404) break;
+        if (res.ok && hashText(await res.text()) === hash) { ok = true; break; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, Math.min(1000 * Math.pow(1.5, attempt), 15000)));
+    }
+    if (pending.get(url) === hash) pending.delete(url);
+    return ok;
   }
 
   /**

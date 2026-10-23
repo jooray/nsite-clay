@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.27",
+    "released": "2026-10-23",
+    "notes": [
+      "Fixed: after you saved a page and went back to it, or opened its plain address, your browser could show the page as it was before the save, because the gateway lets browsers keep a copy for an hour. The page now notices that it is an old copy and loads the published one by itself, and the browser you saved in keeps the new copy from the start.",
+      "Saving from an old copy of a page is now refused, so it can no longer put old text back over changes that were published after that copy was opened. Reload the page and make the change again."
+    ]
+  },
+  {
     "version": "0.3.26",
     "released": "2026-10-23",
     "notes": [
