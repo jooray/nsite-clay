@@ -172,7 +172,7 @@ export const hrefOf = (path) => String(path).replace(/(^|\/)index\.html?$/i, "$1
 
 /** Words to an address segment: "Opening hours" is "opening-hours". */
 export function slugify(text) {
-  return String(text || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  return String(text || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48).replace(/-+$/, "");
 }
 
@@ -630,7 +630,7 @@ export class Pages {
           b.onclick = () => h.close({ remove: true });
           row.append(b); body.append(row);
         }
-        const fold = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+        const fold = (s) => String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
         const options = () => {
           const out = [];
           const here = this.ownInfo();

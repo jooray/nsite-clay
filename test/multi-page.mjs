@@ -147,7 +147,7 @@ try {
   });
   t("the new words follow the page's language", words.es[0] === "Páginas" && words.sk[1] === "Nová stránka v tomto dizajne" &&
     words.cs[1] === "Nová stránka v tomto designu", JSON.stringify(words));
-  t("and none of them has an em or en dash", !/[–—]/.test(readFileSync(join(ROOT, "src/pages.js"), "utf8")));
+  t("and none of them has an em or en dash", !/[\u2013\u2014]/.test(readFileSync(join(ROOT, "src/pages.js"), "utf8")));
 
   await home.click("[data-nc-pages]");
   await dialog(home).locator(".nc-pages li", { hasText: "About us" }).waitFor({ timeout: 15000 });
