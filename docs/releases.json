@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.3.26",
+    "released": "2026-10-23",
+    "notes": [
+      "Once you sign in to edit, you stay signed in for an hour as you move between the pages of your site, and the hour starts again each time you use it. A signer app or browser extension carries across tabs; a key you typed in stays only in that one tab and is never saved.",
+      "Fixed: taking an upgrade on one page could leave the other pages of the same site unable to load the editor. An upgrade now moves every page of the site at once, and an old file is removed only when no page uses it any more.",
+      "A new Pages button lists every page of your site and opens the one you pick, ready to edit. It asks first if you have changes you have not saved.",
+      "Making a link now opens a dialog where you pick one of your pages or a heading on it, or type a web address, an email or a phone number. While you edit, links that lead nowhere get a dashed outline so you can find them.",
+      "You can add a new page in the same design as the one you are on, with the same header, footer and blocks, either empty or written for you by Edit with AI. It is added to this page's menu and published together with it."
+    ]
+  },
+  {
     "version": "0.3.25",
     "released": "2026-10-23",
     "notes": [
