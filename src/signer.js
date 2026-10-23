@@ -31,6 +31,18 @@ export class Nip07Signer {
     this.pubkey = await window.nostr.getPublicKey();
     return this.pubkey;
   }
+  // A page opened again within a remembered sign-in: wait a moment for the
+  // extension, which may inject itself after the page has loaded, then ask it
+  // who it is. An extension that remembers this site answers without a word;
+  // one that asks instead is answered by the deadline, and the page falls back
+  // to its Sign in button.
+  static async resume({ timeout = 10000, wait = 1500 } = {}) {
+    for (let t = 0; !Nip07Signer.available() && t < wait; t += 100) await new Promise((r) => setTimeout(r, 100));
+    if (!Nip07Signer.available()) throw Object.assign(new Error("No NIP-07 extension found"), { code: "absent" });
+    const signer = new Nip07Signer();
+    signer.pubkey = await deadline(window.nostr.getPublicKey(), timeout);
+    return signer;
+  }
   async sign(template) { return window.nostr.signEvent(template); }
   async nip44Encrypt(pubkey, plaintext) {
     if (!window.nostr?.nip44) throw new Error("This extension cannot encrypt. Use a signer that supports NIP-44.");
@@ -45,8 +57,10 @@ export class Nip07Signer {
 
 // A key typed or pasted straight into the page. Accepts an `nsec`, a raw
 // 64-hex secret, or a NIP-49 `ncryptsec` with its password. The key stays in
-// memory for the session and is never written anywhere -- see SPECIFICATION.md
-// §8.2 for why this is the weakest of the three signers.
+// memory, and for the owner also in this tab's sessionStorage for an hour so
+// the next page of the site opens signed in (see _keepSession in index.js). It
+// never reaches localStorage, so it does not outlive the tab -- see
+// SPECIFICATION.md §8.2 for why this is the weakest of the three signers.
 export class LocalSigner {
   constructor(secret) {
     this.kind = "local";
@@ -96,6 +110,9 @@ export class LocalSigner {
   static encrypt(secret, password, logn = 16) {
     return nip49.encrypt(typeof secret === "string" ? LocalSigner.parse(secret) : secret, password, logn);
   }
+
+  // For keeping a sign-in across the pages of one tab; see _keepSession.
+  secretHex() { return this.sec ? bytesToHex(this.sec) : null; }
 
   async connect() { return this.pubkey; }
   async sign(template) { return finalizeEvent(template, this.sec); }
@@ -189,6 +206,34 @@ export class Nip46Signer {
     return { uri, clientPubkey, secret, promise, cancel: () => abort.abort() };
   }
 
+  // What it takes to talk to the same signer again from another page: the client
+  // key the signer granted its permissions to, the signer's own key and the
+  // relays it listens on. The one-time secret is spent and is not kept.
+  pointer() {
+    const bp = this.bunker?.bp;
+    if (!bp?.pubkey || !bp.relays?.length || !this.clientSecret) return null;
+    return { client: bytesToHex(this.clientSecret), remote: bp.pubkey, relays: [...bp.relays] };
+  }
+
+  // Back on a signer this browser already paired with, without a new approval.
+  // No connect request: the signer knows this client key and what it may ask
+  // for. Only replies from `remote` are read (the subscription filters on its
+  // author and they decrypt with its conversation key), and the caller still
+  // compares the answer with the owner. A signer that is asleep is given until
+  // the deadline, and the page carries on with its Sign in button.
+  static async resume({ client, remote, relays }, { timeout = 10000 } = {}) {
+    if (!/^[0-9a-f]{64}$/.test(client || "") || !/^[0-9a-f]{64}$/.test(remote || "") ||
+        !Array.isArray(relays) || !relays.length) {
+      throw new Error("Not a remembered signer");
+    }
+    const sec = hexToBytes(client);
+    const bunker = BunkerSigner.fromBunker(sec, { pubkey: remote, relays, secret: null });
+    const signer = new Nip46Signer(bunker, sec);
+    try { signer.pubkey = await deadline(bunker.getPublicKey(), timeout); }
+    catch (e) { await signer.close(); throw e; }
+    return signer;
+  }
+
   async connect() { return this.pubkey; }
   async sign(template) { return this.bunker.signEvent(template); }
   // Amber and nsec.app answer these; an older or stricter signer may not, and the
@@ -197,6 +242,15 @@ export class Nip46Signer {
   async nip44Encrypt(pubkey, plaintext) { return this.bunker.nip44Encrypt(pubkey, plaintext); }
   async nip44Decrypt(pubkey, ciphertext) { return this.bunker.nip44Decrypt(pubkey, ciphertext); }
   async close() { try { await this.bunker.close(); } catch {} }
+}
+
+// A signer that does not answer is told apart from one that said no: the first
+// may answer next time, the second has let this connection go.
+function deadline(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error("The signer did not answer"), { code: "timeout" })), ms);
+  })]).finally(() => clearTimeout(timer));
 }
 
 function hexToBytes(hex) {

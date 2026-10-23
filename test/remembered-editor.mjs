@@ -64,6 +64,15 @@ const goto = async (p, path) => {
   await p.evaluate(async () => { await nc.ready; await new Promise((r) => setTimeout(r, 50)); });
 };
 
+// Signing in as the owner also keeps the sign-in for this tab, so the next page
+// opens signed in. This file is about the note that opens the controls, which
+// is what a new tab, or one whose hour ran out, still has: so the kept sign-in
+// is let go here. test/kept-signin.mjs is about the sign-in itself.
+const signIn = (p) => p.evaluate(async (k) => {
+  await nc.login("nsec", { key: k });
+  for (const name of Object.keys(sessionStorage)) if (name.startsWith("nsite-clay.session")) sessionStorage.removeItem(name);
+}, NSEC);
+
 try {
   // --- a reader who never signed in -----------------------------------------
   const readers = await browser.newContext();
@@ -87,7 +96,7 @@ try {
   const owner = await open(owners, "/#edit");
   s = await look(owner);
   t("#edit opens the controls as it always did", s.requested && s.toolbar && s.stored.length === 0, JSON.stringify(s));
-  await owner.evaluate((k) => nc.login("nsec", { key: k }), NSEC);
+  await signIn(owner);
   s = await look(owner);
   t("signing in as the owner remembers this browser", s.signedIn && s.stored.length === 1, JSON.stringify(s));
   const record = await owner.evaluate((k) => JSON.parse(localStorage.getItem(k)), s.stored[0]);
@@ -125,11 +134,11 @@ try {
   t("the other tab is not affected", s.requested && s.toolbar, JSON.stringify(s));
 
   // Signing in again clears the "not now"; signing out forgets the browser.
-  await owner.evaluate((k) => nc.login("nsec", { key: k }), NSEC);
+  await signIn(owner);
   await goto(owner, "/");
   s = await look(owner);
   t("signing in again lifts the tab's \"not now\"", s.requested && s.toolbar, JSON.stringify(s));
-  await owner.evaluate((k) => nc.login("nsec", { key: k }), NSEC);
+  await signIn(owner);
   await owner.locator("[data-nc-signin]").click();          // reads "Sign out" now
   s = await look(owner);
   t("signing out forgets this browser", !s.signedIn && s.stored.length === 0, JSON.stringify(s));
@@ -140,7 +149,7 @@ try {
 
   // The Settings line forgets without signing out.
   await goto(owner, "/#edit");
-  await owner.evaluate((k) => nc.login("nsec", { key: k }), NSEC);
+  await signIn(owner);
   await owner.locator("[data-nc-settings]").click();
   const line = owner.getByText("Open the editing controls in this browser without #edit");
   t("Settings offers the remembered browser as a line of its own", await line.count() === 1);

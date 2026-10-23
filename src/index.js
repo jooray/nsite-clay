@@ -31,7 +31,18 @@ import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
 
-const STORAGE = "nsite-clay.session";
+// The owner's sign-in, kept per site so the next page of it opens signed in.
+// Older engines wrote the bare name, saying who had signed in on any site, and
+// never read it back; it is removed wherever a kept sign-in is dropped.
+const SESSION = "nsite-clay.session";
+// How long a sign-in outlives the last time it was used: opening a page signed
+// in, saving, or editing. Sliding rather than fixed, so an owner moving between
+// pages stays in for as long as they keep working, and a browser left alone
+// for this long asks again.
+export const SESSION_TTL = 60 * 60 * 1000;
+// How long a page waits for a remembered signer to say who it is before
+// carrying on with its Sign in button.
+const RESUME_WAIT = 10000;
 // "This browser has signed in here as the owner", per site. Read by the edit
 // gate, so a page that remembers its editor opens as though the URL ended in
 // #edit. The tab-only twin records a "not now" for the rest of this tab.
@@ -88,6 +99,7 @@ class NsiteClay extends EventTarget {
     this.upgrade = new Upgrade(this);
     this.version = VERSION;
     this.status = "idle";
+    this.resuming = Promise.resolve(null);
     this._subs = [];
     this._transforms = [];
   }
@@ -107,6 +119,7 @@ class NsiteClay extends EventTarget {
   // ---- identity -----------------------------------------------------------
 
   async login(method = "auto", opts = {}) {
+    this._loginGen = (this._loginGen || 0) + 1;      // a resume still running gives way
     if (method === "auto") method = Nip07Signer.available() ? "nip07" : "nip46";
     if (method === "nip07") this.signer = new Nip07Signer();
     else if (method === "nsec" || method === "local") {
@@ -133,6 +146,7 @@ class NsiteClay extends EventTarget {
   // of it is another character of URI and the URI is a QR code somebody has to
   // photograph. A long <title> is not worth an unscannable code.
   connectRemote({ relays } = {}) {
+    this._loginGen = (this._loginGen || 0) + 1;
     const { uri, promise, cancel } = Nip46Signer.nostrconnect({
       relays: relays || this.cfg.signerRelays,
       name: (this.doc.title || "nsite-clay").slice(0, 40),
@@ -142,29 +156,31 @@ class NsiteClay extends EventTarget {
     return { uri, ready, cancel };
   }
 
-  _afterLogin() {
+  _afterLogin({ resumed = false } = {}) {
     const html = this.doc.documentElement;
     html.setAttribute("nc:pubkey", this.pubkey);
     html.setAttribute("nc:owner-here", String(this.isOwner));
     html.setAttribute("nc:editmode", String(this.isOwner));
-    try { localStorage.setItem(STORAGE, JSON.stringify({ kind: this.signer.kind, pubkey: this.pubkey })); } catch {}
     // Only the owner is remembered. Somebody else signing in has no controls to
     // come back to, and a reader of their own browser's history learns nothing.
-    if (this.isOwner) this.rememberEditor(true, { quiet: true });
+    // They also end whatever sign-in the owner left here.
+    if (this.isOwner) { this.rememberEditor(true, { quiet: true }); this._keepSession(); }
+    else this._dropSession();
     if (this.isOwner && this.editRequested) this.editable.enable();
-    this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner });
+    this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner, resumed });
   }
 
   async logout() {
+    this._loginGen = (this._loginGen || 0) + 1;
     await this.signer?.close?.();
     this.signer = null;
     const html = this.doc.documentElement;
     for (const a of ["nc:pubkey", "nc:owner-here"]) html.removeAttribute(a);
     html.setAttribute("nc:editmode", "false");
     this.editable.disable();
-    try { localStorage.removeItem(STORAGE); } catch {}
     // Signing out is how a browser stops being the editor's. Without #edit in
-    // the URL the controls go with it, as they would for any reader.
+    // the URL the controls go with it, as they would for any reader. The kept
+    // sign-in goes with the note (rememberEditor drops it).
     this.rememberEditor(false, { quiet: true });
     this._emit("nsiteclay:logout", {});
     this.applyEditGate();
@@ -201,6 +217,8 @@ class NsiteClay extends EventTarget {
       if (on) localStorage.setItem(key, JSON.stringify({ pubkey: this.cfg.owner, at: Date.now() }));
       else localStorage.removeItem(key);
     } catch { /* still true for this tab, which is all a full storage can offer */ }
+    // Forgetting the editor forgets the sign-in kept for it too.
+    if (!on) this._dropSession();
     try { sessionStorage.removeItem(this._editorKey(EDITOR_NOT_NOW)); } catch { /* nothing to clear */ }
     this._editorMemo = { key, on: !!on };
     if (!quiet) this.applyEditGate();
@@ -226,6 +244,118 @@ class NsiteClay extends EventTarget {
   }
 
   get _hashAsksForEdit() { return /^#edit\b/i.test(this.doc.location.hash || ""); }
+
+  // ---- the kept sign-in ----------------------------------------------------
+  //
+  // The owner signs in once and the other pages of the site open signed in,
+  // until SESSION_TTL passes without them being used. What is kept depends on
+  // how they signed in:
+  //
+  //   nip07  who they are, in localStorage. The extension holds the key and is
+  //          asked again on the next page.
+  //   nip46  the client key the signer paired with, the signer's key and its
+  //          relays, in localStorage, so the next page talks to the same signer
+  //          without a new approval. That client key can only ask; the signer
+  //          still decides, and it never was the owner's key.
+  //   local  the key itself, so only in this tab's sessionStorage: it goes when
+  //          the tab closes, other tabs never see it, and it is not left on
+  //          disk for the next person to use this browser.
+  //
+  // Keyed by owner and site like the editor note. Only ever the owner's, and a
+  // record naming anyone else is thrown away rather than resumed.
+  _sessionKey() { return this._editorKey(SESSION); }
+
+  _readSession() {
+    if (!this.cfg.owner) return null;
+    const key = this._sessionKey();
+    for (const name of ["sessionStorage", "localStorage"]) {
+      let rec = null;
+      try { rec = JSON.parse(globalThis[name].getItem(key) || "null"); } catch { continue; }
+      if (!rec || typeof rec !== "object") continue;
+      if (rec.pubkey !== this.cfg.owner || !(Number(rec.until) > Date.now())) { this._dropSession(); return null; }
+      return { ...rec, store: name };
+    }
+    return null;
+  }
+
+  _keepSession() {
+    if (!this.isOwner) return;
+    const s = this.signer;
+    const rec = { kind: s.kind, pubkey: this.pubkey, until: Date.now() + SESSION_TTL };
+    let name = "localStorage";
+    if (s.kind === "local") {
+      rec.key = s.secretHex?.();
+      if (!rec.key) return;
+      if (s.fresh) rec.fresh = true;
+      name = "sessionStorage";
+    } else if (s.kind === "nip46") {
+      const p = s.pointer?.();
+      if (!p) return;
+      Object.assign(rec, p);
+    } else if (s.kind !== "nip07") return;      // a signer this runtime does not know how to find again
+    this._dropSession();
+    try { globalThis[name].setItem(this._sessionKey(), JSON.stringify(rec)); } catch { /* signed in on this page only */ }
+    this._sessionTouched = Date.now();
+  }
+
+  // Push the expiry on. Only a sign-in still kept is touched: once it was
+  // forgotten, working on regardless does not bring it back.
+  _touchSession(force = false) {
+    if (!this.isOwner) return;
+    if (!force && Date.now() - (this._sessionTouched || 0) < 30000) return;
+    this._sessionTouched = Date.now();
+    const rec = this._readSession();
+    if (!rec) return;
+    const { store, ...kept } = rec;
+    kept.until = Date.now() + SESSION_TTL;
+    // A new key stops being new once its relay list is written.
+    if (this.signer?.kind === "local" && !this.signer.fresh) delete kept.fresh;
+    try { globalThis[store].setItem(this._sessionKey(), JSON.stringify(kept)); } catch { /* leave it to expire */ }
+  }
+
+  _dropSession() {
+    const key = this._sessionKey();
+    for (const name of ["sessionStorage", "localStorage"]) {
+      try { globalThis[name].removeItem(key); } catch { /* nothing kept there */ }
+    }
+    try { localStorage.removeItem(SESSION); } catch { /* the old unscoped note */ }
+  }
+
+  // Called once at load. Signs in again only with what _keepSession kept for
+  // this page's owner, and only if nobody has signed in or out meanwhile.
+  // Resolves to the pubkey, or null with the page left as it was: the Sign in
+  // button is still there.
+  async resumeSession() {
+    const rec = this._readSession();
+    if (!rec || this.signer) return null;
+    const gen = this._loginGen || 0;
+    // A key is only ever kept in the tab. One found anywhere else was not put
+    // there by this runtime and is not used.
+    if (rec.kind === "local" && rec.store !== "sessionStorage") { this._dropSession(); return null; }
+    let signer;
+    try {
+      if (rec.kind === "local") signer = new LocalSigner(rec.key);
+      else if (rec.kind === "nip46") signer = await Nip46Signer.resume(rec, { timeout: RESUME_WAIT });
+      else if (rec.kind === "nip07") signer = await Nip07Signer.resume({ timeout: RESUME_WAIT });
+      else { this._dropSession(); return null; }
+    } catch (e) {
+      // A signer that said no has let this connection go. One that did not
+      // answer, or an extension that is not there right now, may be back on the
+      // next page, and the record expires by itself.
+      if (e?.code !== "timeout" && e?.code !== "absent") this._dropSession();
+      return null;
+    }
+    const mine = signer.pubkey === this.cfg.owner && signer.pubkey === rec.pubkey;
+    if (!mine || gen !== (this._loginGen || 0) || this.signer) {
+      if (!mine) this._dropSession();
+      await signer.close?.();
+      return null;
+    }
+    if (rec.kind === "local" && rec.fresh) signer.fresh = true;
+    this.signer = signer;
+    this._afterLogin({ resumed: true });
+    return this.pubkey;
+  }
 
   // ---- saving --------------------------------------------------------------
 
@@ -331,6 +461,7 @@ class NsiteClay extends EventTarget {
       this._ownHash = hash;
       this.source.adopt(html);
       this._manifest = manifest;
+      this._touchSession(true);
       this._set("saved", { hash, manifest, version, missing: report ? missing : null });
       return { hash, bytes: bytes.length, manifest, version, aggregate: aggregateHash(paths), missing };
     } catch (err) {
@@ -854,6 +985,15 @@ nc.ready = (async () => {
   nc._watchVersion();
   if (nc.cfg.owner) {
     nc.currentManifest().then((ev) => { if (ev) { nc._manifest = ev; nc._bootManifest = ev; } }).catch(() => {});
+  }
+  // The owner's kept sign-in, if this browser has one for this site and it has
+  // not run out. Last, so everything listening for a sign-in is listening. A key
+  // kept in the tab is back before `ready` settles; a signer elsewhere answers
+  // when it answers, and `nc.resuming` says when that was.
+  nc.resuming = nc.resumeSession().catch(() => null);
+  // Working on a page is using the sign-in, so it keeps it for another hour.
+  for (const e of ["keydown", "input", "pointerdown"]) {
+    document.addEventListener(e, () => nc._touchSession(), { capture: true, passive: true });
   }
   document.documentElement.setAttribute("nc:ready", "true");
   nc._emit("nsiteclay:ready", {});
