@@ -111,6 +111,14 @@ property-only changes made by scripts can call `nc.undo.recordValue(element,
 
 ### Common operations
 
+`await nc.agentInstructions()` returns the text that **Settings → Copy instructions
+for your own agent** puts on the clipboard: how an outside coding agent pulls this
+site, edits it and deploys it back without breaking the editor, filled in with the
+page's owner, site name, relays, Blossom servers, the pages in the live manifest
+and the engine version. It is generated from a template in the runtime, with no AI
+call, and holds no key. The same template with no facts is published as
+`/llms-edit.txt` on the project site.
+
 `nc.ai.settings()` opens the AI settings hub, with provider/model configuration
 under Advanced and backup/recovery in its own section. `nc.ai.addCredit()` opens
 the focused Lightning/Cashu flow; `nc.ai.withdraw()` opens withdrawal. `nc.ai.client`

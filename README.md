@@ -384,6 +384,19 @@ that go wrong. It deliberately does not restate the documentation; it links it.
 Hand it to Claude Code, Codex, Cursor, or anything else that reads a URL. The
 same file works as `AGENTS.md` in a project built on top of nsite-clay.
 
+A site that is already published has a second brief, for an agent that should
+change it rather than build it:
+
+**<https://nsite-clay.cypherpunk.today/llms-edit.txt>**
+
+The owner gets a filled-in copy from their own page: open it with `#edit`, sign
+in, and press **Settings → Copy instructions for your own agent**. The text names
+the site's public key, relays, Blossom servers and pages, and walks the agent
+through `pull`, the edit, and a `deploy` that keeps the page editable in the
+browser. It asks the owner for a `bunker://` link from Amber, Clave or another
+NIP-46 signer, never for the key, and keeps that one connection for later runs.
+The text is generated from a template in the page, with no AI involved.
+
 ## Templates
 
 Twelve starting points, all sharing one stylesheet and one runtime so an engine
@@ -436,7 +449,9 @@ A gateway resolves your manifest, fetches the blobs, and serves them over HTTP.
 
 ```bash
 nsite-clay init [dir] [--npub=npub1…]
+nsite-clay pull <npub | address> [dir] [--site=name]
 nsite-clay deploy <dir> [--sec=… | --bunker=…] [--site=name] [--title=…] [--description=…]
+nsite-clay whoami [dir]
 nsite-clay unpublish [--site=name] [--path=/page.html] [--version=<id>] [--yes]
 nsite-clay keygen
 ```
@@ -444,6 +459,12 @@ nsite-clay keygen
 Signing takes either a raw key (`--sec`, or `NOSTR_SECRET_KEY`) or a remote signer
 (`--bunker="bunker://…"`, or `NOSTR_BUNKER_URI`). A bunker keeps the key off the machine running
 the deploy, so a CI runner never holds it.
+
+A `bunker://` link's secret works once, so the CLI saves what lasts, the client
+key the signer approved, the bunker's pubkey and its relays, in
+`~/.config/nsite-clay/bunkers.json`. Later runs find that connection by the
+site's owner key and need no link at all. `whoami` connects and prints the key
+the signer holds without signing anything, which is the place to spend a new link.
 
 ### What gets published
 
@@ -649,6 +670,32 @@ So a scheduled job that redeploys an unchanged site costs a few HEAD requests an
 writes nothing to any relay. A server that has dropped a blob gets it back, which
 makes a repeat deploy a repair rather than a no-op, and `--force` publishes
 regardless if a manifest needs rewriting for its own sake.
+
+### Changing a site that was edited in the browser
+
+A page saved in the browser exists only on Blossom, so the directory you
+deployed from goes out of date the moment its owner edits the page. `pull`
+brings the published site back down, every file checked against its hash:
+
+```bash
+npx nsite-clay pull npub1… mysite
+npx nsite-clay deploy mysite
+```
+
+It writes `mysite/.nsite-clay.json`, a dotfile that is never published, saying
+which site, relays and servers the directory came from and which version. A
+deploy of that directory goes back to the same place with no flags, and compares
+each file as pulled, as it is now, and as published: what only you changed is
+published, what was changed only in the browser since the pull is kept and
+written into the directory, a page added in the browser is kept, and a file
+changed in both places stops the deploy before anything is sent. `--overwrite`
+publishes your copy anyway.
+
+A deploy of a directory that did not come from `pull` refuses to take down
+published pages it does not have, and names them. `--keep-missing` keeps them,
+`--prune` takes them down. Every deploy also refuses a page whose `nc:path`,
+`nc:site` or `nc:owner` does not fit where it is going, and a page that would
+lose `/nsite-clay.js`; `--no-check` publishes regardless.
 
 ## Version history
 

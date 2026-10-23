@@ -81,6 +81,11 @@ fi
 # every blob is still served, writes nothing to the relays. It publishes only
 # when the page actually changed, or when a server dropped a blob and it had to
 # be put back.
+#
+# --prune because the demo's key is public and anybody can publish a page under
+# it from the browser. A deploy refuses to take down pages its directory does
+# not have unless told to, and putting the demo back to what main says is
+# exactly that.
 say "publishing $(find demo-dist -type f | wc -l | tr -d ' ') files"
-NOSTR_SECRET_KEY="$DEMO_NSEC" node bin/nsite-clay.mjs deploy demo-dist
+NOSTR_SECRET_KEY="$DEMO_NSEC" node bin/nsite-clay.mjs deploy demo-dist --prune
 say "done"

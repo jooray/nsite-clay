@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.25",
+    "released": "2026-10-23",
+    "notes": [
+      "Settings has a new button, Copy instructions for your own agent. It copies a text for a coding agent such as Claude Code or Codex, filled in with your site's address, relays, servers and pages, that tells it how to download your site, change it and publish it again so that you can still edit it here afterwards. The agent asks you for a link from your signer app, such as Amber or Clave, never for your key, and needs that link only once.",
+      "Once you have signed in on your site in a browser, that browser opens the editing controls on your next visit without #edit. It keeps no key, so you still sign in, and signing out forgets it. You can also turn it off in Settings.",
+      "Publishing from the command line no longer takes down pages you made or saved in the browser. A new pull command downloads your whole published site, and publishing it back keeps what you saved in the browser in the meantime and stops rather than overwrite a page that was changed in both places."
+    ]
+  },
+  {
     "version": "0.3.24",
     "released": "2026-10-19",
     "notes": [

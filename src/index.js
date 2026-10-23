@@ -29,6 +29,7 @@ import { Blocks } from "./blocks.js";
 import { Undo } from "./undo.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { qrSvg, qrElement } from "./qr.js";
+import { agentInstructions, siteFacts } from "./agent-brief.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
 
 const STORAGE = "nsite-clay.session";
@@ -865,6 +866,8 @@ Object.assign(nc, {
   VERSION, stamp, unstamp,
   siteAddress: () => siteAddress(nc.cfg), siteKind: () => siteKind(nc.cfg), toHex,
   manifestPaths, manifestServers, aggregateHash, readFeedConfig, postUrl, addressOf,
+  // The text Settings copies for the owner's own coding agent.
+  agentInstructions: async () => agentInstructions(await siteFacts(nc)),
 });
 
 if (typeof window !== "undefined") window.nsiteclay = window.nc = nc;

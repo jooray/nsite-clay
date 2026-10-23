@@ -15,6 +15,8 @@ go wrong. It links the documentation rather than restating it.
   https://nsite-clay.cypherpunk.today/guide.html
 - The publisher, if they would rather do it themselves in a browser:
   https://nsite-clay.cypherpunk.today/deploy.html
+- Changing a site that is already published, rather than building one:
+  https://nsite-clay.cypherpunk.today/llms-edit.txt
 - Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
 - The block composer template, the one to read before writing a block library:
   https://nsite-clay.cypherpunk.today/t/cms/
@@ -481,6 +483,23 @@ saved. To make that as good as it gets, the site is replaced with an empty
 manifest, which every relay honours because a newer one replaces the old, and
 both that and the deletion go to every relay it can find for the key.
 
+To change a site that is already online, start from what is published, not
+from the directory you deployed it from. The owner may have edited it in the
+browser since, and those edits exist only on Blossom:
+
+```bash
+npx nsite-clay pull npub1… site                         # every file, checked against its hash
+NOSTR_BUNKER_URI="bunker://…" npx nsite-clay whoami     # connect once; the connection is saved
+npx nsite-clay deploy site                              # back to the same site and relays
+```
+
+The deploy of a pulled directory keeps a page that was changed in the browser
+after the pull and not here, and stops on one that was changed in both places.
+The whole procedure for an agent handed an existing site is
+<https://nsite-clay.cypherpunk.today/llms-edit.txt>. The owner can also copy a
+filled-in version of it, with the site's own relays, servers and pages, from
+Settings on their page.
+
 Develop against the local stack rather than public infrastructure:
 
 ```bash
@@ -502,8 +521,8 @@ again. Tell them that.
 Three ways in. Steer them to the second.
 
 1. **A NIP-07 browser extension**, Alby or nos2x. Fine on their own machine.
-2. **A remote signer over NIP-46**, Amber on Android or nsec.app. The key stays on
-   their phone and every save is approved there. The right default for a page
+2. **A remote signer over NIP-46**, Amber on Android, Clave on iPhone, or
+   nsec.app. The key stays on their phone and every save is approved there. The right default for a page
    served by a gateway, and what you should suggest first.
 3. **Pasting a key into the page.** It works, stays in the tab, is written
    nowhere, and is still the weakest option. Say so rather than defaulting to it.
@@ -1121,6 +1140,9 @@ alongside the document.
   document unable to load `/nsite-clay.js` or `/nsite-clay-chrome.js`, because
   the page that would repair that is the page that no longer loads. Deploy the
   whole directory with the CLI rather than hand-editing the path table.
+- **A deploy is the whole site.** The manifest is one path table, so a
+  directory that lacks a page the owner made in the browser would take that page
+  down. The CLI refuses and names the page. Pull the site first.
 - **A directory link needs its trailing slash.** A gateway reads `/coworking/`
   as `/coworking/index.html`, the way any web server does. `/coworking` is a
   different path, and there is nothing at it.

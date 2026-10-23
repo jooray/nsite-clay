@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// nsite-clay CLI: scaffold a site, publish one, and take one down.
+// nsite-clay CLI: scaffold a site, publish one, download one, and take one down.
 //
 // Publishing is the same three steps the browser performs on save, which is why
 // this tool exists at all: something has to put the first version online before
@@ -10,9 +10,9 @@
 //   3. a kind-5128 snapshot pins that set of hashes as a permanent version
 import { readFileSync, readdirSync, statSync, mkdirSync, existsSync, writeFileSync, copyFileSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, relative, extname, dirname, resolve } from "node:path";
+import { join, relative, extname, dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { finalizeEvent, generateSecretKey, getPublicKey, nip19, SimplePool } from "nostr-tools";
+import { finalizeEvent, generateSecretKey, getPublicKey, nip19, SimplePool, verifyEvent } from "nostr-tools";
 import { BunkerSigner, parseBunkerInput } from "nostr-tools/nip46";
 import { useWebSocketImplementation } from "nostr-tools/pool";
 import { sha256 } from "@noble/hashes/sha2";
@@ -52,8 +52,12 @@ const flags = Object.fromEntries(argv.filter((a) => a.startsWith("--")).map((a) 
 }));
 
 const list = (v, d) => (typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
-const RELAYS = list(flags.relays, DEFAULT_RELAYS);
-const SERVERS = list(flags.servers, DEFAULT_SERVERS);
+// `let`, because a directory that came from `pull` says where its site lives,
+// and that is a better default than the public list. A flag still wins.
+let RELAYS = list(flags.relays, DEFAULT_RELAYS);
+let SERVERS = list(flags.servers, DEFAULT_SERVERS);
+const relaysPinned = typeof flags.relays === "string";
+const serversPinned = typeof flags.servers === "string";
 
 const die = (msg) => { console.error("nsite-clay: " + msg); process.exit(1); };
 
@@ -72,36 +76,51 @@ function readBunkers() {
   try { return JSON.parse(readFileSync(BUNKER_FILE, "utf8")); } catch { return {}; }
 }
 
-function rememberClientKey(remotePubkey, secretHex, userPubkey) {
+function rememberClientKey(remotePubkey, secretHex, userPubkey, relays) {
   const all = readBunkers();
-  all[remotePubkey] = { clientSecret: secretHex, userPubkey, saved: new Date().toISOString() };
+  all[remotePubkey] = { clientSecret: secretHex, userPubkey, relays, saved: new Date().toISOString() };
   mkdirSync(CONFIG_DIR, { recursive: true });
   writeFileSync(BUNKER_FILE, JSON.stringify(all, null, 2));
   try { chmodSync(BUNKER_FILE, 0o600); } catch { /* best effort on odd filesystems */ }
 }
 
+// A connection saved for this key, if there is one. The URI is needed once: its
+// secret is spent on the first connect, and what lasts is the client key the
+// bunker approved, its pubkey and its relays, which is everything a later run
+// needs to reach it again without asking anybody for a new link.
+function savedConnection(owner) {
+  if (!owner) return null;
+  const found = Object.entries(readBunkers())
+    .filter(([, v]) => v.userPubkey === owner && v.clientSecret && v.relays?.length)
+    .sort((a, b) => String(b[1].saved).localeCompare(String(a[1].saved)))[0];
+  return found ? { pubkey: found[0], relays: found[1].relays, secret: null, stored: found[1] } : null;
+}
+
 // One interface over a raw key and a remote signer, so `deploy` does not care
-// which the person used.
-async function getSigner() {
+// which the person used. `owner` is the key the site belongs to, when the
+// caller knows it, so a connection saved on an earlier run can be found again.
+async function getSigner({ owner } = {}) {
   // Prefer the environment: a bunker:// URI carries a secret, and anything on
   // argv is visible to every other process on the machine through `ps`.
   const bunker = process.env.NOSTR_BUNKER_URI || flags.bunker;
-  if (bunker) {
+  const raw = flags.sec || process.env.NOSTR_SECRET_KEY;
+  const saved = !bunker && !raw && !flags.fresh ? savedConnection(owner) : null;
+  if (bunker || saved) {
     if (!process.env.NOSTR_BUNKER_URI && flags.bunker) {
       console.error("nsite-clay: warning, --bunker puts the connection secret in your process list.\n" +
                     "  Prefer NOSTR_BUNKER_URI=… in the environment.");
     }
-    const bp = await parseBunkerInput(String(bunker));
+    const bp = saved || await parseBunkerInput(String(bunker));
     if (!bp) die("could not parse that bunker:// URI");
     if (!bp.relays?.length) die("that bunker:// URI names no relays");
-    const stored = flags.fresh ? null : readBunkers()[bp.pubkey];
+    const stored = saved ? saved.stored : (flags.fresh ? null : readBunkers()[bp.pubkey]);
     const clientKey = stored
       ? Uint8Array.from(Buffer.from(stored.clientSecret, "hex"))
       : generateSecretKey();
     // fromBunker, not the constructor: the constructor's second argument is
     // options, so `new BunkerSigner(key, bp)` leaves the pointer unset and
     // connect() dies on it.
-    const signer = BunkerSigner.fromBunker(clientKey, bp);
+    const signer = BunkerSigner.fromBunker(clientKey, { pubkey: bp.pubkey, relays: bp.relays, secret: bp.secret || null });
     // A signer that never answers is the commonest failure, and without a
     // deadline it looks identical to a slow one. Say which relays were tried.
     const deadline = Number(flags.timeout || 60) * 1000;
@@ -111,14 +130,26 @@ async function getSigner() {
         `Is the signer running and connected to at least one of them, and is there a ` +
         `prompt waiting for approval?`)), deadline))]);
 
-    // A bunker that already holds a session for this secret answers `connect`
-    // with "already connected", which is a success in every sense that matters.
-    process.stderr.write("connecting to the signer…\n");
-    try { await withTimeout(signer.connect()); }
-    catch (e) {
-      const msg = String(e?.message ?? e);
-      if (/no answer within/.test(msg)) die(msg);
-      if (!/already connected/i.test(msg)) throw e;
+    if (saved) {
+      // Already approved on an earlier run. There is no secret left to present,
+      // and the requests below are the real test of whether it still holds.
+      process.stderr.write(`connecting to the signer saved for this key in ${BUNKER_FILE}…\n`);
+    } else {
+      // A bunker that already holds a session for this client answers `connect`
+      // with "already connected", which is a success in every sense that
+      // matters. With a client key it approved before, whatever it says about
+      // a spent secret is beside the point: get_public_key below decides.
+      process.stderr.write("connecting to the signer…\n");
+      try { await withTimeout(signer.connect()); }
+      catch (e) {
+        const msg = String(e?.message ?? e);
+        if (/no answer within/.test(msg)) die(msg);
+        if (!stored && !/already connected/i.test(msg)) {
+          die(`the signer refused the connection ("${msg}").\n` +
+              `  A bunker:// secret is single use. If this link was used before, by this tool\n` +
+              `  on another machine or by another app, ask for a fresh link from the signer.`);
+        }
+      }
     }
     // NIP-46: the pubkey on the transport is a per-connection routing key, not
     // the user. The identity only comes from an explicit get_public_key.
@@ -128,7 +159,7 @@ async function getSigner() {
       try { return await withTimeout(fn()); }
       catch (e) {
         const msg = String(e?.message ?? e);
-        if (/no permission|denied|unauthorized/i.test(msg)) {
+        if (/no permission|denied|unauthori[sz]ed|not authori[sz]ed|unknown client/i.test(msg)) {
           die(`the signer refused ${what} ("${msg}").\n` +
               `  Grant this connection: get_public_key, sign_event:24242 (Blossom uploads),\n` +
               `  sign_event:15128 and sign_event:35128 (the nsite manifest), sign_event:5128 (versions),\n` +
@@ -137,7 +168,7 @@ async function getSigner() {
               `  In most signers that means approving the prompt in the app.\n` +
               (stored
                 ? `  This run reused the client key saved in ${BUNKER_FILE}. If the connection was\n` +
-                  `  revoked, get a new bunker:// URI and pass --fresh to connect as a new app.`
+                  `  revoked in the signer, get a new bunker:// URI and pass --fresh to connect as a new app.`
                 : `  A bunker:// secret is single use, so a URI already spent on an earlier\n` +
                   `  connection cannot authorise a new one. Get a fresh URI from the signer.`));
         }
@@ -145,9 +176,10 @@ async function getSigner() {
       }
     };
     const pubkey = await ask("get_public_key", () => signer.getPublicKey());
-    rememberClientKey(bp.pubkey, Buffer.from(clientKey).toString("hex"), pubkey);
+    rememberClientKey(bp.pubkey, Buffer.from(clientKey).toString("hex"), pubkey, bp.relays);
     return {
       pubkey,
+      remote: true,
       sign: (t) => ask(`sign_event kind ${t.kind}`, () => signer.signEvent(t)),
       // For what a deploy can live without: a refusal throws rather than ending
       // the run, which by then has already published the site.
@@ -155,8 +187,11 @@ async function getSigner() {
       close: () => signer.close().catch(() => {}),
     };
   }
-  const raw = flags.sec || process.env.NOSTR_SECRET_KEY;
-  if (!raw) die("no key: pass --sec=nsec1… or --bunker=bunker://… (or set NOSTR_SECRET_KEY / NOSTR_BUNKER_URI)");
+  if (!raw) {
+    die("no key. Set NOSTR_BUNKER_URI=bunker://… for a remote signer (needed once: the connection\n" +
+        `  is saved in ${BUNKER_FILE} and found again for the same key), or pass --sec=nsec1… /\n` +
+        "  NOSTR_SECRET_KEY for a raw key.");
+  }
   const s = String(raw).trim();
   if (s.startsWith("npub")) die("that is a public key; signing needs the nsec");
   const sec = s.startsWith("nsec") ? nip19.decode(s).data : Uint8Array.from(Buffer.from(s, "hex"));
@@ -372,6 +407,11 @@ function cmdInit() {
     .replace(/nc:site="[^"]*"\n\s*/, "");           // a fresh site is a root site
   writeFileSync(join(dir, "index.html"), tpl);
   copyFileSync(join(PKG, "dist", "nsite-clay.js"), join(dir, "nsite-clay.js"));
+  // The serialiser that keeps the author's formatting on save. Templates name it
+  // in nc:source, and a page without it falls back to reprinting the file.
+  if (existsSync(join(PKG, "dist", "nsite-clay-source.js"))) {
+    copyFileSync(join(PKG, "dist", "nsite-clay-source.js"), join(dir, "nsite-clay-source.js"));
+  }
 
   // Templates link these from the root rather than carrying copies, so one
   // upgrade fixes every page built from them.
@@ -399,33 +439,280 @@ function cmdInit() {
   console.log(`Then edit it in the browser at your page's address with #edit on the end.`);
 }
 
+// ------------------------------------------------------------------- shared
+
+// What `pull` leaves beside the files it wrote. A dotfile, so it is never
+// published. `deploy` reads it to publish back to the same site, relays and
+// servers, and to tell a page edited here from a page somebody changed in the
+// browser while the directory was away.
+const RECORD = ".nsite-clay.json";
+
+function readRecord(dir) {
+  try {
+    const r = JSON.parse(readFileSync(join(dir, RECORD), "utf8"));
+    return r && /^[0-9a-f]{64}$/.test(r.pubkey || "") ? r : null;
+  } catch { return null; }
+}
+
+function writeRecord(dir, rec) {
+  writeFileSync(join(dir, RECORD), JSON.stringify(rec, null, 2) + "\n");
+}
+
+const isHtmlPath = (p) => /\.html?$/i.test(p);
+const hashOf = (bytes) => bytesToHex(sha256(bytes));
+const base36 = (pub) => BigInt("0x" + pub).toString(36).padStart(50, "0");
+const siteUrl = (pub, site) => site
+  ? `https://${base36(pub)}${site}.nsite.lol/`
+  : `https://${nip19.npubEncode(pub)}.nsite.lol/`;
+const words = (v) => (typeof v === "string" && v.trim() ? v.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean) : null);
+
+function hexKey(input) {
+  const s = String(input || "").trim();
+  if (/^[0-9a-f]{64}$/i.test(s)) return s.toLowerCase();
+  try {
+    const { type, data } = nip19.decode(s);
+    if (type === "npub") return data;
+    if (type === "nprofile") return data.pubkey;
+  } catch { /* not a key */ }
+  return null;
+}
+
+// npub1…, hex, nprofile1…, or an address a gateway serves: the npub as the
+// first label, or the 50-character base36 key followed by a site name, or the
+// ?npub= a local gateway takes.
+function parseSiteAddress(input) {
+  let s = String(input).trim();
+  if (/^https?:\/\//i.test(s)) {
+    let u;
+    try { u = new URL(s); } catch { return null; }
+    s = u.searchParams.get("npub") || u.searchParams.get("site") || u.hostname.split(".")[0];
+  }
+  const key = hexKey(s);
+  if (key) return { pubkey: key, site: "" };
+  const m = /^([0-9a-z]{50})([a-z0-9-]{1,13})?$/.exec(s.toLowerCase());
+  if (m) {
+    const n = [...m[1]].reduce((acc, c) => acc * 36n + BigInt(parseInt(c, 36)), 0n);
+    if (n < 2n ** 256n) return { pubkey: n.toString(16).padStart(64, "0"), site: m[2] || "" };
+  }
+  return null;
+}
+
+function manifestFilter(pub, site) {
+  return site ? { kinds: [35128], authors: [pub], "#d": [site] } : { kinds: [15128], authors: [pub] };
+}
+
+// Every relay asked, the newest answer kept. Relays disagree, and the first to
+// answer is not necessarily the one with the latest version.
+async function newestManifest(pool, relays, pub, site) {
+  const found = await pool.querySync(relays, manifestFilter(pub, site), { maxWait: QUERY_WAIT }).catch(() => []);
+  return found.filter((e) => e.pubkey === pub && verifyEvent(e))
+    .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? -1 : 1))[0] || null;
+}
+
+// Fetch a blob from whichever server has it, and believe it only if it hashes
+// to the name it was asked for.
+async function fetchBlob(servers, hash) {
+  const errors = [];
+  for (const s of servers) {
+    try {
+      const res = await fetch(`${norm(s)}/${hash}`, until(TIMEOUTS.put));
+      if (!res.ok) { errors.push(`${s}: ${res.status}`); continue; }
+      const bytes = Buffer.from(await res.arrayBuffer());
+      if (hashOf(bytes) !== hash) { errors.push(`${s}: served bytes that do not match the hash`); continue; }
+      return bytes;
+    } catch (e) { errors.push(`${s}: ${why(e, TIMEOUTS.put)}`); }
+  }
+  throw new Error(errors.join("; ") || "no servers to ask");
+}
+
+// The attributes on <html>, which is where an nsite-clay document keeps its
+// configuration.
+function rootAttrs(text) {
+  const tag = /<html\b[^>]*>/i.exec(text)?.[0];
+  if (!tag) return null;
+  const attrs = {};
+  for (const m of tag.slice(5).matchAll(/([^\s=<>"'\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g)) {
+    attrs[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? "";
+  }
+  return attrs;
+}
+
+// The two files a page cannot edit itself without, under whatever content
+// stamps the CLI and the publisher put on their names.
+const ENGINE = new Set(["/nsite-clay.js", "/nsite-clay-chrome.js"]);
+const unstamp = (p) => { const m = /^(.*?)((?:-[0-9a-f]{8})*)(\.[a-z]+)$/.exec(p); return m ? m[1] + m[3] : p; };
+const engineRefs = (text) => [...text.matchAll(/<script\b[^>]*?\bsrc\s*=\s*["']?(\/[^"'\s>]+)/gi)]
+  .map((m) => m[1].split(/[?#]/)[0]).filter((p) => !p.startsWith("//") && ENGINE.has(unstamp(p)));
+
+// What would make a published page misbehave in the browser, found before any
+// key is asked for. A page that reports the wrong nc:path compares itself with
+// somebody else's bytes and reloads forever, or overwrites a sibling when it is
+// saved; one that names another site or owner saves somewhere else or not at
+// all. None of that shows until somebody opens the page.
+function checkDocuments(files, contents, pathOf, site) {
+  const problems = [], warnings = [], owners = [];
+  for (const f of files) {
+    const p = pathOf(f);
+    if (!isHtmlPath(p)) continue;
+    const text = contents.get(f).toString("utf8");
+    const a = rootAttrs(text);
+    if (!a || !("nc:owner" in a)) continue;            // a plain page, not an nsite-clay document
+    const owner = hexKey(a["nc:owner"]);
+    if (!owner) problems.push(`${p}: nc:owner="${a["nc:owner"]}" is not an npub or a hex key`);
+    else owners.push([p, owner]);
+    const said = (a["nc:path"] || "").trim() || "/index.html";
+    if (said !== p) {
+      problems.push(`${p}: says nc:path="${said}" but lives at ${p}. Set nc:path="${p}". ` +
+        `Every page needs its own, or saving it in the browser overwrites ${said} and the page reloads in a loop.`);
+    }
+    const named = (a["nc:site"] || "").trim();
+    if (named !== site) {
+      problems.push(`${p}: says ${named ? `nc:site="${named}"` : "it belongs to the root site"}, but this deploy publishes ` +
+        `${site ? `the named site "${site}"` : "the root site"}. Saving it in the browser would write somewhere else.`);
+    }
+    if (!engineRefs(text).some((r) => unstamp(r) === "/nsite-clay.js")) {
+      warnings.push(`${p} has nc:owner but loads no /nsite-clay.js, so it cannot be edited in the browser`);
+    }
+  }
+  const owner = owners.find(([p]) => p === "/index.html")?.[1] || owners[0]?.[1] || null;
+  return { problems, warnings, owners, owner };
+}
+
 // ------------------------------------------------------------------- deploy
 
 async function cmdDeploy() {
   const dir = positional[0];
-  if (!dir) die("usage: nsite-clay deploy <dir> [--sec=… | --bunker=…] [--site=name]");
+  if (!dir) die("usage: nsite-clay deploy <dir> [--site=name]   (sign with NOSTR_BUNKER_URI, a saved connection, or --sec)");
   if (!existsSync(dir)) die(`no such directory: ${dir}`);
-  const site = flags.site || "";
-  if (site && !/^[a-z0-9-]{1,13}$/.test(site) || site.endsWith("-")) {
-    if (site) die("--site must be 1-13 characters of [a-z0-9-] and must not end with a dash");
+  const record = readRecord(dir);
+  if (record && typeof flags.site === "string" && flags.site !== (record.site || "")) {
+    die(`${dir} was pulled from ${record.site ? `the site "${record.site}"` : "the root site"}, and --site=${flags.site} ` +
+        `would publish it somewhere else. Leave --site out, or pull that site into a directory of its own.`);
+  }
+  const site = typeof flags.site === "string" ? flags.site : (record?.site || "");
+  if (flags.site === true || (site && (!/^[a-z0-9-]{1,13}$/.test(site) || site.endsWith("-")))) {
+    die("--site must be 1-13 characters of [a-z0-9-] and must not end with a dash");
+  }
+  // A pulled directory knows where its site lives, which is where the browser
+  // saves it. Publishing it to the CLI's public defaults instead would put a
+  // version on relays the page never reads.
+  if (record) {
+    if (!relaysPinned && record.relays?.length) RELAYS = record.relays;
+    if (!serversPinned && record.servers?.length) SERVERS = record.servers;
   }
 
   // Chosen before the signer is asked for anything, so what is being left out
   // is on screen before a bunker prompt, and --dry-run needs no key at all.
   const files = selectFiles(dir);
-  if (flags["dry-run"]) {
-    console.log(`Would publish ${files.length} file(s):`);
-    for (const f of files) console.log(`  /${relative(dir, f).split("\\").join("/")}`);
-    return;
-  }
-
-  const signer = await getSigner();
-  const pub = signer.pubkey;
-
-  const fingerprint = !flags["no-fingerprint"];
+  const pathOf = (f) => "/" + relative(dir, f).split("\\").join("/");
   const isHtml = (f) => /\.html?$/i.test(f);
   const contents = new Map(files.map((f) => [f, readFileSync(f)]));
-  const pathOf = (f) => "/" + relative(dir, f).split("\\").join("/");
+  const docs = checkDocuments(files, contents, pathOf, site);
+  for (const w of docs.warnings) console.log(`  note: ${w}`);
+  if (flags["dry-run"]) {
+    if (docs.problems.length) console.log(`Would refuse to publish:\n  ${docs.problems.join("\n  ")}`);
+    console.log(`Would publish ${files.length} file(s)${record ? `, to ${record.site ? `the site "${record.site}"` : "the root site"} of ${record.owner}` : ""}:`);
+    for (const f of files) console.log(`  ${pathOf(f)}`);
+    return;
+  }
+  const noCheck = !!flags["no-check"];
+  if (docs.problems.length && !noCheck) {
+    die(`refusing to publish:\n  ${docs.problems.join("\n  ")}\n  Fix the pages, or pass --no-check to publish them as they are.`);
+  }
+
+  const signer = await getSigner({ owner: record?.pubkey || docs.owner });
+  const pub = signer.pubkey;
+  const quit = async (msg) => { await signer.close(); die(msg); };
+  if (record && pub !== record.pubkey && !noCheck) {
+    await quit(`${dir} was pulled from ${record.owner}, but the signer holds ${nip19.npubEncode(pub)}.\n` +
+      `  Only the owner's key can publish that site. Connect the owner's signer.`);
+  }
+  const strangers = docs.owners.filter(([, o]) => o !== pub);
+  if (strangers.length && !noCheck) {
+    await quit(`these pages name another owner than the signer (${nip19.npubEncode(pub)}):\n  ` +
+      strangers.map(([p, o]) => `${p}: nc:owner is ${nip19.npubEncode(o)}`).join("\n  ") +
+      `\n  A page can only be saved in the browser by the key in its nc:owner. Fix nc:owner, or sign with that key.`);
+  }
+
+  // The site as it is now. A manifest is the whole path table, so whatever is
+  // published and not in this directory would be taken down by this deploy.
+  const pool = new SimplePool();
+  const live = await newestManifest(pool, RELAYS, pub, site);
+  const livePaths = live ? pathsOf(live) : {};
+  const local = new Set(files.map(pathOf));
+  const carried = {};
+
+  if (record) {
+    // Three versions of every path: as pulled, as here, as published now. A
+    // path only one side changed takes that side; a path both changed is a
+    // conflict, and nobody's work is thrown away without being asked.
+    const pulled = record.paths || {};
+    const conflicts = [], fromBrowser = [];
+    for (const f of files) {
+      const p = pathOf(f), was = pulled[p], now = livePaths[p];
+      if (!was || !now || now === was) continue;
+      const mine = hashOf(contents.get(f));
+      if (mine === now) continue;
+      if (mine === was) fromBrowser.push([f, p, now]);
+      else conflicts.push(p);
+    }
+    for (const [p, h] of Object.entries(livePaths)) {
+      if (local.has(p)) continue;
+      // Added after the pull, or a path a directory cannot hold (a dotfile is
+      // never published from one): someone else's, and kept as it is.
+      if (!(p in pulled) || p.split("/").some((seg) => seg.startsWith("."))) carried[p] = h;
+      else if (pulled[p] !== h) conflicts.push(`${p} (deleted here, changed in the browser)`);
+      // else it was deleted here on purpose, and stays out.
+    }
+    if (conflicts.length && !flags.overwrite) {
+      await quit(`the published site changed after ${dir} was pulled, and so did these, here:\n  ` +
+        conflicts.join("\n  ") +
+        `\n  Somebody saved them in the browser meanwhile${live ? ` (latest at ${new Date(live.created_at * 1000).toISOString()})` : ""}.\n` +
+        `  Pull the site again into a new directory, make the same change there, and deploy that.\n` +
+        `  --overwrite publishes your copies anyway and throws the browser's changes to them away.`);
+    }
+    const from = [...new Set([...SERVERS, ...(live ? serversOf(live) : [])])];
+    for (const [f, p, h] of fromBrowser) {
+      let bytes;
+      try { bytes = await fetchBlob(from, h); }
+      catch (e) { await quit(`${p} was changed in the browser after the pull, and that version could not be fetched: ${e.message}`); }
+      writeFileSync(f, bytes);
+      contents.set(f, bytes);
+      console.log(`  ${p}: changed in the browser after the pull and not here, so that version is kept (and written to ${dir})`);
+    }
+    // Written into the directory as well, or the next deploy from it would read
+    // the path's absence as a deletion made here.
+    for (const [p, h] of Object.entries(carried)) {
+      const segs = p.split("/").slice(1);
+      const to = resolve(dir, ...segs);
+      if (segs.some((seg) => !seg || seg.startsWith(".")) || !to.startsWith(resolve(dir) + sep)) continue;
+      try {
+        const bytes = await fetchBlob(from, h);
+        mkdirSync(dirname(to), { recursive: true });
+        writeFileSync(to, bytes);
+        console.log(`  ${p}: added in the browser after the pull, kept as published (and written to ${dir})`);
+      } catch (e) {
+        await quit(`${p} was added to the site after the pull, and it could not be fetched to keep it: ${e.message}`);
+      }
+    }
+  } else if (live) {
+    const missing = Object.keys(livePaths).filter((p) => isHtmlPath(p) && !local.has(p)).sort();
+    if (missing.length) {
+      if (flags["keep-missing"]) {
+        for (const p of missing) carried[p] = livePaths[p];
+        console.log(`  keeping ${missing.length} published page${missing.length === 1 ? "" : "s"} this directory does not have (--keep-missing)`);
+      } else if (!flags.prune) {
+        await quit(`the published site has ${missing.length} page${missing.length === 1 ? "" : "s"} that ${dir} does not:\n  ` +
+          missing.join("\n  ") +
+          `\n  A deploy publishes the whole path table, so this one would take ${missing.length === 1 ? "it" : "them"} down.\n` +
+          `  Pages made or saved in the browser live only on Blossom, not in this directory.\n` +
+          `  "nsite-clay pull" downloads the whole site first. Or pass --keep-missing to keep\n` +
+          `  ${missing.length === 1 ? "it" : "them"} as published, or --prune to take ${missing.length === 1 ? "it" : "them"} down.`);
+      }
+    }
+  }
+
+  const fingerprint = !flags["no-fingerprint"];
   const rename = new Map();
 
   // A published document hardcodes its asset URLs and gateways serve them with
@@ -437,7 +724,12 @@ async function cmdDeploy() {
       if (isHtml(f)) continue;                      // documents keep linkable paths
       const p = pathOf(f);
       const ext = extname(p);
-      rename.set(p, `${p.slice(0, p.length - ext.length)}-${bytesToHex(sha256(contents.get(f))).slice(0, 8)}${ext}`);
+      const stamp = hashOf(contents.get(f)).slice(0, 8);
+      // A file that already wears its own hash, the way a pulled site's assets
+      // do, is left alone. Stamping it again gave /app-1a2b3c4d-1a2b3c4d.js and
+      // a page that pointed at neither.
+      if (p.endsWith(`-${stamp}${ext}`)) continue;
+      rename.set(p, `${p.slice(0, p.length - ext.length)}-${stamp}${ext}`);
     }
     const rules = [...rename].sort((a, b) => b[0].length - a[0].length);  // longest first
     for (const f of files) {
@@ -465,13 +757,24 @@ async function cmdDeploy() {
     }
   }
 
-  const paths = {};
+  // The one hole a browser cannot repair: a page whose engine is not in the
+  // table cannot load the editor that would put it back.
+  const planned = new Set([...Object.keys(carried), ...files.flatMap((f) => [pathOf(f), rename.get(pathOf(f)) || pathOf(f)])]);
+  const holes = files.filter(isHtml).flatMap((f) => engineRefs(contents.get(f).toString("utf8"))
+    .filter((r) => !planned.has(r)).map((r) => `${pathOf(f)} loads ${r}`));
+  if (holes.length && !noCheck) {
+    await quit(`these pages load a runtime file that would not be published:\n  ${[...new Set(holes)].join("\n  ")}\n` +
+      `  They would stop being editable, and no browser could put that back. Keep the file in\n` +
+      `  the directory (a pulled site has it), or point the page at /nsite-clay.js and /nsite-clay-chrome.js.`);
+  }
+
+  const paths = { ...carried };
   let uploads = 0;
   for (const f of files) {
     const bytes = contents.get(f);
     const path = rename.get(pathOf(f)) || pathOf(f);
     const type = TYPES[extname(f).toLowerCase()] || "application/octet-stream";
-    const hash = bytesToHex(sha256(bytes));
+    const hash = hashOf(bytes);
 
     // Who has it already, and who needs a copy. A server that dropped a blob
     // gets it back, which is what makes a repeat deploy a repair rather than a
@@ -485,12 +788,15 @@ async function cmdDeploy() {
       const results = await Promise.allSettled(missing.map((s) => upload(s, bytes, type, signer)));
       sent = results.filter((r) => r.status === "fulfilled").length;
       if (!held && !sent) {
-        die(`${path} is on no server and was refused by every one of them:\n  ` +
+        await quit(`${path} is on no server and was refused by every one of them:\n  ` +
           results.map((r) => r.reason?.message).join("\n  "));
       }
       uploads += sent;
     }
 
+    // A pulled site holds both nsite-clay.js and the stamped copy it became, so
+    // the two arrive at the same path with the same bytes. Say it once.
+    const repeat = paths[path] === hash;
     paths[path] = hash;
     // The unfingerprinted path stays in the manifest pointing at the same blob.
     // Nothing new links to it, but a reader still holding a cached copy of the
@@ -498,7 +804,7 @@ async function cmdDeploy() {
     const original = pathOf(f);
     if (path !== original) paths[original] = hash;
     const note = missing.length ? `${held + sent}/${SERVERS.length}  ${sent} uploaded` : `${held}/${SERVERS.length}  already there`;
-    console.log(`  ${path.padEnd(34)} ${hash.slice(0, 12)}…  ${String(bytes.length).padStart(8)} B  ${note}`);
+    if (!repeat) console.log(`  ${path.padEnd(34)} ${hash.slice(0, 12)}…  ${String(bytes.length).padStart(8)} B  ${note}`);
   }
 
   const agg = aggregate(paths);
@@ -512,29 +818,32 @@ async function cmdDeploy() {
     ...(flags.source ? [["source", String(flags.source)]] : []),
   ];
   const kind = site ? 35128 : 15128;
+  const remember = (ev) => {
+    if (!record) return;
+    writeRecord(dir, { ...record, relays: RELAYS, servers: SERVERS,
+      manifest: { id: ev.id, created_at: ev.created_at }, paths: pathsOf(ev), deployed: new Date().toISOString() });
+  };
 
   // A weekly job that restores an unchanged site should cost nothing. The blobs
   // are content addressed and were checked above, so if the path table still
   // hashes to what the live manifest says, there is nothing to tell anybody: a
   // fresh manifest would carry the same table under a newer timestamp, and the
   // snapshot beside it would file a version identical to the last one.
-  const pool = new SimplePool();
   if (!flags.force) {
-    const current = await pool.get(RELAYS, site
-      ? { kinds: [35128], authors: [pub], "#d": [site], limit: 1 }
-      : { kinds: [15128], authors: [pub], limit: 1 }).catch(() => null);
-    const live = current?.tags.find((t) => t[0] === "x" && t[2] === "aggregate")?.[1];
-    if (live === agg) {
+    const liveAgg = live?.tags.find((t) => t[0] === "x" && t[2] === "aggregate")?.[1];
+    if (live && (liveAgg === agg || aggregate(livePaths) === agg)) {
       console.log(`\n  unchanged: the published manifest already points at these ${Object.keys(paths).length} paths`);
       if (uploads) console.log(`  ${uploads} blob${uploads === 1 ? "" : "s"} were put back on a server that had dropped them`);
       console.log(`  nothing published. --force republishes anyway.\n`);
+      remember(live);
       pool.close(RELAYS);
       await signer.close();
       return;
     }
   }
 
-  const now = Math.floor(Date.now() / 1000);
+  // Newer than what is live by at least a second, or a relay keeps the old one.
+  const now = Math.max(Math.floor(Date.now() / 1000), (live?.created_at ?? 0) + 1);
   const manifest = await signer.sign({ kind, created_at: now, tags, content: "" });
   const snap = await signer.sign({
     kind: 5128, created_at: now, content: "",
@@ -543,9 +852,10 @@ async function cmdDeploy() {
 
   const sent = await Promise.allSettled(pool.publish(RELAYS, manifest));
   const accepted = sent.filter((r) => r.status === "fulfilled").length;
-  if (!accepted) die("no relay accepted the manifest:\n  " +
+  if (!accepted) await quit("no relay accepted the manifest:\n  " +
     sent.map((r, i) => `${RELAYS[i]}: ${r.reason?.message || r.reason}`).join("\n  "));
   await Promise.allSettled(pool.publish(RELAYS, snap));
+  remember(manifest);
 
   // Most gateways find a site through its owner's relay list, and a fresh key
   // has none. Written only when it provably has none; see src/relay-list.js.
@@ -564,15 +874,125 @@ async function cmdDeploy() {
 
   // Blossom servers are told where the blobs are; without this a gateway that
   // has no `server` hint and no kind-10063 for the author answers 404.
-  const b36 = BigInt("0x" + pub).toString(36).padStart(50, "0");
-  const url = site
-    ? `https://${b36}${site}.nsite.lol/`
-    : `https://${nip19.npubEncode(pub)}.nsite.lol/`;
+  const url = siteUrl(pub, site);
   console.log(`\n  manifest  kind ${kind}  ${manifest.id}`);
   console.log(`  aggregate ${agg}`);
   console.log(`  version   v${BigInt("0x" + snap.id).toString(36).padStart(50, "0")}.nsite.lol`);
   console.log(`  relays    ${accepted}/${RELAYS.length} accepted`);
-  console.log(`\n  ${url}\n`);
+  console.log(`\n  ${url}`);
+  console.log(`  ${url}#edit   to edit it in the browser\n`);
+}
+
+// --------------------------------------------------------------------- pull
+
+// The way back from a published site to a directory: the newest manifest, every
+// blob it names, each one checked against its hash, written where its path
+// says. Pages made or saved in the browser exist nowhere else, so this is what
+// has to happen before a directory can be deployed over a site that has been
+// edited in place.
+async function cmdPull() {
+  const target = positional[0];
+  if (!target) die("usage: nsite-clay pull <npub | site address> [dir] [--site=name]");
+  const addr = parseSiteAddress(target);
+  if (!addr) die(`cannot read a key out of "${target}". Give an npub, a hex key, or the site's address.`);
+  const site = typeof flags.site === "string" ? flags.site : addr.site;
+  const pub = addr.pubkey;
+  const dir = positional[1] || "site";
+  if (existsSync(dir) && readdirSync(dir).length && !flags.overwrite) {
+    die(`${dir} is not empty. Pull into a new directory, or pass --overwrite to write over what is there.`);
+  }
+
+  const pool = new SimplePool();
+  let relays = RELAYS.map(norm);
+  if (!relaysPinned) {
+    // The owner's own relay list says where else to look.
+    const lists = await pool.querySync([...new Set([...relays, ...LOOKUP_RELAYS])],
+      { kinds: [10002], authors: [pub] }, { maxWait: QUERY_WAIT }).catch(() => []);
+    const own = lists.filter((e) => e.pubkey === pub).sort((a, b) => b.created_at - a.created_at)[0];
+    const more = (own?.tags || []).filter((t) => t[0] === "r" && /^wss?:\/\//.test(t[1] || "") && t[2] !== "read").map((t) => norm(t[1]));
+    relays = [...new Set([...relays, ...more])];
+  }
+  process.stderr.write(`looking for the manifest on ${relays.length} relay${relays.length === 1 ? "" : "s"}…\n`);
+  const live = await newestManifest(pool, relays, pub, site);
+  if (!live) {
+    pool.close(relays);
+    die(`no relay asked has ${site ? `a site called "${site}"` : "a root site"} for ${nip19.npubEncode(pub)}.\n` +
+        `  Relays asked: ${relays.join(", ")}\n  Is --site right, or does the site live on other relays (--relays=…)?`);
+  }
+  let servers = SERVERS.map(norm);
+  if (!serversPinned) {
+    const lists = await pool.querySync(relays, { kinds: [10063], authors: [pub] }, { maxWait: QUERY_WAIT }).catch(() => []);
+    const own = lists.filter((e) => e.pubkey === pub).sort((a, b) => b.created_at - a.created_at)[0];
+    const theirs = (own?.tags || []).filter((t) => t[0] === "server" && /^https?:\/\//.test(t[1] || "")).map((t) => t[1]);
+    servers = [...new Set([...serversOf(live), ...theirs, ...SERVERS].map(norm))];
+  }
+  pool.close(relays);
+
+  const paths = pathsOf(live);
+  mkdirSync(dir, { recursive: true });
+  const root = resolve(dir);
+  const got = new Map();
+  const failed = [];
+  for (const [p, h] of Object.entries(paths).sort()) {
+    const segs = p.split("/").slice(1);
+    const to = resolve(root, ...segs);
+    if (!p.startsWith("/") || p.endsWith("/") || /[\0\\]/.test(p) || segs.some((s) => !s || s === "." || s === "..") ||
+        !to.startsWith(root + sep)) {
+      console.log(`  ${p}: not a path that can be written as a file, left out`);
+      continue;
+    }
+    let bytes = got.get(h);
+    if (!bytes) {
+      try { bytes = await fetchBlob(servers, h); got.set(h, bytes); }
+      catch (e) { failed.push(`${p}: ${e.message}`); continue; }
+    }
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, bytes);
+    console.log(`  ${p.padEnd(40)} ${h.slice(0, 12)}…  ${String(bytes.length).padStart(8)} B`);
+  }
+  if (failed.length) {
+    die(`could not download ${failed.length} of ${Object.keys(paths).length} files:\n  ${failed.join("\n  ")}\n` +
+        `  Servers asked: ${servers.join(", ")}\n` +
+        `  The directory is incomplete, so no pull record was written and deploy will not treat it as\n` +
+        `  the whole site. Try again, or name the servers that hold them with --servers=…`);
+  }
+
+  // Where the browser saves this site, which is where a deploy should go too.
+  const index = paths["/index.html"] ? join(dir, "index.html")
+    : (Object.keys(paths).filter(isHtmlPath).sort().map((p) => join(dir, ...p.split("/").slice(1)))[0]);
+  const attrs = index && existsSync(index) ? rootAttrs(readFileSync(index, "utf8")) : null;
+  const record = {
+    about: "Written by nsite-clay pull. deploy reads it to publish this directory back to the same site. It is a dotfile, so it is never published.",
+    owner: nip19.npubEncode(pub), pubkey: pub, site, kind: live.kind,
+    relays: relaysPinned ? RELAYS : (words(attrs?.["nc:relays"]) || DEFAULT_RELAYS),
+    servers: serversPinned ? SERVERS : (words(attrs?.["nc:servers"]) || servers),
+    manifest: { id: live.id, created_at: live.created_at },
+    paths,
+    pulled: new Date().toISOString(),
+  };
+  writeRecord(dir, record);
+
+  const pages = Object.keys(paths).filter(isHtmlPath).sort();
+  console.log(`\n  ${Object.keys(paths).length} files from the version published ${new Date(live.created_at * 1000).toISOString()}`);
+  console.log(`  pages     ${pages.join(", ") || "none"}`);
+  console.log(`  site      ${siteUrl(pub, site)}`);
+  console.log(`\n  Edit the files, then publish them back with:\n    nsite-clay deploy ${dir}`);
+  console.log(`  It reads ${RECORD} for the site, relays and servers, and keeps anything changed in the browser meanwhile.\n`);
+}
+
+// ------------------------------------------------------------------- whoami
+
+// Connect to the signer and say whose key it holds, signing nothing. The first
+// connection spends the bunker:// secret and is saved, so this is the place to
+// spend it: once, before any real work, with the answer on screen.
+async function cmdWhoami() {
+  const record = positional[0] ? readRecord(positional[0]) : null;
+  const owner = record?.pubkey || hexKey(flags.npub) || null;
+  const signer = await getSigner({ owner });
+  console.log(nip19.npubEncode(signer.pubkey));
+  if (signer.remote) console.log(`  connection saved in ${BUNKER_FILE}; later runs find it for this key without a link`);
+  await signer.close();
+  if (owner && owner !== signer.pubkey) die(`that is not ${nip19.npubEncode(owner)}, the owner of ${record ? positional[0] : "--npub"}`);
 }
 
 // ---------------------------------------------------------------- unpublish
@@ -870,34 +1290,53 @@ function cmdKeygen() {
 // --------------------------------------------------------------------- help
 
 function cmdHelp() {
-  console.log(`nsite-clay — a single HTML file that edits and republishes itself
+  console.log(`nsite-clay: a single HTML file that edits and republishes itself
 
   nsite-clay init [dir]        scaffold a site (generates a key unless --npub is given)
                                --template=<name> to start from one of:
                                ${templates().join(", ") || "(none built yet)"}
+  nsite-clay pull <site> [dir] download a published site into dir (default: site), every
+                               file checked against its hash. <site> is an npub, a hex
+                               key or the site's address. Writes dir/.nsite-clay.json, so
+                               a deploy of dir goes back to the same site and keeps what
+                               was changed in the browser meanwhile.
   nsite-clay deploy <dir>      publish a directory as an nsite. Blobs already on a
                                server are not uploaded again, and a site whose
                                path table has not changed is not republished.
                                --force publishes regardless.
+  nsite-clay whoami [dir]      connect to the signer, print the key it holds, sign nothing.
+                               The first use of a bunker:// link belongs here.
   nsite-clay unpublish         take a site down: an empty manifest and a deletion request
                                to every relay it can find, and its blobs deleted from the
                                Blossom servers. Shows what it would do; --yes does it.
   nsite-clay keygen            print a fresh keypair and the URL it would live at
+  nsite-clay version           print this tool's version (also --version)
 
 Signing
+  NOSTR_BUNKER_URI=bunker://…            a remote signer (Amber, Clave, nsec.app). Needed once:
+                                         the connection (client key, bunker pubkey, relays)
+                                         is saved in ${BUNKER_FILE}
+                                         and later runs find it by the site's owner key.
+                                         --bunker=… also works but puts the secret in your
+                                         process list.
   --sec=nsec1… | NOSTR_SECRET_KEY        a raw key
-  NOSTR_BUNKER_URI=bunker://…            a remote signer (nsec.app, Amber over a bunker).
-                                         Prefer the env var: --bunker=… also works but puts
-                                         the connection secret in your process list.
   --timeout=60                           seconds to wait for the signer to answer
   --fresh                                connect to the bunker as a new app, ignoring the
                                          client key saved for it
 
+Pull options
+  --site=name         a named site; an address that names one sets it already
+  --relays=a,b,c      look only here (by default: the deploy relays, the lookup relays
+                      and the owner's relay list)
+  --servers=a,b       download only from these (by default: the manifest's servers, the
+                      owner's server list, then the defaults)
+  --overwrite         write into a directory that is not empty
+
 Deploy options
   --site=name         publish as a named site (kind 35128) instead of the root site
   --title=…           --description=…   --source=<repo url>
-  --relays=a,b,c      default: ${DEFAULT_RELAYS.join(",")}
-  --servers=a,b       default: ${DEFAULT_SERVERS.join(",")}
+  --relays=a,b,c      default: a pulled directory's own, else ${DEFAULT_RELAYS.join(",")}
+  --servers=a,b       default: a pulled directory's own, else ${DEFAULT_SERVERS.join(",")}
   --no-fingerprint    do not put content hashes in asset paths
   --exclude=<glob>    leave matching files out; repeat it or separate with commas.
                       A .nsiteignore file in the directory (gitignore syntax)
@@ -908,6 +1347,12 @@ Deploy options
   --no-relay-list     do not publish a relay list (kind 10002) for a key that has
                       none. One is written only when both lookup relays confirm
                       there is none, and it names the relays deployed to.
+  A deploy refuses pages whose nc:path, nc:site or nc:owner does not fit where it is
+  publishing, and pages that would lose /nsite-clay.js. --no-check publishes anyway.
+  From a pulled directory, a file changed only in the browser since the pull is kept,
+  and one changed in both places stops the deploy; --overwrite publishes this copy.
+  Elsewhere, a published page the directory does not have stops the deploy, because
+  publishing would take it down: --keep-missing keeps it, --prune takes it down.
 
 Unpublish options
   --site=name         the named site to take down; without it, the root site
@@ -926,11 +1371,16 @@ Unpublish options
 
 Once a site is published, the owner opens it, signs in, and edits it in the page.
 Saving from the browser republishes it; this CLI is only needed for the first
-version and for changes made outside the browser.
+version and for changes made outside the browser. An agent editing a site from
+outside follows ${"https://nsite-clay.cypherpunk.today/llms-edit.txt"}.
 `);
 }
 
-const commands = { init: cmdInit, deploy: cmdDeploy, unpublish: cmdUnpublish, keygen: cmdKeygen, help: cmdHelp };
-const run = commands[cmd] || cmdHelp;
+function cmdVersion() {
+  console.log(JSON.parse(readFileSync(join(PKG, "package.json"), "utf8")).version);
+}
+
+const commands = { version: cmdVersion, init: cmdInit, deploy: cmdDeploy, pull: cmdPull, whoami: cmdWhoami, unpublish: cmdUnpublish, keygen: cmdKeygen, help: cmdHelp };
+const run = cmd === "help" && flags.version === true ? cmdVersion : commands[cmd] || cmdHelp;
 await run();
 process.exit(0);

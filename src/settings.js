@@ -8,6 +8,7 @@
 //
 // Nothing private goes here. Anyone can read a published page.
 import { modal, checkbox, toast } from "./ui.js";
+import { agentRow } from "./agent-brief.js";
 
 // The one line here that is about this browser rather than this page. It is
 // drawn in the page's language, as the AI settings button below it is.
@@ -113,6 +114,9 @@ export class Settings {
         const ai = this.doc.createElement("button"); ai.type = "button";
         ai.textContent = this.nc.ai.say("settings"); ai.onclick = () => this.nc.ai.settings();
         body.append(ai);
+        // Beside the AI settings: the other way to have a machine edit the page,
+        // with the owner's own agent instead of ours.
+        agentRow(this.nc, body);
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always",
         remember: remember ? remember.checked : undefined }),
