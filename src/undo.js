@@ -4,7 +4,7 @@ const EXCLUDED = '[nc\\:chrome], [nc\\:transient], .nc-ui-chrome, [no-save], [no
 const RUNTIME = new Set(["contenteditable", "spellcheck", "nc:armed", "nc:keep-editable",
   "nc:spellcheck", "nc:highlight", "nc:feed-count", "nc:pubkey", "nc:owner-here",
   "nc:editmode", "nc:status", "nc:ready", "nc:editable", "nc:outdated", "nc:editing",
-  "nc:reading", "nc:cms-rules", "nc:cms-open"]);
+  "nc:reading", "nc:cms-rules", "nc:cms-open", "nc:dead"]);
 const excluded = (node) => !!(node?.nodeType === 1 ? node : node?.parentElement)?.closest?.(EXCLUDED);
 
 export class Undo {

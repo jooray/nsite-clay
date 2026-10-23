@@ -314,7 +314,19 @@ how they become things the owner can add to.
   the home page on its first save.
 - **Link to a directory with the trailing slash**, `href="/coworking/"`. A
   gateway resolves that to `/coworking/index.html` the way any web server does.
-  `/coworking` without the slash is a different path with nothing at it.
+  `/coworking` without the slash depends on the gateway: nsite.lol serves the
+  directory, nsite.run serves the home page instead. Treat it as a dead link,
+  which is what the runtime does.
+- **Give the site one menu shape.** A `<nav>` inside the `<header>`, outside
+  `<main nc:blocks>`, with one link per page and `aria-current="page"` on this
+  page's own (or mark the menu `nc:nav`). The owner then gets the rest while
+  editing, drawn by the runtime: a Pages button that lists and opens the site's
+  pages, a link dialog that offers those pages and the headings on them, dead
+  links outlined before they save, and "New page" (in this page's design, empty
+  or written by AI), which copies the header, menu, footer, stylesheet and block
+  library, adds the page to this page's menu and publishes both in one manifest.
+  It updates only the menu of the page it was made from; tell the owner the
+  other pages need the link added by hand.
 - **Deploy the whole directory in one command.** A manifest is the entire path
   table and the CLI builds it from the files on disk, so every page, every
   picture and the three shared files land in one signed event. Deploying one
@@ -1152,7 +1164,8 @@ alongside the document.
   down. The CLI refuses and names the page. Pull the site first.
 - **A directory link needs its trailing slash.** A gateway reads `/coworking/`
   as `/coworking/index.html`, the way any web server does. `/coworking` is a
-  different path, and there is nothing at it.
+  different path: some gateways resolve it and some serve the home page, so the
+  runtime counts it as a dead link. `/about` does not find `/about.html` either.
 - **Every page needs its own `nc:path`.** A document defaults to `/index.html`,
   so a site with more than one editable page, an about page, a translation,
   anything, needs `nc:path="/about.html"` on each `<html>` or saving one of them

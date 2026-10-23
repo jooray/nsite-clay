@@ -3,7 +3,7 @@ import { ImageStore, makePicture, fillPictures, pictureFiles, pictureName, uploa
 import { modal, field, notice } from "./ui.js";
 import { qrElement } from "./qr.js";
 import { installEditing, editDialog, propose, proposePage, accept } from "./ai-edit.js";
-import { buildPage, refinePage, applyPage, preparePage, mentionsPictures } from "./ai-builder.js";
+import { buildPage, refinePage, applyPage, preparePage, mentionsPictures, buildContent } from "./ai-builder.js";
 import { previewHTML } from "./ai-edit.js";
 import { FLOW_WORDS } from "./ai-flow-words.js";
 import { creditDialog, withdrawalDialog } from "./ai-credit.js";
@@ -128,6 +128,11 @@ export class Ai {
   accept(proposal) { return accept(this, proposal); }
   buildPage(description, options) { return buildPage(this, description, options); }
   refinePage(page, instruction, options) { return refinePage(this, page, instruction, options); }
+  // The inside of <main> for a new page in this page's design; see pages.js.
+  buildContent(options) { return buildContent(this, options); }
+  // Pictures made in this browser, swapped for addresses on the owner's Blossom
+  // servers. Done only for what is kept.
+  uploadPictures(html) { return uploadPictures(this, html); }
 
   /** Whether a picture can be asked for at all with the current settings. */
   canPicture() { const s = this.client.session(); return !!(s.key && s.imageModel); }

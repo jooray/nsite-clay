@@ -61,7 +61,7 @@ function cleanElement(nc, element) {
     // and stays. Left in, the model echoes it back, the element is accepted
     // without the marker, and the attribute is published from then on.
     if (el.hasAttribute("nc:spellcheck")) el.removeAttribute("spellcheck");
-    for (const a of ["contenteditable", "nc:armed", "nc:keep-editable", "nc:highlight", "nc:spellcheck"]) el.removeAttribute(a);
+    for (const a of ["contenteditable", "nc:armed", "nc:keep-editable", "nc:highlight", "nc:spellcheck", "nc:dead"]) el.removeAttribute(a);
     if (el.matches('input[type="password"], input[type="file"]')) el.removeAttribute("value");
   }
   copy.querySelectorAll('[no-save], [clay~="no-save"], [no-snapshot], [clay~="no-snapshot"]').forEach((el) => el.remove());

@@ -109,6 +109,26 @@ const CSS = `
 .nc-ui .nc-pick .nc-body-text { flex: 1; min-width: 0; }
 .nc-ui .nc-pick b { display: block; font-weight: 600; }
 .nc-ui .nc-pick small { color: var(--nc-ink-dim, #7e768f); }
+/* The pages of a site and the places on them: one group label per page. */
+.nc-ui .nc-pick .nc-pick-group { margin: .55rem 0 0; padding: 0 .2rem; font-size: .74rem; font-weight: 600;
+  letter-spacing: .02em; color: var(--nc-ink-dim, #9a92ad); }
+.nc-ui .nc-pick .nc-pick-group:first-child { margin-top: 0; }
+.nc-ui .nc-pick small { overflow-wrap: anywhere; }
+.nc-ui .nc-link-pick { gap: .3rem; }
+.nc-ui .nc-link-pick button { padding: .4rem .65rem; align-items: baseline; }
+.nc-ui .nc-link-pick .nc-body-text { display: flex; gap: .8rem; align-items: baseline; justify-content: space-between; }
+.nc-ui .nc-link-pick .nc-body-text b { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nc-ui .nc-link-pick .nc-body-text small { flex: 0 1 auto; text-align: right; font-family: var(--nc-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: .74rem; }
+.nc-ui .nc-pages li .nc-page-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.nc-ui .nc-pages li .nc-page-text b { flex: 0 0 auto; }
+.nc-ui .nc-pages li .nc-path { color: var(--nc-ink-dim, #7e768f); font-size: .76rem;
+  font-family: var(--nc-mono, ui-monospace, SFMono-Regular, Menlo, monospace); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nc-ui .nc-pages li.nc-here { border-color: var(--nc-accent, #6f5ad1); }
+.nc-ui .nc-pages { max-height: 19rem; }
+.nc-ui .nc-tag { flex: 0 0 auto; font-size: .74rem; color: var(--nc-ink-dim, #9a92ad);
+  border: 1px solid var(--nc-edge, #322c40); border-radius: 999px; padding: .1rem .55rem; }
+.nc-ui .nc-pages + .nc-hint { margin: .7rem 0 0; }
+.nc-ui .nc-pages ~ .nc-row { margin-top: .9rem; }
 .nc-toast {
   display: block; position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 2147483647;
   background: var(--nc-panel, #14121a); color: var(--nc-ink, #ece9f2);

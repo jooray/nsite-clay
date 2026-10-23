@@ -11,7 +11,7 @@ import { SimplePool, verifyEvent, nip19 } from "nostr-tools";
 import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
 import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
 import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from "./blossom.js";
-import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers } from "./manifest.js";
+import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers, pathKnown } from "./manifest.js";
 import { ensureRelayList } from "./relay-list.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
@@ -28,6 +28,7 @@ import { Cms } from "./cms.js";
 import { Blocks } from "./blocks.js";
 import { Undo } from "./undo.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
+import { Pages } from "./pages.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { agentInstructions, siteFacts } from "./agent-brief.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
@@ -98,6 +99,7 @@ class NsiteClay extends EventTarget {
     this.vault = new Vault(this);
     this.ai = new Ai(this);
     this.upgrade = new Upgrade(this);
+    this.pages = new Pages(this);
     this.version = VERSION;
     this.status = "idle";
     this.resuming = Promise.resolve(null);
@@ -389,6 +391,9 @@ class NsiteClay extends EventTarget {
     // The parts tree marks whichever element the pointer is over. Left behind,
     // it would publish one element wearing an outline nobody asked for.
     for (const el of [...clone.querySelectorAll("[nc\\:highlight]")]) el.removeAttribute("nc:highlight");
+    // A link the editor marked as leading nowhere. The mark is for the owner
+    // while they edit; a reader of the published page has no use for it.
+    for (const el of [...clone.querySelectorAll("[nc\\:dead]")]) el.removeAttribute("nc:dead");
   }
 
   _capture() {
@@ -463,7 +468,13 @@ class NsiteClay extends EventTarget {
       const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
       paths[this.cfg.path] = hash;
 
-      const manifest = await this.signer.sign(buildManifest(this.cfg, paths, { title: this.doc.title }));
+      // A replaceable event is replaced only by a newer one, and on a tie the
+      // relay keeps whichever id sorts lower. Two saves in the same second, which
+      // a new page published right after a save is, would otherwise have the
+      // relay accept the second and go on serving the first.
+      const draft = buildManifest(this.cfg, paths, { title: this.doc.title });
+      if (this._manifest && draft.created_at <= this._manifest.created_at) draft.created_at = this._manifest.created_at + 1;
+      const manifest = await this.signer.sign(draft);
       await publishToAny(this.pool, this.cfg.relays, manifest);
 
       let version = null;
@@ -555,13 +566,10 @@ class NsiteClay extends EventTarget {
     have.add(this.cfg.path);
     // A gateway resolves a directory the way any web server does, so a link to
     // /blog/ is answered by /blog/index.html in the table. Without this every
-    // correctly deployed multi-page site would report itself broken.
-    const known = (p) => {
-      if (have.has(p)) return true;
-      if (p.endsWith("/")) return have.has(p + "index.html");
-      if (/\.[a-z0-9]+$/i.test(p.slice(p.lastIndexOf("/") + 1))) return false;
-      return have.has(p + "/index.html") || have.has(p + ".html");
-    };
+    // correctly deployed multi-page site would report itself broken. A link
+    // without the slash is not, because not every gateway resolves it; see
+    // pathKnown in manifest.js, which the editor's live marks use as well.
+    const known = (p) => pathKnown(have, p);
     const { loads, links } = this._referenceMap(html);
     const assets = [...loads].filter((p) => !known(p));
     // The one that cannot be undone from a browser: the page that would fix it
@@ -978,6 +986,7 @@ nc.ready = (async () => {
   nc.blocks.start();
   nc.undo.start();
   nc.ai.start();
+  nc.pages.start();
   // Not at load. The serialiser and its parser are a third of the runtime and
   // only somebody about to save has any use for them, so the fetch waits until
   // this page is being edited. A reader never pays for it.

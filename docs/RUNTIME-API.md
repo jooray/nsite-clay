@@ -157,7 +157,7 @@ excluded from element proposals. `nc.ai.proposePage(prompt, options)` returns
 original snapshot before replacing the page as one undo step.
 
 `nc.ai.drafts.read(kind)`, `.write(kind, draft)`, `.clear(kind)` and
-`.import(kind, jsonText)` manage local drafts. Kinds are `edit` and `builder`.
+`.import(kind, jsonText)` manage local drafts. Kinds are `edit`, `builder` and `newpage`.
 Storage is scoped to the signed-in pubkey, document path and workflow, keeps up
 to five proposed versions, and reports write failure without discarding memory.
 Draft files are sanitised again before preview or acceptance. They contain page
@@ -171,6 +171,10 @@ assigns the publisher's ownership/path, and supplies runtime references, toolbar
 editable regions, CMS rules and a fallback block library. It removes generated
 scripts and forms, and CSS that reaches off the page. It refuses a document that
 carries no stylesheet, because that one publishes as unstyled text.
+`await nc.ai.buildContent({ title, description, href, css, blocks, pages, lang, pictures, previous, instruction })`
+returns only the inside of `<main>` for a new page in an existing design, sanitised and marked editable;
+`nc.pages` puts it into the page's own shell. `nc.ai.uploadPictures(html)` swaps pictures made in this
+browser for addresses on the owner's Blossom servers.
 `nc.ai.previewHTML(html)` adds a restrictive CSP for display in an iframe with an
 empty `sandbox` attribute. Preparing or previewing never publishes anything.
 
@@ -296,6 +300,59 @@ within ten seconds leaves the page signed out and the record kept for the next p
 resumed for a browser that never signed in as the owner, and somebody else signing in ends the
 owner's kept sign-in. Signing out, unticking the Settings line above, and the hour running out all
 drop it.
+
+## A site with more than one page
+
+All of this is drawn by the runtime and marked `nc:chrome`, so it needs no markup in the page and
+reaches pages already published through an upgrade.
+
+- **Pages.** The owner in edit mode gets a Pages button on `.nc-bar`, next to Edit with AI. It lists
+  the HTML paths of the live path table (the union `nc.save()` would publish), this page first, each
+  with the title read from its own bytes: fetched from Blossom with `fetchVerified`, checked against
+  the hash, and kept in `localStorage` (`nsite-clay.page-info`, by hash, so a page changed since is
+  the only one fetched again). A page whose `nc:owner` is not this one is listed as "not editable
+  here". Open goes to the page with `#edit`, as a normal page load; with unsaved work it first asks
+  Save and open, Open without saving, or Cancel.
+- **Links.** The text toolbar's link button and `⌘K` open a dialog listing the site's pages, the
+  headings on this page and the headings on the other pages, and taking a typed address: a page path,
+  `#id`, a web address (`https://` added when it is missing), an email address (`mailto:`) or a phone
+  number (`tel:`). Anything else is refused. A heading picked from this page that has no `id` gets one
+  from its words. An existing link opens with its address in the box and a Remove link button; a
+  button block's anchor keeps its element and loses only its `href`.
+- **Dead links, while editing.** Same-site links whose page is not in the table, directory links
+  without their trailing slash, and `#id` links to a place this page (or a cached sibling) does not
+  have carry `nc:dead="page" | "slash" | "anchor"` and a dashed outline. The attribute is stripped from
+  every save. The after-save panel uses the same rule: `/blog/` is answered by `/blog/index.html`,
+  `/blog` and `/about` (for `/about.html`) are not, because only some gateways resolve them.
+- **New page in this design.** A copy of this document's head, stylesheet, header, menu, footer,
+  block library, toolbar and settings (`nc:owner`, `nc:site`, `nc:relays`, `nc:servers`,
+  `nc:edit-gate`), with the block area (`[nc:blocks]`, else `<main>`) emptied to one titled block
+  from the library, its own `nc:path`, the new `<title>`, no copied description or canonical link,
+  relative URLs made root-relative, and `nc:cms` rules pruned to what still exists. The menu is
+  `[nc:nav]`, else a `<nav>` inside a `<header>`, else the first `<nav>` outside the block area; the
+  new item copies the shape of the last one and becomes `aria-current` on the new page. The new blob
+  is uploaded and this page is saved with `save({ extraPaths })`, so both, and this page's menu, go out
+  in one manifest and one version. The page opens once the gateway serves its hash. Only this page's
+  menu is updated; the other pages keep theirs.
+- **New page with AI.** The same shell, with its main content written by the model. The model is sent
+  this page's `<style>` text, its block templates, the other pages' titles and addresses, and the
+  description, and asked for the inside of `<main>` only; whatever else it writes is dropped, and the
+  result is sanitised and marked editable. The dialog shows the credit check and the cost estimate,
+  pictures are made under the same allowance as the builder and uploaded to the owner's Blossom
+  servers only when the page is published, and the preview can be refined. The last result is kept as
+  the `newpage` draft until it is published.
+
+```js
+nc.pages.open()                      // the Pages dialog
+await nc.pages.table({ fresh })      // the path table, as a save would build it
+nc.pages.list(table)                 // [{ path, href, hash, current }], HTML documents only
+await nc.pages.info(page)            // { t: title, h: [[id, text]], ids, o: owner } by hash
+await nc.pages.openPage({ path })    // go there with #edit, asking about unsaved work
+await nc.pages.pickLink({ href, remove })   // → { href } | { remove: true } | null
+nc.pages.reason(href)                // null | "page" | "slash" | "anchor"
+nc.pages.shell({ title, path, menu, content })   // the new document, as text
+await nc.pages.newPage({ ai })       // the dialog; publishes and opens the page
+```
 
 ## Upgrading a published page
 
