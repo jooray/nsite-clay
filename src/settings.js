@@ -18,10 +18,10 @@ const WORDS = {
     "Abrir los controles de edición en este navegador sin #edit",
     "Zobrazovať ovládanie úprav v tomto prehliadači aj bez #edit",
     "Zobrazovat ovládání úprav v tomto prohlížeči i bez #edit"],
-  rememberNote: ["This browser remembers that the owner signed in here. It keeps no key, and signing out forgets it.",
-    "Este navegador recuerda que el propietario inició sesión aquí. No guarda ninguna clave, y al cerrar sesión lo olvida.",
-    "Tento prehliadač si pamätá, že sa tu prihlásil vlastník. Žiadny kľúč neuchováva a odhlásenie to zruší.",
-    "Tento prohlížeč si pamatuje, že se tu přihlásil vlastník. Žádný klíč neuchovává a odhlášení to zruší."],
+  rememberNote: ["This browser remembers that the owner signed in here, and stays signed in until an hour passes without use, so the other pages open signed in. Unticking this or signing out forgets both.",
+    "Este navegador recuerda que el propietario inició sesión aquí y mantiene la sesión hasta que pase una hora sin usarla, así que las demás páginas se abren con la sesión iniciada. Al desmarcar esta casilla o al cerrar sesión se olvidan las dos cosas.",
+    "Tento prehliadač si pamätá, že sa tu prihlásil vlastník, a nechá ho prihláseného, kým neprejde hodina bez použitia, takže ďalšie stránky sa otvoria už prihlásené. Zrušením tejto voľby alebo odhlásením sa zabudne oboje.",
+    "Tento prohlížeč si pamatuje, že se tu přihlásil vlastník, a nechá ho přihlášeného, dokud neuplyne hodina bez použití, takže další stránky se otevřou už přihlášené. Zrušením této volby nebo odhlášením se zapomene obojí."],
 };
 
 export class Settings {

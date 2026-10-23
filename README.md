@@ -337,9 +337,10 @@ who has forgotten. `nc.settings.open()` turns the gate off if you would rather
 have the toolbar always there.
 
 Once you have signed in on your site in a browser, that browser remembers it and
-opens the toolbar on later visits without `#edit`. It keeps no key, so you still
-sign in each time, and signing out forgets it. Visitors who never signed in see
-nothing different.
+opens the toolbar on later visits without `#edit`. The sign-in itself lasts an
+hour after you last used it, so moving between the pages of your site does not ask
+again; after that, you sign in again. Signing out forgets both. Visitors who never
+signed in see nothing different.
 
 Autosave is off by default. Every save stores the whole page again and files a
 version, so saving on a timer publishes a dozen versions of one paragraph.
@@ -365,7 +366,9 @@ Ranked by how much you have to trust the page in front of you:
   shows a `nostrconnect://` QR and deep link, and every signature is approved on your phone.
   This is the right default for a document served from a gateway you do not control.
 - **Typing a key.** `nsec1…`, 64 hex characters, or a NIP-49 `ncryptsec1…` with its password.
-  The key stays in the tab's memory for the session and is written nowhere. It sits in a
+  The key stays in that tab: in memory, and for an hour in the tab's `sessionStorage` so the
+  other pages of the site open signed in. It never reaches `localStorage` and goes when the
+  tab closes. It sits in a
   password field deliberately: the snapshot algorithm never writes those values into markup, so
   a save cannot bake your key into the document it publishes.
 

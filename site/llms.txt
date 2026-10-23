@@ -524,8 +524,9 @@ Three ways in. Steer them to the second.
 2. **A remote signer over NIP-46**, Amber on Android, Clave on iPhone, or
    nsec.app. The key stays on their phone and every save is approved there. The right default for a page
    served by a gateway, and what you should suggest first.
-3. **Pasting a key into the page.** It works, stays in the tab, is written
-   nowhere, and is still the weakest option. Say so rather than defaulting to it.
+3. **Pasting a key into the page.** It works, stays in that one tab (kept there
+   for an hour, never in the browser's lasting storage), and is still the weakest
+   option. Say so rather than defaulting to it.
 
 The toolbar handles all three. You write no sign-in code. The sign-in QR is
 generated in the page, so the connection secret never leaves the browser.
@@ -553,6 +554,12 @@ After the owner has signed in once, their browser remembers it, and later visits
 to that site open the toolbar without `#edit`. Nobody else's browser changes.
 Signing out forgets it. `#edit` is still the way in on a new device, so it still
 goes in the handover note.
+
+The sign-in itself lasts an hour after they last used it, so moving between the
+pages of their site does not ask them to sign in again. Opening a page, saving or
+editing pushes the hour on. A remote signer or an extension carries over to every
+tab of that browser; a pasted key only within its own tab. You write nothing for
+this.
 
 Autosave is off, deliberately: every save stores the whole page again and files a
 version, so a timer publishes a dozen versions of one paragraph. Leaving with

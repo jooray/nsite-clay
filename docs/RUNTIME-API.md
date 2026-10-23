@@ -185,7 +185,8 @@ await nc.login("auto")             // "nip07" | "nip46" | "bunker" | "nsec"
 await nc.login("nsec", { key, password })     // nsec1…, 64 hex, or ncryptsec1… + password
 await nc.login("bunker", { uri })             // bunker://…
 const { uri, ready } = nc.connectRemote()     // nostrconnect:// for Amber; await ready
-await nc.logout()                  // also forgets this browser as the editor's
+await nc.logout()                  // also forgets this browser as the editor's, and the kept sign-in
+await nc.resuming                  // settles once a kept sign-in is back (pubkey) or not (null)
 
 nc.editRequested                   // is the edit gate open (always true without nc:edit-gate="hash")
 nc.editorRemembered                // has the owner signed in on this site in this browser
@@ -256,7 +257,7 @@ With `nc:edit-gate="hash"` the editing controls stay shut until the URL ends in 
 owner has signed in on a site in a browser, that browser keeps a note in `localStorage`
 (`nsite-clay.editor:<owner hex>:<nc:site>`, holding the owner's pubkey and a time, never a key),
 and later visits to any page of that site open the gate exactly as `#edit` would: the toolbar with
-its Sign in button. Nothing signs in by itself. A browser that never signed in as the owner reads
+its Sign in button. The note itself signs nobody in; that is the kept sign-in below. A browser that never signed in as the owner reads
 nothing and sees the page as before, and signing in with some other key is not remembered.
 
 The note goes when the owner signs out, or when they untick "Open the editing controls in this
@@ -266,6 +267,35 @@ controls away for the rest of that tab (`sessionStorage`), so whoever else uses 
 page as a reader does and is not offered the controls on every reload; `#edit` still opens them, and
 signing in again lifts it. Every storage access is guarded, so a browser that refuses storage behaves
 as one that never signed in.
+
+### The kept sign-in
+
+Signing in as the owner also lasts beyond the page: for an hour after it was last used, any page of
+the same site opens signed in, so the owner can move between pages without signing in on each one.
+The hour is `SESSION_TTL` in `src/index.js`, and it slides: opening a page signed in, saving, or
+editing (a key press, input or pointer press, at most every 30 seconds) pushes it on by another
+hour. After an hour without any of that, the next page shows the Sign in button.
+
+It is kept as `nsite-clay.session:<owner hex>:<nc:site>`, and what it holds depends on how the owner
+signed in:
+
+- **Extension (NIP-07):** the method and the pubkey, in `localStorage`. The next page asks the
+  extension for its pubkey again. An extension that remembers the site answers silently; one that
+  asks, or answers with another account, leaves the page signed out.
+- **Remote signer (NIP-46, `bunker://` or the QR):** the client key the signer paired with, the
+  signer's pubkey and its relays, in `localStorage`, so every tab of the browser gets it. The next
+  page sends `get_public_key` from that client key, with no new `connect` and so nothing new to
+  approve; only replies from the stored signer are read. The one-time secret is not kept.
+- **A typed key (nsec, hex, ncryptsec) or one made in the page:** the key itself, so only in that
+  tab's `sessionStorage`. It goes when the tab closes, a second tab does not get it, and it is never
+  written to `localStorage`, where it would outlive the tab on disk.
+
+A page resumes only a record naming its own owner, and only if the signer answers as the owner; a
+signer that says no, or answers as anyone else, has the record dropped. One that does not answer
+within ten seconds leaves the page signed out and the record kept for the next page. Nothing is
+resumed for a browser that never signed in as the owner, and somebody else signing in ends the
+owner's kept sign-in. Signing out, unticking the Settings line above, and the hour running out all
+drop it.
 
 ## Upgrading a published page
 
