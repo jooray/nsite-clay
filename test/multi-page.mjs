@@ -321,7 +321,7 @@ try {
     relays: document.documentElement.getAttribute("nc:relays"),
     brand: document.querySelector("header .brand")?.textContent,
     nav: [...document.querySelectorAll("header nav a")].map((a) => [a.getAttribute("href"), a.textContent, a.getAttribute("aria-current")]),
-    blocks: [...document.querySelector("main[nc\\:blocks]").children].map((el) => el.outerHTML),
+    blocks: [...document.querySelector("main[nc\\:blocks]").children].filter((el) => !el.hasAttribute("nc:chrome")).map((el) => el.outerHTML),
     library: document.querySelectorAll("template[nc\\:block]").length,
     rules: JSON.parse(document.querySelector("script[nc\\:cms]")?.textContent || "{}"),
     logo: document.querySelector("header img").getAttribute("src"),
