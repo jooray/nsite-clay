@@ -207,7 +207,12 @@ class NsiteClay extends EventTarget {
   // keeps its dead links to itself: they were dead before it ran, they will be
   // reported the next time the person saves, and a panel about them in answer to
   // a button that said Update is a report about the wrong thing.
-  async save({ extraPaths = {}, dropPaths = [], snapshotVersion = true, report = true } = {}) {
+  //
+  // `expect` names paths whose current hash the caller has based its
+  // `extraPaths` on. An upgrade rewrites the site's other pages from what it
+  // read of them a moment ago; if one has been saved since, from another tab,
+  // publishing the rewrite would throw that save away, so nothing is published.
+  async save({ extraPaths = {}, dropPaths = [], expect = {}, snapshotVersion = true, report = true } = {}) {
     if (!this.signer) throw new Error("Not signed in");
     if (!this.isOwner) throw new Error("Only the site owner can save this document");
     this.undo.flush();
@@ -226,7 +231,14 @@ class NsiteClay extends EventTarget {
     if (!tableOnly && hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
     this._set("saving");
     try {
-      const paths = { ...(await this._currentPaths()), ...extraPaths };
+      const live = await this._currentPaths();
+      const changed = Object.keys(expect).filter((p) => live[p] !== expect[p]);
+      if (changed.length) {
+        throw new Error(
+          `${changed.join(", ")} changed while this was running, so nothing was published. ` +
+          `Try again: it will start from what is there now.`);
+      }
+      const paths = { ...live, ...extraPaths };
       // Paths the caller is retiring. An upgraded runtime would otherwise leave
       // its predecessor named in the table for the life of the site. Nothing is
       // destroyed by this: every kind-5128 snapshot still names the old hash and
