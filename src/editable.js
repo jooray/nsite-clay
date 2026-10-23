@@ -50,7 +50,7 @@ const BLOCKISH = "p, div, h1, h2, h3, h4, h5, h6, ul, ol, li, blockquote, pre, "
 
 // The rule the sanitiser uses, so a typed link cannot go anywhere pasted markup
 // could not.
-const SAFE_URL = /^(https?:|mailto:|#|\/)/i;
+const SAFE_URL = /^(https?:|mailto:|tel:|#|\/)/i;
 
 // A single line takes the words and drops the shape, whitespace included: a
 // pasted paragraph should not arrive carrying the source document's line breaks.
@@ -168,7 +168,8 @@ export class Editable {
     if (k === "b") return run(() => this.exec("bold"));
     if (k === "i") return run(() => this.exec("italic"));
     if (k === "u") return run(() => this.exec("underline"));
-    if (k === "k") return run(() => this.link());
+    // Not through run(): the dialog decides whether anything changed.
+    if (k === "k") { e.preventDefault(); this.link(); return; }
     if (e.shiftKey && k === "7") return run(() => this.list("insertOrderedList"));
     if (e.shiftKey && k === "8") return run(() => this.list("insertUnorderedList"));
     if (e.shiftKey && k === "9") return run(() => this.block("BLOCKQUOTE"));
@@ -271,28 +272,67 @@ export class Editable {
     // by splitting the host, which is the other way a page grows a second empty
     // button. Edit the anchor that is already there instead, which is also the
     // only way to change where a button points.
-    const own = this.activeHost()?.closest("a");
-    if (own) return this.retarget(own);
+    const host = this.activeHost();
+    if (!host) return;
+    const own = host.closest("a");
+    if (own) return this.retarget(own, { button: true });
 
     const sel = this.doc.getSelection();
-    if (!sel || sel.isCollapsed) return;
-    const existing = this.state().link;
-    if (existing) return this.exec("unlink");
-    const url = this.doc.defaultView.prompt("Link to:", "https://");
-    if (!url) return;
-    if (!SAFE_URL.test(url)) return;
-    this.exec("createLink", url);
+    if (!sel || !sel.rangeCount) return;
+    // A caret or a selection inside a link edits that link, with where it goes
+    // already in the box, rather than taking it away unasked.
+    const existing = this.linkAt(sel.anchorNode, host);
+    if (existing) return this.retarget(existing);
+    if (sel.isCollapsed) return;
+    // The dialog takes the focus and with it the selection, so the words being
+    // linked are remembered and selected again when it closes.
+    const range = sel.getRangeAt(0).cloneRange();
+    return this.ask({ href: "" }).then((out) => {
+      if (!out?.href || !host?.isConnected) return;
+      host.focus({ preventScroll: true });
+      const again = this.doc.getSelection();
+      again.removeAllRanges(); again.addRange(range);
+      this.exec("createLink", out.href);
+      this.normalise(host);
+      this.nc.dirty = true;
+      this.syncBar();
+    });
   }
 
-  // Point an existing anchor somewhere else, or clear it. Emptying the box
-  // removes the href rather than the element: the element is the button.
-  retarget(a) {
-    const url = this.doc.defaultView.prompt("Link to:", a.getAttribute("href") || "https://");
-    if (url === null) return;
-    if (!url.trim()) { a.removeAttribute("href"); this.nc.dirty = true; return; }
-    if (!SAFE_URL.test(url.trim())) return;
-    a.setAttribute("href", url.trim());
-    this.nc.dirty = true;
+  linkAt(node, host) {
+    let el = node && (node.nodeType === 1 ? node : node.parentElement);
+    while (el && el !== host && el !== this.doc.body) {
+      if (el.tagName === "A") return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  // Where a link should go. The runtime's link dialog lists the site's pages
+  // and the places on them; without it, the browser's own prompt.
+  ask({ href = "", remove = false } = {}) {
+    if (this.nc.pages?.pickLink) return this.nc.pages.pickLink({ href, remove });
+    const url = this.doc.defaultView.prompt("Link to:", href || "https://");
+    if (url === null) return Promise.resolve(null);
+    if (!url.trim()) return Promise.resolve(remove ? { remove: true } : null);
+    return Promise.resolve(SAFE_URL.test(url.trim()) ? { href: url.trim() } : null);
+  }
+
+  // Point an existing anchor somewhere else, or take the link away. On a button
+  // block the anchor is the button, so taking the link away removes the href
+  // and keeps the element; in running text it unwraps the words.
+  retarget(a, { button = false } = {}) {
+    return this.ask({ href: a.getAttribute("href") || "", remove: true }).then((out) => {
+      if (!out || !a.isConnected) return;
+      this.nc.undo.commit("Link", () => {
+        if (out.remove) {
+          if (button || a.hasAttribute("editable")) a.removeAttribute("href");
+          else a.replaceWith(...a.childNodes);
+        } else a.setAttribute("href", out.href);
+      });
+      this.nc.dirty = true;
+      this.syncBar();
+    });
   }
 
   // execCommand output varies by engine. Strip the debris it leaves behind so
@@ -410,7 +450,7 @@ export class Editable {
 
     const linkBtn = mk("button", btnCss, { type: "button", title: "Link (⌘K)", textContent: "🔗" });
     linkBtn.onmousedown = (e) => e.preventDefault();
-    linkBtn.onclick = () => { this.link(); this.nc.dirty = true; this.syncBar(); };
+    linkBtn.onclick = () => { this.link(); };
     bar.appendChild(linkBtn);
 
     sep();

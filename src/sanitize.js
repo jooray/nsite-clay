@@ -13,7 +13,7 @@ const SANITIZE = {
   ],
   ALLOWED_ATTR: ["href", "title", "alt", "src", "colspan", "rowspan", "class", "lang", "dir",
                  "datetime", "loading", "rel", "width", "height"],
-  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#|\/)/i,
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#|\/)/i,
   FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "link", "meta", "base", "svg", "math"],
   FORBID_ATTR: ["style", "srcset", "formaction", "ping", "target"],
   ALLOW_DATA_ATTR: false,

@@ -31,6 +31,21 @@ const cssText = (css) => css
  * tags, rather than hidden CSS requests or imports. */
 const reachesOut = (css) => /@import|url\s*\(|expression\s*\(/i.test(cssText(css));
 
+/**
+ * Mark what carries words as editable, so the owner can change it in place.
+ *
+ * Document order, so an outer mark is already in place when its children are
+ * tested: editable inside editable would arm the same words twice.
+ */
+export function markWords(root) {
+  const ONE_LINE = /^(H[1-6]|TD|TH|DT|CAPTION)$/;
+  for (const el of root.querySelectorAll("h1,h2,h3,h4,h5,h6,p,figcaption,li,td,th,dt,dd,caption")) {
+    if (!el.textContent.trim() || el.parentElement?.closest("[editable]")) continue;
+    if (!el.hasAttribute("editable")) el.setAttribute("editable", ONE_LINE.test(el.tagName) ? "single-line" : "");
+  }
+  return root;
+}
+
 export function preparePage(html, { owner, path = "/index.html", lang = "en", relays = [], servers = [], previous = "", keep = false } = {}) {
   // nc:keep marks where a live part of the page, such as a feed, goes back after
   // a rewrite. It is honoured only when the caller put such places there.
@@ -105,13 +120,7 @@ export function preparePage(html, { owner, path = "/index.html", lang = "en", re
   // whatever ends up editable also keeps the two in step, since the model marks
   // some of this itself and used to end up editable on the page but missing from
   // the form.
-  const ONE_LINE = /^(H[1-6]|TD|TH|DT|CAPTION)$/;
-  for (const el of doc.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,figcaption,li,td,th,dt,dd,caption")) {
-    // Document order, so an outer mark is already in place when its children are
-    // tested. Editable inside editable would arm the same words twice.
-    if (!el.textContent.trim() || el.parentElement?.closest("[editable]")) continue;
-    if (!el.hasAttribute("editable")) el.setAttribute("editable", ONE_LINE.test(el.tagName) ? "single-line" : "");
-  }
+  markWords(doc.body);
   const fields = {};
   let index = 0;
   for (const el of doc.body.querySelectorAll("[editable]")) {
@@ -300,6 +309,70 @@ export async function refinePage(ai, page, instruction, { lang = "en", signal, o
   const doc = new DOMParser().parseFromString(out, "text/html");
   for (const el of doc.querySelectorAll("[nc\\:redraw]")) el.removeAttribute("nc:redraw");
   return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
+}
+
+// A new page of a site that already exists. The design is the site's and is not
+// the model's to choose: what comes back goes into a copy of the current page's
+// own head, header, menu, footer and block library, which the model never sees
+// whole and so never gets the chance to restyle or drop.
+const CONTENT_RULES = `Return only the HTML that goes inside the page's <main>: a sequence of <section> elements, with no <html>, <head>, <body>, <main>, <header>, <nav>, <footer> or <style>, and no Markdown fences or explanation. The site's header, menu, footer and stylesheet are put around your answer afterwards exactly as they are, so do not write them and do not restyle anything. Use the class names the stylesheet defines and follow the structure of the block shapes shown, so the new page looks like the rest of the site. Open with one <h1> holding the page's title. Mark headings editable="single-line", prose editable, and do the same for list items and table cells that hold real content. Use static markup only: no scripts, forms, buttons, inline styles or event handlers. Use actual supplied content; do not invent businesses, prices or contact details. Where a photograph belongs, write an <img> with a description of the wanted picture in alt, an nc:crop giving the shape that suits the layout ("16:9", "4:3" or "1:1"), and no src. Do not invent image URLs and do not use placeholder image services. Link to the site's other pages by the addresses listed, with the slash at the end of a directory address.`;
+const KEEP_SOURCES = ` An <img> that already has a src is a picture the page has: keep that src and that id exactly as they are. Change only what the user asks for and keep the rest as it is.`;
+
+/**
+ * The content of a new page in an existing site's design: the inside of its
+ * <main>, sanitised and marked editable, ready to drop into the page's shell.
+ *
+ * `previous` and `instruction` refine content this returned before, the way a
+ * preview is refined everywhere else.
+ */
+export async function buildContent(ai, { title = "", description = "", href = "", css = "", blocks = "", pages = [],
+  lang = "en", pictures = 0, previous = "", instruction = "", signal, onProgress } = {}) {
+  if (!description.trim() && !instruction.trim()) throw new Error("Describe the page you want to build.");
+  if (description.length > 20000 || instruction.length > 20000) throw new Error("Use a shorter description.");
+  const user = [
+    `Title of the new page: ${title}`,
+    href ? `Its address: ${href}` : "",
+    description.trim() ? `What the page is for:\n${description.trim()}` : "",
+    pages.length ? `The site's other pages:\n${pages.map((p) => `- ${p.title} (${p.href})`).join("\n")}` : "",
+    `The site's stylesheet:\n${css.slice(0, 60000)}`,
+    blocks ? `Block shapes the site uses:\n${blocks.slice(0, 20000)}` : "",
+    previous ? `The content as it is now:\n${previous}\n\nChange to make:\n${instruction}` : "",
+  ].filter(Boolean).join("\n\n");
+  const reply = await ai.client.complete([
+    { role: "system", content: `Write the content of one new page for an existing static website made with nsite-clay. ${CONTENT_RULES}${previous ? KEEP_SOURCES : ""}${pictureRule(pictures)} Language: ${lang}. ${AI_WRITING}` },
+    { role: "user", content: user },
+  ], { signal, onProgress, maxTokens: room(previous.length + 4000) }).catch((e) => {
+    if (ranOut(e)) throw new Error(`${e.message} Ask for a shorter page, or one with fewer sections.`);
+    throw e;
+  });
+  return cleanContent(reply);
+}
+
+/**
+ * What a model wrote for the inside of <main>, made safe to publish.
+ *
+ * Models do not always do as they are told, so a whole document is accepted
+ * and cut down to its <main>, and a header, menu or footer it wrote anyway is
+ * dropped: the page already has its own.
+ */
+export function cleanContent(reply) {
+  const parsed = new DOMParser().parseFromString(unfence(reply), "text/html");
+  const root = parsed.querySelector("main") || parsed.body;
+  for (const el of [...root.children]) if (el.matches("header, nav, footer, style, script, link, meta, title")) el.remove();
+  const clean = DOMPurify.sanitize(root.innerHTML, { ADD_ATTR: MARKERS,
+    FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "base", "form", "input", "button", "textarea", "select", "link", "meta", "template"],
+    FORBID_ATTR: ["style", "srcdoc", "srcset", "ping", "formaction"], ALLOW_DATA_ATTR: false });
+  const box = new DOMParser().parseFromString(`<!DOCTYPE html><html><body>${clean}</body></html>`, "text/html").body;
+  for (const el of box.querySelectorAll("*")) {
+    for (const a of [...el.attributes]) {
+      if ((a.name.startsWith("nc:") && !MARKERS.includes(a.name)) || /^on/i.test(a.name)) el.removeAttribute(a.name);
+    }
+  }
+  markWords(box);
+  if (!box.textContent.trim() && !box.querySelector("img")) {
+    throw new Error("The model returned nothing to put on the page. Try a longer description.");
+  }
+  return box.innerHTML.trim();
 }
 
 /**

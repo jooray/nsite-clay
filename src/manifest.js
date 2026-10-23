@@ -48,3 +48,17 @@ export function manifestPaths(event) {
 export function manifestServers(event) {
   return event.tags.filter((t) => t[0] === "server" && t[1]).map((t) => t[1]);
 }
+
+// Whether a link to `path` reaches something in a table that holds `have`.
+//
+// A directory link with its trailing slash, `/blog/`, is answered by
+// `/blog/index.html`, the way any web server answers it. Without the slash it
+// depends on the gateway: nsite.lol serves the directory's index, nsite.run
+// serves the site's home page instead, and the local devnet serves nothing. So
+// `/blog` counts as missing even when `/blog/index.html` exists, and so does
+// `/about` next to `/about.html`, which no gateway resolves. The editor offers
+// the slash where it would help (see pages.js).
+export function pathKnown(have, path) {
+  if (have.has(path)) return true;
+  return path.endsWith("/") && have.has(path + "index.html");
+}
