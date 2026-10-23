@@ -289,6 +289,25 @@ An upgrade replaces the engine, the toolbar script and the stylesheet. It does n
 document — the template's own CSS, its `<template nc:block>` library and its toolbar buttons are the
 author's page. Version history keeps the old path table either way, so a restore undoes it.
 
+A site is one manifest, and its pages usually load the same content-stamped files, so an upgrade
+taken on any page moves every page of the site in the same publish. This page is saved from the live
+document, as any save is. Every other `.html` path in the manifest is read from Blossom by its hash,
+and in a page that runs nsite-clay for the same owner, site and `nc:runtime-owner`, the values of the
+`src`, `href` and `nc:source` attributes that name a moved file are replaced and nothing else: the
+document is not reserialised, and the same path written as prose, in a comment, in a code sample or
+in a script body stays as it was. A page that names the plain `/nsite-clay.js` is moved by the
+manifest pointing that name at the new blob, and its bytes do not change. Then one manifest carries
+all of it. The offer says how many pages the site has.
+
+An old stamped name leaves the manifest only when every page was read and none of them loads it any
+more. A page that cannot be fetched, is not valid UTF-8, belongs to another owner or runtime key, or
+does not read back with exactly the references expected is left as it was, keeps every file it
+loads, and is named once the update is done. At most 200 other pages are read; past that the rest
+are left alone and nothing is retired. If one of the pages is saved from another tab while the
+upgrade runs, nothing is published and the update can simply be taken again. Each page the upgrade
+moved is remembered in this browser, so a copy of any of them that a gateway still serves from
+before the update says so rather than offering it a second time.
+
 ## Editing markup
 
 ```html

@@ -19,9 +19,17 @@
 // <template nc:block> library and its toolbar buttons are the author's page, not
 // the runtime's, and an upgrade that edited somebody's markup would be a
 // different and much worse promise. The engine changes; the page stays put.
+//
+// A site is usually more than one page, all of them named in the one manifest
+// and all pointing at the same stamped engine. So an upgrade taken on any page
+// moves every page of the site: it reads each sibling document the manifest
+// names, changes the attribute values that name a moved file and not one other
+// byte, and publishes all of them in the same manifest. An old name is retired
+// only once no page loads it any more.
 import { verifyEvent } from "nostr-tools";
 import { manifestPaths, manifestServers } from "./manifest.js";
-import { fetchVerified, uploadAll } from "./blossom.js";
+import { readConfig } from "./config.js";
+import { fetchVerified, has, hashBytes, signUploads, uploadAll } from "./blossom.js";
 import { modal, toast } from "./ui.js";
 
 // The shared files every template names from the site root. The last is not a
@@ -53,6 +61,75 @@ const STAMPED = /^(.*?)((?:-[0-9a-f]{8})*)(\.[a-z]+)$/;
 // there is no way for them to tell that anything worked.
 const APPLIED = "nsite-clay.upgraded";
 
+// A site's documents, as the manifest names them. Anything else in the table is
+// a picture, a font or a file somebody linked, and an upgrade has no business
+// with it.
+const PAGE = /\.html?$/i;
+
+// How many other pages one upgrade will read. Each is a Blossom fetch and, when
+// it changes, an upload a phone signer has to approve, so a site past this is
+// better redeployed with the CLI. The pages past it are left exactly as they
+// are, and so is every file they may load.
+export const MAX_PAGES = 200;
+
+// The attributes a reference to a shared file sits in, and so the only places
+// a sibling's bytes are ever changed.
+const REF_ATTRS = ["src", "href", "nc:source"];
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Elements whose content is text rather than markup. A tag written inside a
+// script or a textarea is not a tag, so only the opening tag is looked at.
+const RAW_TEXT = "script|style|textarea|title|xmp|iframe|noembed|noframes";
+const TAG = `<[a-zA-Z](?:"[^"]*"|'[^']*'|[^'">])*>`;
+const TOKENS = new RegExp(
+  `<!--[\\s\\S]*?(?:-->|$)|<(${RAW_TEXT})\\b(?:"[^"]*"|'[^']*'|[^'">])*>[\\s\\S]*?(?:<\\/\\1\\s*>|$)|${TAG}`, "gi");
+const OPENING = new RegExp("^" + TAG);
+
+/**
+ * Repoint references to moved files, and change nothing else.
+ *
+ * `moves` maps an exact old path to its new one. What is replaced is the value
+ * of a src, href or nc:source attribute, inside a real tag, that is exactly an
+ * old path, with any query or fragment after it kept as it was. Prose,
+ * comments, code samples and script bodies naming the same file are text, not
+ * references, and come back byte for byte. Nothing is reserialised: the page
+ * goes out with its owner's own whitespace, quoting and entities.
+ */
+export function retarget(html, moves) {
+  if (!moves.size) return html;
+  const names = REF_ATTRS.map(escapeRe).join("|");
+  const froms = [...moves.keys()].sort((a, b) => b.length - a.length).map(escapeRe).join("|");
+  const ATTR = new RegExp(
+    `(\\s(?:${names})\\s*=\\s*)(?:"(${froms})([?#][^"]*)?"|'(${froms})([?#][^']*)?'|(${froms})([?#][^\\s"'=<>\`]*)?(?=[\\s>]|$))`,
+    "gi");
+  const inTag = (tag) => tag.replace(ATTR, (m, lead, dq, dqRest, sq, sqRest, bare, bareRest) => {
+    const from = dq ?? sq ?? bare;
+    // Case-blind so that SRC= is found; the path itself has to match exactly.
+    if (!moves.has(from)) return m;
+    const to = moves.get(from);
+    if (dq !== undefined) return `${lead}"${to}${dqRest || ""}"`;
+    if (sq !== undefined) return `${lead}'${to}${sqRest || ""}'`;
+    return `${lead}${to}${bareRest || ""}`;
+  });
+  return html.replace(TOKENS, (token, raw) => {
+    if (token.startsWith("<!--")) return token;
+    if (!raw) return inTag(token);
+    const open = OPENING.exec(token)?.[0] || "";
+    return inTag(open) + token.slice(open.length);
+  });
+}
+
+// A few at a time: enough that a ten-page site does not read its pages one
+// after another, few enough that a big one does not open fifty connections to
+// somebody's Blossom server at once.
+async function eachLimited(items, n, fn) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (next < items.length) { const i = next++; await fn(items[i], i); }
+  }));
+}
+
 // "a and b", "a, b and c". Two file names read as a sentence, not as a list.
 function andList(items) {
   if (items.length < 2) return items[0] || "";
@@ -79,10 +156,13 @@ export class Upgrade {
   // ---- reading the document -----------------------------------------------
 
   // Every reference this page makes to one of the shared files, with the
-  // canonical name its stamp was made from.
-  refs() {
+  // canonical name its stamp was made from. Also asked of a sibling page read
+  // out of the manifest, and there a missing nc:source means nothing at all: a
+  // page that never named the serialiser is not pointed at one by an upgrade
+  // taken somewhere else.
+  refs(doc = this.doc, { assumeSource = true } = {}) {
     const out = [];
-    for (const el of this.doc.querySelectorAll("script[src], link[href]")) {
+    for (const el of doc.querySelectorAll("script[src], link[href]")) {
       const attr = el.tagName === "SCRIPT" ? "src" : "href";
       const url = el.getAttribute(attr) || "";
       if (!url.startsWith("/") || url.startsWith("//")) continue;
@@ -95,12 +175,19 @@ export class Upgrade {
     // path is what lets this upgrade install it and point the page at it, rather
     // than leaving that page on full serialisation for ever.
     for (const kind of SHARED.filter((s) => s.attribute)) {
-      const declared = this.doc.documentElement.getAttribute(kind.attribute) || "";
-      const path = declared.startsWith("/") && !declared.startsWith("//")
-        ? declared.split(/[?#]/)[0] : kind.canonical;
-      out.push({ el: this.doc.documentElement, attr: kind.attribute, path, ...kind });
+      const declared = doc.documentElement.getAttribute(kind.attribute) || "";
+      const named = declared.startsWith("/") && !declared.startsWith("//");
+      if (!named && !assumeSource) continue;
+      const path = named ? declared.split(/[?#]/)[0] : kind.canonical;
+      out.push({ el: doc.documentElement, attr: kind.attribute, path, ...kind });
     }
     return out;
+  }
+
+  // The other documents of this site, by path. This page is not among them: it
+  // is saved from the live DOM, unsaved edits and all.
+  _siblings(table) {
+    return Object.keys(table).filter((p) => PAGE.test(p) && p !== this.nc.cfg.path).sort();
   }
 
   // ---- reading the other key's site ---------------------------------------
@@ -132,6 +219,10 @@ export class Upgrade {
     }
 
     const mine = await this.nc._currentPaths();
+    // Everything the runtime key publishes, whether or not this page names it:
+    // a sibling can be behind on a file this page already has.
+    const want = {};
+    for (const s of SHARED) if (src.paths[s.canonical]) want[s.canonical] = src.paths[s.canonical];
     const files = [];
     for (const ref of this.refs()) {
       const want = src.paths[ref.canonical];
@@ -147,6 +238,11 @@ export class Upgrade {
       released: notes?.released || null,
       notes: Array.isArray(notes?.notes) ? notes.notes : [],
       files,
+      want,
+      // Counted from the table, so the offer can say what it will touch without
+      // reading every page first. A page that does not run nsite-clay is in the
+      // count and is left alone.
+      pages: 1 + this._siblings(mine).length,
       servers: src.servers,
       // True when every file this plan would install is one this browser has
       // already installed on this site. Then the site is current and the
@@ -158,9 +254,9 @@ export class Upgrade {
 
   // ---- what this browser has already done ----------------------------------
 
-  _key() {
+  _key(path = this.nc.cfg.path) {
     const c = this.nc.cfg;
-    return `${APPLIED}:${c.owner || ""}:${c.site || ""}:${c.path || ""}`;
+    return `${APPLIED}:${c.owner || ""}:${c.site || ""}:${path || ""}`;
   }
 
   // Kept for a day. Past that, a plan naming the same hashes is more likely to
@@ -173,11 +269,18 @@ export class Upgrade {
     return rec;
   }
 
-  _remember(plan) {
-    const hashes = {};
+  // Written for every page the upgrade moved, not only this one: a sibling
+  // opened a minute later can come out of a gateway's cache just the same, and
+  // should say so rather than offer the update a second time. All pages of a
+  // site share one origin, so they share this storage.
+  _remember(plan, paths = [this.nc.cfg.path]) {
+    const hashes = { ...(plan.want || {}) };
     for (const f of plan.files) hashes[f.canonical] = f.hash;
-    try { localStorage.setItem(this._key(), JSON.stringify({ at: Date.now(), version: plan.version, hashes })); }
-    catch { /* nothing is lost but the reminder */ }
+    const rec = JSON.stringify({ at: Date.now(), version: plan.version, hashes });
+    for (const path of paths) {
+      try { localStorage.setItem(this._key(path), rec); }
+      catch { /* nothing is lost but the reminder */ }
+    }
   }
 
   _forget() {
@@ -191,41 +294,193 @@ export class Upgrade {
 
   // ---- doing it ------------------------------------------------------------
 
-  // Fetch, store on the owner's own Blossom servers, repoint the document, and
-  // publish one manifest carrying all of it. After this the site is still served
-  // entirely from where its owner put it; nothing of ours is in the path.
+  // One sibling document, read from Blossom by the hash the manifest names.
+  //
+  // `state` is what the upgrade may do with it: "ours" is an nsite-clay page of
+  // this owner's site on this runtime key and is moved with this one; "none"
+  // loads none of the shared files and is left alone; "foreign" runs nsite-clay
+  // for somebody else, or from another runtime key, or with upgrades off, and is
+  // not ours to rewrite; "unread" could not be fetched or decoded, so nothing is
+  // known about what it loads.
+  async _readPage(path, hash, servers) {
+    const page = { path, hash, state: "unread", refs: [], moves: new Map() };
+    let bytes;
+    try { bytes = await fetchVerified(servers, hash, { as: "bytes" }); } catch { return page; }
+    // Fatal, and keeping a byte order mark: a page is only rewritten when its
+    // text turns back into exactly the bytes it came from.
+    try { page.text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes); }
+    catch { return page; }
+    const doc = new DOMParser().parseFromString(page.text, "text/html");
+    page.refs = this.refs(doc, { assumeSource: false });
+    if (!page.refs.length) { page.state = "none"; return page; }
+    const theirs = readConfig(doc), ours = this.nc.cfg;
+    page.state = theirs.owner === ours.owner && theirs.site === ours.site &&
+      !!theirs.runtimeOwner && theirs.runtimeOwner === ours.runtimeOwner ? "ours" : "foreign";
+    return page;
+  }
+
+  // Fetch, store on the owner's own Blossom servers, repoint every page of the
+  // site, and publish one manifest carrying all of it. After this the site is
+  // still served entirely from where its owner put it; nothing of ours is in
+  // the path.
+  //
+  // This page is saved from the live document, as any save is. Every other page
+  // is read from Blossom, has the attribute values that name a moved file
+  // changed and nothing else, and goes into the same manifest. A page that
+  // cannot be read or rewritten is left as it was, and then no old file is
+  // retired, because nothing says that page does not still load it.
   async apply(plan, onProgress = () => {}) {
     if (!this.nc.isOwner) throw new Error("Only the site owner can change this page");
-    const extraPaths = {};
-    const dropPaths = [];
-    let done = 0;
+    const cfg = this.nc.cfg;
+    const want = plan.want || Object.fromEntries(plan.files.map((f) => [f.canonical, f.hash]));
+    const table = await this.nc._currentPaths();
+    const siteServers = [...new Set([...cfg.servers,
+      ...(this.nc._manifest ? manifestServers(this.nc._manifest) : [])])];
 
-    for (const f of plan.files) {
-      onProgress({ path: f.canonical, done, total: plan.files.length });
-      const bytes = await fetchVerified(plan.servers, f.hash, { as: "bytes" });
-      await uploadAll(this.nc.cfg.servers, bytes, {
-        signer: this.nc.signer, type: f.type, check: true,
-      });
-      // A page that links the plain name keeps the plain name -- the blob behind
-      // it simply changes. Only a stamped reference has to move, because its
-      // whole purpose is to be a URL a cache has never seen.
-      const to = f.path === f.canonical ? f.path : stamp(f.canonical, f.hash);
-      extraPaths[to] = f.hash;
-      if (to !== f.path) {
-        f.el.setAttribute(f.attr, to);
-        dropPaths.push(f.path);
+    // Where one reference goes, or null when it already loads the newer bytes.
+    // A page that links the plain name keeps the plain name -- the blob behind
+    // it simply changes. Only a stamped reference has to move, because its
+    // whole purpose is to be a URL a cache has never seen.
+    const target = (ref) => {
+      const hash = want[ref.canonical];
+      if (!hash || table[ref.path] === hash) return null;
+      return { hash, to: ref.path === ref.canonical ? ref.path : stamp(ref.canonical, hash) };
+    };
+
+    // ---- read the other pages
+    const others = this._siblings(table);
+    const reading = others.slice(0, MAX_PAGES);
+    const pages = others.slice(MAX_PAGES).map((path) => ({ path, hash: table[path], state: "unread", refs: [], moves: new Map() }));
+    let read = 0;
+    await eachLimited(reading, 4, async (path) => {
+      onProgress({ stage: "read", path, done: read, total: reading.length });
+      pages.push(await this._readPage(path, table[path], siteServers));
+      read++;
+    });
+    pages.sort((a, b) => (a.path < b.path ? -1 : 1));
+
+    // ---- work out every move, on this page and on the others
+    const files = new Map();          // canonical -> hash being installed
+    const extraPaths = {};
+    const retire = new Set();         // old names something moved off
+    const own = [];
+    const note = (ref, m) => {
+      files.set(ref.canonical, m.hash);
+      extraPaths[m.to] = m.hash;
+      if (m.to !== ref.path) retire.add(ref.path);
+    };
+    for (const ref of this.refs()) {
+      const m = target(ref);
+      if (!m) continue;
+      note(ref, m);
+      if (m.to !== ref.path) own.push({ ref, to: m.to, was: ref.el.getAttribute(ref.attr) });
+    }
+    for (const page of pages) {
+      if (page.state !== "ours") continue;
+      for (const ref of page.refs) {
+        const m = target(ref);
+        if (!m) continue;
+        note(ref, m);
+        page.touched = true;
+        if (m.to !== ref.path) page.moves.set(ref.path, m.to);
       }
+      // Only plain names: the table change is the whole of it.
+      if (page.touched && !page.moves.size) page.state = "moved";
+    }
+
+    // ---- the shared files themselves
+    let done = 0;
+    for (const [canonical, hash] of files) {
+      onProgress({ stage: "file", path: canonical, done, total: files.size });
+      const bytes = await fetchVerified(plan.servers, hash, { as: "bytes" });
+      await uploadAll(cfg.servers, bytes, {
+        signer: this.nc.signer, type: SHARED.find((s) => s.canonical === canonical).type, check: true,
+      });
       done++;
     }
 
-    onProgress({ path: "the manifest", done, total: plan.files.length });
-    // report: false, because this save is not one the person made about their
-    // own writing. A page with a link to a page they have not written yet would
-    // otherwise answer "Update" with a panel about broken links, which is true,
-    // unrelated, and not what they pressed.
-    const out = await this.nc.save({ extraPaths, dropPaths, report: false });
-    this._remember(plan);
-    return { ...out, files: plan.files.length };
+    // ---- the other pages, rewritten
+    const enc = new TextEncoder();
+    const rewritten = [];
+    for (const page of pages) {
+      if (page.state !== "ours" || !page.moves.size) continue;
+      const text = retarget(page.text, page.moves);
+      // Read back what came out. Every reference has to be where it was sent and
+      // nothing else may have moved; a page this cannot be sure of keeps its
+      // own bytes, and the files it loads stay with it.
+      const back = this.refs(new DOMParser().parseFromString(text, "text/html"), { assumeSource: false });
+      const expected = page.refs.map((r) => page.moves.get(r.path) || r.path);
+      if (back.length !== expected.length || back.some((r, i) => r.path !== expected[i])) {
+        page.state = "unwritten";
+        continue;
+      }
+      page.bytes = enc.encode(text);
+      page.next = hashBytes(page.bytes);
+      rewritten.push(page);
+    }
+    const expect = {};
+    if (rewritten.length) {
+      // Asked first and signed in one burst, as a publish does, so a phone signer
+      // approves exactly the uploads that happen and all of them at once.
+      const present = await Promise.all(rewritten.map((p) =>
+        Promise.all(cfg.servers.map((s) => has(s, p.next, p.bytes.length)))));
+      const needed = rewritten.filter((_, i) => present[i].some((x) => !x)).map((p) => p.next);
+      const signed = needed.length ? await signUploads(this.nc.signer, needed) : new Map();
+      done = 0;
+      for (const [i, page] of rewritten.entries()) {
+        onProgress({ stage: "page", path: page.path, done, total: rewritten.length });
+        try {
+          await uploadAll(cfg.servers, page.bytes, {
+            signer: this.nc.signer, type: "text/html", known: present[i], signed: signed.get(page.next),
+          });
+          extraPaths[page.path] = page.next;
+          // Published only if that page is still what was read, so a save made
+          // to it from another tab in the meantime is not overwritten.
+          expect[page.path] = page.hash;
+          page.state = "moved";
+        } catch { page.state = "unwritten"; }
+        done++;
+      }
+    }
+
+    // ---- what can be retired
+    //
+    // Only a stamped name, only one this upgrade moved something off, and only
+    // when every page of the site was read and none of them loads it any more.
+    const dropPaths = [];
+    if (!pages.some((p) => p.state === "unread")) {
+      const loaded = new Set();
+      const ownTo = new Map(own.map((o) => [o.ref.path, o.to]));
+      for (const r of this.refs()) loaded.add(ownTo.get(r.path) || r.path);
+      for (const p of pages) {
+        for (const r of p.refs) loaded.add(p.state === "moved" ? p.moves.get(r.path) || r.path : r.path);
+      }
+      for (const p of retire) if (!loaded.has(p) && unstamp(p) !== p && p !== cfg.path) dropPaths.push(p);
+    }
+    const kept = pages.filter((p) => p.state === "unread" || p.state === "unwritten" ||
+      (p.state === "foreign" && p.refs.some((r) => target(r)))).map((p) => p.path);
+
+    onProgress({ stage: "manifest", path: "the manifest", done: 0, total: 1 });
+    for (const { ref, to } of own) ref.el.setAttribute(ref.attr, to);
+    let out;
+    try {
+      // report: false, because this save is not one the person made about their
+      // own writing. A page with a link to a page they have not written yet would
+      // otherwise answer "Update" with a panel about broken links, which is true,
+      // unrelated, and not what they pressed.
+      out = await this.nc.save({ extraPaths, dropPaths, expect, report: false });
+    } catch (err) {
+      // Nothing was published, so this page goes back to naming what the live
+      // manifest still serves. Left moved, the next ordinary save would point it
+      // at files the table has never heard of.
+      for (const { ref, was } of own) {
+        if (was === null) ref.el.removeAttribute(ref.attr); else ref.el.setAttribute(ref.attr, was);
+      }
+      throw err;
+    }
+    const moved = pages.filter((p) => p.state === "moved").map((p) => p.path);
+    this._remember(plan, [cfg.path, ...moved]);
+    return { ...out, files: files.size, pages: 1 + moved.length, kept, dropped: dropPaths };
   }
 
   // ---- the offer -----------------------------------------------------------
@@ -261,18 +516,47 @@ export class Upgrade {
         const note = this.doc.createElement("p");
         note.className = "nc-hint";
         note.style.margin = "1.2rem 0 0";
-        note.textContent = `This replaces ${andList(plan.files.map((f) => f.canonical))} and ` +
-          "nothing else. Your page is untouched: the blocks, the words and the design stay as " +
-          "they are, and version history keeps the old one, so this is reversible.";
+        const names = andList(plan.files.map((f) => f.canonical));
+        const many = (plan.pages || 1) > 1;
+        // Every page of a site loads the same files, so an update that moved one
+        // page would leave the others pointing at a file that is gone. Saying it
+        // is all of them is what the owner of a five-page site needs to hear
+        // before pressing a button on one.
+        note.textContent = many
+          ? `This replaces ${names} and nothing else, on all ${plan.pages} pages of this site at ` +
+            "once, so no page is left pointing at a file that is gone. The pages themselves are " +
+            "untouched: their blocks, words and design stay as they are, and version history " +
+            "keeps the old ones, so this is reversible."
+          : `This replaces ${names} and nothing else. Your page is untouched: the blocks, the ` +
+            "words and the design stay as they are, and version history keeps the old one, so " +
+            "this is reversible.";
+        if (plan.pages - 1 > MAX_PAGES) {
+          note.textContent += ` Only the first ${MAX_PAGES} other pages are updated from here; ` +
+            "the rest keep the runtime they have, and so do the files they load.";
+        }
         body.appendChild(note);
       },
       onSubmit: async (h) => {
-        saved = await this.apply(plan, ({ path, done, total }) =>
-          h.status(`Updating ${path} (${Math.min(done + 1, total)}/${total})…`));
+        saved = await this.apply(plan, ({ stage, path, done, total }) => {
+          const n = `(${Math.min(done + 1, total)}/${total})`;
+          h.status(stage === "read" ? `Reading the other pages of this site ${n}…`
+            : stage === "manifest" ? "Publishing the manifest…"
+            : `Updating ${path} ${n}…`);
+        });
         return true;
       },
     });
-    if (ok) this.installed(plan, saved?.hash);
+    if (ok) {
+      this.installed(plan, saved?.hash);
+      // Said, and not buried: a page left behind still works, but it is on the
+      // old runtime until it is fixed, and its owner should know which one.
+      if (saved?.kept?.length) {
+        toast(`${saved.kept.length === 1 ? "One page" : saved.kept.length + " pages"} could not be ` +
+          `updated and kept the runtime ${saved.kept.length === 1 ? "it" : "they"} had, with every ` +
+          `file ${saved.kept.length === 1 ? "it loads" : "they load"}: ${andList(saved.kept)}.`,
+          { doc: this.doc, ms: 12000 });
+      }
+    }
     return ok;
   }
 
