@@ -626,8 +626,11 @@ about a second; without it, up to ten minutes. It is in the default set for that
 sensibly enough, since they would be hosting arbitrary pages on their own domain. Several accept
 only padded base64 in the auth header where BUD-11 asks for base64url. The CLI and the runtime
 both try each encoding, and a deploy succeeds if any one server takes the blob, since blobs are
-content-addressed and more copies is strictly better. `cdn.hzrd149.com` and `nostr.download`
-are known to work, and are the defaults.
+content-addressed and more copies is strictly better. `nostr.download` and
+`blossom.yakihonne.com` take a key they have never seen, keep the type, and delete when asked, and
+are the defaults. `cdn.hzrd149.com`, the default until 0.3.27, now refuses keys it does not know
+("Pubkey not authorized by any storage rule"); pages that still name it keep working from the
+other server they name, and their old files stay readable there.
 
 **A Blossom server has to keep the type you upload with.** Gateways pass on the Content-Type the
 server reports, and a browser will not apply a stylesheet labelled as anything but `text/css`.

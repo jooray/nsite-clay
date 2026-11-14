@@ -2,13 +2,14 @@
 <html lang="en"
       nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://nostr.download"
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com"
       nc:path="/index.html" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>nsite-clay: a self-editable nsite</title>
+<title>nsite-clay: a web page that edits itself</title>
 <meta name="description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
+<meta name="color-scheme" content="light dark">
 <link rel="alternate" hreflang="en" href="/">
 <link rel="alternate" hreflang="es" href="/es/">
 <link rel="alternate" hreflang="sk" href="/sk/">
@@ -18,449 +19,254 @@
 <meta property="og:title" content="nsite-clay">
 <meta property="og:description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
 <meta property="og:image" content="/nsite-clay.png">
+<script src="/site.js"></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
-    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
-    --nc-radius: 12px; --nc-radius-sm: 8px;
+  .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(1.4rem, 4vw, 3rem); align-items: start; }
+  .hero h1 { margin-bottom: .4em; font-size: clamp(2.4rem, 5.3vw, 4.3rem); }
+  .mini .loaf { height: 7.5rem; margin: 0 0 1rem; border: 2px solid var(--ink); background: var(--purple-wash) radial-gradient(circle, var(--purple) 1.6px, transparent 2px) 0 0 / 9px 9px; -webkit-mask: none; position: relative; }
+  .mini .loaf::after { content: "photo of today's loaves goes here"; position: absolute; inset: auto .5rem .4rem auto; background: #fff; border: 1.5px solid var(--ink); padding: .15rem .45rem; font: 700 .75rem/1.3 var(--text); }
+  .mini .btn { margin-top: 1rem; padding: .6rem .9rem; font-size: .9rem; }
+  .hero .lede { font-size: 1.22rem; }
+  .hero .ostrich { width: clamp(4.4rem, 10vw, 6.2rem); height: auto; display: block; margin: 0 0 1rem -.4rem; }
+  .hero .note { font-size: .88rem; color: var(--ink-dim); margin: .9rem 0 0; }
+  @media (max-width: 52rem) { .hero { grid-template-columns: 1fr; } }
 
-    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
-    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
-    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16.5px/1.65 var(--sans);
-    background-image:
-      radial-gradient(60rem 40rem at 78% -12%, rgba(139,100,225,.20), transparent 62%),
-      radial-gradient(46rem 34rem at 6% 8%, rgba(86,60,170,.16), transparent 60%);
-    background-attachment: fixed;
-  }
-  .wrap { max-width: 54rem; margin: 0 auto; padding: 0 1.4rem; }
-  a { color: var(--violet); text-decoration-color: rgba(171,130,241,.35); text-underline-offset: 3px; }
-  a:hover { color: #C9AAFF; }
-  code { font: .88em var(--mono); color: #D6C4F5; }
-  h2 { font-size: 1.45rem; letter-spacing: -.015em; margin: 0 0 .6rem; }
-  h3 { font-size: 1.02rem; margin: 0 0 .35rem; }
-  p { margin: 0 0 1rem; }
-  section { padding: 3.4rem 0; border-top: 1px solid var(--edge); }
-  .lede { color: var(--ink-dim); }
+  /* the example page printed on the flyer */
+  .mini { background: #fff; border: 2px solid var(--ink); transform: rotate(1.4deg); padding: 1.2rem 1.3rem 1.3rem; position: relative; }
+  .mini .bar-top { display: flex; gap: .3rem; margin: -.2rem 0 .9rem; }
+  .mini .bar-top i { width: .55rem; height: .55rem; border-radius: 50%; border: 1.5px solid var(--ink); }
+  .mini .mini-name { font: 800 1.7rem/1.05 var(--display); letter-spacing: -.02em; margin: 0 0 .25em; }
+  .mini p { font-size: .98rem; margin: 0 0 .7em; color: var(--ink); }
+  .mini dl { margin: .8rem 0 0; display: grid; grid-template-columns: 1fr auto; gap: .25rem 1rem; font-size: .98rem; }
+  .mini dt, .mini dd { margin: 0; border-bottom: 1px dotted var(--ink-dim); padding-bottom: .2rem; }
+  .mini dd { font-weight: 700; }
+  .mini [contenteditable]:hover { background: var(--purple-wash); cursor: text; }
+  .mini [contenteditable]:focus { outline: 2px solid var(--purple); outline-offset: 2px; background: var(--purple-wash); }
+  .mini .stamp { position: absolute; right: -.6rem; top: -1.1rem; background: var(--paper); transform: rotate(4deg); }
 
-  /* hero */
-  header { padding: 4.5rem 0 3.6rem; text-align: center; }
-  header img { width: 132px; height: 132px; filter: drop-shadow(0 18px 40px rgba(86,60,170,.55)); }
-  h1 { font-size: clamp(2.5rem, 8vw, 4rem); margin: 1rem 0 .4rem; letter-spacing: -.035em;
-       background: linear-gradient(100deg, #FFFFFF, var(--violet)); -webkit-background-clip: text;
-       background-clip: text; color: transparent; }
-  .tag { font-size: clamp(1.02rem, 2.6vw, 1.2rem); color: var(--ink-dim); max-width: 34rem;
-         margin: 0 auto 1.8rem; }
-  .cta { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; gap: .5rem; font: 600 .92rem/1 var(--sans);
-         padding: .78rem 1.25rem; border-radius: 10px; text-decoration: none;
-         border: 1px solid var(--edge); background: var(--panel); color: var(--ink); }
-  .btn:hover { border-color: var(--violet-3); color: var(--ink); }
-  .btn.primary { background: linear-gradient(160deg, var(--violet-2), var(--violet-3));
-                 border-color: transparent; color: #12081F; }
-  .btn.primary:hover { filter: brightness(1.09); color: #12081F; }
+  .tabs { --n: 6; }
 
-  .shot { margin: 3rem 0 0; }
-  .shot img { width: 100%; height: auto; display: block; border-radius: 14px;
-              border: 1px solid var(--edge); box-shadow: 0 30px 80px -40px rgba(0,0,0,.9); }
-  .shot figcaption { margin-top: .7rem; font-size: .85rem; color: var(--ink-faint); text-align: center; }
+  .flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 2rem 0 1.4rem; counter-reset: s; list-style: none; padding: 0; }
+  .flow li { counter-increment: s; padding: 0 1.4rem 0 0; position: relative; }
+  .flow li::before { content: counter(s); display: block; font: 800 3.6rem/1 var(--display); color: var(--purple); margin-bottom: .2rem; }
+  .flow li + li { padding-left: 1.4rem; border-left: 2px dashed var(--ink-dim); }
+  .flow h3 { font-size: 1.15rem; }
+  .flow p { font-size: .98rem; color: var(--ink-dim); margin: 0; }
+  @media (max-width: 52rem) { .flow { grid-template-columns: 1fr; gap: 1.4rem; } .flow li + li { padding: 1.4rem 0 0; border-left: 0; border-top: 2px dashed var(--ink-dim); } }
 
-  /* the loop */
-  .steps { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-           margin: 1.6rem 0 0; padding: 0; list-style: none; }
-  .steps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-              padding: 1.1rem 1.15rem; }
-  .steps .n { font: 600 .72rem/1 var(--mono); letter-spacing: .1em; color: var(--violet);
-              display: block; margin-bottom: .5rem; }
-  .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
+  .stack > * + * { margin-top: 3.2rem; }
+  .stack { padding: 2.4rem 0 1rem; }
 
-  /* templates as apps */
-  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-          margin: 1.8rem 0 1.4rem; padding: 0; list-style: none; }
-  .apps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-             overflow: hidden; display: flex; flex-direction: column; }
-  .apps .thumb { display: block; line-height: 0; }
-  .apps img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center;
-              display: block; border-bottom: 1px solid var(--edge); }
-  .apps .t { display: block; padding: .9rem 1rem .35rem; font: 600 .95rem/1.2 var(--sans); }
-  .apps .t a { text-decoration: none; color: var(--ink); }
-  .apps .t a:hover { color: var(--violet); }
-  .apps p { margin: 0; padding: 0 1rem 1.05rem; color: var(--ink-dim); font-size: .9rem; }
+  /* the other flyers on the board: real templates, pinned at their own angles */
+  .wallof { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.4rem; margin: 1.6rem 0 1.4rem; }
+  .wallof a { display: block; text-decoration: none; color: var(--ink); background: var(--paper-2); padding: .5rem .5rem .7rem; box-shadow: var(--shadow); transform: rotate(var(--t, 0deg)); transition: transform .2s cubic-bezier(.2,.8,.2,1); }
+  .wallof a:hover { transform: rotate(0deg) translateY(-4px); }
+  .wallof img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; background: var(--paper); }
+  .wallof b { display: block; font: 800 1.02rem/1.15 var(--display); margin: .55rem .2rem .1rem; }
+  .wallof span { display: block; font-size: .86rem; line-height: 1.35; color: var(--ink-dim); margin: 0 .2rem; }
+  .wallof a:nth-child(1) { grid-column: span 3; --t: -1.1deg; }
+  .wallof a:nth-child(2) { grid-column: span 3; --t: .9deg; margin-top: 1.4rem; }
+  .wallof a:nth-child(3) { grid-column: span 3; --t: .6deg; }
+  .wallof a:nth-child(4) { grid-column: span 3; --t: -.8deg; margin-top: 1rem; }
+  .wallof a:nth-child(5) { grid-column: span 3; --t: 1.2deg; }
+  @media (max-width: 40rem) { .wallof { grid-template-columns: 1fr 1fr; } .wallof a { grid-column: auto !important; margin-top: 0 !important; } }
 
-  /* code */
-  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
-        padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
-        font: .855rem/1.65 var(--mono); color: #D9CCF3; }
-  pre .c { color: var(--ink-faint); }
-  pre .k { color: var(--violet); }
-  pre .s { color: #9FD8B0; }
+  /* the price, written the way a stall writes one */
+  .price { background: var(--purple-wash); padding: 1.3rem 1.4rem; transform: rotate(-.8deg); border: 2px solid var(--purple); align-self: start; }
+  .price .big { font: 800 3rem/1 var(--display); color: var(--purple); letter-spacing: -.03em; }
+  .price .big small { font-size: 1.1rem; letter-spacing: 0; }
+  .price ul { list-style: none; margin: .8rem 0 0; padding: 0; font-size: .98rem; }
+  .price li { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; border-top: 1px dotted var(--ink-dim); }
+  .price li b { font-weight: 700; }
+  .free { padding: .3rem 0; }
 
-  /* key box */
-  .keybox { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-            padding: 1.1rem 1.15rem; margin: 1.2rem 0; }
-  .keybox label { display: block; font: 600 .7rem/1 var(--mono); letter-spacing: .1em;
-                  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .55rem; }
-  .keyrow { display: flex; gap: .6rem; align-items: center; }
-  .keyrow input { flex: 1; min-width: 0; font: .82rem var(--mono); padding: .6rem .7rem;
-                  border-radius: 8px; border: 1px solid var(--edge); background: #0B0416;
-                  color: var(--ink); }
-  .keyrow button { font: 600 .82rem var(--sans); padding: .6rem .9rem; border-radius: 8px;
-                   border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink);
-                   cursor: pointer; white-space: nowrap; }
-  .keyrow button:hover { border-color: var(--violet-3); }
+  .limits { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .9rem; }
+  .limits li { padding-top: .8rem; border-top: 1px dotted var(--ink-dim); font-size: .98rem; }
+  .limits strong { display: block; font: 700 1rem var(--display); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 2.4rem; }
+  @media (max-width: 52rem) { .two { grid-template-columns: minmax(0, 1fr); } }
 
-  .cols { display: grid; gap: 1.6rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
-  .limits { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .8rem; }
-  .limits li { padding-left: 1.4rem; position: relative; color: var(--ink-dim); font-size: .95rem; }
-  .limits li::before { content: "·"; position: absolute; left: 0; color: var(--violet-3); }
-  .limits strong { color: var(--ink); font-weight: 600; }
+  .keyslip { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .9rem 0 .4rem; }
+  .keyslip input { flex: 1 1 18rem; font: .82rem var(--mono); }
 
-  footer { border-top: 1px solid var(--edge); padding: 2.6rem 0 3.6rem; color: var(--ink-faint);
-           font-size: .88rem; }
-  footer a { color: var(--ink-dim); }
-
-  /* editing affordances, owner only */
-  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
-  html[nc\:editable="true"] [editable]:hover:not(:focus) { box-shadow: 0 0 0 1px var(--edge); border-radius: 4px; }
-  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
-         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
-         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
-  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
-                background: var(--bg-2); color: var(--ink); cursor: pointer; }
-  .bar button:hover { border-color: var(--violet-3); }
-  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600; }
-  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
-  html[nc\:status="saving"] .dot { background: var(--violet); }
-  html[nc\:status="saved"] .dot { background: #7FC08C; }
-  html[nc\:status="error"] .dot { background: #E08A8A; }
-  html[nc\:owner-here="true"] .save { display: inline-block; }
-  .save { display: none; }
-  dialog { border: 1px solid var(--edge); border-radius: 14px; background: var(--panel);
-           color: var(--ink); max-width: 32rem; width: calc(100vw - 2rem); padding: 1.4rem;
-           font: .92rem var(--sans); }
-  dialog::backdrop { background: rgba(6,2,12,.7); }
-  dialog h3 { margin-top: 0; }
-  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--edge);
-               display: grid; gap: .5rem; }
-  #nsec-form label { font-size: .8rem; color: var(--ink-dim); }
-  #nsec-form input { font: .8rem var(--mono); padding: .5rem .6rem; border: 1px solid var(--edge);
-                     border-radius: 7px; background: #0B0416; color: var(--ink); width: 100%; }
-  #nsec-form button { justify-self: start; font: inherit; padding: .45rem .85rem; border-radius: 7px;
-                      border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink); cursor: pointer; }
-  #nsec-status { font-size: .8rem; color: #E08A8A; min-height: 1.2em; }
-  .warn { font-size: .78rem; color: var(--ink-faint); margin: 0; }
-  #qr { display: block; margin: 1rem auto; background: #fff; padding: .7rem; border-radius: 10px; }
+  /* owner-only editing affordances */
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { outline: 2px dotted var(--purple-2); outline-offset: 4px; border-radius: 3px; }
+  .who { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center; background: var(--paper); color: var(--ink);
+         box-shadow: var(--shadow); padding: .5rem .6rem; font: .85rem var(--text); z-index: 50; }
+  @media (max-width: 40rem) { .who { left: .6rem; right: .6rem; bottom: .6rem; justify-content: space-between; } .foot { padding-bottom: 5rem; } }
+  .who button { font: 700 .85rem var(--text); padding: .4rem .75rem; border: 2px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .who button:hover { background: var(--ink); color: var(--paper); }
+  .who .save { background: var(--purple); border-color: var(--purple); color: var(--on-purple); display: none; }
+  html[nc\:owner-here="true"] .who .save { display: inline-block; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; background: #8a8398; }
+  html[nc\:status="saving"] .dot { background: var(--purple-2); }
+  html[nc\:status="saved"] .dot { background: var(--ok); }
+  html[nc\:status="error"] .dot { background: var(--bad); }
+  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px dashed var(--ink-dim); display: grid; gap: .5rem; }
+  #nsec-status { font-size: .85rem; color: var(--bad); min-height: 1.2em; }
+  .warn { font-size: .85rem; color: var(--ink-dim); margin: 0; }
+  #qr { display: block; margin: 1rem auto; background: #fff; padding: .7rem; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-
-  <nav class="nc-nav">
-    <a class="nc-brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
-    <a href="/" aria-current="page">Home</a>
+<div class="page">
+  <nav class="topbar" aria-label="Main">
+    <a class="brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
     <a href="/guide.html">Guide</a>
     <a href="/templates.html">Templates</a>
-    <a href="/deploy.html">Publish</a>
+    <a href="/how.html">How it works</a>
     <a href="/llms.txt">For agents</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-    <div class="nc-lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></div>
+    <span class="lang"><a href="/" hreflang="en" aria-current="page">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
   </nav>
 
-  <header>
-    <img src="/nsite-clay-transparent.png" alt="nsite-clay">
-    <h1 editable="single-line">nsite-clay</h1>
-    <p class="tag" editable="single-line">A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.</p>
-    <div class="cta">
-      <a class="btn primary" href="/deploy.html">Publish a site</a>
-      <a class="btn" href="#ai">Write it with AI</a>
-      <a class="btn" href="/guide.html">Read the guide</a>
-      <a class="btn" href="#try">Try the live demo</a>
-      <a class="btn" href="https://github.com/jooray/nsite-clay">Source on GitHub</a>
-    </div>
-    <figure class="shot">
-      <img src="/editing.png" alt="The heading of a published page being edited in the browser, with the block menu open" width="1600" height="860">
-      <figcaption editable="single-line">Editing a published page. The heading is live text. The toolbar comes from the runtime.</figcaption>
-    </figure>
-  </header>
+  <main class="stack">
 
-  <section id="what">
-    <h2 editable="single-line">What it is</h2>
-    <div editable>
-      <p class="lede">Open the page, sign in with your key, and type into it. The document
-        serialises its own DOM, pushes those bytes to a Blossom server as one content-addressed
-        blob, and republishes the NIP-5A nsite manifest that points at it. Anyone else loading
-        the page gets a plain static document with your changes already in it.</p>
-      <p class="lede">Nothing in that round trip is a server you have to run. Relays hold the manifest,
-        Blossom servers hold the bytes, and the browser does the rest. Ownership is a keypair, so
-        who may edit this page is not a row in somebody else's database.</p>
-    </div>
+    <section class="flyer" data-fix="tape" data-settle style="--tilt:-.5deg" aria-labelledby="top">
+      <div class="hero">
+        <div>
+          <img class="ostrich" src="/nsite-clay-transparent.png" alt="">
+          <h1 id="top" editable="single-line">A web page that <em>edits itself.</em></h1>
+          <p class="lede" editable="single-line">Open it, sign in with your key, type, press Save. It lives on Nostr, so there is no server to run and no account to open.</p>
+          <p class="note" editable="single-line">Free to try. The example page is yours to type in, and nothing you type is kept.</p>
+        </div>
+        <div class="mini" aria-label="Example page">
+          <span class="stamp">example</span>
+          <div class="bar-top" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="loaf" aria-hidden="true"></div>
+          <p class="mini-name" data-demo>Marta's Bread</p>
+          <p data-demo>Sourdough and rye from a wood oven. Come early, the dark loaves go first.</p>
+          <dl>
+            <dt data-demo>Tuesday to Friday</dt><dd data-demo>7:00 to 14:00</dd>
+            <dt data-demo>Saturday</dt><dd data-demo>7:00 to 12:00</dd>
+            <dt data-demo>Rye, 1 kg</dt><dd data-demo>4.20</dd>
+          </dl>
+          <span class="btn primary" data-demo>Order for Saturday</span>
+        </div>
+      </div>
 
-    <ol class="steps">
-      <li><span class="n">01 SNAPSHOT</span>
-        <p>The page clones its own DOM, cleans it up, and serialises the whole document.</p></li>
-      <li><span class="n">02 BLOSSOM</span>
-        <p>Those bytes go to a Blossom server as a blob addressed by its own sha256.</p></li>
-      <li><span class="n">03 MANIFEST</span>
-        <p>A replaceable nsite event maps the path to that hash. Publishing it is the deploy.</p></li>
-    </ol>
-    <p style="margin-top:1.4rem" class="lede">This page you are reading is one of those documents.
-      It runs nsite-clay and saves itself the same way.</p>
-  </section>
+      <nav class="tabs" aria-label="Where to start">
+        <a class="tab go" href="/deploy.html?key=have"><b editable="single-line">I have a key</b><span>Amber or a browser extension. Sign in and publish.</span><i aria-hidden="true">&rarr;</i></a>
+        <a class="tab go" href="/deploy.html?key=new"><b editable="single-line">I need one</b><span>We make it with you. You keep it.</span><i aria-hidden="true">&rarr;</i></a>
+        <a class="tab" href="/guide.html"><b editable="single-line">Read the guide</b><span>Every step with screenshots.</span></a>
+        <a class="tab" href="/templates.html"><b editable="single-line">Templates</b><span>Twelve, all free.</span></a>
+        <a class="tab" href="/llms.txt"><b editable="single-line">For agents</b><span>A brief for your coding agent.</span></a>
+        <a class="tab" href="#cli"><b editable="single-line">The command line</b><span>npx nsite-clay deploy</span></a>
+      </nav>
+    </section>
 
-  <section id="geeks">
-    <h2 editable="single-line">Description for Nostr geeks</h2>
-    <div editable>
-      <p class="lede">An nsite is web hosting. Not long-form notes, whole HTML files. That is all
-        an nsite is.</p>
-      <p class="lede">nsite-clay adds one thing to it: the page edits and updates itself, so the
-        CMS sits inside the static HTML rather than behind it.</p>
-      <p class="lede">You change the DOM. Click around the page and edit things, or open your
-        browser's DOM inspector and change it there; the page does not care which. The new version
-        is uploaded to your Blossom servers, and one replaceable event is republished saying which
-        Blossom hash <code>/</code> or <code>/about-us</code> now points to. Any nsite gateway
-        renders it.</p>
-    </div>
-  </section>
-
-  <section id="ai">
-    <h2 editable="single-line">Write and edit with AI</h2>
-    <div editable>
-      <p class="lede">Describe the page you want in <a href="/deploy.html">the publisher</a> and AI writes
-        it: the layout, the stylesheet, text you can edit and empty frames for your own photos. Look at the
-        preview, ask for changes, and publish it with your own key.</p>
-      <p class="lede">On a page that is already published, press Edit with AI and say what should change,
-        either the whole page or only the part you clicked. Nothing reaches the page until you keep the
-        result. Undo takes it back, and Save publishes it.</p>
-      <p class="lede">You pay for AI in one of three ways.</p>
-    </div>
-
-    <ol class="steps">
-      <li><span class="n">01 SUPPORT THE PROJECT</span>
-        <p>The default. Pay one 2000 sat Lightning invoice and everything works: 1000 sats fund nsite-clay,
-          1000 become your AI credit on our Routstr node. The key is kept encrypted on your own relays, so it
-          follows you to every device you sign in on, and credit you do not spend can be withdrawn.</p></li>
-      <li><span class="n">02 YOUR OWN ROUTSTR NODE</span>
-        <p>Point AI settings at any other Routstr node and add credit there with Lightning or Cashu. The fees
-          go to whoever runs that node.</p></li>
-      <li><span class="n">03 BRING YOUR OWN KEY</span>
-        <p>Use any OpenAI-compatible API that accepts requests from a browser, with your own key and the model
-          you choose. What you pay stays between you and that provider.</p></li>
-    </ol>
-
-    <div editable>
-      <p style="margin-top:1.4rem" class="lede"><strong>AI is an extra, and everything else stays free.</strong>
-        The editor, the twelve templates, the block composer and publishing never ask for payment. Pick a
-        template, click into the page and type, exactly as before.</p>
-      <p style="margin-top:1rem">Paying for the AI, refunds and support: <a href="https://cypherpunk.today/terms/#s3">the terms page</a>.</p>
-    </div>
-  </section>
-
-  <section id="document">
-    <h2 editable="single-line">The whole integration</h2>
-    <p class="lede" editable="single-line">One attribute says who owns the file, one marks what people can type into, one script tag does the rest.</p>
-<pre><span class="c">&lt;!DOCTYPE html&gt;</span>
-&lt;html lang="en" <span class="k">autosave</span> <span class="k">nc:owner</span>=<span class="s">"npub1…"</span>&gt;
-&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Notes&lt;/title&gt;&lt;/head&gt;
-&lt;body&gt;
-  &lt;h1 <span class="k">editable</span>="single-line"&gt;My notes&lt;/h1&gt;
-  &lt;div <span class="k">editable</span>&gt;
-    &lt;p&gt;Type anything here.&lt;/p&gt;
-  &lt;/div&gt;
-  &lt;script src="/nsite-clay.js"&gt;&lt;/script&gt;
-&lt;/body&gt;
-&lt;/html&gt;</pre>
-    <div editable>
-      <p class="lede">Save it, then open the file in a text editor: your words are in the HTML.
-        The DOM is the database, so there is no other place for state to live.</p>
-    </div>
-  </section>
-
-  <section id="editing">
-    <h2 editable="single-line">Editing</h2>
-    <div class="cols">
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="how">
+      <h2 id="how" editable="single-line">Press Save and three things happen.</h2>
+      <ol class="flow">
+        <li><h3>The page copies itself.</h3><p>It takes its own text and pictures as they are now and packs them into one file.</p></li>
+        <li><h3>The copy is stored.</h3><p>A storage server, called Blossom, keeps the file under a name made from its contents, so nobody can swap it quietly.</p></li>
+        <li><h3>One signed note goes out.</h3><p>It says: this address now shows that file. Relays pass it on. That note is the publishing.</p></li>
+      </ol>
       <div editable>
-        <p class="lede">Mark a container <code>editable</code> and it becomes rich text for the
-          owner and ordinary markup for everybody else.</p>
-        <p class="lede">Enter starts a new paragraph. Selecting text raises a floating toolbar
-          whose first control is a block menu: Paragraph, Heading 1 to 3, Quote, Code block.</p>
+        <p class="lede">Nothing in this is a server you run. Relays keep the note, Blossom keeps the file, and your browser does the rest. Who may edit the page is decided by a key, not by a line in somebody else's database. This page is one of those documents, and it saves itself the same way.</p>
       </div>
-      <div editable>
-        <p class="lede">Keyboard shortcuts work as you would expect, and typing <code>#&nbsp;</code>,
-          <code>-&nbsp;</code> or <code>&gt;&nbsp;</code> at the start of a line does too.</p>
-        <p class="lede">What reaches the file is markup a person could have written by hand. The
-          toolbar and the debris browsers emit from editing commands never get saved.</p>
+      <p><a class="btn" href="/how.html">How it works, in detail</a></p>
+    </section>
+
+    <section class="flyer" style="--tilt:-.3deg" aria-labelledby="apps">
+      <h2 id="apps" editable="single-line">Twelve starting points, all free.</h2>
+      <p class="lede" editable="single-line">A template is a small application that happens to be one file. Pick one, put your own words in, and it is yours.</p>
+      <div class="wallof">
+        <a href="/t/gallery/"><img src="/shots/t-gallery.png" alt="" loading="lazy"><b>Photo gallery</b><span>Hundreds of pictures on a canvas you drag and zoom.</span></a>
+        <a href="/t/event/"><img src="/shots/t-event.png" alt="" loading="lazy"><b>Event invitation</b><span>Details big enough to read across a room, and a calendar file to download.</span></a>
+        <a href="/t/links/"><img src="/shots/t-links.png" alt="" loading="lazy"><b>Link list</b><span>A linktree you edit on the page itself.</span></a>
+        <a href="/t/personal/"><img src="/shots/t-personal.png" alt="" loading="lazy"><b>Personal homepage</b><span>Who you are and what you write, notes and articles included, at one address that is yours.</span></a>
       </div>
-    </div>
-  </section>
+      <p><a class="btn primary" href="/templates.html">See all twelve</a></p>
+    </section>
 
-  <section id="apps">
-    <h2 editable="single-line">Templates as apps</h2>
-    <div editable>
-      <p class="lede">A template is not a colour scheme. Each one is a small application that happens to be a single file: it reads from relays, it has controls, and in several of them a visitor can do something. The page can look like anything, because nothing underneath is deciding what a page has to be.</p>
-    </div>
-    <ul class="apps">
-      <li>
-        <a class="thumb" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="The gallery template" loading="lazy"></a>
-        <span class="t"><a href="/t/gallery/">Photo wall</a></span>
-        <p>Hundreds of pictures from one npub, on a canvas you drag and zoom. Three layouts, switchable.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/links/"><img src="/shots/t-links.png" alt="The links template" loading="lazy"></a>
-        <span class="t"><a href="/t/links/">Link list</a></span>
-        <p>A linktree you edit on the page itself. Add a link, drop one, set a zap address.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/irc/"><img src="/shots/t-irc.png" alt="The irc template" loading="lazy"></a>
-        <span class="t"><a href="/t/irc/">Channel log</a></span>
-        <p>A page you keep adding lines to. Sign in and a composer appears at the bottom.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/event/"><img src="/shots/t-event.png" alt="The event template" loading="lazy"></a>
-        <span class="t"><a href="/t/event/">Event invitation</a></span>
-        <p>Details large enough to read across a room, and a calendar file the visitor downloads.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="The phrack template" loading="lazy"></a>
-        <span class="t"><a href="/t/phrack/">Text file</a></span>
-        <p>Seventy-nine columns of monospace and ASCII rules, in the shape of the old zines.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/eco/"><img src="/shots/t-eco.png" alt="The eco template" loading="lazy"></a>
-        <span class="t"><a href="/t/eco/">Low weight</a></span>
-        <p>System fonts and as little of everything else as the job allows. It measures and prints its own transfer weight.</p>
-      </li>
-    </ul>
-    <p><a class="btn" href="/templates.html">All twelve templates</a></p>
-  </section>
-
-  <section id="try">
-    <h2 editable="single-line">Try it, with a real key</h2>
-    <div editable>
-      <p class="lede">A live document is published under a throwaway key, and the key is public
-        on purpose. Open it, press Sign in, paste the nsec, and edit the page. Your save
-        rewrites the real document for everyone.</p>
-    </div>
-    <p><a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Open the demo</a></p>
-    <div class="keybox">
-      <label for="demokey">Demo key. Public, shared, treat it as a sandbox</label>
-      <div class="keyrow">
-        <input id="demokey" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y">
-        <button type="button" id="copykey">Copy</button>
+    <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="ai">
+      <h2 id="ai" editable="single-line">Ask AI to write it. Pay once, keep what is left.</h2>
+      <div class="two">
+        <div editable>
+          <p class="lede">Describe the page you want and AI writes it: the layout, the style, the text, and empty frames for your own photos. Look at the preview, ask for changes, and publish it with your own key.</p>
+          <p class="lede">On a page that is already online, press Edit with AI and say what should change, in the whole page or only the part you clicked. Nothing reaches the page until you keep the result. Undo takes it back.</p>
+        </div>
+        <div class="price">
+          <div class="big">2000 <small>sats, once</small></div>
+          <ul>
+            <li><span>Supports nsite-clay</span><b>1000</b></li>
+            <li><span>Your own AI credit</span><b>1000</b></li>
+          </ul>
+          <p class="warn" style="margin-top:.8rem;color:var(--ink)">One Lightning payment. The credit is yours, and what you do not spend can be withdrawn. A whole page costs roughly 20 sats, so 1000 covers dozens of pages or hundreds of edits.</p>
+        </div>
       </div>
-    </div>
-    <p class="warn">Anyone can rewrite that page, so whatever you find there is other people's
-      leftovers. Never paste a key you care about into a page you did not publish yourself.</p>
-  </section>
+      <div class="free" editable>
+        <p><strong>AI is an extra. Everything else stays free:</strong> the editor, the twelve templates, the block composer and publishing never ask for payment.</p>
+        <p>Prefer not to pay us? Point the AI settings at any other Routstr node, or bring your own key for any OpenAI-compatible service. Terms, refunds and support are on <a href="https://cypherpunk.today/terms/#s3">the terms page</a>.</p>
+      </div>
+    </section>
 
-  <section id="deploy">
-    <h2 editable="single-line">Deploy your own</h2>
-    <div editable>
-      <p class="lede">The <a href="/deploy.html">web publisher</a> does the whole thing in a
-        browser tab: pick a template, sign in with a key or make one, and it is online. There is
-        a <a href="/guide.html">walkthrough with screenshots</a> if you would like to see it
-        first. After that the page saves itself and you never need the publisher again.</p>
-      <p class="lede">The CLI does the same job for anyone who would rather have a directory on
-        disk and a command to run.</p>
-    </div>
-<pre><span class="c"># scaffold a site and generate a key for it</span>
+    <section class="flyer" data-fix="pin" style="--tilt:-.6deg" aria-labelledby="cli">
+      <div class="two">
+        <div>
+          <h2 id="cli" editable="single-line">Rather use the command line?</h2>
+          <pre><span class="c"># make a site and a key for it</span>
 npx nsite-clay init mysite
 
 <span class="c"># publish it</span>
 npx nsite-clay deploy mysite --sec=nsec1…
 
-<span class="c"># or keep the key off this machine and sign through a bunker</span>
+<span class="c"># or sign through a remote signer</span>
 npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
-    <div editable>
-      <p class="lede">Your site is served at <code>https://&lt;npub&gt;.nsite.lol/</code>. Named sites
-        get their own subdomain, every save files a permanent version with its own URL, and any
-        NIP-5A gateway serves the same site. A CNAME from your own domain to your npub subdomain
-        gets a gateway to serve it there too, though HTTPS on that name needs a gateway that issues
-        certificates for it.</p>
-      <p class="lede">Assets are published at paths carrying their content hash, and each
-        document watches its own manifest and reloads itself when a newer version appears. Nobody
-        needs to know what a hard refresh is.</p>
-    </div>
-    <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Full deployment guide</a></p>
-  </section>
+          <div editable>
+            <p>Your site is served at <code>https://&lt;npub&gt;.nsite.lol/</code> and by any other NIP-5A gateway.</p>
+            <p>Most pages made this way will be built by an agent. Point yours at <a href="/llms.txt"><code>llms.txt</code></a>, a brief written for exactly that. For a site that is already online, <a href="/llms-edit.txt"><code>llms-edit.txt</code></a> is the second one.</p>
+          </div>
+        </div>
+        <div>
+          <h2 editable="single-line">What it does not do.</h2>
+          <ul class="limits">
+            <li><strong>One key writes the page.</strong> No shared editing and no per-visitor content.</li>
+            <li><strong>Two devices editing at once will lose one side.</strong> There is no way to detect the clash.</li>
+            <li><strong>The gateway is trusted for the first byte.</strong> Everything after it is checked by hash.</li>
+            <li><strong>No server code.</strong> If your project needs a backend, this is the wrong tool.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-  <section id="agents">
-    <h2 editable="single-line">Built for agents, because the web is now built by agents</h2>
-    <div editable>
-      <p class="lede">Most pages made with this will be built by an agent rather than by hand, so
-        the project ships a brief written for one. Point your coding agent at <code>llms.txt</code>
-        and ask it for the page you want.</p>
-      <p class="lede">The brief covers what to ask you for, how to pick and rework a template, how to get
-        the page online with a remote signer rather than a raw key, and the handful of things that
-        go wrong. It links the documentation rather than restating it, and works as
-        <code>AGENTS.md</code> in a project built on top of nsite-clay.</p>
-      <p class="lede">For a site that is already published, there is a second brief. Open the site with
-        <code>#edit</code>, sign in, open Settings and press <em>Copy instructions for your own
-        agent</em>. The text names your site's public key, relays, servers and pages, and tells
-        the agent to download the site, edit it and publish it back so it still edits itself in
-        the browser. It asks you for a link from your signer app, never for your key.</p>
-    </div>
-    <p><a class="btn primary" href="/llms.txt">llms.txt</a> <a class="btn" href="/llms-edit.txt">llms-edit.txt</a> <a class="btn" href="/templates.html">Templates</a></p>
-  </section>
+    <section class="flyer" style="--tilt:.4deg;margin-inline:clamp(0rem,6vw,5rem)" aria-labelledby="try">
+      <h2 id="try" editable="single-line">Try it with a real key.</h2>
+      <div editable>
+        <p class="lede">A live page is published under a throwaway key, and the key is public on purpose. Open it, press Sign in, paste the key, and edit. Your save rewrites that page for everyone, so treat it as a sandbox and never paste a key you care about into a page you did not publish yourself.</p>
+      </div>
+      <div class="keyslip">
+        <input id="demokey" type="text" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" aria-label="Demo key">
+        <button class="btn" type="button" id="copykey">Copy</button>
+        <a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Open the demo</a>
+      </div>
+    </section>
 
-  <section id="gateways">
-    <h2 editable="single-line">Gateways, and where your page gets served</h2>
-    <div editable>
-      <p class="lede">A gateway resolves your manifest and serves the files. They all read the same
-        events, so your site is not tied to any of them. If one is down, swap the hostname.</p>
-    </div>
-    <ul class="limits">
-      <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> and
-        <a href="https://nwb.tf">nwb.tf</a> are public gateways.</li>
-      <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
-        and <a href="https://shakespeare.to">shakespeare.to</a> are reference implementations.
-        nsite.run also has the clearest explanation of what an nsite is.</li>
-      <li>A CNAME from your domain to your npub subdomain gets any of them to serve it, over
-        plain HTTP. HTTPS needs a certificate for that name, which today means running your own.
-        <code>npm run devnet</code> runs one on your laptop.</li>
-    </ul>
-  </section>
+  </main>
 
-  <section id="limits">
-    <h2 editable="single-line">What it does not do</h2>
-    <ul class="limits">
-      <li><strong>One key writes the document.</strong> The manifest carries one signature. No
-        shared editing, no per-visitor content.</li>
-      <li><strong>No conflict detection.</strong> A replaceable event has no compare-and-swap, so
-        two devices editing at once will silently lose one side's work.</li>
-      <li><strong>The gateway is trusted for the first byte.</strong> The entry document cannot
-        verify itself. Everything it depends on is hash-checked, and the manifest, blobs and
-        history all live outside the gateway, so you can verify through another one or run your
-        own.</li>
-      <li><strong>No server code.</strong> If your project needs a backend, this is the wrong
-        tool. Though your project probably does not need one beyond Nostr. You would be
-        surprised how far you get without it.</li>
-    </ul>
-  </section>
-
-  <footer>
-    <p>MIT-0. The malleable-HTML idea and the editing model come from
+  <footer class="foot">
+    <p>MIT-0. The editable-HTML idea and the editing model come from
       <a href="https://hyperclay.com">HyperClay</a> and <a href="https://clayjs.com">ClayJS</a>.
       Hosting rests on <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       nsites and <a href="https://github.com/hzrd149/blossom">Blossom</a>.</p>
     <p><a href="/deploy.html">Publish a site</a> · <a href="/guide.html">Guide</a> ·
-      <a href="/templates.html">Templates</a> · <a href="/llms.txt">For agents</a></p>
-    <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
+      <a href="/templates.html">Templates</a> · <a href="/how.html">How it works</a> · <a href="/llms.txt">For agents</a> ·
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
     <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
-      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
-      MIT-0.</p>
+      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.</p>
   </footer>
 </div>
 
-<div class="bar">
+<div class="who">
   <span class="dot"></span>
   <span id="who">read-only</span>
   <button id="signin-btn">Sign in</button>
@@ -551,8 +357,12 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     const b = $("#copykey"); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1400);
   };
 
+  // The example page is a toy for visitors: typing in it works, and none of it is kept.
+  document.querySelectorAll("[data-demo]").forEach((el) => { el.contentEditable = "plaintext-only"; el.spellcheck = false; });
+
   // Nothing half-typed and no transient status text should ever reach the file.
   nc.addDocumentTransform((clone) => {
+    clone.querySelectorAll("[data-demo]").forEach((el) => { el.removeAttribute("contenteditable"); el.removeAttribute("spellcheck"); });
     for (const id of ["nsec-input", "nsec-pass"]) clone.querySelector("#" + id)?.removeAttribute("value");
     const s = clone.querySelector("#nsec-status"); if (s) s.textContent = "";
     clone.querySelector("#nsec-pass")?.setAttribute("hidden", "");

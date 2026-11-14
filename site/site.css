@@ -1,0 +1,275 @@
+/* The nsite-clay site: a notice board with flyers pinned to it.
+ *
+ * One stylesheet for every page of the presentation site and the publisher.
+ * The editor's own chrome lives in nsite-clay-base.css and is not touched here.
+ *
+ * Two scenes, not one inverted: a bright day wall and a night street under a
+ * lamp. Paper stays paper in both, because a flyer is a sheet of paper.
+ * Nostr purple is the ink, never the ground. */
+
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 500 800; font-display: swap;
+  src: url(/fonts/brico-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 500 800; font-display: swap;
+  src: url(/fonts/brico-ext.woff2) format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400 700; font-display: swap;
+  src: url(/fonts/atk-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400 700; font-display: swap;
+  src: url(/fonts/atk-ext.woff2) format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --text: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Day wall: pale concrete with a cool cast. */
+  --wall: #d5d9dd;
+  --wall-2: #c9ced3;
+  --wall-ink: #25202e;
+  --wall-dim: #4c4658;
+  --paper: #f6f5f1;
+  --paper-2: #ebe9e3;
+  --paper-edge: #d4d0c7;
+  --ink: #1c1725;
+  --ink-dim: #4f4960;
+  --purple: #5f35c7;          /* riso ink, 6.9:1 on paper */
+  --purple-2: #7a52de;
+  --purple-wash: #e6defa;     /* the ink printed light */
+  --on-purple: #fbf9ff;
+  --tape: rgba(222, 211, 168, .78);
+  --pin: #b3342f;
+  --lamp: transparent;
+  --shadow: 0 1px 1px rgba(30, 20, 50, .16), 0 10px 22px -8px rgba(30, 20, 50, .34), 0 26px 46px -22px rgba(30, 20, 50, .3);
+  --ok: #1f6b3a;
+  --bad: #a3262a;
+
+  /* the editor's chrome reads these */
+  --nc-ink: var(--ink); --nc-ink-dim: var(--ink-dim); --nc-bg: var(--paper);
+  --nc-panel: var(--paper-2); --nc-edge: var(--paper-edge); --nc-accent: var(--purple);
+  --nc-accent-ink: var(--on-purple);
+  color-scheme: light;
+}
+
+/* Night street: asphalt with a purple cast and a lamp overhead. */
+:root[data-theme="dark"] {
+  --wall: #16121d;
+  --wall-2: #0f0c15;
+  --wall-ink: #ece8f5;
+  --wall-dim: #b3abc6;
+  --paper: #e9e6ee;
+  --paper-2: #dcd8e4;
+  --paper-edge: #bdb8c9;
+  --ink: #17121f;
+  --ink-dim: #483f5a;
+  --purple: #5a2fc2;
+  --purple-2: #7448da;
+  --purple-wash: #d9cff5;
+  --tape: rgba(204, 192, 140, .8);
+  --lamp: rgba(255, 226, 170, .16);
+  --shadow: 0 1px 1px rgba(0, 0, 0, .5), 0 12px 24px -8px rgba(0, 0, 0, .7), 0 30px 50px -20px rgba(0, 0, 0, .7);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wall: #16121d; --wall-2: #0f0c15; --wall-ink: #ece8f5; --wall-dim: #b3abc6;
+    --paper: #e9e6ee; --paper-2: #dcd8e4; --paper-edge: #bdb8c9; --ink: #17121f; --ink-dim: #483f5a;
+    --purple: #5a2fc2; --purple-2: #7448da; --purple-wash: #d9cff5; --tape: rgba(204, 192, 140, .8);
+    --lamp: rgba(255, 226, 170, .16);
+    --shadow: 0 1px 1px rgba(0, 0, 0, .5), 0 12px 24px -8px rgba(0, 0, 0, .7), 0 30px 50px -20px rgba(0, 0, 0, .7);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0; min-height: 100vh; color: var(--wall-ink);
+  font: 400 1.0625rem/1.62 var(--text);
+  background-color: var(--wall);
+  /* At night, the cone of one lamp. */
+  background-image: radial-gradient(70rem 36rem at 50% -8rem, var(--lamp), transparent 70%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--purple); color: var(--on-purple); }
+:focus-visible { outline: 3px solid var(--purple-2); outline-offset: 3px; border-radius: 3px; }
+:root[data-theme="dark"] :focus-visible { outline-color: #b69cff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :focus-visible { outline-color: #b69cff; } }
+.flyer :focus-visible { outline-color: var(--purple); }
+[tabindex="-1"]:focus { outline: none; }   /* headings that take focus when a step changes */
+html { scrollbar-color: var(--purple) var(--wall-2); }
+
+a { color: var(--purple); text-underline-offset: .18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+.wall-text a { color: inherit; }
+p { margin: 0 0 1em; }
+code, .mono { font: .88em/1.5 var(--mono); }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; line-height: 1.02; letter-spacing: -.025em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.6rem, 7.2vw, 5.1rem); }
+h2 { font-size: clamp(1.8rem, 4vw, 2.7rem); margin-bottom: .55em; }
+h3 { font-size: 1.25rem; letter-spacing: -.015em; margin-bottom: .35em; }
+.lede { font-size: 1.14rem; color: var(--ink-dim); max-width: 62ch; }
+
+.page { width: min(100% - 2rem, 66rem); margin-inline: auto; }
+.page.narrow { width: min(100% - 2rem, 50rem); }
+
+/* ---- top bar: the only thing printed directly on the wall -------------- */
+.topbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.3rem;
+  padding: 1.1rem 0 .4rem; font: 600 .95rem/1 var(--text); color: var(--wall-ink);
+}
+.topbar a { color: var(--wall-ink); text-decoration: none; padding: .5rem 0; }
+.topbar a:hover, .topbar a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--purple-2); text-decoration-thickness: 3px; text-underline-offset: .35em; }
+:root[data-theme="dark"] .topbar a:hover { text-decoration-color: #a98aff; }
+.topbar .brand { display: flex; align-items: center; gap: .6rem; margin-right: auto; font: 800 1.2rem/1 var(--display); letter-spacing: -.02em; }
+.topbar .brand img { width: 34px; height: 34px; }
+.topbar .lang { display: flex; gap: .1rem; }
+.topbar .lang a { padding: .4rem .5rem; font: 600 .8rem/1 var(--mono); border-radius: 4px; }
+.topbar .lang a[aria-current="page"] { background: var(--wall-ink); color: var(--wall); text-decoration: none; }
+.theme-toggle {
+  display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; padding: 0;
+  border: 2px solid var(--wall-ink); border-radius: 50%; background: transparent; color: var(--wall-ink); cursor: pointer;
+}
+.theme-toggle:hover { background: var(--wall-ink); color: var(--wall); }
+.theme-toggle svg { width: 1.15rem; height: 1.15rem; }
+.theme-toggle .moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .moon { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .sun { display: none; }
+  :root:not([data-theme="light"]) .theme-toggle .moon { display: block; }
+}
+
+/* ---- flyers -------------------------------------------------------------- */
+.flyer {
+  position: relative; background: var(--paper); color: var(--ink);
+  padding: clamp(1.4rem, 4vw, 2.8rem); box-shadow: var(--shadow);
+  transform: rotate(var(--tilt, 0deg)); transform-origin: 50% 0;
+}
+.flyer::before, .flyer::after { content: ""; position: absolute; pointer-events: none; }
+.flyer[data-fix="tape"]::before {
+  top: -.8rem; left: 50%; width: 6.4rem; height: 1.7rem; margin-left: -3.2rem;
+  background: var(--tape); transform: rotate(-2.5deg);
+  box-shadow: 0 1px 2px rgba(30, 20, 50, .22);
+  clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%);   /* notched ends, as tape is cut */
+}
+.flyer[data-fix="pin"]::before {
+  top: .7rem; left: 50%; width: .95rem; height: .95rem; margin-left: -.47rem; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e86a63, var(--pin) 55%, #6d1815);
+  box-shadow: 0 3px 4px rgba(20, 10, 30, .4);
+}
+.flyer h2, .flyer h3 { color: var(--ink); }
+.flyer h1 em, .flyer h2 em { font-style: normal; color: var(--purple); }
+.flyer .lede { color: var(--ink-dim); }
+
+/* ---- buttons: ink stamped on paper -------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; gap: .55rem; padding: .8rem 1.2rem;
+  font: 700 .98rem/1.1 var(--text); text-decoration: none; cursor: pointer;
+  color: var(--ink); background: transparent; border: 2px solid var(--ink); border-radius: 3px;
+  transition: background .12s, color .12s, transform .12s;
+}
+.btn:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
+.btn.primary { background: var(--purple); border-color: var(--purple); color: var(--on-purple); }
+.btn.primary:hover { background: var(--ink); border-color: var(--ink); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+
+/* ---- the tear-off tabs --------------------------------------------------- */
+.tabs {
+  display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr));
+  margin: 2.2rem calc(-1 * clamp(1.4rem, 4vw, 2.8rem)) calc(-1 * clamp(1.4rem, 4vw, 2.8rem));
+  padding-top: .2rem; border-top: 2px dashed var(--ink-dim);
+}
+.tab {
+  display: flex; flex-direction: column; justify-content: space-between; gap: .6rem;
+  min-height: 9.4rem; padding: 1rem .8rem 1.1rem; text-decoration: none; color: var(--ink);
+  border-left: 2px dashed var(--ink-dim); transform-origin: 50% 0;
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1), background .15s;
+}
+.tab:first-child { border-left: 0; }
+.tab b { font: 800 1.05rem/1.1 var(--display); letter-spacing: -.01em; }
+.tab span { font-size: .84rem; line-height: 1.3; color: var(--ink-dim); }
+.tab i { font: normal 700 1.5rem/1 var(--display); }
+.tab.go { background: var(--purple); color: var(--on-purple); }
+.tab.go span { color: color-mix(in srgb, var(--on-purple) 82%, var(--purple)); }
+.tab:hover { transform: translateY(.45rem) rotate(var(--r, 1.2deg)); text-decoration: none; background: var(--purple-wash); }
+.tab.go:hover { background: var(--purple-2); }
+.tab:nth-child(even) { --r: -1.4deg; }
+@media (max-width: 52rem) {
+  .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tab { min-height: 6.6rem; border-left: 0; border-top: 2px dashed var(--ink-dim); }
+  .tab:nth-child(even) { border-left: 2px dashed var(--ink-dim); }
+  .tab:nth-child(-n+2) { border-top: 0; }
+}
+
+/* ---- inks ---------------------------------------------------------------- */
+.ink { color: var(--purple); }
+.halftone {
+  background: radial-gradient(circle, var(--purple) 1.1px, transparent 1.5px) 0 0 / 7px 7px;
+  -webkit-mask-image: linear-gradient(115deg, #000, transparent 75%); mask-image: linear-gradient(115deg, #000, transparent 75%);
+}
+.stamp {
+  display: inline-block; padding: .25rem .6rem; border: 2px solid var(--purple); border-radius: 3px;
+  color: var(--purple); font: 800 .78rem/1 var(--display); letter-spacing: .1em; text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+hr.cut { border: 0; border-top: 2px dashed var(--ink-dim); margin: 2rem 0; }
+
+/* ---- code ----------------------------------------------------------------- */
+pre {
+  margin: 0 0 1.2rem; padding: 1.1rem 1.2rem; overflow-x: auto; border-radius: 3px;
+  background: #1d1829; color: #e6e0f4; font: .88rem/1.65 var(--mono); tab-size: 2;
+}
+pre .c { color: #9a90b3; } pre .k { color: #b89cff; } pre .s { color: #8fd6a4; }
+:not(pre) > code { background: var(--purple-wash); color: var(--ink); padding: .08em .35em; border-radius: 3px; }
+
+/* ---- reading column (guide, docs) ---------------------------------------- */
+.prose { max-width: 70ch; }
+.prose h2 { margin-top: 2.4rem; }
+.prose h3 { margin-top: 1.8rem; }
+.prose p, .prose li { color: var(--ink); }
+.prose ul, .prose ol { padding-left: 1.3rem; }
+.prose li { margin-bottom: .4em; }
+.prose figure { margin: 1.6rem 0; }
+.prose figure img { max-width: 100%; height: auto; display: block; border: 1px solid var(--paper-edge); box-shadow: 0 6px 18px -10px rgba(30, 20, 50, .5); }
+.prose figcaption { font-size: .88rem; color: var(--ink-dim); margin-top: .5rem; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--paper-edge); vertical-align: top; }
+th { font-family: var(--display); font-weight: 700; }
+
+/* ---- footer --------------------------------------------------------------- */
+.foot { padding: 3rem 0 4rem; color: var(--wall-dim); font-size: .92rem; }
+.foot a { color: var(--wall-ink); }
+.foot p { max-width: 62ch; }
+
+/* ---- forms (publisher and the sign-in dialog) ---------------------------- */
+label { font-weight: 700; font-size: .92rem; }
+input[type="text"], input[type="password"], input[type="url"], input[type="search"], textarea, select {
+  font: 1rem/1.4 var(--text); color: var(--ink); background: #fff; width: 100%;
+  border: 2px solid var(--ink); border-radius: 3px; padding: .65rem .75rem;
+}
+input::placeholder, textarea::placeholder { color: #6c6578; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--purple-2); outline-offset: 1px; }
+input[type="radio"], input[type="checkbox"] { accent-color: var(--purple); }
+dialog {
+  border: 0; padding: 1.6rem; background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
+  width: min(32rem, calc(100vw - 2rem)); font: 1rem/1.55 var(--text);
+}
+dialog::backdrop { background: rgba(14, 8, 24, .72); }
+
+/* ---- motion: the tabs are the one authored moment; the rest only settles - */
+@keyframes settle { from { opacity: 0; transform: translateY(14px) rotate(calc(var(--tilt, 0deg) - .8deg)); } }
+@media (prefers-reduced-motion: no-preference) {
+  .flyer[data-settle] { animation: settle .6s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: var(--d, 0s); }
+}
+
+@media (max-width: 40rem) {
+  body { font-size: 1.02rem; }
+  .flyer { transform: none; }
+}

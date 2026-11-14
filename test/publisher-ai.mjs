@@ -5,6 +5,14 @@ import { join, extname } from "node:path";
 import { chromium } from "playwright";
 import { mockAiAccount } from "./ai-account-fixture.mjs";
 
+// Headless Chrome can send a click near the fresh, sandboxed preview frame to
+// the frame after a scripted scroll; scroll first and let a frame pass.
+const press = async (page, sel) => {
+  await page.locator(sel).scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.click(sel);
+};
+
 // What a model actually sends: a sentence about itself, a fence, then the page.
 const preamble = 'Here is a complete static HTML page for the workshop. It covers opening hours and contact details.\n```html\n';
 const html = '<!DOCTYPE html><html nc:owner="wrong" nc:path="/wrong" nc:ai-key="secret"><head><title>Bike workshop</title><style>body{font-family:system-ui;margin:2rem}main{max-width:60rem}h1{color:#345}</style></head><body><main><section><h1>A bike workshop</h1><p>Bring your bike on Saturday.</p><table><caption>Opening hours</caption><tr><th>Saturday</th><td>10 to 16</td></tr></table><img nc:crop="16:9" alt="The workshop bench on a Saturday"><ul><li>Bring your own spare parts</li></ul><a href="javascript:alert(1)">Bad link</a></section></main><script>window.bad=true</script></body></html>';
@@ -80,7 +88,7 @@ try {
     if (refine) {
       const asked = requests.length;
       await page.fill("#ai-change", "Put the opening hours at the top.");
-      await page.click("#ai-refine");
+      await press(page, "#ai-refine");
       await page.waitForFunction(() => document.querySelector("#ai-change").value === "");
       assert.equal(requests.length, asked + 1, "the change was not sent");
       const sent = requests.at(-1).messages[1].content;
@@ -99,7 +107,7 @@ try {
       assert.equal(await page.getAttribute("#ai-preview", "srcdoc"), prior);
       assert(await page.isEnabled("#ai-use"), "the prior preview cannot be used after a failed replacement");
     }
-    await page.click("#ai-use");
+    await press(page, "#ai-use");
     await page.fill("#path", "/workshop/");
     await page.click("#where-go");
     await page.waitForSelector("#done-card:not([hidden])");

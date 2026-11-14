@@ -99,6 +99,10 @@ const POSTER = {
   vimeo: () => "",
 };
 
+// What a sealed page may carry in pictures. A photo from a phone comes out at
+// 100 to 250 kB at the first step; the later steps are for the ones that do not.
+const SEALED_PICTURE = { picture: 350_000, page: 3_000_000, steps: [[1600, 0.82], [1280, 0.75], [1024, 0.7], [800, 0.6]] };
+
 export class Media {
   constructor(nc) { this.nc = nc; this.doc = nc.doc; }
 
@@ -112,12 +116,59 @@ export class Media {
   // because a server is entitled to serve blobs from another host.
   async upload(file) {
     if (!this.nc.signer) throw new Error("Sign in before uploading");
+    // On a sealed page a picture on Blossom would be the one part of it anybody
+    // could look at. It goes inside the page instead, and is encrypted with it.
+    if (this.nc.sealed?.active) return this.embed(file);
     const bytes = new Uint8Array(await file.arrayBuffer());
     const type = file.type || "application/octet-stream";
     const { hash, ok } = await uploadAll(this.servers, bytes, { signer: this.nc.signer, type });
     const ext = EXT[type] || "";
     const url = ok[0]?.url || `${ok[0].server}/${hash}${ext}`;
     return { url, hash, type, size: bytes.length };
+  }
+
+  // A picture for a sealed page: made small enough to live in the document, and
+  // returned as a data: URL. The whole page is sealed and uploaded again on
+  // every save, so the budget is for the page, not for the picture.
+  async embed(file) {
+    const type = file.type || "";
+    if (!/^image\//.test(type)) {
+      throw new Error("An encrypted page can hold pictures, but not video or other files yet.");
+    }
+    const win = this.doc.defaultView;
+    const toDataUrl = (blob) => new Promise((resolve, reject) => {
+      const r = new win.FileReader();
+      r.onload = () => resolve(r.result); r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+    const used = new Blob([this.doc.documentElement.outerHTML]).size;
+    let out = null;
+    if (type === "image/svg+xml" || type === "image/gif") {
+      // Drawing these to a canvas would flatten what makes them what they are.
+      if (file.size <= SEALED_PICTURE.picture) out = file;
+    } else {
+      const bitmap = await win.createImageBitmap(file);
+      for (const [edge, quality] of SEALED_PICTURE.steps) {
+        const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
+        const canvas = this.doc.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        // A browser that cannot write WebP does not say so: it hands back a
+        // PNG, which for a photograph is several times the size. Ask, look at
+        // what came, and fall back to JPEG.
+        let blob = await new Promise((r) => canvas.toBlob(r, "image/webp", quality));
+        if (blob?.type !== "image/webp") blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", quality));
+        if (blob && blob.size <= SEALED_PICTURE.picture) { out = blob; break; }
+      }
+      bitmap.close?.();
+    }
+    if (!out) throw new Error("That picture is too large to keep inside an encrypted page.");
+    // Base64 is a third larger than the bytes it carries.
+    if (used + out.size * 4 / 3 > SEALED_PICTURE.page) {
+      throw new Error("This encrypted page is full. Remove a picture before adding another.");
+    }
+    return { url: await toDataUrl(out), hash: null, type: out.type, size: out.size, embedded: true };
   }
 
   // ---- inserting ----------------------------------------------------------

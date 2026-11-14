@@ -60,6 +60,10 @@ try {
   t("and offers a way back to the description", await wiz.isVisible("#ai-again"));
 
   await wiz.fill("#ai-change", "Make it dark, and add a section saying where to find us.");
+  // Headless Chrome can send the first click below the fresh preview frame to
+  // the frame after a scripted scroll; scroll and let a frame pass first.
+  await wiz.locator("#ai-refine").scrollIntoViewIfNeeded();
+  await wiz.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   await wiz.click("#ai-refine");
   await wiz.waitForFunction(() => document.querySelector("#ai-change").value === "", null, { timeout: 20000 });
   const refined = await wiz.evaluate(() => document.querySelector("#ai-preview").srcdoc);
@@ -84,7 +88,7 @@ try {
   }, `ws://127.0.0.1:${relayPort}`);
   t("a new key gets a relay list naming the relay it published to",
     JSON.stringify(relayList.tags) === JSON.stringify([["r", `ws://127.0.0.1:${relayPort}`]]), JSON.stringify(relayList.tags));
-  t("and the log says so", /Published a relay list/.test(relayList.said), relayList.said.slice(-200));
+  t("and the log says so", /let every gateway find this site/.test(relayList.said), relayList.said.slice(-200));
 
   // ---- the published page ------------------------------------------------
   const live = await browser.newPage();

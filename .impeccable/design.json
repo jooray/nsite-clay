@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T00:00:00Z",
+  "title": "Design System: nsite-clay",
+  "extensions": {
+    "colorMeta": {
+      "riso-purple": {
+        "role": "primary",
+        "displayName": "Riso Purple",
+        "canonical": "#5f35c7",
+        "tonalRamp": [
+          "#1d0f45",
+          "#2f1773",
+          "#44259f",
+          "#5f35c7",
+          "#7a52de",
+          "#a186ea",
+          "#cfc2f4",
+          "#efeafc"
+        ]
+      },
+      "riso-purple-bright": {
+        "role": "primary",
+        "displayName": "Riso Purple Bright",
+        "canonical": "#7a52de",
+        "tonalRamp": [
+          "#2f1773",
+          "#44259f",
+          "#5f35c7",
+          "#7a52de",
+          "#9272e6",
+          "#b39df0",
+          "#d6cbf6",
+          "#f1edfc"
+        ]
+      },
+      "purple-wash": {
+        "role": "primary",
+        "displayName": "Purple Wash",
+        "canonical": "#e6defa",
+        "tonalRamp": [
+          "#5f35c7",
+          "#7a52de",
+          "#9d82e8",
+          "#bfaeef",
+          "#d9cff5",
+          "#e6defa",
+          "#f0ebfc",
+          "#f8f6fe"
+        ]
+      },
+      "wall-concrete": {
+        "role": "neutral",
+        "displayName": "Wall Concrete",
+        "canonical": "#d5d9dd",
+        "tonalRamp": [
+          "#2b2f35",
+          "#4a5058",
+          "#70777f",
+          "#9aa0a7",
+          "#b6bbc1",
+          "#c9ced3",
+          "#d5d9dd",
+          "#eceef0"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f6f5f1",
+        "tonalRamp": [
+          "#4a4840",
+          "#7a776c",
+          "#a6a297",
+          "#d4d0c7",
+          "#ebe9e3",
+          "#f6f5f1",
+          "#faf9f6",
+          "#fdfdfb"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1c1725",
+        "tonalRamp": [
+          "#0d0a12",
+          "#1c1725",
+          "#332c42",
+          "#4f4960",
+          "#6e6880",
+          "#948fa3",
+          "#bdb9c8",
+          "#e2e0e8"
+        ]
+      },
+      "pushpin-red": {
+        "role": "secondary",
+        "displayName": "Pushpin Red",
+        "canonical": "#b3342f",
+        "tonalRamp": [
+          "#3a0e0c",
+          "#6d1815",
+          "#8f2420",
+          "#b3342f",
+          "#e86a63",
+          "#f19a95",
+          "#f8c8c5",
+          "#fcebea"
+        ]
+      },
+      "ok-green": {
+        "role": "semantic",
+        "displayName": "Success Green",
+        "canonical": "#1f6b3a",
+        "tonalRamp": [
+          "#0d2f19",
+          "#154d29",
+          "#1f6b3a",
+          "#3a8c58",
+          "#68ae82",
+          "#98cbaa",
+          "#c6e3d1",
+          "#e8f4ed"
+        ]
+      },
+      "bad-red": {
+        "role": "semantic",
+        "displayName": "Error Red",
+        "canonical": "#a3262a",
+        "tonalRamp": [
+          "#4a1012",
+          "#771b1e",
+          "#a3262a",
+          "#c44448",
+          "#d9777a",
+          "#e8a5a7",
+          "#f3cfd0",
+          "#fbeeee"
+        ]
+      },
+      "night-scene": {
+        "role": "neutral",
+        "displayName": "Night street values (dark scene)",
+        "canonical": "#16121d",
+        "tonalRamp": [
+          "#0f0c15",
+          "#16121d",
+          "#483f5a",
+          "#b3abc6",
+          "#ece8f5",
+          "#bdb8c9",
+          "#dcd8e4",
+          "#e9e6ee"
+        ],
+        "note": "Dark counterparts: wall #16121d, wall-deep #0f0c15, wall-ink #ece8f5, wall-ink-dim #b3abc6, paper #e9e6ee, paper-shade #dcd8e4, paper-edge #bdb8c9, ink #17121f, ink-dim #483f5a, riso-purple #5a2fc2, riso-purple-bright #7448da, purple-wash #d9cff5, masking-tape rgba(204,192,140,.8), lamp rgba(255,226,170,.16). Unchanged: on-purple, pushpin-red, ok-green, bad-red."
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page h1 on a flyer; Bricolage Grotesque 800, tight tracking."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section h2 and wizard step titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h3, way-in buttons, tab names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text in Atkinson Hyperlegible Next."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, form labels, top bar links."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "The only uppercase, wide-tracked type: stamps."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Keys, addresses, the build log, code."
+      }
+    },
+    "shadows": [
+      {
+        "name": "flyer-lift",
+        "value": "0 1px 1px rgba(30, 20, 50, .16), 0 10px 22px -8px rgba(30, 20, 50, .34), 0 26px 46px -22px rgba(30, 20, 50, .3)",
+        "purpose": "Day --shadow: every pinned sheet. Three layers, y-offset only."
+      },
+      {
+        "name": "flyer-lift-night",
+        "value": "0 1px 1px rgba(0, 0, 0, .5), 0 12px 24px -8px rgba(0, 0, 0, .7), 0 30px 50px -20px rgba(0, 0, 0, .7)",
+        "purpose": "Night --shadow."
+      },
+      {
+        "name": "small-card-lift",
+        "value": "0 1px 1px rgba(30, 20, 50, .14), 0 9px 14px -9px rgba(30, 20, 50, .4)",
+        "purpose": "Template choices inside the wizard."
+      },
+      {
+        "name": "hanging-stub",
+        "value": "0 10px 14px -10px rgba(30, 20, 50, .55)",
+        "purpose": "The current wizard tab."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-pull",
+        "value": "cubic-bezier(.2, .8, .2, 1)",
+        "purpose": "Tabs pulled down, flyers settling, cards straightening (180 to 600ms)."
+      },
+      {
+        "name": "press",
+        "value": ".12s",
+        "purpose": "Button background, color and 1px press."
+      },
+      {
+        "name": "march",
+        "value": ".8s linear infinite",
+        "purpose": "The dashed working bar in the wizard."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "52rem"
+      },
+      {
+        "name": "wall-two-col",
+        "value": "62rem"
+      },
+      {
+        "name": "phone",
+        "value": "40rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Flyer",
+      "kind": "card",
+      "refersTo": "flyer",
+      "description": "A sheet of paper taped to the wall, slightly tilted, with a notched tape strip.",
+      "html": "<div class=\"ds-flyer\"><h2>A web page that <em>edits itself.</em></h2><p>Open it, sign in with your key, type, press Save.</p></div>",
+      "css": ".ds-flyer{position:relative;background:#f6f5f1;color:#1c1725;padding:2rem 1.6rem;margin-top:1rem;transform:rotate(-.5deg);transform-origin:50% 0;box-shadow:0 1px 1px rgba(30,20,50,.16),0 10px 22px -8px rgba(30,20,50,.34),0 26px 46px -22px rgba(30,20,50,.3);font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;}.ds-flyer::before{content:'';position:absolute;top:-.8rem;left:50%;width:6.4rem;height:1.7rem;margin-left:-3.2rem;background:rgba(222,211,168,.78);transform:rotate(-2.5deg);box-shadow:0 1px 2px rgba(30,20,50,.22);clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)}.ds-flyer h2{font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:2rem;line-height:1.02;letter-spacing:-.025em;margin:0 0 .5em;text-wrap:balance}.ds-flyer em{font-style:normal;color:#5f35c7}.ds-flyer p{margin:0;color:#4f4960;line-height:1.62}"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Ink-outlined, near-square; inverts to solid ink on hover.",
+      "html": "<button class=\"ds-btn\">Choose another way</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:.55rem;padding:.8rem 1.2rem;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;font-weight:700;font-size:.98rem;line-height:1.1;color:#1c1725;background:transparent;border:2px solid #1c1725;border-radius:3px;cursor:pointer;transition:background .12s,color .12s,transform .12s}.ds-btn:hover{background:#1c1725;color:#f6f5f1}.ds-btn:focus-visible{outline:3px solid #5f35c7;outline-offset:3px}.ds-btn:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action: riso purple, turns to ink on hover.",
+      "html": "<button class=\"ds-btn-primary\">Publish my page</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:.55rem;padding:.8rem 1.2rem;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;font-weight:700;font-size:.98rem;line-height:1.1;color:#fbf9ff;background:#5f35c7;border:2px solid #5f35c7;border-radius:3px;cursor:pointer;transition:background .12s,transform .12s}.ds-btn-primary:hover{background:#1c1725;border-color:#1c1725}.ds-btn-primary:focus-visible{outline:3px solid #7a52de;outline-offset:3px}.ds-btn-primary:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Tear-off Tabs",
+      "kind": "custom",
+      "refersTo": "tear-off-tab",
+      "description": "The entrances: perforated stubs along a flyer's bottom edge; the go tabs are purple; hover pulls a stub down.",
+      "html": "<div class=\"ds-tabs\"><a class=\"ds-tab go\" href=\"#\"><b>I have a key</b><span>Sign in and publish</span><i>&rarr;</i></a><a class=\"ds-tab go\" href=\"#\"><b>I need one</b><span>Make a key here</span><i>&rarr;</i></a><a class=\"ds-tab\" href=\"#\"><b>Guide</b><span>Step by step</span><i>&rarr;</i></a><a class=\"ds-tab\" href=\"#\"><b>Templates</b><span>Twelve free</span><i>&rarr;</i></a></div>",
+      "css": ".ds-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#f6f5f1;border-top:2px dashed #4f4960;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;}.ds-tab{display:flex;flex-direction:column;justify-content:space-between;gap:.6rem;min-height:8rem;padding:1rem .8rem 1.1rem;text-decoration:none;color:#1c1725;border-left:2px dashed #4f4960;transform-origin:50% 0;transition:transform .2s cubic-bezier(.2,.8,.2,1),background .15s}.ds-tab:first-child{border-left:0}.ds-tab b{font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:1.05rem;line-height:1.1}.ds-tab span{font-size:.84rem;line-height:1.3;color:#4f4960}.ds-tab i{font-style:normal;font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:700;font-size:1.5rem;line-height:1}.ds-tab.go{background:#5f35c7;color:#fbf9ff}.ds-tab.go span{color:#e0d8f6}.ds-tab:hover{transform:translateY(.45rem) rotate(1.2deg);background:#e6defa}.ds-tab.go:hover{background:#7a52de}.ds-tab:nth-child(even):hover{transform:translateY(.45rem) rotate(-1.4deg)}.ds-tab:focus-visible{outline:3px solid #5f35c7;outline-offset:-3px}"
+    },
+    {
+      "name": "Progress Tabs",
+      "kind": "nav",
+      "refersTo": "progress-tab",
+      "description": "The wizard's four steps: done discs inked like stamps, the current stub hanging lower.",
+      "html": "<ol class=\"ds-steps\"><li data-done=\"true\"><span class=\"n\">1</span>Sign in</li><li aria-current=\"step\"><span class=\"n\">2</span>Your page</li><li><span class=\"n\">3</span>Address</li><li><span class=\"n\">4</span>Publish</li></ol>",
+      "css": ".ds-steps{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:0;background:#f6f5f1;border-bottom:2px dashed #4f4960;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;}.ds-steps li{position:relative;display:flex;align-items:center;gap:.6rem;padding:.95rem .9rem;border-left:2px dashed #4f4960;color:#4f4960;font-weight:700;font-size:.92rem;line-height:1.15;cursor:pointer;transition:background .15s,transform .2s cubic-bezier(.2,.8,.2,1)}.ds-steps li:first-child{border-left:0}.ds-steps .n{display:grid;place-items:center;flex:none;width:1.9rem;height:1.9rem;border:2px solid currentColor;border-radius:50%;font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:.95rem;line-height:1}.ds-steps li[data-done=true]{color:#5f35c7}.ds-steps li[data-done=true] .n{background:#5f35c7;border-color:#5f35c7;color:#fbf9ff;transform:rotate(-8deg)}.ds-steps li[aria-current=step]{color:#1c1725;background:#e6defa;z-index:1;padding-bottom:1.25rem;margin-bottom:-.4rem;box-shadow:0 10px 14px -10px rgba(30,20,50,.55)}.ds-steps li[aria-current=step] .n{border-color:#5f35c7;color:#5f35c7;background:#f6f5f1}.ds-steps li:hover{background:#e6defa;transform:translateY(.25rem)}"
+    },
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "A tilted rubber-stamp label in riso purple, for status.",
+      "html": "<span class=\"ds-stamp\">Published</span>",
+      "css": ".ds-stamp{display:inline-block;padding:.25rem .6rem;border:2px solid #5f35c7;border-radius:3px;color:#5f35c7;background:#f6f5f1;font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:.78rem;line-height:1;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-3deg)}"
+    },
+    {
+      "name": "Key Ticket",
+      "kind": "custom",
+      "refersTo": "key-ticket",
+      "description": "The one-time key on a dashed purple ticket with a stamp hung off the corner.",
+      "html": "<div class=\"ds-ticket\"><span class=\"ds-stamp\">Your key</span><p class=\"ds-f\">Save this key. It cannot be shown again.</p><div class=\"ds-keybox\">nsec1q9x7k2m4v8r5t0w3h6j1c2d9e8f7a4b5</div></div>",
+      "css": ".ds-stamp{display:inline-block;padding:.25rem .6rem;border:2px solid #5f35c7;border-radius:3px;color:#5f35c7;background:#f6f5f1;font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:.78rem;line-height:1;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-3deg)}.ds-ticket{position:relative;margin:1.2rem 0 0;padding:1.4rem 1.3rem 1.3rem;background:#e6defa;border:2px dashed #5f35c7;color:#1c1725;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;}.ds-ticket .ds-stamp{position:absolute;top:-.95rem;right:1rem}.ds-f{margin:0 0 .4rem;font-weight:700;font-size:.95rem;line-height:1.3}.ds-keybox{font:600 1.05rem/1.6 ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere;user-select:all;background:#fff;border:2px solid #1c1725;padding:.85rem .95rem}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White ground, 2px ink outline, 3px corners; purple focus ring.",
+      "html": "<label class=\"ds-label\" for=\"ds-in\">Page address</label><input class=\"ds-input\" id=\"ds-in\" type=\"text\" placeholder=\"my-bakery\">",
+      "css": ".ds-label{display:block;margin:0 0 .4rem;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;font-weight:700;font-size:.95rem;color:#1c1725}.ds-input{width:100%;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;font-size:1rem;line-height:1.4;color:#1c1725;background:#fff;border:2px solid #1c1725;border-radius:3px;padding:.65rem .75rem}.ds-input::placeholder{color:#6c6578}.ds-input:focus-visible{outline:3px solid #7a52de;outline-offset:1px}"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "topbar-link",
+      "description": "Links printed straight on the wall, language codes and a round theme toggle.",
+      "html": "<nav class=\"ds-topbar\"><a class=\"ds-brand\" href=\"#\">nsite-clay</a><a href=\"#\" aria-current=\"page\">Guide</a><a href=\"#\">Templates</a><span class=\"ds-lang\"><a href=\"#\" aria-current=\"page\">EN</a><a href=\"#\">ES</a><a href=\"#\">SK</a><a href=\"#\">CS</a></span><button class=\"ds-toggle\" type=\"button\" aria-label=\"Switch between light and dark\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/></svg></button></nav>",
+      "css": ".ds-topbar{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.3rem;padding:1.1rem 1rem .6rem;background:#d5d9dd;color:#25202e;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;font-weight:600;font-size:.95rem;line-height:1}.ds-topbar a{color:#25202e;text-decoration:none;padding:.5rem 0}.ds-topbar a:hover,.ds-topbar>a[aria-current=page]{text-decoration:underline;text-decoration-color:#7a52de;text-decoration-thickness:3px;text-underline-offset:.35em}.ds-brand{margin-right:auto;font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:1.2rem}.ds-lang{display:flex;gap:.1rem}.ds-lang a{padding:.4rem .5rem!important;font:600 .8rem/1 ui-monospace,Menlo,monospace;border-radius:4px}.ds-lang a[aria-current=page]{background:#25202e;color:#d5d9dd;text-decoration:none}.ds-toggle{display:inline-grid;place-items:center;width:2.4rem;height:2.4rem;padding:0;border:2px solid #25202e;border-radius:50%;background:transparent;color:#25202e;cursor:pointer}.ds-toggle:hover{background:#25202e;color:#d5d9dd}.ds-toggle:focus-visible{outline:3px solid #7a52de;outline-offset:3px}"
+    },
+    {
+      "name": "Template Wall",
+      "kind": "custom",
+      "refersTo": "template-card",
+      "description": "Pinned template flyers at their own angles with uneven offsets, not a uniform grid.",
+      "html": "<div class=\"ds-wall\"><a class=\"ds-card\" href=\"#\" style=\"--t:-1.2deg\"><span class=\"ds-shot\"></span><b>Bakery</b><p>Opening hours and today's loaves.</p></a><a class=\"ds-card\" href=\"#\" style=\"--t:.8deg;margin-top:1.2rem\"><span class=\"ds-shot\"></span><b>Event</b><p>One date, one place, one RSVP.</p></a><a class=\"ds-card\" href=\"#\" style=\"--t:-.6deg\"><span class=\"ds-shot\"></span><b>Links</b><p>Everything you point people to.</p></a></div>",
+      "css": ".ds-wall{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.6rem 1.2rem;padding:1.4rem 1rem 1rem;background:#d5d9dd;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;}.ds-card{position:relative;display:flex;flex-direction:column;padding:.7rem .7rem 1rem;background:#f6f5f1;color:#1c1725;text-decoration:none;box-shadow:0 1px 1px rgba(30,20,50,.16),0 10px 22px -8px rgba(30,20,50,.34),0 26px 46px -22px rgba(30,20,50,.3);transform:rotate(var(--t,0deg));transition:transform .2s cubic-bezier(.2,.8,.2,1)}.ds-card::before{content:'';position:absolute;top:-.45rem;left:50%;width:.95rem;height:.95rem;margin-left:-.47rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e86a63,#b3342f 55%,#6d1815);box-shadow:0 3px 4px rgba(20,10,30,.4)}.ds-card:hover,.ds-card:focus-visible{transform:rotate(0) translateY(-4px)}.ds-card:focus-visible{outline:3px solid #5f35c7;outline-offset:3px}.ds-shot{display:block;aspect-ratio:16/10;background:#ebe9e3;border:1px solid #d4d0c7}.ds-card b{font-family:'Bricolage Grotesque','Arial Narrow',system-ui,sans-serif;font-weight:800;font-size:1.3rem;line-height:1.1;margin:.8rem .35rem .1rem}.ds-card p{margin:.2rem .35rem 0;font-size:.95rem;line-height:1.5;color:#4f4960}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Notice Board",
+    "overview": "The site is a wall and everything on it is a sheet of paper somebody pinned up. A page is a flyer taped or pinned at a slight tilt, and a flyer's way out is a row of tear-off tabs along its bottom edge, cut with dashed perforations. The one thing printed straight on the wall is the slim top bar. Voice is plain, concrete and unhurried: the surfaces explain what a thing is rather than selling it, and the board stays quiet around the paper.\n\nThere are two real scenes, not one inverted. Light is a bright day wall of pale cool concrete. Dark is a night street: asphalt with a purple cast under one lamp, a faint warm cone at the top of the page. Paper stays paper in both: a flyer is a sheet of paper, so its ground changes only a few steps (cool off-white by day, slightly lilac off-white at night). Nostr purple is the riso ink that prints headlines' emphasis, stamps, tabs and active states. It is never the ground of a page or a section.\n\nThe system is built from a handful of recurring flat shapes (paper, dashed cut lines, a 3px-cornered ink outline) and one soft, layered y-offset shadow. It refuses the old dark-violet gradient template, a hero over five equal buttons, same-size card grids as structure, gradient text, glows, glass, hard offset shadows, side-stripe borders, eyebrow kickers above headings, and em or en dashes in prose.",
+    "keyCharacteristics": [
+      "Paper on a wall: every content surface is a flyer, tilted by a small fixed angle, fixed with tape or a pin.",
+      "Purple is ink, used on emphasis, stamps, primary actions and the \"go\" tab, and nowhere as a surface ground. The one tint of it that fills areas is the pale purple wash.",
+      "Perforated dashed lines (2px) are the structural divider: tab strips, step bars, price halves, \"or\" breaks.",
+      "Controls are ink-outlined, near-square (3px), and invert to solid ink on hover.",
+      "Motion is rare: tabs hang lower on hover, new flyers settle in once, a dashed line walks while the wizard waits."
+    ],
+    "rules": [
+      {
+        "name": "The Riso Ink Rule",
+        "body": "Purple prints on paper; it never becomes the page or a section ground. The only large purple fills are the \"go\" tab and primary buttons, which are things you tear off or press.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper Stays Paper Rule",
+        "body": "A flyer is light in both scenes. Dark mode changes the wall, the shadow and the ink's depth, not the idea that text sits on paper.",
+        "section": "colors"
+      },
+      {
+        "name": "The Own Scene Rule",
+        "body": "Light and dark are each designed values, not inversions of each other. Change a token in one scene and check the other.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Display face for shouted words, text face for read words. Do not set paragraphs in Bricolage or buttons' sentences in it; do not set headings in Atkinson.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stamp Only Rule",
+        "body": "Uppercase and wide tracking belong to stamps. Nothing else is uppercased.",
+        "section": "typography"
+      },
+      {
+        "name": "The Light From Above Rule",
+        "body": "Every shadow is a y-offset with negative spread. No horizontal offsets, no hard offset blocks, no glows.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Lamp Is Not A Glow Rule",
+        "body": "The only light effect is the night lamp: a wide, faint warm cone fixed at the top of the wall (70rem by 36rem, rgba(255, 226, 170, 0.16)). It lights the wall, never an element.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** put content on paper (a flyer) and let the wall carry only the top bar, intro and footer.",
+      "**Do** print in one ink: Riso Purple (#5f35c7) for emphasis, primary actions, stamps and active states.",
+      "**Do** separate sections with 2px dashed Ink Dim lines, and make entrances tear-off tabs.",
+      "**Do** use one primary button per decision and let the rest be outlined Ink.",
+      "**Do** use the single flyer-lift shadow for anything pinned, and keep everything else flat.",
+      "**Do** design the night wall as its own scene: Asphalt Violet ground, lilac-white paper, lamp cone at the top.",
+      "**Do** set shouted words in Bricolage Grotesque 800 with -0.025em tracking and read words in Atkinson Hyperlegible Next.",
+      "**Do** keep the 3px focus outline visible on every control, and honor reduced motion."
+    ],
+    "donts": [
+      "**Don't** use the old dark-violet gradient template look: no purple page grounds, no gradient washes.",
+      "**Don't** put a hero over five equal buttons, or build structure from same-size card grids; stagger and tilt instead.",
+      "**Don't** use gradient text, glows, glass or blur.",
+      "**Don't** use hard offset shadows or any shadow with a horizontal offset.",
+      "**Don't** use side-stripe borders; a border is a full outline or a dashed divider.",
+      "**Don't** put an eyebrow or kicker label above a heading. A stamp marks status or a name; it does not introduce a heading.",
+      "**Don't** uppercase anything except stamps.",
+      "**Don't** use em or en dashes in prose in any language.",
+      "**Don't** flip paper to dark in dark mode."
+    ]
+  }
+}

@@ -33,3 +33,16 @@ for (const [outfile, format, globalName, entry] of [
   const b = readFileSync(outfile);
   console.log(outfile, (b.length / 1024).toFixed(1) + "KB", "gz " + (gzipSync(b).length / 1024).toFixed(1) + "KB");
 }
+
+// The agent skill's tool, as one file with its dependencies inside, so an agent
+// in a container runs it with node and nothing else. Same source as
+// `nsite-clay artifact`.
+await esbuild.build({
+  entryPoints: ["bin/artifact.mjs"], bundle: true, minify: true, platform: "node", format: "esm", target: "node18",
+  outfile: "skills/nsite-artifacts/scripts/artifact.mjs", legalComments: "none",
+  banner: { js: `// nsite-artifacts ${version}. Built from bin/artifact.mjs and src/seal.js of nsite-clay (nostr-tools, @noble/hashes, parse5 and ws inside). MIT-0.\n// One file, nothing to install: node artifact.mjs help\nimport { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);` },
+});
+{
+  const b = readFileSync("skills/nsite-artifacts/scripts/artifact.mjs");
+  console.log("skills/nsite-artifacts/scripts/artifact.mjs", (b.length / 1024).toFixed(1) + "KB");
+}

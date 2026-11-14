@@ -3,7 +3,7 @@
       nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
       nc:path="/es/docs.html"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://nostr.download">
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex, follow">
@@ -16,119 +16,76 @@
 <link rel="alternate" hreflang="cs" href="/cs/docs.html">
 <link rel="alternate" hreflang="x-default" href="/docs.html">
 <link rel="icon" href="/nsite-clay-mark.svg">
+<meta name="color-scheme" content="light dark">
+<script src="/site.js"></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
-    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
-    --nc-radius: 12px; --nc-radius-sm: 8px;
-
-    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
-    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
-    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.7 var(--sans);
-    background-image:
-      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.16), transparent 62%),
-      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
-    background-attachment: fixed;
-  }
-  a { color: var(--violet); text-underline-offset: 3px; }
-  a:hover { color: #C9AAFF; }
-  code { font: .87em var(--mono); color: #D6C4F5; }
-  .wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.4rem; }
-
-  header.top { padding: 3rem 0 1.4rem; }
-  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--ink-faint); }
-  .crumb img { width: 28px; height: 28px; }
-  .crumb a { color: var(--ink-dim); text-decoration: none; }
-  .crumb a:hover { color: var(--violet); }
-  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
-  .lede { color: var(--ink-dim); font-size: 1.12rem; max-width: 40rem; }
-
-  nav.toc { border: 1px solid var(--edge); border-radius: 12px; background: var(--panel);
-            padding: .9rem 1.2rem; margin: 2rem 0 0; font-size: .95rem; }
-  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
-  nav.toc li { margin: .12rem 0; }
-  nav.toc a { color: var(--ink-dim); text-decoration: none; }
-  nav.toc a:hover { color: var(--violet); }
-  @media (max-width: 40rem) { nav.toc ol { columns: 1; } }
-
-  section { padding: 2.8rem 0 .5rem; border-top: 1px solid var(--edge); margin-top: 2.4rem; }
-  .step { font: 600 .72rem/1 var(--mono); letter-spacing: .12em; color: var(--violet); }
-  section > h2 { font-size: 1.55rem; letter-spacing: -.02em; margin: .35rem 0 .8rem; }
-  h3 { font-size: 1.03rem; margin: 1.8rem 0 .4rem; }
-  p { margin: 0 0 1rem; }
-  ul, ol { padding-left: 1.35rem; }
-  li { margin: .35rem 0; }
-
-  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
-        padding: .95rem 1.15rem; overflow-x: auto; margin: 0 0 1.1rem;
-        font: .85rem/1.75 var(--mono); color: #D9CCF3; }
-  pre .c { color: var(--ink-faint); }
-
-  figure { margin: 1.3rem 0 1.6rem; }
-  figure img { width: 100%; height: auto; display: block; border-radius: 12px;
-               border: 1px solid var(--edge); box-shadow: 0 26px 60px -34px rgba(0,0,0,.95); }
-  figcaption { font-size: .86rem; color: var(--ink-faint); margin-top: .55rem; }
-
-  .keys { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: .94rem; }
-  .keys td { padding: .42rem .6rem; border-bottom: 1px solid var(--edge); vertical-align: top; }
-  .keys td:first-child { width: 11rem; color: var(--ink); }
-  kbd { font: .82em var(--mono); border: 1px solid var(--edge); border-bottom-width: 2px;
-        border-radius: 5px; padding: .08em .38em; background: var(--bg-2); }
-
-  .note { border-left: 3px solid var(--violet-3); background: rgba(86,60,170,.12);
-          padding: .8rem 1rem; border-radius: 0 10px 10px 0; margin: 0 0 1.2rem; font-size: .96rem; }
+  .stack > * + * { margin-top: 3.2rem; }
+  .stack { padding: 2.4rem 0 1rem; }
+  .sheet { max-width: 56rem; }
+  .sheet .prose { max-width: 70ch; }
+  .intro h1 { font-size: clamp(2.3rem, 5.4vw, 4rem); margin-bottom: .4em; }
+  .prose h2 { display: flex; align-items: baseline; gap: .7rem; margin-bottom: .5em; scroll-margin-top: 1rem; }
+  .prose > h2:first-child { margin-top: 0; }
+  .prose h2 .n { flex: none; font: 800 1.15em/1 var(--display); color: var(--purple); letter-spacing: -.04em; min-width: 1.5ch; }
+  .prose figure { margin: 1.5rem 0 1.8rem; }
+  .prose figure img { padding: .35rem; background: #fff; border: 1px solid var(--paper-edge); }
+  .prose a { color: var(--purple); }
+  .note { margin: 1.6rem 0; padding: 1rem 1.2rem; background: var(--purple-wash); border: 1px solid var(--purple); border-radius: 3px; font-size: .98rem; color: var(--ink); }
   .note p:last-child { margin-bottom: 0; }
-  .note b { color: var(--ink); }
+  .keys td { font-size: .95rem; }
+  .keys td:first-child { width: 11rem; }
+  kbd { font: .82em var(--mono); border: 1px solid var(--ink-dim); border-bottom-width: 2px; border-radius: 4px; padding: .08em .38em; background: var(--paper-2); }
 
-  footer { border-top: 1px solid var(--edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
-           color: var(--ink-faint); font-size: .9rem; }
+  .steps ol { list-style: none; margin: 1.6rem 0 0; padding: 0; counter-reset: s; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); border-top: 2px dashed var(--ink-dim); border-right: 2px dashed var(--ink-dim); }
+  .steps li { counter-increment: s; margin: 0; border-left: 2px dashed var(--ink-dim); border-bottom: 2px dashed var(--ink-dim); }
+  .steps li a { display: flex; gap: .55rem; align-items: baseline; height: 100%; padding: .7rem .8rem; font: 600 .92rem/1.25 var(--text); color: var(--ink); text-decoration: none; transition: background .15s, transform .2s cubic-bezier(.2,.8,.2,1); transform-origin: 50% 0; }
+  .steps li a::before { content: counter(s); font: 800 1.25rem/1 var(--display); color: var(--purple); }
+  .steps li a:hover { background: var(--purple-wash); transform: translateY(.25rem) rotate(.8deg); }
 
-  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
-  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
-         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
-         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
-  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
-                background: var(--bg-2); color: var(--ink); cursor: pointer; }
-  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600;
-               display: none; }
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center; background: var(--paper); color: var(--ink); box-shadow: var(--shadow); padding: .5rem .6rem; font: .85rem var(--text); z-index: 50; }
+  .bar button { font: 700 .85rem var(--text); padding: .4rem .75rem; border: 2px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .bar button:hover { background: var(--ink); color: var(--paper); }
+  .bar .save { background: var(--purple); border-color: var(--purple); color: var(--on-purple); display: none; }
   html[nc\:owner-here="true"] .bar .save { display: inline-block; }
-  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
-  html[nc\:status="saved"] .dot { background: #7FC08C; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; background: #8a8398; }
+  html[nc\:status="saved"] .dot { background: var(--ok); }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header class="top">
-<nav class="nc-nav">
-      <a class="nc-brand" href="/es/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
-      <a href="/es/">Inicio</a>
-      <a href="/es/guide.html">Guía</a>
-      <a href="/es/templates.html">Plantillas</a>
-      <a href="/es/deploy.html">Publicar</a>
-      <a href="/llms.txt">Para agentes</a>
-      <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-      <div class="nc-lang"><a href="/docs.html" hreflang="en">EN</a><a href="/es/docs.html" hreflang="es" aria-current="page">ES</a><a href="/sk/docs.html" hreflang="sk">SK</a><a href="/cs/docs.html" hreflang="cs">CS</a></div>
-    </nav>
-    <h1 editable="single-line">Guía paso a paso</h1>
-    <div class="note">
+<div class="page">
+  <nav class="topbar" aria-label="Principal">
+    <a class="brand" href="/es/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/es/guide.html">Guía</a>
+    <a href="/es/templates.html">Plantillas</a>
+    <a href="/es/how.html">Cómo funciona</a>
+    <a href="/llms.txt">Para agentes</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <span class="lang"><a href="/docs.html" hreflang="en">EN</a><a href="/es/docs.html" hreflang="es" aria-current="page">ES</a><a href="/sk/docs.html" hreflang="sk">SK</a><a href="/cs/docs.html" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar entre claro y oscuro" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </nav>
+
+  <main class="stack">
+
+    <section class="flyer sheet intro" data-fix="tape" data-settle style="--tilt:-.5deg" aria-labelledby="top">
+      <div class="prose">
+        <h1 id="top" editable="single-line">Guía paso a paso</h1>
+        <div class="note">
       <p><b>Esta página ha sido reemplazada.</b> Todo el contenido de aquí, junto con los pasos de
         publicación que antes la precedían, está ahora en <a href="/es/guide.html">la guía</a>. Esa
         es la que hay que leer. Esta copia se queda para que los enlaces antiguos sigan
         funcionando.</p>
     </div>
-    <p class="lede" editable="single-line">Dos comandos para poner una página en línea. Después todo ocurre en el navegador: escribir, imágenes, video, tus publicaciones de Nostr. Todas las capturas de abajo son reales.</p>
-
-    <nav class="toc">
-      <ol>
+        <p class="lede" editable="single-line">Dos comandos para poner una página en línea. Después todo ocurre en el navegador: escribir, imágenes, video, tus publicaciones de Nostr. Todas las capturas de abajo son reales.</p>
+      </div>
+      <nav class="steps" aria-label="Pasos de esta página">
+        <ol>
         <li><a href="#online">Pon tu página en línea</a></li>
         <li><a href="#signin">Ábrela e inicia sesión</a></li>
         <li><a href="#text">Cambia el texto</a></li>
@@ -139,13 +96,13 @@
         <li><a href="#save">Guarda los cambios</a></li>
         <li><a href="#history">Vuelve a una versión anterior</a></li>
         <li><a href="#share">La dirección de tu página</a></li>
-      </ol>
-    </nav>
-  </header>
+        </ol>
+      </nav>
+    </section>
 
-  <section id="online">
-    <p class="step">01</p>
-    <h2>Pon tu página en línea</h2>
+    <section class="flyer sheet" data-fix="tape" style="--tilt:-.4deg;margin-left:0;margin-right:auto">
+      <div class="prose">
+      <h2 id="online"><span class="n">1</span>Pon tu página en línea</h2>
     <div editable>
       <p>Esta es la única parte que ocurre en una terminal, y son dos comandos. Necesitas tener
         <a href="https://nodejs.org">Node.js</a> instalado.</p>
@@ -165,11 +122,8 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p><b>Ese es el último comando que necesitas.</b> A partir de aquí la página se cambia sola.
         Solo vuelves a la terminal si quieres editar el archivo a mano.</p>
     </div>
-  </section>
 
-  <section id="signin">
-    <p class="step">02</p>
-    <h2>Ábrela e inicia sesión</h2>
+      <h2 id="signin"><span class="n">2</span>Ábrela e inicia sesión</h2>
     <div editable>
       <p>Abre la dirección que imprimió el despliegue. Esto es lo que ve cualquier visitante: tu
         página y nada en lo que hacer clic.</p>
@@ -204,13 +158,14 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p><b>Solo tu clave puede cambiar la página.</b> Cualquier otra persona que inicie sesión ve
         la misma página de solo lectura que un visitante.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <section id="text">
+    <section class="flyer sheet" data-fix="pin" style="--tilt:.5deg;margin-left:clamp(0rem,6vw,5rem);margin-right:auto">
+      <div class="prose">
+      <h2 id="text"><span class="n">3</span>Cambia el texto</h2>
     <p>Editar contenido abre un formulario con los campos de la página. La plantilla puede ofrecer
       un selector de fecha, una lista desplegable o un campo numérico. Los campos de texto con formato conservan enlaces, listas y estilos.</p>
-    <p class="step">03</p>
-    <h2>Cambia el texto</h2>
     <div editable>
       <p>Haz clic en cualquier texto y escribe. Pulsa Enter para un párrafo nuevo. Selecciona algo
         de texto y aparece una barra pequeña encima.</p>
@@ -236,11 +191,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>Pegar desde un procesador de textos no da problemas. El formato se limpia al entrar, así
         que no acabas con las fuentes de otro programa dentro de tu página.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <section id="picture">
-    <p class="step">04</p>
-    <h2>Añade una imagen</h2>
+    <section class="flyer sheet" data-fix="tape" style="--tilt:-.5deg;margin-left:auto;margin-right:clamp(0rem,4vw,3rem)">
+      <div class="prose">
+      <h2 id="picture"><span class="n">4</span>Añade una imagen</h2>
     <div editable>
       <p>Pon el cursor donde la quieras y pulsa el botón de imagen en la barra.</p>
       <p>¿Has borrado un bloque por error? Pulsa Deshacer en la barra o usa Ctrl+Z (⌘Z en Mac).
@@ -258,11 +214,8 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>Rellena el texto alternativo. Es lo que oye quien usa un lector de pantalla y lo que se
         muestra si la imagen no llega a cargar. El pie de foto es opcional y aparece debajo de la imagen.</p>
     </div>
-  </section>
 
-  <section id="video">
-    <p class="step">05</p>
-    <h2>Añade un video</h2>
+      <h2 id="video"><span class="n">5</span>Añade un video</h2>
     <div editable>
       <p>El botón de video que hay al lado acepta un enlace de YouTube o de Vimeo, o un archivo de
         video para subir.</p>
@@ -280,11 +233,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
         rastrea a tus lectores, y la miniatura sigue funcionando como enlace incluso para quien
         navega con JavaScript desactivado.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <section id="posts">
-    <p class="step">06</p>
-    <h2>Muestra tus publicaciones de Nostr</h2>
+    <section class="flyer sheet" data-fix="pin" style="--tilt:.4deg;margin-left:clamp(0rem,3vw,2.4rem);margin-right:auto">
+      <div class="prose">
+      <h2 id="posts"><span class="n">6</span>Muestra tus publicaciones de Nostr</h2>
     <div editable>
       <p>El botón del rayo inserta un feed de publicaciones de Nostr en la página. Eliges si quieres
         notas cortas, artículos largos o publicaciones con fotos, y de quién.</p>
@@ -306,11 +260,8 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>Publica algo nuevo más adelante y aparecerá aquí por su cuenta. No tienes que volver a
         tocar la página.</p>
     </div>
-  </section>
 
-  <section id="write">
-    <p class="step">07</p>
-    <h2>Escribe una publicación</h2>
+      <h2 id="write"><span class="n">7</span>Escribe una publicación</h2>
     <div editable>
       <p>Si la página puede mostrar tus publicaciones, también puede escribirlas. Aparece listado
         todo lo que has publicado, y puedes editar cualquier artículo desde aquí.</p>
@@ -334,11 +285,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>Las publicaciones y las páginas van por separado. Escribir una nota no cambia tu página, y
         guardar la página no toca tus publicaciones.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <section id="save">
-    <p class="step">08</p>
-    <h2>Guarda los cambios</h2>
+    <section class="flyer sheet" data-fix="tape" style="--tilt:-.3deg;margin-left:auto;margin-right:clamp(0rem,6vw,5rem)">
+      <div class="prose">
+      <h2 id="save"><span class="n">8</span>Guarda los cambios</h2>
     <div editable>
       <p>Pulsa <b>Guardar</b>, o <kbd>⌘S</kbd>. El punto de la esquina se pone verde cuando termina,
         y a partir de ese momento quien abra tu página ve la versión nueva.</p>
@@ -352,11 +304,8 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
         habitual es una app de firma que se ha dormido: despiértala, aprueba y vuelve a pulsar
         Guardar.</p>
     </div>
-  </section>
 
-  <section id="history">
-    <p class="step">09</p>
-    <h2>Vuelve a una versión anterior</h2>
+      <h2 id="history"><span class="n">9</span>Vuelve a una versión anterior</h2>
     <div editable>
       <p>Cada guardado se conserva. <b>Historial</b> los lista todos.</p>
     </div>
@@ -368,11 +317,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>Restaurar una versión antigua no tira la actual. Pasa a ser una entrada más de la lista,
         así que puedes volver a cambiar de opinión.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <section id="share">
-    <p class="step">10</p>
-    <h2>La dirección de tu página</h2>
+    <section class="flyer sheet" data-fix="pin" style="--tilt:.5deg;margin-left:clamp(0rem,2vw,1.6rem);margin-right:auto">
+      <div class="prose">
+      <h2 id="share"><span class="n">10</span>La dirección de tu página</h2>
     <div editable>
       <p>Tu página vive en tu npub:</p>
     </div>
@@ -394,9 +344,12 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
       <p>También puedes tener más de una página. Añade <code>--site=blog</code> al desplegar y esa
         recibe su propia dirección, con la misma clave detrás.</p>
     </div>
-  </section>
+      </div>
+    </section>
 
-  <footer>
+  </main>
+
+  <footer class="foot">
     <p><a href="/es/">Inicio</a> · <a href="https://github.com/jooray/nsite-clay">Código en GitHub</a> · <a href="https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md">Para desarrolladores</a></p>
     <p>Esta página es una de estas páginas. Se escribió dentro de sí misma.</p>
     <p class="nc-credit">Hecho por <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.

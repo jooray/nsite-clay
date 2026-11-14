@@ -15,6 +15,8 @@ import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestSer
 import { ensureRelayList } from "./relay-list.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
+import { Sealed } from "./sealed.js";
+import { keysFrom, parseFragment } from "./seal.js";
 import { Vault } from "./vault.js";
 import { Ai } from "./ai-ui.js";
 import { sanitize, sanitizeAs } from "./sanitize.js";
@@ -100,6 +102,7 @@ class NsiteClay extends EventTarget {
     this.ai = new Ai(this);
     this.upgrade = new Upgrade(this);
     this.pages = new Pages(this);
+    this.sealed = new Sealed(this);
     this.version = VERSION;
     this.status = "idle";
     this.resuming = Promise.resolve(null);
@@ -170,6 +173,8 @@ class NsiteClay extends EventTarget {
     if (this.isOwner) { this.rememberEditor(true, { quiet: true }); this._keepSession(); }
     else this._dropSession();
     if (this.isOwner && this.editRequested) this.editable.enable();
+    // A member opening a sealed page with their own key rather than a link.
+    if (this.sealed.locked) this.sealed.unlockWith(this.signer).catch(() => {});
     this._emit("nsiteclay:login", { pubkey: this.pubkey, isOwner: this.isOwner, resumed });
   }
 
@@ -360,6 +365,20 @@ class NsiteClay extends EventTarget {
     return this.pubkey;
   }
 
+  async _linkSignIn() {
+    let signer = this.sealed.signer();
+    if (!signer && !this.sealed.active) {
+      const { edit } = parseFragment(this.doc.location.hash);
+      if (edit) { const k = await keysFrom({ edit }); if (k.pubkey === this.cfg.owner) signer = new LocalSigner(k.sk); }
+    }
+    if (!signer) return;
+    this._loginGen = (this._loginGen || 0) + 1;
+    this.signer = signer;
+    this._linkEditor = true;
+    this._afterLogin();
+    this.applyEditGate();
+  }
+
   // ---- saving --------------------------------------------------------------
 
   // Everything the runtime injected comes off the clone before serialisation,
@@ -370,7 +389,7 @@ class NsiteClay extends EventTarget {
     for (const a of ["nc:pubkey", "nc:owner-here", "nc:editmode", "nc:status", "nc:ready",
                      "nc:editable", "nc:outdated", "nc:editing", "nc:reading",
                      "nc:cms-rules", "nc:cms-open"]) clone.removeAttribute(a);
-    for (const el of [...clone.querySelectorAll("[nc\\:chrome]")]) el.remove();
+    for (const el of [...clone.querySelectorAll("[nc\\:chrome], [nc\\:shell]")]) el.remove();
     // A feed's items and an opened video frame are fetched at view time. They
     // are not this document's content and must not be frozen into it.
     for (const el of [...clone.querySelectorAll("[nc\\:transient]")]) el.remove();
@@ -433,7 +452,8 @@ class NsiteClay extends EventTarget {
     const tableOnly = Object.keys(extraPaths).length > 0 || dropPaths.length > 0;
     // Identical bytes deduplicate to the same Blossom blob anyway; skipping
     // spares the relays a version event that says nothing new.
-    if (!tableOnly && hashText(html) === this._ownHash) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
+    const sealed = this.sealed.active;
+    if (!tableOnly && (sealed ? html === this.sealed.plain && !this.sealed.shellChanged : hashText(html) === this._ownHash)) { this._set("saved", { skipped: true }); return { skipped: true, hash: this._ownHash }; }
     this._set("saving");
     try {
       const live = await this._currentPaths();
@@ -474,7 +494,8 @@ class NsiteClay extends EventTarget {
           `path table.`);
       }
 
-      const bytes = new TextEncoder().encode(html);
+      // A page that arrived sealed leaves sealed. There is no other branch.
+      const bytes = new TextEncoder().encode(sealed ? await this.sealed.seal(html) : html);
       const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
       paths[this.cfg.path] = hash;
 
@@ -482,17 +503,29 @@ class NsiteClay extends EventTarget {
       // relay keeps whichever id sorts lower. Two saves in the same second, which
       // a new page published right after a save is, would otherwise have the
       // relay accept the second and go on serving the first.
-      const draft = buildManifest(this.cfg, paths, { title: this.doc.title });
+      const draft = buildManifest(this.cfg, paths, sealed
+        ? { sealed: true, expires: this.sealed.expires }
+        : { title: this.doc.title });
       if (this._manifest && draft.created_at <= this._manifest.created_at) draft.created_at = this._manifest.created_at + 1;
       const manifest = await this.signer.sign(draft);
       await publishToAny(this.pool, this.cfg.relays, manifest);
 
       let version = null;
-      if (snapshotVersion) {
+      // A sealed page keeps no history. Its versions are ciphertext nobody
+      // browses, each one a whole copy of the page, and an artifact that saves
+      // on every tick would otherwise leave hundreds behind on somebody else's
+      // free server. So no snapshot names the old one, and the old one goes.
+      if (sealed) {
+        const before = live[this.cfg.path];
+        if (before && before !== hash && !Object.values(paths).includes(before)) {
+          this.sealed.retire(before, this.cfg.servers, this.signer);
+        }
+      } else if (snapshotVersion) {
         version = await this.signer.sign(buildSnapshot(this.cfg, manifest));
         this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
       }
       this._ownHash = hash;
+      this.sealed.adopt(html);
       this.source.adopt(html);
       this._manifest = manifest;
       this._refreshCached(Object.fromEntries(Object.entries(paths).filter(([p, h]) => live[p] !== h)));
@@ -913,6 +946,7 @@ class NsiteClay extends EventTarget {
   // this tab said "not now".
   get editRequested() {
     if (this.cfg.editGate !== "hash") return true;
+    if (this._linkEditor) return true;
     if (this._hashAsksForEdit) return true;
     return this.editorRemembered && !this._editorDismissed;
   }
@@ -1040,8 +1074,25 @@ class NsiteClay extends EventTarget {
     banner.append(msg, btn);
     this.doc.body.appendChild(banner);
 
+    const lang = ["en", "es", "sk", "cs"].indexOf((this.doc.documentElement.lang || "en").slice(0, 2).toLowerCase());
+    const say = (words) => words[Math.max(lang, 0)];
+    btn.textContent = say(["Reload", "Recargar", "Načítať znova", "Načíst znovu"]);
     if (this.dirty) {
-      msg.textContent = "A newer version of this page was published. You have unsaved changes.";
+      msg.textContent = say(["A newer version of this page was published. You have unsaved changes.",
+        "Se publicó una versión más reciente de esta página. Tiene cambios sin guardar.",
+        "Bola zverejnená novšia verzia tejto stránky. Máte neuložené zmeny.",
+        "Byla zveřejněna novější verze této stránky. Máte neuložené změny."]);
+      return;
+    }
+    // Somebody who can edit may be about to type, or half way through reading
+    // a row they mean to change. The page under them is not replaced without
+    // their say: the notice stays and the button is theirs to press. A save
+    // from this copy is refused meanwhile, so nothing newer is overwritten.
+    if (this.isOwner) {
+      msg.textContent = say(["Someone changed this page. Reload to see it.",
+        "Alguien ha cambiado esta página. Recargue para verlo.",
+        "Niekto túto stránku zmenil. Načítajte ju znova a uvidíte zmeny.",
+        "Někdo tuto stránku změnil. Načtěte ji znovu a uvidíte změny."]);
       return;
     }
     let n = 5;
@@ -1061,7 +1112,10 @@ nc.ready = (async () => {
   if (document.readyState === "loading") {
     await new Promise((r) => document.addEventListener("DOMContentLoaded", r, { once: true }));
   }
-  nc.cfg = readConfig(document);
+  // A sealed page: find a key and open it. That replaces the document, and the
+  // runtime the page links starts again on the real one, so this run ends here.
+  if (nc.sealed.locked) await nc.sealed.open();
+  nc.cfg = nc.sealed.pin(readConfig(document), readConfig);
   nc._trackDirty();
   nc._armSaving();
   nc._guardUnload();
@@ -1091,6 +1145,8 @@ nc.ready = (async () => {
   // is furniture. The shared stylesheet hides it unless this says otherwise.
   if (nc.doc.querySelector("script[nc\\:cms]")) nc.doc.documentElement.setAttribute("nc:cms-rules", "true");
   nc.upgrade.start();
+  // An opened sealed page: its links, who has it, and deleting it.
+  if (nc.sealed.active) nc.sealed.drawButton();
   nc._watchVersion();
   if (nc.cfg.owner) {
     nc.currentManifest().then((ev) => { if (ev) { nc._manifest = ev; nc._bootManifest = ev; } }).catch(() => {});
@@ -1100,6 +1156,8 @@ nc.ready = (async () => {
   // kept in the tab is back before `ready` settles; a signer elsewhere answers
   // when it answers, and `nc.resuming` says when that was.
   nc.resuming = nc.resumeSession().catch(() => null);
+  // An edit link is a sign-in: the secret after #e= is the page's own key.
+  await nc._linkSignIn().catch(() => {});
   // Working on a page is using the sign-in, so it keeps it for another hour.
   for (const e of ["keydown", "input", "pointerdown"]) {
     document.addEventListener(e, () => nc._touchSession(), { capture: true, passive: true });

@@ -46,6 +46,9 @@ export class Source {
       if (!/^https?:/.test(url || "")) return false;
       if (!await this.load()) return false;
       try {
+        // The file a sealed page was served as is its shell. Its own text is
+        // what was decrypted from it.
+        if (this.nc.sealed?.active) { if (!this.model && this.nc.sealed.plain) this.adopt(this.nc.sealed.plain); return !!this.model; }
         const response = await fetch(url, { cache: "no-store", redirect: "error", credentials: "same-origin", signal: AbortSignal.timeout(10000) });
         if (!response.ok || !/^text\/html\b/i.test(response.headers.get("content-type") || "")) return false;
         // A successful local save while the initial fetch was in flight wins.

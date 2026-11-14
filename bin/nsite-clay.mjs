@@ -39,7 +39,7 @@ const DEFAULT_RELAYS = [
   // and ten minutes before a change is visible.
   "wss://relay.nsite.lol",
 ];
-const DEFAULT_SERVERS = ["https://cdn.hzrd149.com", "https://nostr.download"];
+const DEFAULT_SERVERS = ["https://nostr.download", "https://blossom.yakihonne.com"];
 
 // ---------------------------------------------------------------- arguments
 
@@ -1384,6 +1384,13 @@ function cmdVersion() {
 }
 
 const commands = { version: cmdVersion, init: cmdInit, deploy: cmdDeploy, pull: cmdPull, whoami: cmdWhoami, unpublish: cmdUnpublish, keygen: cmdKeygen, help: cmdHelp };
+// Pages an agent makes for somebody: encrypted, shared by link, deleted on a
+// date. Its own file, because the agent skill ships that file by itself.
+if (cmd === "artifact") {
+  const { main } = await import("./artifact.mjs");
+  process.exit(await main(argv.slice(argv.indexOf("artifact") + 1)));
+}
+
 const run = cmd === "help" && flags.version === true ? cmdVersion : commands[cmd] || cmdHelp;
 await run();
 process.exit(0);

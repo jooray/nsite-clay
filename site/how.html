@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/how.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: how it works</title>
+<meta name="description" content="What an nsite is, how a page edits and republishes itself, the three lines that make a document editable, and where it gets served.">
+<meta name="color-scheme" content="light dark">
+<link rel="alternate" hreflang="en" href="/how.html">
+<link rel="alternate" hreflang="es" href="/es/how.html">
+<link rel="alternate" hreflang="sk" href="/sk/how.html">
+<link rel="alternate" hreflang="cs" href="/cs/how.html">
+<link rel="alternate" hreflang="x-default" href="/how.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<script src="/site.js"></script>
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .stack > * + * { margin-top: 3rem; }
+  .stack { padding: 2.4rem 0 1rem; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 2.4rem; }
+  @media (max-width: 52rem) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .gate { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .9rem; }
+  .gate li { padding-top: .8rem; border-top: 1px dotted var(--ink-dim); }
+  .gate strong { display: block; font: 700 1.02rem var(--display); }
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { outline: 2px dotted var(--purple-2); outline-offset: 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="topbar" aria-label="Main">
+    <a class="brand" href="/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/guide.html">Guide</a>
+    <a href="/templates.html">Templates</a>
+    <a href="/how.html" aria-current="page">How it works</a>
+    <a href="/llms.txt">For agents</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <span class="lang"><a href="/how.html" hreflang="en" aria-current="page">EN</a><a href="/es/how.html" hreflang="es">ES</a><a href="/sk/how.html" hreflang="sk">SK</a><a href="/cs/how.html" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch between light and dark" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </nav>
+
+  <main class="stack">
+
+    <section class="flyer" data-fix="tape" data-settle style="--tilt:-.4deg" aria-labelledby="top">
+      <h1 id="top" editable="single-line">How a page <em>edits itself.</em></h1>
+      <div editable class="prose">
+        <p class="lede">An nsite is web hosting on Nostr: whole HTML files, served to anyone who opens the address. That is all an nsite is. nsite-clay adds one thing: the page edits and updates itself, so the CMS sits inside the static HTML, not behind it.</p>
+        <p class="lede">You change the page. Click around and type, or open your browser's inspector and change the DOM there; the page does not care which. The new version is uploaded to your Blossom servers, and one replaceable event is republished that says which file <code>/</code> or <code>/about-us</code> now points to. Any nsite gateway renders it.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="loop">
+      <h2 id="loop" editable="single-line">What Save does, exactly.</h2>
+      <ol class="gate">
+        <li><strong>Snapshot.</strong> The page clones its own DOM, cleans it up, and serialises the whole document. The toolbar and the debris browsers leave behind after editing commands never get saved.</li>
+        <li><strong>Blossom.</strong> Those bytes go to a Blossom server as one blob, addressed by its own sha256.</li>
+        <li><strong>Manifest.</strong> A replaceable NIP-5A event maps the path to that hash. Publishing it is the deploy.</li>
+      </ol>
+      <div editable>
+        <p class="lede" style="margin-top:1.2rem">Relays hold the manifest, Blossom servers hold the bytes, and the browser does the rest. Ownership is a keypair, so who may edit a page is not a row in somebody else's database.</p>
+      </div>
+    </section>
+
+    <section class="flyer" style="--tilt:-.3deg" aria-labelledby="document">
+      <h2 id="document" editable="single-line">The whole integration.</h2>
+      <p class="lede" editable="single-line">One attribute says who owns the file, one marks what people can type into, one script tag does the rest.</p>
+<pre><span class="c">&lt;!DOCTYPE html&gt;</span>
+&lt;html lang="en" <span class="k">autosave</span> <span class="k">nc:owner</span>=<span class="s">"npub1…"</span>&gt;
+&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Notes&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1 <span class="k">editable</span>="single-line"&gt;My notes&lt;/h1&gt;
+  &lt;div <span class="k">editable</span>&gt;
+    &lt;p&gt;Type anything here.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;script src="/nsite-clay.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+      <div editable>
+        <p class="lede">Save it, then open the file in a text editor: your words are in the HTML. The DOM is the database, so there is no other place for state to live.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="editing">
+      <h2 id="editing" editable="single-line">Editing.</h2>
+      <div class="cols">
+        <div editable>
+          <p>Mark a container <code>editable</code> and it becomes rich text for the owner and ordinary markup for everybody else.</p>
+          <p>Enter starts a new paragraph. Selecting text raises a floating toolbar whose first control is a block menu: Paragraph, Heading 1 to 3, Quote, Code block.</p>
+        </div>
+        <div editable>
+          <p>Keyboard shortcuts work as you would expect, and typing <code>#&nbsp;</code>, <code>-&nbsp;</code> or <code>&gt;&nbsp;</code> at the start of a line does too.</p>
+          <p>What reaches the file is markup a person could have written by hand.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:-.5deg" aria-labelledby="gateways">
+      <h2 id="gateways" editable="single-line">Gateways, and where your page is served.</h2>
+      <div editable>
+        <p class="lede">A gateway resolves your manifest and serves the files. They all read the same events, so your site is not tied to any of them. If one is down, swap the hostname.</p>
+      </div>
+      <ul class="gate">
+        <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> and <a href="https://nwb.tf">nwb.tf</a> are public gateways.</li>
+        <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a> and <a href="https://shakespeare.to">shakespeare.to</a> are reference implementations. nsite.run also has the clearest explanation of what an nsite is.</li>
+        <li>A CNAME from your own domain to your npub subdomain gets any of them to serve it, over plain HTTP. HTTPS needs a certificate for that name, which today means running your own gateway. <code>npm run devnet</code> runs one on your laptop.</li>
+        <li>Assets are published at paths that carry their content hash, and each document watches its own manifest and reloads itself when a newer version appears. Nobody needs to know what a hard refresh is.</li>
+      </ul>
+      <p style="margin-top:1.4rem"><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Full deployment guide</a></p>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p><a href="/">Home</a> · <a href="/deploy.html">Publish a site</a> · <a href="/guide.html">Guide</a> ·
+      <a href="/templates.html">Templates</a> · <a href="/llms.txt">For agents</a> ·
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
+    <p>MIT-0.</p>
+  </footer>
+</div>
+
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

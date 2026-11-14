@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.28",
+    "released": "2026-11-14",
+    "notes": [
+      "New sites are now stored on nostr.download and blossom.yakihonne.com. The server cdn.hzrd149.com, which new sites used until now, stopped accepting files from new accounts. A site that already lists it keeps working: its pages stay readable there, and every save also goes to its other server.",
+      "The nsite-clay website and the page where you start a new site have a new look. Starting a site now asks one thing per screen, and the AI options you rarely need are tucked under More options.",
+      "Pages that an AI agent publishes for you, such as a shopping list or a trip plan, can now be encrypted so that only people with the link can read them. A small padlock on such a page lets you copy its links, add a person, or delete it, and an old version is removed from the servers every time the page is saved."
+    ]
+  },
+  {
     "version": "0.3.27",
     "released": "2026-10-23",
     "notes": [

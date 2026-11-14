@@ -14,427 +14,538 @@
 
   The four language versions are generated from this file by
   tools/stage-deploy.mjs. Edit this one.
+
+  Entry points: /deploy.html shows every way in. ?key=have opens the sign-in
+  choice for somebody who holds a key, ?key=new goes straight to making one.
 -->
 <html lang="en"
       nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
       nc:path="/deploy.html"
       nc:edit-gate="hash"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://nostr.download" nc:source="/nsite-clay-source.js">
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: publish a site</title>
 <meta name="description" content="Publish a self-editable website to Nostr from your browser. Pick a template, sign in with your key, and it is online. No command line and no account.">
+<meta name="color-scheme" content="light dark">
 <link rel="alternate" hreflang="en" href="/deploy.html">
 <link rel="alternate" hreflang="es" href="/es/deploy.html">
 <link rel="alternate" hreflang="sk" href="/sk/deploy.html">
 <link rel="alternate" hreflang="cs" href="/cs/deploy.html">
 <link rel="alternate" hreflang="x-default" href="/deploy.html">
 <link rel="icon" href="/nsite-clay-mark.svg">
+<script src="/site.js"></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
-    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
-    --nc-ok: #6FD39A; --nc-bad: #E88A8A;
-    --nc-radius: 12px; --nc-radius-sm: 8px;
-    --nc-shadow: 0 24px 60px -30px rgba(0,0,0,.85);
-    --violet: #AB82F1; --ink-faint: #6F5D8E;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
-    --nc-chrome-font: var(--sans); --nc-mono: var(--mono);
+  [hidden] { display: none !important; }
+  /* A wizard moves between screens and jumps to results; a page-wide glide makes
+     every programmatic scroll and every click on a button that is still sliding
+     land somewhere else. Script asks for smooth scrolling where it wants it. */
+  html { scroll-behavior: auto; }
+
+  .page { width: min(100% - 2rem, 54rem); }
+  .wiz { padding: 1.2rem 0 1rem; }
+  .wiz-intro { margin: 0 0 2.2rem; }
+  .wiz-intro h1 { font-size: clamp(2.2rem, 5.4vw, 3.3rem); color: var(--wall-ink); }
+  .wiz-intro p { color: var(--wall-dim); max-width: 50ch; margin: .8rem 0 0; font-size: 1.1rem; }
+
+  /* The flyer is pinned over two other sheets, so the board looks used. */
+  .board { position: relative; isolation: isolate; margin: 0 0 2rem; }
+  .board::before, .board::after {
+    content: ""; position: absolute; z-index: -1; box-shadow: var(--shadow);
+    inset: .7rem .3rem -.7rem; background: var(--paper-2); transform: rotate(-1deg);
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--nc-bg); color: var(--nc-ink);
-    font: 16.5px/1.68 var(--sans);
-    background-image:
-      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
-      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
-    background-attachment: fixed;
+  .board::after { inset: 1rem .6rem -1.1rem; background: var(--paper-edge); transform: rotate(.8deg); z-index: -2; }
+  .wiz-flyer { --pad: clamp(1.4rem, 4vw, 2.8rem); --tilt: 0deg; min-height: 26rem; }
+
+  /* ---- the progress mark: four tear-off tabs along the top edge ------------ */
+  .wiz-tabs {
+    list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) clamp(1.5rem, 3.4vw, 2.2rem); padding: 0;
+    border-bottom: 2px dashed var(--ink-dim);
   }
-  a { color: var(--violet); text-underline-offset: 3px; }
-  a:hover { color: #C9AAFF; }
-  code, .mono { font-family: var(--mono); font-size: .9em; }
-  .wrap { max-width: 52rem; margin: 0 auto; padding: 0 1.4rem; }
-
-  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
-           color: var(--ink-faint); padding-top: 2.5rem; flex-wrap: wrap; }
-  .crumb img { width: 28px; height: 28px; }
-  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
-  .crumb .langs { margin-left: auto; display: flex; gap: .55rem; }
-
-  h1 { font-size: clamp(2rem, 5.5vw, 2.7rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
-  .lede { color: var(--nc-ink-dim); font-size: 1.08rem; max-width: 40rem; margin: 0 0 2.5rem; }
-
-  /* ---- the stepper ------------------------------------------------------ */
-
-  ol.steps { list-style: none; display: flex; gap: .4rem; margin: 0 0 2rem; padding: 0;
-             flex-wrap: wrap; font-size: .82rem; color: var(--ink-faint); }
-  ol.steps li { display: flex; align-items: center; gap: .45rem; padding: .3rem .75rem;
-                border: 1px solid var(--nc-edge); border-radius: 999px; }
-  ol.steps li .n { display: grid; place-items: center; width: 1.35rem; height: 1.35rem;
-                   border-radius: 50%; background: var(--nc-edge); color: var(--nc-ink);
-                   font-size: .74rem; font-weight: 600; }
-  ol.steps li[aria-current="step"] { color: var(--nc-ink); border-color: var(--nc-accent); }
-  ol.steps li[aria-current="step"] .n { background: var(--nc-accent); color: var(--nc-accent-ink); }
-  ol.steps li[data-done="true"] { color: var(--nc-ink-dim); }
-  ol.steps li[data-go] { cursor: pointer; }
-  ol.steps li[data-go]:hover, ol.steps li[data-go]:focus-visible {
-    color: var(--nc-ink); border-color: var(--nc-accent); outline: none;
+  .wiz-tabs li {
+    position: relative; display: flex; align-items: center; gap: .6rem; min-width: 0;
+    padding: .95rem .9rem; border-left: 2px dashed var(--ink-dim);
+    color: var(--ink-dim); font: 700 .92rem/1.15 var(--text); overflow-wrap: anywhere;
+    transition: background .15s, transform .2s cubic-bezier(.2, .8, .2, 1);
   }
-  ol.steps li[data-go]:focus-visible { outline: 2px solid var(--nc-accent); outline-offset: 2px; }
-  ol.steps li[data-done="true"] .n { background: var(--nc-ok); color: #0b2418; }
+  .wiz-tabs li:first-child { border-left: 0; }
+  .wiz-tabs .n {
+    display: grid; place-items: center; flex: none; width: 1.9rem; height: 1.9rem;
+    border: 2px solid currentColor; border-radius: 50%; font: 800 .95rem/1 var(--display);
+  }
+  /* done: inked, like a stamp pressed on the stub */
+  .wiz-tabs li[data-done="true"] { color: var(--purple); }
+  .wiz-tabs li[data-done="true"] .n { background: var(--purple); border-color: var(--purple); color: var(--on-purple); transform: rotate(-8deg); }
+  /* current: the stub that is pulled out and hangs lower than the rest */
+  .wiz-tabs li[aria-current="step"] {
+    color: var(--ink); background: var(--purple-wash); z-index: 1; padding-bottom: 1.25rem;
+    margin-bottom: -.4rem; box-shadow: 0 10px 14px -10px rgba(30, 20, 50, .55);
+  }
+  .wiz-tabs li[aria-current="step"] .n { border-color: var(--purple); color: var(--purple); background: var(--paper); }
+  .wiz-tabs li[data-go] { cursor: pointer; }
+  .wiz-tabs li[data-go]:hover { background: var(--purple-wash); transform: translateY(.25rem); }
+  .wiz-tabs li[data-go]:hover .lbl { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .25em; }
 
+  /* ---- a step ---------------------------------------------------------------- */
   section.step { display: none; }
   section.step[data-on] { display: block; }
+  .step h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin: 0 0 .35em; }
+  .step h2:focus { outline: none; }
+  .step h2:focus-visible { outline: 3px solid var(--purple); }
+  .sub { color: var(--ink-dim); max-width: 58ch; margin: 0 0 1.5rem; }
+  .note { font-size: .93rem; color: var(--ink-dim); margin: .65rem 0 0; }
+  .bad { color: var(--bad); }
+  .note a, .sub a { color: var(--purple); }
+  label.f, p.f { display: block; margin: 1.1rem 0 .4rem; font: 700 .95rem/1.3 var(--text); color: var(--ink); }
+  .row { display: flex; gap: .7rem; flex-wrap: wrap; align-items: center; }
+  .moves { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: space-between; align-items: center;
+           margin-top: 2rem; padding-top: 1.3rem; border-top: 2px dashed var(--ink-dim); }
+  .moves .end { margin-left: auto; }
 
-  .card { background: var(--nc-panel); border: 1px solid var(--nc-edge);
-          border-radius: var(--nc-radius); padding: 1.4rem 1.5rem; margin: 0 0 1.1rem; }
-  .card h2 { font-size: 1.15rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
-  .card p.sub { color: var(--nc-ink-dim); font-size: .93rem; margin: 0 0 1.1rem; }
-
-  button, .btn {
-    font: inherit; font-size: .92rem; cursor: pointer; padding: .58rem 1.05rem;
-    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
-    background: var(--nc-bg); color: var(--nc-ink); text-decoration: none; display: inline-block;
+  /* Controls made in script have no class and still have to look like paper and ink. */
+  .wiz-flyer button:not([class]) {
+    font: 700 .95rem/1.1 var(--text); cursor: pointer; padding: .6rem .95rem; color: var(--ink);
+    background: transparent; border: 2px solid var(--ink); border-radius: 3px;
   }
-  button:hover, .btn:hover { border-color: var(--nc-accent); }
-  button.primary, .btn.primary {
-    background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); font-weight: 600;
+  .wiz-flyer button:not([class]):hover { background: var(--ink); color: var(--paper); }
+  .wiz-flyer button[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.small { padding: .55rem .85rem; font-size: .92rem; }
+
+  /* an unhurried "working" mark: a dashed line that walks */
+  .busy { height: 6px; margin: .9rem 0 0; max-width: 22rem;
+          background: repeating-linear-gradient(90deg, var(--purple) 0 14px, transparent 14px 24px) 0 0 / 24px 100%; }
+  @media (prefers-reduced-motion: no-preference) { .busy { animation: march .8s linear infinite; } }
+  @keyframes march { to { background-position: 24px 0; } }
+
+  details.more { margin-top: 1.4rem; border-top: 1px dashed var(--ink-dim); padding-top: .3rem; }
+  details.more > summary { cursor: pointer; padding: .6rem 0; font-weight: 700; color: var(--ink-dim); }
+  details.more > summary:hover { color: var(--ink); }
+  details.more textarea { font: .86rem/1.55 var(--mono); min-height: 4.6rem; resize: vertical; }
+  details.more input[type="file"] { width: 100%; font: .92rem var(--text); }
+
+  /* ---- 1. sign in ------------------------------------------------------------ */
+  .group + .group { margin-top: 1.8rem; }
+  .group h3 { font-size: 1.3rem; margin: 0 0 .7rem; }
+  .way {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; align-items: center;
+    width: 100%; text-align: left; padding: 1rem 1.1rem; font: inherit; color: var(--ink);
+    background: transparent; border: 2px solid var(--ink); border-radius: 3px; cursor: pointer;
+    transition: background .12s, color .12s;
   }
-  button.primary:hover { filter: brightness(1.09); }
-  button[disabled] { opacity: .45; cursor: not-allowed; }
-  .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-  .row.end { justify-content: flex-end; margin-top: 1.2rem; }
+  .way + .way { margin-top: .65rem; }
+  .way b { font: 800 1.15rem/1.2 var(--display); letter-spacing: -.01em; }
+  .way small { grid-column: 1; font-size: .95rem; line-height: 1.4; color: var(--ink-dim); }
+  .way::after { content: "\2192"; grid-column: 2; grid-row: 1 / span 2; font: 700 1.5rem/1 var(--display); color: var(--purple); }
+  .way:hover { background: var(--ink); color: var(--paper); }
+  .way:hover small, .way:hover::after { color: inherit; }
+  .way[disabled] { opacity: .5; cursor: not-allowed; }
+  .group-new .way { border-style: dashed; background: var(--purple-wash); }
+  .group-new .way:hover { background: var(--ink); }
+  #signin-choose[data-mode="have"] .group-new { display: none; }
+  button.textlink { all: unset; cursor: pointer; color: var(--purple); text-decoration: underline; text-underline-offset: .2em; font-weight: 700; }
+  button.textlink:focus-visible { outline: 3px solid var(--purple-2); outline-offset: 3px; }
+  #qrbox { text-align: center; margin: 1rem 0 0; }
+  #qrbox svg { width: min(300px, 100%); height: auto; background: #fff; padding: .6rem; border: 2px solid var(--ink); }
+  #qrbox p { margin: .8rem 0 0; }
 
-  label.f { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
-            color: var(--nc-ink-dim); margin: 0 0 .35rem; }
-  input[type=text], input[type=password], textarea, select {
-    width: 100%; font: inherit; font-size: .93rem; padding: .6rem .7rem;
-    border-radius: var(--nc-radius-sm); border: 1px solid var(--nc-edge);
-    background: var(--nc-bg); color: inherit;
+  /* the key, printed on a ticket nobody can print again */
+  .ticket { position: relative; margin: 1.6rem 0 1rem; padding: 1.4rem 1.3rem 1.3rem; background: var(--purple-wash); border: 2px dashed var(--purple); }
+  .ticket .stamp { position: absolute; top: -.95rem; right: 1rem; background: var(--paper); }
+  .ticket p.f { margin-top: 0; }
+  .keybox { font: 600 1.05rem/1.6 var(--mono); overflow-wrap: anywhere; user-select: all; color: var(--ink);
+            background: #fff; border: 2px solid var(--ink); padding: .85rem .95rem; margin: 0 0 1rem; }
+  .confirm { display: flex; gap: .8rem; align-items: flex-start; margin: 1.4rem 0 0; padding: .95rem 1.05rem;
+             border: 2px solid var(--ink); font-weight: 700; cursor: pointer; }
+  .confirm input { width: 1.5rem; height: 1.5rem; flex: none; margin: .05rem 0 0; }
+
+  /* ---- 2. a starting point --------------------------------------------------- */
+  .who { margin: -.6rem 0 1.4rem; font-size: .95rem; }
+  .who code { background: var(--purple-wash); color: var(--ink); padding: .1em .4em; border-radius: 3px; }
+  .route h3 { font-size: 1.55rem; margin: 0 0 .3em; }
+  .route-sub { color: var(--ink-dim); max-width: 58ch; margin: 0 0 1.1rem; }
+  #ai-description { min-height: 8rem; }
+  .price { margin: 1.3rem 0 1rem; padding: 1.1rem 1.2rem 1.2rem; background: var(--purple-wash); border: 2px dashed var(--purple); }
+  .price-total { margin: 0 0 .9rem; font: 700 1rem/1.2 var(--text); color: var(--ink); }
+  .price-total b { font: 800 2.9rem/1 var(--display); letter-spacing: -.03em; color: var(--purple); margin-right: .2rem; }
+  .halves { display: grid; grid-template-columns: 1fr 1fr; }
+  .half { padding: 0 1.1rem; font-size: .98rem; line-height: 1.35; }
+  .half:first-child { padding-left: 0; }
+  .half + .half { border-left: 2px dashed var(--ink-dim); }
+  .half b { display: block; font: 800 1.8rem/1.1 var(--display); color: var(--ink); }
+  .price .note { margin-top: .9rem; color: var(--ink); }
+  /* Before anything is paid the price above says it all; balance and rates are for later. */
+  #ai-price:not([hidden]) ~ #ai-readiness { display: none; }
+  .nc-ai-readiness .nc-hint { font-size: .93rem; color: var(--ink-dim); margin: .5rem 0 0; }
+  .nc-ai-readiness .nc-hint.nc-bad { color: var(--bad); }
+  .nc-ai-readiness button { margin-top: .5rem; }
+  #ai-builder .row { margin-top: 1rem; }
+  #ai-builder h4 { font: 800 1.3rem/1.1 var(--display); margin: 2rem 0 .6rem; }
+  #ai-builder h4:focus { outline: none; }
+  #ai-preview { display: block; width: 100%; height: 30rem; border: 2px solid var(--ink); background: #fff; margin: 1rem 0; }
+  #ai-version { margin-top: .3rem; }
+
+  .cut-or { display: flex; align-items: center; gap: 1rem; margin: 2.4rem 0 2rem; color: var(--ink-dim); font: 700 .95rem/1 var(--text); }
+  .cut-or::before, .cut-or::after { content: ""; flex: 1; border-top: 2px dashed var(--ink-dim); }
+
+  .grid { display: grid; gap: 1.3rem 1.1rem; grid-template-columns: repeat(auto-fill, minmax(13.6rem, 1fr)); padding: .4rem 0 .4rem; }
+  .tpl {
+    display: flex; flex-direction: column; text-align: left; padding: .5rem .5rem .85rem; font: inherit;
+    color: var(--ink); background: var(--paper-2); border: 1px solid var(--paper-edge); cursor: pointer;
+    box-shadow: 0 1px 1px rgba(30, 20, 50, .14), 0 9px 14px -9px rgba(30, 20, 50, .4);
+    transform: rotate(var(--t, 0deg)); transition: transform .18s cubic-bezier(.2, .8, .2, 1);
   }
-  input:focus, textarea:focus { outline: 2px solid var(--nc-accent); outline-offset: 1px; }
+  .tpl:nth-child(3n+1) { --t: -.6deg; } .tpl:nth-child(3n+2) { --t: .5deg; } .tpl:nth-child(3n) { --t: -.25deg; }
+  .tpl:hover { transform: rotate(0) translateY(-3px); }
+  .tpl[aria-pressed="true"] { outline: 3px solid var(--purple); outline-offset: 2px; }
+  .tpl .shot { display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--paper); border: 1px solid var(--paper-edge); }
+  .tpl .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+  .tpl .shot .none { display: grid; place-items: center; height: 100%; color: var(--ink-dim); font: .8rem var(--mono); }
+  .tpl .body { display: flex; flex-direction: column; gap: .15rem; padding: .6rem .35rem 0; flex: 1; }
+  .tpl .name { font: 700 .76rem/1.2 var(--mono); color: var(--purple); }
+  .tpl b { font: 800 1.1rem/1.15 var(--display); }
+  .tpl p { margin: .15rem 0 0; font-size: .9rem; line-height: 1.4; color: var(--ink-dim); }
+  .cli { margin: 1.6rem 0 0; font-size: .95rem; color: var(--ink-dim); }
 
-  .note { font-size: .86rem; color: var(--nc-ink-dim); margin: .6rem 0 0; }
-  /* The paid route, and the one most people should take, so it looks like a
-     thing rather than a disclosure triangle. */
-  .ai-builder { display: block; margin: 1.2rem 0 0; padding: 1.1rem 1.2rem 1.2rem;
-    border: 1px solid var(--nc-accent); border-radius: var(--nc-radius);
-    background: color-mix(in srgb, var(--nc-accent) 9%, transparent); }
-  .ai-builder h3 { margin: 0; font-size: 1.05rem; }
-  .ai-builder textarea { min-height: 7.5rem; }
-  .or-pick { margin: 1.4rem 0 .2rem; }
-  .warn { border-color: #7a4a2a; background: #2a1710; }
-  .warn h2 { color: #F0B48A; }
-  .good { border-color: #2c5f45; background: #10231a; }
-  .bad { color: var(--nc-bad); }
+  /* ---- 3. an address --------------------------------------------------------- */
+  #path-preview { font: 600 .95rem/1.5 var(--mono); overflow-wrap: anywhere; color: var(--ink); background: #fff;
+                  border: 2px solid var(--ink); padding: .75rem .9rem; margin: .9rem 0 0; }
+  .occ { margin: 1.3rem 0 0; padding: 1.1rem 1.2rem 1.2rem; background: var(--paper-2); border: 2px dashed var(--ink-dim); }
+  .occ.warn { background: var(--purple-wash); border-color: var(--purple); }
+  .occ h3 { font-size: 1.3rem; margin: 0 0 .3em; }
+  .occ .sub { margin-bottom: .8rem; }
+  .occ .mono { color: var(--ink); overflow-wrap: anywhere; }
 
-  /* ---- sign in ---------------------------------------------------------- */
-
-  .ways { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
-  .way { text-align: left; padding: .9rem 1rem; display: grid; gap: .2rem; }
-  .way b { font-weight: 600; font-size: .95rem; }
-  .way small { color: var(--nc-ink-dim); font-size: .8rem; line-height: 1.5; }
-  #qrbox { text-align: center; margin-top: 1rem; }
-  #qrbox svg { max-width: min(300px, 100%); height: auto; }
-
-  .keybox { font-family: var(--mono); font-size: .82rem; word-break: break-all;
-            background: var(--nc-bg); border: 1px solid var(--nc-edge);
-            border-radius: var(--nc-radius-sm); padding: .8rem; margin: .8rem 0; }
-
-  /* ---- templates -------------------------------------------------------- */
-
-  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
-  .tpl { padding: 0; overflow: hidden; text-align: left; display: flex; flex-direction: column;
-         background: var(--nc-panel); border: 1px solid var(--nc-edge);
-         border-radius: var(--nc-radius); cursor: pointer; }
-  .tpl:hover { border-color: var(--nc-accent); }
-  .tpl[aria-pressed=true] { border-color: var(--nc-accent); box-shadow: 0 0 0 2px var(--nc-accent) inset; }
-  .tpl .shot { aspect-ratio: 16/10; background: #100722; overflow: hidden; display: block; }
-  .tpl .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
-  .tpl .shot .none { display: grid; place-items: center; height: 100%; color: var(--ink-faint);
-                     font: .78rem var(--mono); }
-  .tpl .body { padding: .8rem .9rem 1rem; display: flex; flex-direction: column; gap: .2rem; flex: 1; }
-  .tpl .name { font: .72rem var(--mono); color: var(--violet); letter-spacing: .04em; }
-  .tpl b { font-size: 1rem; font-weight: 600; }
-  .tpl p { margin: .2rem 0 0; font-size: .86rem; color: var(--nc-ink-dim); }
-
-  /* ---- progress --------------------------------------------------------- */
-
-  ul.log { list-style: none; margin: 1rem 0 0; padding: 0; font: .86rem/1.9 var(--mono); }
-  ul.log li { color: var(--nc-ink-dim); }
-  ul.log li::before { content: "· "; }
-  ul.log li[data-ok]::before { content: "✓ "; color: var(--nc-ok); }
-  ul.log li[data-bad]::before { content: "✕ "; color: var(--nc-bad); }
-  ul.log li[data-bad] { color: var(--nc-bad); }
-  /* One line per Blossom server under the file being pushed. A publish that has
-     stalled with two servers configured is a different problem depending on
-     which of them stopped answering, and a counter cannot say. */
-  ul.log li.srv { padding-left: 1.6rem; opacity: .85; }
-  ul.log li.srv::before { content: "· "; }
-  ul.log li.srv[data-ok]::before { content: "✓ "; }
-  ul.log li.srv[data-bad]::before { content: "✕ "; }
-  ul.log li.srv b { font-weight: 400; color: var(--nc-ink); }
+  /* ---- 4. publishing --------------------------------------------------------- */
+  ul.log { list-style: none; margin: 1.2rem 0 0; padding: 1rem 1.1rem; font: .9rem/1.85 var(--mono);
+           background: var(--paper-2); border: 2px solid var(--ink); }
+  ul.log:empty { display: none; }
+  ul.log li { color: var(--ink-dim); overflow-wrap: anywhere; }
+  ul.log li::before { content: "\00B7  "; }
+  ul.log li[data-ok]::before { content: "\2713  "; color: var(--ok); font-weight: 700; }
+  ul.log li[data-bad]::before { content: "\2715  "; color: var(--bad); font-weight: 700; }
+  ul.log li[data-bad] { color: var(--bad); }
+  /* One line per storage server under the file being pushed: a stall is a different
+     problem depending on which of them stopped answering. */
+  ul.log li.srv { padding-left: 1.6rem; }
+  ul.log li.srv b { font-weight: 400; color: var(--ink); }
   ul.log li.srv i { font-style: normal; }
-  ul.log li.srv i.clock { color: var(--nc-ink-dim); opacity: .7; }
+  ul.log li.srv i.clock { opacity: .75; }
+  .done { position: relative; padding-top: .4rem; }
+  .done .stamp { font-size: 1rem; margin: 0 0 1rem; }
+  .url { font: 600 1rem/1.5 var(--mono); overflow-wrap: anywhere; background: #fff; border: 2px solid var(--ink); padding: .9rem 1rem; margin: 1.1rem 0; }
 
-  details.adv { margin-top: 1.2rem; border-top: 1px solid var(--nc-edge); padding-top: .9rem; }
-  details.adv > summary { cursor: pointer; font-size: .88rem; color: var(--nc-ink-dim); }
-  details.adv > summary:hover { color: var(--nc-ink); }
-  details.adv textarea {
-    width: 100%; font: .82rem/1.6 var(--mono); padding: .55rem .65rem; resize: vertical;
-    min-height: 4.4rem; border-radius: var(--nc-radius-sm);
-    border: 1px solid var(--nc-edge); background: var(--nc-bg); color: var(--nc-ink);
+  /* ---- the foot --------------------------------------------------------------- */
+  .foot a { text-underline-offset: .2em; }
+
+  @media (max-width: 40rem) {
+    .board::before, .board::after { display: none; }
+    .wiz-flyer { min-height: 0; }
+    .wiz-tabs li { flex-direction: column; justify-content: flex-start; text-align: center; gap: .4rem; padding: .8rem .35rem; font-size: .76rem; }
+    .wiz-tabs li[aria-current="step"] { padding-bottom: 1rem; }
+    .halves { grid-template-columns: 1fr; gap: .8rem; }
+    .half { padding: 0; }
+    .half + .half { border-left: 0; border-top: 2px dashed var(--ink-dim); padding-top: .8rem; }
+    #ai-preview { height: 22rem; }
+    .moves > .btn { flex: 1 1 auto; justify-content: center; }
   }
-
-  .url { font-family: var(--mono); font-size: .95rem; word-break: break-all;
-         background: var(--nc-bg); border: 1px solid var(--nc-edge);
-         border-radius: var(--nc-radius-sm); padding: .8rem; margin: .9rem 0; }
-
-  footer { border-top: 1px solid var(--nc-edge); margin-top: 4rem; padding: 2rem 0 4rem;
-           color: var(--ink-faint); font-size: .9rem; }
-  footer a { color: var(--nc-ink-dim); }
-
-  noscript p { border: 1px solid var(--nc-edge); border-radius: var(--nc-radius);
-               padding: 1rem 1.2rem; background: var(--nc-panel); }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <p class="crumb">
-    <img src="/nsite-clay-transparent.png" alt="" width="28" height="28">
-    <a href="/">nsite-clay</a> <span>/</span> <span data-t="crumb">publish</span>
-    <span class="langs">
-      <a href="/deploy.html" hreflang="en">EN</a>
-      <a href="/es/deploy.html" hreflang="es">ES</a>
-      <a href="/sk/deploy.html" hreflang="sk">SK</a>
-      <a href="/cs/deploy.html" hreflang="cs">CS</a>
-    </span>
-  </p>
+<div class="page">
+  <nav class="topbar" data-t-label="navMain" aria-label="Main">
+    <a class="brand" href="/"><img src="/nsite-clay-transparent.png" alt="" width="34" height="34">nsite-clay</a>
+    <a href="/guide.html" data-t="fGuide">Guide</a>
+    <a href="/templates.html" data-t="fTemplates">Templates</a>
+    <span class="lang"><a href="/deploy.html" hreflang="en" aria-current="page">EN</a><a href="/es/deploy.html" hreflang="es">ES</a><a href="/sk/deploy.html" hreflang="sk">SK</a><a href="/cs/deploy.html" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle data-t-label="themeSwitch" aria-label="Switch between light and dark" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </nav>
 
-  <h1 data-t="h1">Publish a site</h1>
-  <p class="lede" data-t="lede">Sign in with your Nostr key, describe the page you want or start from a
-  finished one, and it is online. The page you publish edits itself afterwards, so this is the only time
-  you need this wizard.</p>
+  <main class="wiz">
+    <header class="wiz-intro">
+      <h1 data-t="h1">Publish a site</h1>
+      <p data-t="lede">Sign in with your key, pick a starting point, and your page is online. It edits itself from then on, so this is the only time you need this wizard.</p>
+    </header>
 
-  <noscript><p data-t="noscript">This publisher runs entirely in your browser, so it needs JavaScript.
-  Without it you can still publish from a terminal with <code>npx nsite-clay deploy</code>.</p></noscript>
+    <noscript><p data-t="noscript">This publisher runs entirely in your browser, so it needs JavaScript.
+    Without it you can still publish from a terminal with <code>npx nsite-clay deploy</code>.</p></noscript>
 
-  <ol class="steps" id="steps">
-    <li data-step="1"><span class="n">1</span><span data-t="s1">Sign in</span></li>
-    <li data-step="2"><span class="n">2</span><span data-t="s2">Your page</span></li>
-    <li data-step="3"><span class="n">3</span><span data-t="s3">Address</span></li>
-    <li data-step="4"><span class="n">4</span><span data-t="s4">Publish</span></li>
-  </ol>
+    <div class="board">
+    <div class="flyer wiz-flyer">
 
-  <!-- ---- 1. sign in ---------------------------------------------------- -->
-  <section class="step" data-step="1">
-    <div class="card">
-      <h2 data-t="signinTitle">Who is publishing?</h2>
-      <p class="sub" data-t="signinSub">A site belongs to a key, not to an account. Whichever key signs
-      in here becomes the only one that can change the page afterwards.</p>
+      <ol class="wiz-tabs" id="steps" data-t-label="stepsLabel" aria-label="Steps">
+        <li data-step="1"><span class="n">1</span><span class="lbl" data-t="s1">Sign in</span></li>
+        <li data-step="2"><span class="n">2</span><span class="lbl" data-t="s2">Your page</span></li>
+        <li data-step="3"><span class="n">3</span><span class="lbl" data-t="s3">Address</span></li>
+        <li data-step="4"><span class="n">4</span><span class="lbl" data-t="s4">Publish</span></li>
+      </ol>
 
-      <div class="ways">
-        <button class="way" id="way-nip07" hidden>
-          <b data-t="wayExt">Browser extension</b>
-          <small data-t="wayExtSub">Alby, nos2x and the rest. Nothing to type.</small>
-        </button>
-        <button class="way" id="way-remote">
-          <b data-t="wayApp">Signer app</b>
-          <small data-t="wayAppSub">Amber or another NIP-46 signer. Scan a code from a second device and your key never leaves the phone.</small>
-        </button>
-        <button class="way" id="way-key">
-          <b data-t="wayKey">Paste a key</b>
-          <small data-t="wayKeySub">An nsec, an encrypted ncryptsec, or a bunker:// address.</small>
-        </button>
-        <button class="way" id="way-new">
-          <b data-t="wayNew">I have no key yet</b>
-          <small data-t="wayNewSub">Make one here. Nothing keeps a copy of it, so you have to write it down yourself.</small>
-        </button>
-      </div>
+      <!-- ---- 1. sign in -------------------------------------------------- -->
+      <section class="step" data-step="1">
+        <div id="signin-choose" data-mode="all">
+          <h2 tabindex="-1" data-t="signinTitle">Who is publishing?</h2>
+          <p class="sub" data-t="signinSub">A site belongs to a key, not to an account. Whichever key signs
+          in here becomes the only one that can change the page afterwards.</p>
 
-      <div id="qrbox" hidden></div>
+          <div class="group group-have">
+            <h3 data-t="haveTitle">I already have a key</h3>
+            <button type="button" class="way" id="way-nip07" hidden>
+              <b data-t="wayExt">Browser extension</b>
+              <small data-t="wayExtSub">Alby, nos2x and the rest. Nothing to type.</small>
+            </button>
+            <button type="button" class="way" id="way-remote">
+              <b data-t="wayApp">Signer app</b>
+              <small data-t="wayAppSub">Amber or another signer app. Scan a code with your phone and your key never leaves it.</small>
+            </button>
+            <button type="button" class="way" id="way-key">
+              <b data-t="wayKey">Paste a key</b>
+              <small data-t="wayKeySub">An nsec, an encrypted ncryptsec, or a bunker:// address.</small>
+            </button>
+          </div>
 
-      <div id="keyform" hidden style="margin-top:1.1rem">
-        <label class="f" for="key" data-t="keyLabel">Your key</label>
-        <input type="password" id="key" autocomplete="off" spellcheck="false"
-               placeholder="nsec1… / ncryptsec1… / bunker://…">
-        <div id="passwrap" hidden style="margin-top:.8rem">
-          <label class="f" for="pass" data-t="passLabel">Password for that ncryptsec</label>
-          <input type="password" id="pass" autocomplete="off">
+          <div class="group group-new">
+            <h3 data-t="nothingTitle">I have nothing yet</h3>
+            <button type="button" class="way" id="way-new">
+              <b data-t="wayNew">I have no key yet</b>
+              <small data-t="wayNewSub">Make one here in a minute. It is yours alone, so you will save it before you go on.</small>
+            </button>
+          </div>
+
+          <p class="note" id="nokey-wrap" hidden><button type="button" class="textlink" id="nokey-link" data-t="wayNew">I have no key yet</button></p>
         </div>
-        <p class="note" data-t="keyNote">The key stays in this tab's memory for as long as it is open and is
-        never written anywhere. A signer app is safer, because the key never reaches the page at all.</p>
-        <div class="row end"><button class="primary" id="key-go" data-t="keyGo">Sign in</button></div>
-      </div>
 
-      <div id="newkey" hidden style="margin-top:1.1rem">
-        <p class="sub" data-t="newIntro">This is your new key. It is the only thing that can ever change your
-        site. Nobody can reset it and nobody else has a copy.</p>
-        <label class="f" data-t="newSecret">Secret key, write this down</label>
-        <div class="keybox" id="newkey-nsec"></div>
-        <div class="row">
-          <button id="newkey-copy" data-t="copy">Copy</button>
-          <button id="newkey-file" data-t="newDownload">Save an encrypted backup file</button>
+        <div id="panel-app" hidden>
+          <h2 tabindex="-1" data-t="panelApp">Sign in with a signer app</h2>
+          <p class="sub" data-t="appSub">Open Amber, or another signer app, on your phone and scan this code. Your key stays on the phone.</p>
+          <div id="qrbox"></div>
+          <div class="moves"><button type="button" class="btn back-to-choose" data-t="signinBack">Choose another way</button></div>
         </div>
-        <div id="encwrap" hidden style="margin-top:1rem">
-          <label class="f" for="encpass" data-t="newPass">A password for the backup file</label>
-          <input type="password" id="encpass" autocomplete="new-password">
-          <p class="note" data-t="newPassNote">The file is encrypted with this password using NIP-49. Losing
-          the password loses the key, exactly like losing the key itself.</p>
-          <div class="row end"><button id="encgo" data-t="newPassGo">Write the file</button></div>
-        </div>
-        <p class="note"><label><input type="checkbox" id="newkey-ok" style="width:auto"> <span data-t="newConfirm">I have saved this key somewhere safe.</span></label></p>
-        <div class="row end"><button class="primary" id="newkey-go" disabled data-t="newGo">Continue</button></div>
-      </div>
 
-      <p class="note bad" id="signin-error" hidden></p>
-    </div>
-  </section>
-
-  <!-- ---- 2. template --------------------------------------------------- -->
-  <section class="step" data-step="2">
-    <div class="card">
-      <h2 data-t="tplTitle">How do you want to start?</h2>
-      <p class="sub" data-t="tplSub">Two ways. Describe the page you want and have it built, or take a
-      finished one and type over it. Either way the page is yours afterwards and edits itself.</p>
-      <p class="note"><a href="#template-route" data-t="freeRoute">Prefer to start free? Choose a template.</a></p>
-      <!-- Two routes, drawn as two routes. Each carries its own heading and its
-           own description, so neither one's explanation can be read as the
-           other's. That is the mistake this replaced: the sentence describing
-           the twelve templates sat above the AI form and appeared to describe it. -->
-      <section class="route" id="ai-builder" nc:no-persist>
-        <h3 data-t="aiTitle">Describe it, and AI builds it</h3>
-        <p class="note" data-t="aiHint">Write what the page is for and what should be on it. Paid with Lightning or Cashu, and the page is ordinary HTML you can keep editing afterwards.</p>
-        <p class="note" data-t="aiCost">Simple setup costs 2000 sats: 1000 support nsite-clay and 1000 become your AI credit. You need a funded Lightning wallet. Templates below are free.</p>
-        <p class="note" data-ai-word="capabilities"></p>
-        <label class="f" for="ai-description" data-t="aiDescribe">What page do you want?</label>
-        <textarea id="ai-description" rows="5" nc:no-persist data-t-placeholder="aiPlaceholder"
-          placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
-        <p class="note" id="ai-provider"></p>
-        <div id="ai-readiness"></div>
-        <div class="row">
-          <button type="button" class="primary" id="ai-buy" data-t="aiBuy">Simple setup, 2000 sats</button>
-          <button type="button" id="ai-resume" hidden data-t="buyResume">Resume previous payment</button>
-          <button type="button" id="ai-topup" hidden data-ai-word="addCredit">Add AI credit</button>
-          <button type="button" class="primary" id="ai-generate" data-t="aiGenerate">Generate preview</button>
-          <button type="button" id="ai-cancel" hidden data-t="aiCancel">Cancel generation</button>
+        <div id="keyform" hidden>
+          <h2 tabindex="-1" data-t="panelKey">Paste your key</h2>
+          <label class="f" for="key" data-t="keyLabel">Your key</label>
+          <input type="password" id="key" autocomplete="off" spellcheck="false"
+                 placeholder="nsec1… / ncryptsec1… / bunker://…">
+          <div id="passwrap" hidden>
+            <label class="f" for="pass" data-t="passLabel">Password for that ncryptsec</label>
+            <input type="password" id="pass" autocomplete="off">
+          </div>
+          <p class="note" data-t="keyNote">The key stays in this tab's memory for as long as it is open and is
+          never written anywhere. A signer app is safer, because the key never reaches the page at all.</p>
+          <div class="moves">
+            <button type="button" class="btn back-to-choose" data-t="signinBack">Choose another way</button>
+            <button type="button" class="btn primary end" id="key-go" data-t="keyGo">Sign in</button>
+          </div>
         </div>
-        <p class="note"><a href="#" id="ai-settings" data-t="aiAdvanced">Advanced setup, or my own API key</a></p>
-        <details class="adv"><summary data-ai-word="importDraft">Restore draft file</summary>
-          <label class="f" for="ai-import" data-ai-word="importDraft">Restore draft file</label>
-          <input type="file" id="ai-import" accept=".json,application/json">
+
+        <div id="newkey" hidden>
+          <h2 tabindex="-1" data-t="newTitle">Make your key</h2>
+          <p class="sub" data-t="newIntro">A page here has no account and no password. It belongs to whoever holds its key.
+          This key is yours now, and it is the only thing that can change your page later.</p>
+          <div class="ticket">
+            <span class="stamp" data-t="newStamp">Only copy</span>
+            <p class="f" id="newkey-label" data-t="newSecret">Your secret key</p>
+            <div class="keybox" id="newkey-nsec" aria-labelledby="newkey-label"></div>
+            <div class="row">
+              <button type="button" class="btn primary" id="newkey-copy" data-t="copy">Copy</button>
+              <button type="button" class="btn" id="newkey-file" data-t="newDownload">Save an encrypted backup file</button>
+            </div>
+            <div id="encwrap" hidden>
+              <label class="f" for="encpass" data-t="newPass">A password for the backup file</label>
+              <input type="password" id="encpass" autocomplete="new-password">
+              <p class="note" data-t="newPassNote">The file is encrypted with this password using NIP-49. Losing
+              the password loses the key, exactly like losing the key itself.</p>
+              <div class="row" style="margin-top:.8rem"><button type="button" class="btn" id="encgo" data-t="newPassGo">Write the file</button></div>
+            </div>
+          </div>
+          <p class="note" data-t="newSafe">This is the only time you will see it. Put it in a password manager or save the file where you will find it again. If it is lost, nobody can get it back, and nobody can reset it for you.</p>
+          <label class="confirm"><input type="checkbox" id="newkey-ok"><span data-t="newConfirm">I have saved this key somewhere safe.</span></label>
+          <div class="moves">
+            <button type="button" class="btn back-to-choose" id="newkey-back" data-t="signinBack">Choose another way</button>
+            <button type="button" class="btn primary end" id="newkey-go" disabled data-t="newGo">Continue</button>
+          </div>
+        </div>
+
+        <!-- Moves into whichever panel is showing, just above its buttons. -->
+        <div id="signin-msgs">
+          <div class="busy" id="signin-busy" hidden></div>
+          <p class="note" id="signin-status" role="status" hidden></p>
+          <p class="note bad" id="signin-error" role="alert" hidden></p>
+        </div>
+      </section>
+
+      <!-- ---- 2. a starting point ----------------------------------------- -->
+      <section class="step" data-step="2">
+        <h2 tabindex="-1" data-t="tplTitle">How do you want to start?</h2>
+        <p class="sub" data-t="tplSub">Two ways. Describe the page you want and have it built, or take a
+        finished one and type over it. Either way the page is yours afterwards and edits itself.</p>
+        <p class="who note" id="who" hidden></p>
+        <p class="note"><a href="#template-route" data-t="freeRoute">Prefer to start free? Choose a template.</a></p>
+
+        <!-- Two routes, drawn as two routes. Each carries its own heading and its
+             own description, so neither one's explanation can be read as the
+             other's. -->
+        <section class="route" id="ai-builder" nc:no-persist style="margin-top:1.8rem">
+          <h3 data-t="aiTitle">Describe it, and AI builds it</h3>
+          <p class="route-sub" data-t="aiHint">Write what the page is for and what should be on it. Paid with Lightning or Cashu, and the page is ordinary HTML you can keep editing afterwards.</p>
+          <label class="f" for="ai-description" data-t="aiDescribe" style="margin-top:0">What page do you want?</label>
+          <textarea id="ai-description" rows="5" nc:no-persist data-t-placeholder="aiPlaceholder"
+            placeholder="I want to build a website for my coffee shop. Brown theme, we sell hipster flat-white and do Nostr meetups every tuesday at 8pm. Address is 123 Satoshi Way, 12345 Asunción, Paraguay. Explain that we do specialty coffee. Simple one-pager, with three photos. Modern and hip"></textarea>
+
+          <div class="price" id="ai-price">
+            <p class="price-total"><b>2000</b><span data-t="priceTotal">sats, paid once</span></p>
+            <div class="halves">
+              <div class="half"><b>1000</b><span data-t="priceSupport">sats support nsite-clay</span></div>
+              <div class="half"><b>1000</b><span data-t="priceCredit">sats become your own AI credit</span></div>
+            </div>
+            <p class="note" data-t="buyOwn">The credit is yours. It lasts a long time, and you can take back whatever you do not spend.</p>
+          </div>
+          <p class="note" data-ai-word="capabilities"></p>
+          <p class="note" id="ai-provider"></p>
+          <div id="ai-readiness"></div>
+          <div class="row">
+            <button type="button" class="btn primary" id="ai-buy" data-t="aiBuy">Simple setup, 2000 sats</button>
+            <button type="button" class="btn" id="ai-resume" hidden data-t="buyResume">Resume previous payment</button>
+            <button type="button" class="btn" id="ai-topup" hidden data-ai-word="addCredit">Add AI credit</button>
+            <button type="button" class="btn primary" id="ai-generate" data-t="aiGenerate">Generate preview</button>
+            <button type="button" class="btn" id="ai-cancel" hidden data-t="aiCancel">Cancel generation</button>
+          </div>
+          <div class="busy" id="ai-busy" hidden></div>
+          <p class="note" id="ai-status" role="status"></p>
+          <p class="note" id="ai-draft-status" role="status"></p>
+
+          <details class="more">
+            <summary data-t="moreOptions">More options</summary>
+            <p class="note" data-t="moreHint">Use another AI node, or your own OpenAI-compatible key, or restore a draft you saved to a file.</p>
+            <div class="row" style="margin-top:.8rem">
+              <button type="button" class="btn small" id="ai-settings" data-t="aiAdvanced">Advanced setup, or my own API key</button>
+            </div>
+            <label class="f" for="ai-import" data-ai-word="importDraft">Restore draft file</label>
+            <input type="file" id="ai-import" accept=".json,application/json">
+          </details>
+
+          <div id="ai-result" hidden>
+            <h4 id="ai-review-title" tabindex="-1" data-t="aiPreviewTitle">Review your page</h4>
+            <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
+            <!-- Three ways on, drawn as three, because a preview with one button
+                 and no way back reads as a decision somebody is not allowed to
+                 make. -->
+            <div class="row" style="margin-top:.9rem">
+              <button type="button" class="btn primary" id="ai-use" data-t="aiUse">Use this page</button>
+              <button type="button" class="btn" id="ai-again" data-t="aiAgain">Change the description</button>
+            </div>
+            <iframe id="ai-preview" title="AI page preview" sandbox=""></iframe>
+            <label class="f" for="ai-change" data-t="aiChangeLabel">Or tell AI what to change about this page</label>
+            <textarea id="ai-change" rows="2" nc:no-persist data-t-placeholder="aiChangePlaceholder"
+              placeholder="Make it darker, drop the photos, and put the opening hours at the top"></textarea>
+            <div class="row" style="margin-top:.8rem">
+              <button type="button" class="btn" id="ai-refine" data-t="aiRefine">Make that change</button>
+            </div>
+            <label class="f" for="ai-version" data-ai-word="version">Proposed version</label>
+            <select id="ai-version"></select>
+            <div class="row" style="margin-top:.8rem">
+              <button type="button" class="btn small" id="ai-download" data-ai-word="downloadDraft">Download draft</button>
+              <button type="button" class="btn small" id="ai-discard" data-ai-word="discardDraft">Discard draft</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="cut-or" role="separator"><span data-t="cutOr">or start free</span></div>
+
+        <section class="route" id="template-route">
+          <h3 data-t="aiOr">Start from a finished page</h3>
+          <p class="route-sub" data-t="tplPick">Every one of these is a whole page you can type over. The first is built
+          out of blocks you add and rearrange, which is the easiest place to begin. Free, and no AI involved.</p>
+          <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
+          <p class="cli"><span data-t="cliNote">Rather use a terminal? This does the same thing:</span> <code>npx nsite-clay deploy</code></p>
+        </section>
+
+        <div class="moves">
+          <button type="button" class="btn" id="tpl-back" data-t="back">Back</button>
+          <button type="button" class="btn primary end" id="tpl-next" disabled data-t="next">Next</button>
+        </div>
+      </section>
+
+      <!-- ---- 3. an address ----------------------------------------------- -->
+      <section class="step" data-step="3">
+        <h2 tabindex="-1" data-t="whereTitle">Where should it live?</h2>
+        <p class="sub" data-t="whereSub">Your page lives at an address made from your key. Choose what comes after it:
+        a single slash for your front page, or a name like /menu for another page.</p>
+        <label class="f" for="path" data-t="pathLabel">Path</label>
+        <input type="text" id="path" value="/" spellcheck="false" autocapitalize="off" autocorrect="off">
+        <p id="path-preview"></p>
+        <p class="note" id="path-checking" role="status" hidden data-t="pathChecking">Checking what this key has published already…</p>
+        <div id="occupied" hidden></div>
+        <p class="note bad" id="where-error" role="alert" hidden></p>
+
+        <details class="more">
+          <summary data-t="moreOptions">More options</summary>
+          <p class="note" data-t="advSub">One per line. Relays hold the pointer to your site and Blossom
+          servers hold the bytes, so more of each is more places your page survives. The defaults work; change
+          them if you run your own, or if one of them is refusing you.</p>
+          <label class="f" for="adv-relays" data-t="advRelays">Relays</label>
+          <textarea id="adv-relays" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+          <label class="f" for="adv-servers" data-t="advServers">Blossom servers</label>
+          <textarea id="adv-servers" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+          <div class="row" style="margin-top:.8rem">
+            <button type="button" class="btn small" id="adv-reset" data-t="advReset">Back to the defaults</button>
+          </div>
         </details>
-        <p class="note" id="ai-status" role="status"></p>
-        <p class="note" id="ai-draft-status" role="status"></p>
-        <div id="ai-result" hidden>
-          <h4 id="ai-review-title" tabindex="-1" data-t="aiPreviewTitle">Review your page</h4>
-          <label class="f" for="ai-version" data-ai-word="version">Proposed version</label>
-          <select id="ai-version"></select>
-          <p class="note" data-t="aiReview">Check the page before continuing. You can edit its words and blocks after publishing.</p>
-          <!-- Three ways on, drawn as three, because a preview with one button
-               and no way back reads as a decision somebody is not allowed to
-               make. Keeping it, changing one thing about it, or going back to
-               the description are all things people want here. -->
-          <div class="row">
-            <button type="button" class="primary" id="ai-use" data-t="aiUse">Use this page</button>
-            <button type="button" id="ai-again" data-t="aiAgain">Change the description</button>
-            <button type="button" id="ai-download" data-ai-word="downloadDraft">Download draft</button>
-            <button type="button" id="ai-discard" data-ai-word="discardDraft">Discard draft</button>
-          </div>
-          <iframe id="ai-preview" title="AI page preview" sandbox="" style="width:100%;height:30rem;border:1px solid var(--nc-edge);background:white"></iframe>
-          <label class="f" for="ai-change" data-t="aiChangeLabel">Or tell AI what to change about this page</label>
-          <textarea id="ai-change" rows="2" nc:no-persist data-t-placeholder="aiChangePlaceholder"
-            placeholder="Make it darker, drop the photos, and put the opening hours at the top"></textarea>
-          <div class="row">
-            <button type="button" id="ai-refine" data-t="aiRefine">Make that change</button>
-          </div>
+
+        <div class="moves">
+          <button type="button" class="btn" id="where-back" data-t="back">Back</button>
+          <button type="button" class="btn primary end" id="where-go" data-t="publish">Publish it</button>
         </div>
       </section>
-      <section class="route" id="template-route">
-        <h3 data-t="aiOr">Start from a finished page</h3>
-        <p class="note" data-t="tplPick">Every one of these is a whole page you can type over. The first is built
-        out of blocks you add and rearrange, which is the easiest place to begin. Free, and no AI involved.</p>
-        <div class="grid" id="tpls"><p class="note" data-t="tplLoading">loading templates…</p></div>
-      </section>
-      <div class="row end">
-        <button id="tpl-back" data-t="back">Back</button>
-      </div>
-    </div>
-  </section>
 
-  <!-- ---- 3. address ---------------------------------------------------- -->
-  <section class="step" data-step="3">
-    <div class="card">
-      <h2 data-t="whereTitle">Where should it live?</h2>
-      <p class="sub" data-t="whereSub">Your site is at your npub on any nsite gateway. This is the path
-      inside it. Leave it as a single slash for the front page.</p>
-      <label class="f" for="path" data-t="pathLabel">Path</label>
-      <input type="text" id="path" value="/" spellcheck="false" autocapitalize="off" autocorrect="off">
-      <p class="note" id="path-preview"></p>
-      <div id="occupied" hidden></div>
-      <p class="note bad" id="where-error" hidden></p>
-
-      <details class="adv">
-        <summary data-t="advTitle">Relays and Blossom servers</summary>
-        <p class="note" data-t="advSub">One per line. Relays hold the pointer to your site and Blossom
-        servers hold the bytes, so more of each is more places your page survives. The defaults work; change
-        them if you run your own, or if one of them is refusing you.</p>
-        <label class="f" for="adv-relays" data-t="advRelays">Relays</label>
-        <textarea id="adv-relays" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
-        <label class="f" for="adv-servers" data-t="advServers">Blossom servers</label>
-        <textarea id="adv-servers" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
-        <div class="row">
-          <button id="adv-reset" data-t="advReset">Back to the defaults</button>
+      <!-- ---- 4. publish -------------------------------------------------- -->
+      <section class="step" data-step="4">
+        <div id="progress-card">
+          <h2 tabindex="-1" data-t="pubTitle">Publishing</h2>
+          <p class="sub" data-t="pubSub">Your page and its editor are uploaded, then your key signs one note that says which
+          version is current. Keep this page open. If your signer app asks, approve each request.</p>
+          <div class="busy" id="pub-busy"></div>
+          <ul class="log" id="log" role="status"></ul>
+          <div class="moves" id="retry-row" hidden>
+            <button type="button" class="btn" id="publish-back" data-t="back">Back</button>
+            <button type="button" class="btn primary end" id="retry" data-t="retry">Try again</button>
+          </div>
         </div>
-      </details>
 
-      <div class="row end">
-        <button id="where-back" data-t="back">Back</button>
-        <button class="primary" id="where-go" data-t="publish">Publish it</button>
-      </div>
+        <div class="done" id="done-card" hidden>
+          <span class="stamp" data-t="doneStamp">Online</span>
+          <h2 tabindex="-1" data-t="doneTitle">It is online</h2>
+          <p class="sub" data-t="doneSub">Open it and sign in with the same key. The page edits itself from now
+          on, so you do not need this wizard again.</p>
+          <div class="url" id="done-url"></div>
+          <div class="row">
+            <a class="btn primary" id="done-open" href="#" target="_blank" rel="noopener" data-t="doneOpen">Open it and start editing</a>
+            <a class="btn" id="done-plain" href="#" target="_blank" rel="noopener" data-t="doneView">Just look at it</a>
+            <a class="btn" href="/guide.html" data-t="doneGuide">Read the guide</a>
+          </div>
+          <p class="note" data-t="doneKey">Your key is the only way back in to edit it, so keep the copy you saved.</p>
+          <p class="note" data-t="doneSlow">A gateway can take a minute to notice a brand new site. If it is not
+          there yet, wait a moment and reload.</p>
+        </div>
+      </section>
     </div>
-  </section>
-
-  <!-- ---- 4. publish ---------------------------------------------------- -->
-  <section class="step" data-step="4">
-    <div class="card" id="progress-card">
-      <h2 data-t="pubTitle">Publishing</h2>
-      <p class="sub" data-t="pubSub">Each file becomes a Blossom blob, then one signed manifest says which
-      blob each path points at. Your signer may ask you to approve each signature.</p>
-      <ul class="log" id="log"></ul>
-      <div class="row end" id="retry-row" hidden>
-        <button id="retry" data-t="retry">Try again</button>
-      </div>
     </div>
+  </main>
 
-    <div class="card good" id="done-card" hidden>
-      <h2 data-t="doneTitle">It is online</h2>
-      <p class="sub" data-t="doneSub">Open it and sign in with the same key. The page edits itself from now
-      on, so you do not need this wizard again.</p>
-      <div class="url" id="done-url"></div>
-      <div class="row">
-        <a class="btn primary" id="done-open" href="#" target="_blank" rel="noopener" data-t="doneOpen">Open it and start editing</a>
-        <a class="btn" id="done-plain" href="#" target="_blank" rel="noopener" data-t="doneView">Just look at it</a>
-        <a class="btn" href="/guide.html" data-t="doneGuide">Read the guide</a>
-      </div>
-      <p class="note" data-t="doneSlow">A gateway can take a minute to notice a brand new site. If it is not
-      there yet, wait a moment and reload.</p>
-    </div>
-  </section>
-</div>
-
-<footer>
-  <div class="wrap">
+  <footer class="foot">
     <p><a href="/">nsite-clay</a> · <a href="/templates.html" data-t="fTemplates">Templates</a> ·
        <a href="/guide.html" data-t="fGuide">Guide</a> · <a href="/llms.txt">llms.txt</a></p>
     <p data-t="fNote">Publishing runs in your browser. Optional AI generation sends your description and chosen template to the AI provider you select. Your Nostr signing key stays separate.</p>
-  </div>
-</footer>
+  </footer>
+</div>
 
 <script src="/nsite-clay.js"></script>
 <script src="/nsite-clay-wallet.js"></script>
@@ -497,26 +608,41 @@
       occOtherSub: "Tus otras páginas no se tocan. Esta se añade junto a ellas.",
       occList: "Ya publicado: ", occLook: "Ver lo que hay ahora", occConfirm: "Reemplazar la página que hay ahí.",
       pathBad: "Una ruta puede llevar letras, números, guiones y barras.", needConfirm: "Marca la casilla para confirmar que reemplazas esa página.",
-      logFetch: "Leyendo la plantilla y el runtime…", logReady: "Listo: ", logFiles: " archivos",
-      logUpload: "Subiendo a Blossom…", logUploaded: "Todos los archivos están en Blossom", logSent: "subidos", logReused: "ya estaban",
-      logManifest: "Publicando el manifiesto en los relays…", logPublished: "Manifiesto publicado, versión archivada", logRelayChecking: "Comprobando si tu clave tiene una lista de relays…", logRelayWritten: "Se publicó una lista de relays para tu clave, así cualquier gateway encuentra este sitio", logRelayPresent: "Tu clave ya tiene una lista de relays; se dejó como estaba", logRelayUnknown: "No se pudo comprobar la lista de relays, así que no se escribió ninguna. Algunos gateways quizá no encuentren este sitio hasta que tu clave tenga una.", logRelayFailed: "Ningún relay aceptó la lista de relays. Algunos gateways quizá no encuentren este sitio hasta que tu clave tenga una.",
+      logFetch: "Preparando tu página y su editor…", logReady: "Listo: ", logFiles: " archivos",
+      logUpload: "Subiendo tus archivos…", logUploaded: "Todos los archivos están subidos", logSent: "subidos", logReused: "ya estaban",
+      logManifest: "Avisando a la red de cuál es la versión actual…", logPublished: "Publicada, y esta versión queda en el historial de la página", logRelayChecking: "Comprobando que las pasarelas puedan encontrar tu sitio…", logRelayWritten: "Se añadieron los datos que permiten a cualquier pasarela encontrar este sitio", logRelayPresent: "Tu clave ya tenía esos datos, así que se dejaron como estaban", logRelayUnknown: "No se pudo comprobar, así que no se añadió nada. Algunas pasarelas quizá no encuentren este sitio hasta que tu clave tenga esos datos.", logRelayFailed: "Nadie los aceptó. Algunas pasarelas quizá no encuentren este sitio hasta que tu clave tenga esos datos.",
       aiTitle: "Descríbela y la IA la construye", aiHint: "Escribe para qué es la página y qué debe llevar. Se paga con Lightning o Cashu, y el resultado es HTML normal que puedes seguir editando.",
       aiStart: "Página inicial", aiScratch: "Empezar desde cero", aiDescribe: "¿Qué página quieres?", aiSettings: "Ajustes y saldo de IA", aiGenerate: "Generar vista previa", aiCancel: "Cancelar generación", aiReview: "Revisa la página antes de continuar. Puedes editar sus palabras y bloques después de publicarla.", aiUse: "Usar esta página", aiWorking: "Generando…", aiReady: "La vista previa está lista.", aiCancelled: "Generación cancelada.",
       crumb: "publicar", h1: "Publica un sitio",
-      lede: "Entra con tu clave de Nostr, describe la página que quieres o empieza por una ya hecha, y está en línea. La página que publicas se edita sola después, así que esta es la única vez que necesitas este asistente.",
+      lede: "Entra con tu clave, elige por dónde empezar y tu página está en línea. A partir de ahí se edita sola, así que esta es la única vez que necesitas este asistente.",
       noscript: "Este publicador funciona entero en tu navegador, así que necesita JavaScript. Sin él todavía puedes publicar desde una terminal con npx nsite-clay deploy.",
       s1: "Entrar", s2: "Tu página", s3: "Dirección", s4: "Publicar",
       signinTitle: "¿Quién publica?",
       signinSub: "Un sitio pertenece a una clave, no a una cuenta. La clave que entre aquí será la única que pueda cambiar la página después.",
       wayExt: "Extensión del navegador", wayExtSub: "Alby, nos2x y las demás. No hay que escribir nada.",
-      wayApp: "App de firma", wayAppSub: "Amber u otra app NIP-46. Escanea el código desde otro dispositivo y tu clave no sale del teléfono.",
+      wayApp: "App de firma", wayAppSub: "Amber u otra app de firma. Escanea un código con el teléfono y tu clave no sale de él.",
       wayKey: "Pegar una clave", wayKeySub: "Un nsec, un ncryptsec cifrado o una dirección bunker://.",
-      wayNew: "Todavía no tengo clave", wayNewSub: "Créala aquí. Es tuya, no se guarda en ningún sitio y tienes que apuntarla.",
+      wayNew: "Todavía no tengo clave", wayNewSub: "Crea una aquí en un minuto. Es solo tuya, así que la guardarás antes de seguir.",
+      navMain: "Principal", themeSwitch: "Cambiar entre claro y oscuro", stepsLabel: "Pasos",
+      haveTitle: "Ya tengo una clave", nothingTitle: "Todavía no tengo nada", signinBack: "Elegir otra forma",
+      panelKey: "Pega tu clave", panelApp: "Entra con una app de firma",
+      appSub: "Abre Amber, u otra app de firma, en tu teléfono y escanea este código. Tu clave se queda en el teléfono.",
+      newTitle: "Crea tu clave", newStamp: "Única copia",
+      newSafe: "Esta es la única vez que la verás. Guárdala en un gestor de contraseñas o guarda el archivo donde lo vuelvas a encontrar. Si se pierde, nadie puede recuperarla ni restablecerla por ti.",
+      signingIn: "Entrando. Si tu app de firma lo pide, apruébalo allí.",
+      signinHint: "Revísalo e inténtalo otra vez, o elige otra forma de entrar.",
+      signedAs: "Has entrado como ", tplRetry: "Intentar otra vez",
+      priceTotal: "sats, un solo pago", priceSupport: "sats apoyan a nsite-clay", priceCredit: "sats pasan a ser tu saldo de IA",
+      moreOptions: "Más opciones",
+      moreHint: "Usa otro nodo de IA o tu propia clave compatible con OpenAI, o restaura un borrador que guardaste en un archivo.",
+      cutOr: "o empieza gratis", cliNote: "¿Prefieres una terminal? Esto hace lo mismo:",
+      pathChecking: "Comprobando qué ha publicado ya esta clave…",
+      doneStamp: "En línea", doneKey: "Tu clave es la única forma de volver a editarla, así que conserva la copia que guardaste.",
       keyLabel: "Tu clave", passLabel: "Contraseña de ese ncryptsec",
       keyNote: "La clave se queda en la memoria de esta pestaña mientras esté abierta y no se escribe en ningún sitio. Una app de firma es más segura, porque la clave nunca llega a la página.",
       keyGo: "Entrar",
-      newIntro: "Esta es tu clave nueva. Es lo único que podrá cambiar tu sitio. Nadie puede restablecerla y nadie más tiene una copia.",
-      newSecret: "Clave secreta, apúntala", copy: "Copiar",
+      newIntro: "Aquí una página no tiene cuenta ni contraseña. Pertenece a quien tiene su clave. Esta clave ya es tuya, y es lo único que podrá cambiar tu página más adelante.",
+      newSecret: "Tu clave secreta", copy: "Copiar",
       newDownload: "Guardar una copia cifrada", newPass: "Una contraseña para el archivo",
       newPassNote: "El archivo se cifra con esta contraseña usando NIP-49. Perder la contraseña es perder la clave, igual que perder la clave misma.",
       newPassGo: "Escribir el archivo", newConfirm: "He guardado esta clave en un sitio seguro.",
@@ -525,12 +651,12 @@
       tplSub: "Dos caminos. Describe la página que quieres y deja que se construya, o toma una ya hecha y escribe encima. En ambos casos la página es tuya después y se edita sola.",
       tplLoading: "cargando plantillas…", back: "Atrás", next: "Siguiente",
       whereTitle: "¿Dónde va a vivir?",
-      whereSub: "Tu sitio está en tu npub en cualquier pasarela nsite. Esto es la ruta dentro de él. Deja una sola barra para la portada.",
+      whereSub: "Tu página vive en una dirección hecha con tu clave. Elige lo que va después: una sola barra para la portada, o un nombre como /menu para otra página.",
       pathLabel: "Ruta", publish: "Publicar",
       pubTitle: "Publicando",
-      pubSub: "Cada archivo se convierte en un blob de Blossom y después un manifiesto firmado dice a qué blob apunta cada ruta. Tu firmante puede pedirte que apruebes cada firma.",
+      pubSub: "Tu página y su editor se suben, y luego tu clave firma una nota que dice cuál es la versión actual. Mantén esta página abierta. Si tu app de firma lo pide, aprueba cada solicitud.",
       retry: "Intentar otra vez",
-      logChecking: "Preguntando a los servidores Blossom qué tienen ya…",
+      logChecking: "Preguntando a los servidores de archivos qué tienen ya…",
       logChecked: "Preguntado a cada servidor qué tiene ya",
       logSigning: "Firmando las subidas. Tu app de firma puede pedirte que apruebes cada una.",
       logSigned: "Todas las subidas están firmadas",
@@ -541,7 +667,7 @@
       srvChecking: "preguntando si ya lo tiene…", srvHere: "ya está ahí",
       srvNeeds: "necesita una copia", srvSigning: "esperando a tu app de firma…",
       srvSending: "subiendo…", srvOk: "subido", srvFailed: "falló",
-      logRetryHint: "No se ha perdido nada. Al intentarlo otra vez se salta lo que ya llegó, y puedes cambiar los relays o los servidores Blossom en el paso anterior.",
+      logRetryHint: "No se ha perdido nada. Al intentarlo otra vez se salta lo que ya llegó, y puedes cambiar dónde se guardan los archivos en el paso anterior.",
       doneTitle: "Ya está en línea",
       doneSub: "Ábrelo e inicia sesión con la misma clave. La página se edita a sí misma a partir de ahora, así que no necesitas volver aquí.",
       doneOpen: "Abrir y empezar a editar", doneView: "Solo verlo", doneGuide: "Leer la guía",
@@ -594,26 +720,41 @@
       occOtherSub: "Ostatných stránok sa to nedotkne. Táto pribudne vedľa nich.",
       occList: "Už zverejnené: ", occLook: "Pozrieť, čo tam je teraz", occConfirm: "Nahradiť stránku, ktorá tam je.",
       pathBad: "Cesta môže obsahovať písmená, čísla, pomlčky a lomky.", needConfirm: "Zaškrtni políčko a potvrď, že tú stránku nahrádzaš.",
-      logFetch: "Načítava sa šablóna a runtime…", logReady: "Pripravené: ", logFiles: " súborov",
-      logUpload: "Nahráva sa na Blossom…", logUploaded: "Všetky súbory sú na Blossome", logSent: "nahraných", logReused: "už tam bolo",
-      logManifest: "Manifest sa zverejňuje na relayoch…", logPublished: "Manifest zverejnený, verzia uložená", logRelayChecking: "Zisťuje sa, či má tvoj kľúč zoznam relayov…", logRelayWritten: "Pre tvoj kľúč sa zverejnil zoznam relayov, takže túto stránku nájde každá brána", logRelayPresent: "Tvoj kľúč už zoznam relayov má, zostal bez zmeny", logRelayUnknown: "Zoznam relayov sa nepodarilo overiť, preto sa žiadny nezapísal. Niektoré brány túto stránku možno nenájdu, kým ho tvoj kľúč nebude mať.", logRelayFailed: "Zoznam relayov neprijal žiadny relay. Niektoré brány túto stránku možno nenájdu, kým ho tvoj kľúč nebude mať.",
+      logFetch: "Pripravuje sa tvoja stránka a jej editor…", logReady: "Pripravené: ", logFiles: " súborov",
+      logUpload: "Nahrávajú sa tvoje súbory…", logUploaded: "Všetky súbory sú nahrané", logSent: "nahraných", logReused: "už tam bolo",
+      logManifest: "Oznamuje sa sieti, ktorá verzia je aktuálna…", logPublished: "Zverejnené, a táto verzia je uložená v histórii stránky", logRelayChecking: "Overuje sa, či tvoju stránku nájdu brány…", logRelayWritten: "Pridali sa údaje, vďaka ktorým túto stránku nájde každá brána", logRelayPresent: "Tvoj kľúč už tie údaje mal, takže zostali, ako boli", logRelayUnknown: "Nepodarilo sa to overiť, preto sa nič nepridalo. Niektoré brány túto stránku možno nenájdu, kým tvoj kľúč tie údaje mať nebude.", logRelayFailed: "Nikto ich neprijal. Niektoré brány túto stránku možno nenájdu, kým tvoj kľúč tie údaje mať nebude.",
       aiTitle: "Opíš ju a AI ju postaví", aiHint: "Napíš, na čo tá stránka je a čo na nej má byť. Platí sa cez Lightning alebo Cashu, a výsledok je obyčajné HTML, ktoré vieš ďalej upravovať.",
       aiStart: "Východisková stránka", aiScratch: "Začať od nuly", aiDescribe: "Akú stránku chceš?", aiSettings: "Nastavenia a kredit AI", aiGenerate: "Vytvoriť náhľad", aiCancel: "Zrušiť generovanie", aiReview: "Pred pokračovaním si stránku skontroluj. Text aj bloky môžeš upravovať po zverejnení.", aiUse: "Použiť túto stránku", aiWorking: "Generuje sa…", aiReady: "Náhľad je pripravený.", aiCancelled: "Generovanie zrušené.",
       crumb: "publikovať", h1: "Zverejni stránku",
-      lede: "Prihlás sa svojím Nostr kľúčom, opíš stránku, akú chceš, alebo začni hotovou, a je online. Stránka, ktorú zverejníš, sa potom upravuje sama, takže tohto sprievodcu potrebuješ len raz.",
+      lede: "Prihlás sa kľúčom, vyber si, odkiaľ začať, a stránka je online. Odvtedy sa upravuje sama, takže tohto sprievodcu potrebuješ len raz.",
       noscript: "Tento publikátor beží celý v prehliadači, takže potrebuje JavaScript. Aj bez neho vieš zverejniť z terminálu cez npx nsite-clay deploy.",
       s1: "Prihlásenie", s2: "Tvoja stránka", s3: "Adresa", s4: "Zverejnenie",
       signinTitle: "Kto zverejňuje?",
       signinSub: "Stránka patrí kľúču, nie účtu. Kľúč, ktorý sa tu prihlási, bude jediný, ktorý ju potom vie zmeniť.",
       wayExt: "Rozšírenie prehliadača", wayExtSub: "Alby, nos2x a ďalšie. Nič netreba písať.",
-      wayApp: "Podpisová aplikácia", wayAppSub: "Amber alebo iná NIP-46 aplikácia. Naskenuj kód z druhého zariadenia a kľúč neopustí telefón.",
+      wayApp: "Podpisová aplikácia", wayAppSub: "Amber alebo iná podpisová aplikácia. Naskenuj kód telefónom a kľúč ho neopustí.",
       wayKey: "Vložiť kľúč", wayKeySub: "nsec, zašifrovaný ncryptsec alebo adresa bunker://.",
-      wayNew: "Kľúč zatiaľ nemám", wayNewSub: "Vyrob si ho tu. Je tvoj, nikde sa neukladá a musíš si ho zapísať.",
+      wayNew: "Kľúč zatiaľ nemám", wayNewSub: "Vyrob si ho tu za chvíľu. Je len tvoj, preto si ho uložíš skôr, než pôjdeš ďalej.",
+      navMain: "Hlavná navigácia", themeSwitch: "Prepnúť svetlý a tmavý režim", stepsLabel: "Kroky",
+      haveTitle: "Kľúč už mám", nothingTitle: "Zatiaľ nemám nič", signinBack: "Vybrať iný spôsob",
+      panelKey: "Vlož svoj kľúč", panelApp: "Prihlás sa podpisovou aplikáciou",
+      appSub: "Otvor v telefóne Amber alebo inú podpisovú aplikáciu a naskenuj tento kód. Kľúč zostane v telefóne.",
+      newTitle: "Vyrob si kľúč", newStamp: "Jediná kópia",
+      newSafe: "Vidíš ho len teraz. Ulož ho do správcu hesiel alebo ulož súbor tam, kde ho znova nájdeš. Ak sa stratí, nikto ho nevie obnoviť ani za teba vynulovať.",
+      signingIn: "Prihlasuje sa. Ak o to podpisová aplikácia požiada, schváľ to tam.",
+      signinHint: "Skontroluj to a skús znova, alebo vyber iný spôsob prihlásenia.",
+      signedAs: "Prihlásený ako ", tplRetry: "Skúsiť znova",
+      priceTotal: "satov, jednorazovo", priceSupport: "satov podporí nsite-clay", priceCredit: "satov sa stane tvojím AI kreditom",
+      moreOptions: "Ďalšie možnosti",
+      moreHint: "Použi iný AI uzol alebo vlastný kľúč kompatibilný s OpenAI, alebo obnov koncept uložený do súboru.",
+      cutOr: "alebo začni zadarmo", cliNote: "Radšej terminál? Toto robí to isté:",
+      pathChecking: "Overuje sa, čo tento kľúč už zverejnil…",
+      doneStamp: "Online", doneKey: "Tvoj kľúč je jediná cesta späť k úpravám, preto si nechaj uloženú kópiu.",
       keyLabel: "Tvoj kľúč", passLabel: "Heslo k tomu ncryptsecu",
       keyNote: "Kľúč zostáva v pamäti tejto karty, kým je otvorená, a nikam sa nezapisuje. Podpisová aplikácia je bezpečnejšia, lebo kľúč sa na stránku vôbec nedostane.",
       keyGo: "Prihlásiť sa",
-      newIntro: "Toto je tvoj nový kľúč. Je jediné, čo vie tvoju stránku zmeniť. Nikto ho nevie obnoviť a nikto iný jeho kópiu nemá.",
-      newSecret: "Tajný kľúč, zapíš si ho", copy: "Skopírovať",
+      newIntro: "Stránka tu nemá účet ani heslo. Patrí tomu, kto drží jej kľúč. Tento kľúč je odteraz tvoj a je to jediné, čo bude vedieť tvoju stránku neskôr zmeniť.",
+      newSecret: "Tvoj tajný kľúč", copy: "Skopírovať",
       newDownload: "Uložiť zašifrovanú zálohu", newPass: "Heslo k záložnému súboru",
       newPassNote: "Súbor sa zašifruje týmto heslom cez NIP-49. Stratiť heslo znamená stratiť kľúč, rovnako ako stratiť samotný kľúč.",
       newPassGo: "Zapísať súbor", newConfirm: "Kľúč mám uložený na bezpečnom mieste.",
@@ -622,12 +763,12 @@
       tplSub: "Dve cesty. Opíš stránku, akú chceš, a nechaj ju postaviť, alebo si vezmi hotovú a píš do nej. Tak či tak je stránka potom tvoja a upravuje sa sama.",
       tplLoading: "načítavajú sa šablóny…", back: "Späť", next: "Ďalej",
       whereTitle: "Kde má bývať?",
-      whereSub: "Tvoja stránka je na tvojom npube na ktorejkoľvek nsite bráne. Toto je cesta vnútri nej. Pre titulnú stránku nechaj jednu lomku.",
+      whereSub: "Tvoja stránka býva na adrese vytvorenej z tvojho kľúča. Vyber, čo príde za ňou: jedna lomka pre titulnú stránku alebo meno ako /menu pre ďalšiu stránku.",
       pathLabel: "Cesta", publish: "Zverejniť",
       pubTitle: "Zverejňuje sa",
-      pubSub: "Z každého súboru sa stane blossom blob a potom jeden podpísaný manifest povie, na ktorý blob ktorá cesta ukazuje. Podpisovač si môže vypýtať schválenie každého podpisu.",
+      pubSub: "Tvoja stránka a jej editor sa nahrajú a potom tvoj kľúč podpíše poznámku, ktorá hovorí, ktorá verzia je aktuálna. Nechaj túto stránku otvorenú. Ak o to podpisová aplikácia požiada, schváľ každú žiadosť.",
       retry: "Skúsiť znova",
-      logChecking: "Pýtame sa Blossom serverov, čo už majú…",
+      logChecking: "Pýtame sa súborových serverov, čo už majú…",
       logChecked: "Každého servera sme sa spýtali, čo už má",
       logSigning: "Podpisujú sa nahrávania. Podpisovacia aplikácia si môže vypýtať schválenie každého.",
       logSigned: "Všetky nahrávania sú podpísané",
@@ -638,7 +779,7 @@
       srvChecking: "pýtame sa, či to už má…", srvHere: "už tam je",
       srvNeeds: "potrebuje kópiu", srvSigning: "čaká sa na podpisovú aplikáciu…",
       srvSending: "nahráva sa…", srvOk: "nahraté", srvFailed: "zlyhalo",
-      logRetryHint: "Nič sa nestratilo. Ďalší pokus preskočí to, čo už dorazilo, a relaye alebo Blossom servery môžeš zmeniť v predchádzajúcom kroku.",
+      logRetryHint: "Nič sa nestratilo. Ďalší pokus preskočí to, čo už dorazilo, a miesto uloženia súborov môžeš zmeniť v predchádzajúcom kroku.",
       doneTitle: "Je to online",
       doneSub: "Otvor si to a prihlás sa tým istým kľúčom. Stránka sa odteraz upravuje sama, takže sem sa už vracať nemusíš.",
       doneOpen: "Otvoriť a začať upravovať", doneView: "Len sa pozrieť", doneGuide: "Prečítať návod",
@@ -691,26 +832,41 @@
       occOtherSub: "Ostatních stránek se to nedotkne. Tahle přibude vedle nich.",
       occList: "Už zveřejněné: ", occLook: "Podívat se, co tam je teď", occConfirm: "Nahradit stránku, která tam je.",
       pathBad: "Cesta může obsahovat písmena, čísla, pomlčky a lomítka.", needConfirm: "Zaškrtni políčko a potvrď, že tu stránku nahrazuješ.",
-      logFetch: "Načítá se šablona a runtime…", logReady: "Připraveno: ", logFiles: " souborů",
-      logUpload: "Nahrává se na Blossom…", logUploaded: "Všechny soubory jsou na Blossomu", logSent: "nahraných", logReused: "už tam bylo",
-      logManifest: "Manifest se zveřejňuje na relayích…", logPublished: "Manifest zveřejněný, verze uložená", logRelayChecking: "Zjišťuje se, jestli má tvůj klíč seznam relayů…", logRelayWritten: "Pro tvůj klíč se zveřejnil seznam relayů, takže tuhle stránku najde každá brána", logRelayPresent: "Tvůj klíč už seznam relayů má, zůstal beze změny", logRelayUnknown: "Seznam relayů se nepodařilo ověřit, proto se žádný nezapsal. Některé brány tuhle stránku možná nenajdou, dokud ho tvůj klíč nebude mít.", logRelayFailed: "Seznam relayů nepřijal žádný relay. Některé brány tuhle stránku možná nenajdou, dokud ho tvůj klíč nebude mít.",
+      logFetch: "Připravuje se tvoje stránka a její editor…", logReady: "Připraveno: ", logFiles: " souborů",
+      logUpload: "Nahrávají se tvoje soubory…", logUploaded: "Všechny soubory jsou nahrané", logSent: "nahraných", logReused: "už tam bylo",
+      logManifest: "Oznamuje se síti, která verze je aktuální…", logPublished: "Zveřejněno a tahle verze je uložená v historii stránky", logRelayChecking: "Ověřuje se, jestli tvoji stránku najdou brány…", logRelayWritten: "Přidaly se údaje, díky kterým tuhle stránku najde každá brána", logRelayPresent: "Tvůj klíč už ty údaje měl, takže zůstaly, jak byly", logRelayUnknown: "Nepodařilo se to ověřit, proto se nic nepřidalo. Některé brány tuhle stránku možná nenajdou, dokud tvůj klíč ty údaje mít nebude.", logRelayFailed: "Nikdo je nepřijal. Některé brány tuhle stránku možná nenajdou, dokud tvůj klíč ty údaje mít nebude.",
       aiTitle: "Popiš ji a AI ji postaví", aiHint: "Napiš, na co ta stránka je a co na ní má být. Platí se přes Lightning nebo Cashu, a výsledek je obyčejné HTML, které umíš dál upravovat.",
       aiStart: "Výchozí stránka", aiScratch: "Začít od nuly", aiDescribe: "Jakou stránku chceš?", aiSettings: "Nastavení a kredit AI", aiGenerate: "Vytvořit náhled", aiCancel: "Zrušit generování", aiReview: "Před pokračováním si stránku zkontroluj. Text i bloky můžeš upravovat po zveřejnění.", aiUse: "Použít tuto stránku", aiWorking: "Generuje se…", aiReady: "Náhled je připravený.", aiCancelled: "Generování zrušeno.",
       crumb: "publikovat", h1: "Zveřejni stránku",
-      lede: "Přihlas se svým Nostr klíčem, popiš stránku, jakou chceš, nebo začni hotovou, a je online. Stránka, kterou zveřejníš, se potom upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
+      lede: "Přihlas se klíčem, vyber, odkud začít, a stránka je online. Od té chvíle se upravuje sama, takže tohohle průvodce potřebuješ jen jednou.",
       noscript: "Tenhle publikátor běží celý v prohlížeči, takže potřebuje JavaScript. I bez něj můžeš zveřejnit z terminálu přes npx nsite-clay deploy.",
       s1: "Přihlášení", s2: "Tvoje stránka", s3: "Adresa", s4: "Zveřejnění",
       signinTitle: "Kdo zveřejňuje?",
       signinSub: "Stránka patří klíči, ne účtu. Klíč, který se tu přihlásí, bude jediný, který ji pak umí změnit.",
       wayExt: "Rozšíření prohlížeče", wayExtSub: "Alby, nos2x a další. Nic se nemusí psát.",
-      wayApp: "Podpisová aplikace", wayAppSub: "Amber nebo jiná NIP-46 aplikace. Naskenuj kód z druhého zařízení a klíč neopustí telefon.",
+      wayApp: "Podpisová aplikace", wayAppSub: "Amber nebo jiná podpisová aplikace. Naskenuj kód telefonem a klíč ho neopustí.",
       wayKey: "Vložit klíč", wayKeySub: "nsec, zašifrovaný ncryptsec nebo adresa bunker://.",
-      wayNew: "Klíč zatím nemám", wayNewSub: "Vyrob si ho tady. Je tvůj, nikde se neukládá a musíš si ho zapsat.",
+      wayNew: "Klíč zatím nemám", wayNewSub: "Vyrob si ho tady za chvíli. Je jen tvůj, takže si ho uložíš, než půjdeš dál.",
+      navMain: "Hlavní navigace", themeSwitch: "Přepnout světlý a tmavý režim", stepsLabel: "Kroky",
+      haveTitle: "Klíč už mám", nothingTitle: "Zatím nemám nic", signinBack: "Vybrat jiný způsob",
+      panelKey: "Vlož svůj klíč", panelApp: "Přihlas se podpisovou aplikací",
+      appSub: "Otevři v telefonu Amber nebo jinou podpisovou aplikaci a naskenuj tenhle kód. Klíč zůstane v telefonu.",
+      newTitle: "Vyrob si klíč", newStamp: "Jediná kopie",
+      newSafe: "Vidíš ho jen teď. Ulož ho do správce hesel nebo ulož soubor tam, kde ho znovu najdeš. Pokud se ztratí, nikdo ho neumí obnovit ani za tebe vynulovat.",
+      signingIn: "Přihlašuje se. Pokud o to podpisová aplikace požádá, schval to tam.",
+      signinHint: "Zkontroluj to a zkus znovu, nebo vyber jiný způsob přihlášení.",
+      signedAs: "Přihlášený jako ", tplRetry: "Zkusit znovu",
+      priceTotal: "satů, jednorázově", priceSupport: "satů podpoří nsite-clay", priceCredit: "satů se stane tvým AI kreditem",
+      moreOptions: "Další možnosti",
+      moreHint: "Použij jiný AI uzel nebo vlastní klíč kompatibilní s OpenAI, nebo obnov koncept uložený do souboru.",
+      cutOr: "nebo začni zdarma", cliNote: "Raději terminál? Tohle dělá totéž:",
+      pathChecking: "Ověřuje se, co už tenhle klíč zveřejnil…",
+      doneStamp: "Online", doneKey: "Tvůj klíč je jediná cesta zpět k úpravám, takže si ponech uloženou kopii.",
       keyLabel: "Tvůj klíč", passLabel: "Heslo k tomu ncryptsecu",
       keyNote: "Klíč zůstává v paměti téhle karty, dokud je otevřená, a nikam se nezapisuje. Podpisová aplikace je bezpečnější, protože klíč se na stránku vůbec nedostane.",
       keyGo: "Přihlásit se",
-      newIntro: "Tohle je tvůj nový klíč. Je jediné, co umí tvoji stránku změnit. Nikdo ho neumí obnovit a nikdo jiný jeho kopii nemá.",
-      newSecret: "Tajný klíč, zapiš si ho", copy: "Zkopírovat",
+      newIntro: "Stránka tu nemá účet ani heslo. Patří tomu, kdo drží její klíč. Tenhle klíč je teď tvůj a je to jediné, co bude umět tvoji stránku později změnit.",
+      newSecret: "Tvůj tajný klíč", copy: "Zkopírovat",
       newDownload: "Uložit zašifrovanou zálohu", newPass: "Heslo k zálohovacímu souboru",
       newPassNote: "Soubor se zašifruje tímhle heslem přes NIP-49. Ztratit heslo znamená ztratit klíč, stejně jako ztratit klíč samotný.",
       newPassGo: "Zapsat soubor", newConfirm: "Klíč mám uložený na bezpečném místě.",
@@ -719,12 +875,12 @@
       tplSub: "Dvě cesty. Popiš stránku, jakou chceš, a nech ji postavit, nebo si vezmi hotovou a piš do ní. Tak či tak je stránka potom tvoje a upravuje se sama.",
       tplLoading: "načítají se šablony…", back: "Zpět", next: "Dál",
       whereTitle: "Kde má bydlet?",
-      whereSub: "Tvoje stránka je na tvém npubu na kterékoli nsite bráně. Tohle je cesta uvnitř ní. Pro titulní stránku nech jedno lomítko.",
+      whereSub: "Tvoje stránka bydlí na adrese vytvořené z tvého klíče. Vyber, co přijde za ní: jedno lomítko pro titulní stránku, nebo jméno jako /menu pro další stránku.",
       pathLabel: "Cesta", publish: "Zveřejnit",
       pubTitle: "Zveřejňuje se",
-      pubSub: "Z každého souboru se stane blossom blob a pak jeden podepsaný manifest řekne, na který blob která cesta ukazuje. Podpisovač si může vyžádat schválení každého podpisu.",
+      pubSub: "Tvoje stránka a její editor se nahrají a pak tvůj klíč podepíše poznámku, která říká, která verze je aktuální. Nech tuhle stránku otevřenou. Pokud o to podpisová aplikace požádá, schval každou žádost.",
       retry: "Zkusit znovu",
-      logChecking: "Ptáme se Blossom serverů, co už mají…",
+      logChecking: "Ptáme se souborových serverů, co už mají…",
       logChecked: "Každého serveru jsme se zeptali, co už má",
       logSigning: "Podepisují se nahrávání. Podpisová aplikace si může vyžádat schválení každého.",
       logSigned: "Všechna nahrávání jsou podepsaná",
@@ -735,7 +891,7 @@
       srvChecking: "ptáme se, jestli to už má…", srvHere: "už tam je",
       srvNeeds: "potřebuje kopii", srvSigning: "čeká se na podpisovou aplikaci…",
       srvSending: "nahrává se…", srvOk: "nahráno", srvFailed: "selhalo",
-      logRetryHint: "Nic se neztratilo. Další pokus přeskočí to, co už dorazilo, a relaye nebo Blossom servery můžeš změnit v předchozím kroku.",
+      logRetryHint: "Nic se neztratilo. Další pokus přeskočí to, co už dorazilo, a místo uložení souborů můžeš změnit v předchozím kroku.",
       doneTitle: "Je to online",
       doneSub: "Otevři si to a přihlas se stejným klíčem. Stránka se odteď upravuje sama, takže se sem už vracet nemusíš.",
       doneOpen: "Otevřít a začít upravovat", doneView: "Jen se podívat", doneGuide: "Přečíst návod",
@@ -755,16 +911,23 @@
     const s = T[el.dataset.tPlaceholder];
     if (s) el.placeholder = s;
   }
+  // Names read aloud by a screen reader are text too.
+  for (const el of document.querySelectorAll("[data-t-label]")) {
+    const s = T[el.dataset.tLabel];
+    if (s) el.setAttribute("aria-label", s);
+  }
   const say = (key, fallback) => T[key] || fallback;
 
   const $ = (s) => document.querySelector(s);
   for (const el of document.querySelectorAll("[data-ai-word]")) el.textContent = nc.ai.say(el.dataset.aiWord);
-  const state = { template: null, catalogue: [], path: "/", confirmed: false, reached: 1, published: false };
+  const state = { template: null, catalogue: [], path: "/", confirmed: false, reached: 1, published: false, who: "" };
 
   // ---- the stepper -------------------------------------------------------
-  // A step you have already been through is a way back to it. Nothing is lost by
-  // returning to the template list, and a wizard that only goes forwards makes
-  // people start over in a new tab to change one choice.
+  // A step you have already been through is a way back to it, and one you have
+  // been back from is a way forward again. Nothing is lost by returning to the
+  // template list, and a wizard that only goes forwards makes people start over
+  // in a new tab to change one choice.
+  let stepShown = 0;
   function step(n) {
     state.reached = Math.max(state.reached, n);
     if (n === 2 && typeof showProvider === "function") showProvider();
@@ -773,10 +936,11 @@
     }
     for (const li of document.querySelectorAll("#steps li")) {
       const i = Number(li.dataset.step);
-      li.setAttribute("data-done", String(i < n));
+      li.setAttribute("data-done", String(i < n || (i === 4 && state.published)));
       i === n ? li.setAttribute("aria-current", "step") : li.removeAttribute("aria-current");
-      // Once it is published there is nothing to go back and change.
-      const canGo = i < n && i <= state.reached && !state.published;
+      // Once it is published there is nothing to go back and change, and the
+      // last step is something you are taken to, never something you pick.
+      const canGo = i !== n && i <= state.reached && i < 4 && !state.published;
       li.toggleAttribute("data-go", canGo);
       li.tabIndex = canGo ? 0 : -1;
       // A step you can click really is a button. One you cannot stays an
@@ -784,12 +948,21 @@
       // for a screen reader and give nothing back.
       canGo ? li.setAttribute("role", "button") : li.removeAttribute("role");
     }
+    $("#who").hidden = !state.who || n !== 2;
+    $("#tpl-next").disabled = !state.template;
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // A new screen starts at its question, for the reader who cannot see it change.
+    if (stepShown && stepShown !== n) {
+      const heading = document.querySelector(`section.step[data-step="${n}"] h2:not([hidden])`);
+      heading?.focus({ preventScroll: true });
+    }
+    stepShown = n;
   }
 
   function goTo(n) {
-    if (state.published || generation || settingUp || n > state.reached) return;
+    if (state.published || generation || settingUp || n > state.reached || n >= 4) return;
     step(n);
+    if (n === 1) showChoices();
     if (n === 2) loadTemplates();
     if (n === 3) checkPath();
   }
@@ -809,8 +982,46 @@
   };
 
   // ---- 1. sign in --------------------------------------------------------
+  // One decision on screen at a time: the list of ways in, or the one way that
+  // was picked, never both. Each way has a plain way back to the list.
+
+  const PANELS = { choose: "#signin-choose", app: "#panel-app", key: "#keyform", new: "#newkey" };
+  let attempt = null;
+  function panel(name, { focus = true } = {}) {
+    for (const [k, sel] of Object.entries(PANELS)) $(sel).hidden = k !== name;
+    fail("#signin-error", "");
+    // Whatever there is to say about signing in is said next to the thing being
+    // pressed, not under a row of buttons somewhere else on the sheet.
+    const target = $(PANELS[name]);
+    target.insertBefore($("#signin-msgs"), target.querySelector(".moves"));
+    // A signer code nobody is looking at must not sign anybody in later.
+    if (name !== "app" && attempt) { attempt.cancel?.(); attempt = null; }
+    if (focus) $(PANELS[name] + " h2").focus({ preventScroll: true });
+  }
+  function showChoices() { panel("choose", { focus: false }); }
+  for (const b of document.querySelectorAll(".back-to-choose")) b.onclick = () => panel("choose");
+
+  // A bunker round trip takes seconds and prompts on a phone, so say so and keep
+  // everything still until it answers.
+  function signing(on, message) {
+    for (const b of document.querySelectorAll("#signin-choose .way, #key-go, #newkey-go, .back-to-choose")) b.disabled = on;
+    if (!on) $("#newkey-go").disabled = !$("#newkey-ok").checked;
+    $("#signin-busy").hidden = !on;
+    const status = $("#signin-status");
+    status.hidden = !on;
+    status.textContent = on ? (message || say("signingIn", "Signing in. If your signer asks, approve it there.")) : "";
+  }
+  const signFail = (e) => {
+    const what = String((e && e.message) || e || "").trim();
+    fail("#signin-error", `${what}${/[.!?…]$/.test(what) ? "" : "."} ${say("signinHint", "Check it and try again, or choose another way to sign in.")}`);
+  };
 
   function signedIn() {
+    const npub = nc.npub || "";
+    state.who = npub;
+    const code = document.createElement("code");
+    code.textContent = npub ? `${npub.slice(0, 12)}…${npub.slice(-6)}` : "";
+    $("#who").replaceChildren(say("signedAs", "Signed in as "), code);
     step(2);
     loadTemplates();
     restoreCredit();
@@ -820,24 +1031,22 @@
   if (window.nostr) $("#way-nip07").hidden = false;
   $("#way-nip07").onclick = async () => {
     fail("#signin-error", "");
+    signing(true);
     try { await nc.login("nip07"); signedIn(); }
-    catch (e) { fail("#signin-error", e.message); }
+    catch (e) { signFail(e); }
+    finally { signing(false); }
   };
 
-  $("#way-key").onclick = () => {
-    $("#keyform").hidden = false;
-    $("#newkey").hidden = true;
-    $("#qrbox").hidden = true;
-    $("#key").focus();
-  };
+  $("#way-key").onclick = () => { panel("key", { focus: false }); $("#key").focus(); };
   $("#key").addEventListener("input", () => {
     $("#passwrap").hidden = !$("#key").value.trim().startsWith("ncryptsec");
   });
+  $("#key").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#key-go").click(); });
   $("#key-go").onclick = async () => {
     fail("#signin-error", "");
     const raw = $("#key").value.trim();
     if (!raw) return fail("#signin-error", say("needKey", "Paste a key first."));
-    $("#key-go").disabled = true;
+    signing(true);
     try {
       // A bunker:// address is a remote signer, not a key, and takes a
       // different door into the same runtime.
@@ -845,20 +1054,16 @@
       else await nc.login("nsec", { key: raw, password: $("#pass").value });
       $("#key").value = "";                       // out of the DOM the moment it is used
       signedIn();
-    } catch (e) { fail("#signin-error", e.message); }
-    finally { $("#key-go").disabled = false; }
+    } catch (e) { signFail(e); }
+    finally { signing(false); }
   };
 
   // The signer app. connectRemote() mints the URI and hands back a promise that
   // settles when the signer answers; the code is drawn here rather than fetched,
   // because whoever renders it could answer the connection instead of you.
-  let attempt = null;
   $("#way-remote").onclick = () => {
-    fail("#signin-error", "");
-    $("#keyform").hidden = true;
-    $("#newkey").hidden = true;
+    panel("app");
     const box = $("#qrbox");
-    box.hidden = false;
 
     const start = () => {
       attempt?.cancel?.();
@@ -875,9 +1080,12 @@
 
       const status = document.createElement("p");
       status.className = "note";
+      status.setAttribute("role", "status");
       status.textContent = say("qrWait", "Waiting for the signer. Keep this page open while you approve it.");
 
       const again = document.createElement("button");
+      again.type = "button";
+      again.className = "btn";
       again.textContent = say("qrRetry", "Show a new code");
       again.hidden = true;
       again.onclick = start;
@@ -909,9 +1117,7 @@
   // A key for somebody who has none. Generated here, shown once, never stored.
   let fresh = null;
   $("#way-new").onclick = () => {
-    $("#keyform").hidden = true;
-    $("#qrbox").hidden = true;
-    $("#newkey").hidden = false;
+    panel("new");
     if (!fresh) {
       const signer = new nc.LocalSigner();
       fresh = { nsec: nc.nip19.nsecEncode(signer.sec), npub: nc.nip19.npubEncode(signer.pubkey) };
@@ -972,10 +1178,13 @@
   $("#newkey-ok").onchange = (e) => { $("#newkey-go").disabled = !e.target.checked; };
   $("#newkey-go").onclick = async () => {
     fail("#signin-error", "");
+    signing(true);
     // Made on this page a moment ago, so it has no relay list to look for.
     try { await nc.login("nsec", { key: fresh.nsec, fresh: true }); signedIn(); }
-    catch (e) { fail("#signin-error", e.message); }
+    catch (e) { signFail(e); }
+    finally { signing(false); }
   };
+  $("#nokey-link").onclick = () => $("#way-new").click();
 
   // ---- 2. templates ------------------------------------------------------
 
@@ -986,13 +1195,27 @@
       // Same origin: this wizard is published on the site that carries the
       // templates, so there is no cross-origin request and nothing to allow.
       const res = await fetch("/t/index.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error(`${res.status}`);
       state.catalogue = await res.json();
     } catch (e) {
+      // Not a dead end: say what failed and offer the same request again.
       host.innerHTML = "";
       const p = document.createElement("p");
       p.className = "note bad";
       p.textContent = say("tplFailed", "Could not load the template list: ") + e.message;
-      host.appendChild(p);
+      const again = document.createElement("button");
+      again.type = "button";
+      again.className = "btn small";
+      again.textContent = say("tplRetry", "Try again");
+      again.onclick = () => {
+        host.innerHTML = "";
+        const wait = document.createElement("p");
+        wait.className = "note";
+        wait.textContent = say("tplLoading", "loading templates…");
+        host.appendChild(wait);
+        loadTemplates();
+      };
+      host.append(p, again);
       return;
     }
     host.innerHTML = "";
@@ -1042,7 +1265,11 @@
     }
   }
 
-  $("#tpl-back").onclick = () => step(1);
+  // Back, and on again once there is a choice to go on with. Picking a template
+  // or accepting an AI page already moves on; this is for coming back to a step
+  // whose choice is still standing.
+  $("#tpl-back").onclick = () => goTo(1);
+  $("#tpl-next").onclick = () => { if (state.template && !generation && !settingUp) { step(3); checkPath(); } };
 
   // AI produces an in-memory draft. Only Use this page hands it to the ordinary
   // publishing path; tokens, keys and prompts never enter the generated HTML.
@@ -1125,6 +1352,8 @@
     // asks them to decide whether they paid, which they should not have to.
     $("#ai-buy").hidden = !!s.key || !!paymentSetup || paymentPending || restoringCredit;
     $("#ai-resume").hidden = !paymentSetup && !paymentPending;
+    // The price is a thing to read before paying, not after.
+    $("#ai-price").hidden = $("#ai-buy").hidden;
     $("#ai-topup").hidden = !s.key || s.mode !== "routstr";
     $("#ai-generate").disabled = !aiReady?.canGenerate || !!generation || settingUp;
     $("#ai-generate").classList.toggle("primary", !generated);
@@ -1151,6 +1380,7 @@
       settingUp = on;
       for (const id of ["ai-buy", "ai-resume", "ai-generate", "tpl-back"]) $("#" + id).disabled = on;
       $("#ai-settings").inert = on; $("#tpls").inert = on;
+      $("#ai-busy").hidden = !on;
     };
     busy(true);
     try {
@@ -1196,7 +1426,7 @@
         }
         body.append(split);
         const own = document.createElement("p"); own.className = "note";
-        own.textContent = say("buyOwn", "The credit is yours."); body.append(own);
+        own.textContent = say("buyOwn", "The credit is yours. It lasts a long time, and you can take back whatever you do not spend."); body.append(own);
         const qr = nc.qrElement(quote.request.toUpperCase(), { size: 260 });
         qr.style.cssText = "display:block;width:min(260px,100%);height:auto;margin:1rem auto;background:#fff";
         body.append(qr);
@@ -1297,7 +1527,7 @@
   const generationBusy = (on) => {
     for (const id of ["ai-generate", "ai-buy", "ai-resume", "ai-topup", "ai-import", "ai-version", "ai-download", "ai-discard", "ai-description", "ai-change", "tpl-back", "ai-use", "ai-again", "ai-refine"]) $("#" + id).disabled = on;
     $("#ai-settings").inert = on;
-    $("#tpls").inert = on; $("#ai-cancel").hidden = !on;
+    $("#tpls").inert = on; $("#ai-cancel").hidden = !on; $("#ai-busy").hidden = !on;
     $("#ai-builder").setAttribute("aria-busy", String(on));
     if (!on) { showProvider(); checkReadiness(true); }
   };
@@ -1411,7 +1641,7 @@
   $("#ai-again").onclick = () => {
     $("#ai-status").textContent = say("aiEditDescription", "Change the description and generate a new preview.");
     $("#ai-description").focus();
-    $("#ai-description").scrollIntoView({ block: "center", behavior: "smooth" });
+    $("#ai-description").scrollIntoView({ block: "center" });
   };
 
   $("#ai-use").onclick = () => {
@@ -1454,8 +1684,11 @@
     const token = {};
     checking = token;
     let manifest = null;
+    // A relay can take a few seconds to answer. Say what is being waited for.
+    $("#path-checking").hidden = false;
     try { manifest = await nc.manifestOf(nc.pubkey, ""); } catch { /* offline is not occupied */ }
     if (checking !== token) return;
+    $("#path-checking").hidden = true;
     if (!manifest) return;
 
     const paths = nc.manifestPaths(manifest);
@@ -1464,10 +1697,9 @@
 
     const here = !!paths[docPath];
     box.hidden = false;
-    box.className = here ? "card warn" : "card";
-    box.style.margin = "1.1rem 0 0";
+    box.className = here ? "occ warn" : "occ";
 
-    const h = document.createElement("h2");
+    const h = document.createElement("h3");
     h.textContent = here
       ? say("occTitle", "There is already a page here")
       : say("occOtherTitle", "This key already has a site");
@@ -1494,17 +1726,15 @@
       row.appendChild(look);
       box.appendChild(row);
 
-      const confirm = document.createElement("p");
-      confirm.className = "note";
       const label = document.createElement("label");
+      label.className = "confirm";
       const cb = document.createElement("input");
-      cb.type = "checkbox"; cb.style.width = "auto";
+      cb.type = "checkbox";
       cb.onchange = () => { state.confirmed = cb.checked; };
       const span = document.createElement("span");
-      span.textContent = " " + say("occConfirm", "Replace the page that is there.");
+      span.textContent = say("occConfirm", "Replace the page that is there.");
       label.append(cb, span);
-      confirm.appendChild(label);
-      box.appendChild(confirm);
+      box.appendChild(label);
     }
   }
 
@@ -1593,6 +1823,7 @@
     timers.length = 0;
     log.innerHTML = "";
     $("#retry-row").hidden = true;
+    $("#pub-busy").hidden = false;
     $("#done-card").hidden = true;
     $("#progress-card").hidden = false;
 
@@ -1601,7 +1832,7 @@
     const docPath = state.path;
 
     try {
-      line(say("logFetch", "Reading the template and the runtime…"));
+      line(say("logFetch", "Getting your page and its editor ready…"));
       const shared = [
         ["/nsite-clay.js", "text/javascript"],
         ["/nsite-clay-base.css", "text/css"],
@@ -1758,7 +1989,7 @@
           if (stage === "checking") {
             checking = checking || line("");
             checking.textContent =
-              `${say("logChecking", "Asking the Blossom servers what they already have…")} ${done + 1}/${total}  ${path}`;
+              `${say("logChecking", "Asking the file servers what they already have…")} ${done + 1}/${total}  ${path}`;
             return;
           }
           if (stage === "signing") {
@@ -1771,27 +2002,27 @@
             settle(checking, say("logChecked", "Asked every server what it already holds"));
             settle(signing, say("logSigned", "Every upload is signed"));
             uploading = uploading || line("");
-            uploading.textContent = `${say("logUpload", "Uploading to Blossom…")} ${done + 1}/${total}  ${path}`;
+            uploading.textContent = `${say("logUpload", "Uploading your files…")} ${done + 1}/${total}  ${path}`;
             return;
           }
           if (stage === "manifest") {
             // Say when nothing had to be sent. The runtime is the same blob for
             // everybody, so most of a publish is usually already there.
             settle(uploading, reused
-              ? `${say("logUploaded", "Every file is on Blossom")} (${uploaded} ${say("logSent", "uploaded")}, ${reused} ${say("logReused", "already there")})`
-              : say("logUploaded", "Every file is on Blossom"));
-            manifestLine = line(say("logManifest", "Publishing the manifest to the relays…"));
+              ? `${say("logUploaded", "Every file is uploaded")} (${uploaded} ${say("logSent", "uploaded")}, ${reused} ${say("logReused", "already there")})`
+              : say("logUploaded", "Every file is uploaded"));
+            manifestLine = line(say("logManifest", "Telling the network which version is current…"));
           }
           // Most gateways find a site through its owner's relay list, and a new
           // key has none. The runtime writes one only when it provably has none.
           if (stage === "relaylist") {
-            settle(manifestLine, say("logPublished", "Manifest published, version filed"));
-            if (!p.state) { relayLine = line(say("logRelayChecking", "Checking whether your key has a relay list…")); return; }
+            settle(manifestLine, say("logPublished", "Published, and this version is filed in the page's history"));
+            if (!p.state) { relayLine = line(say("logRelayChecking", "Checking that gateways can find your site…")); return; }
             const said = {
-              written: say("logRelayWritten", "Published a relay list for your key, so every gateway can find this site"),
-              present: say("logRelayPresent", "Your key already has a relay list; it was left as it is"),
-              unknown: say("logRelayUnknown", "Could not check for a relay list, so none was written. Some gateways may not find this site until your key has one."),
-              failed: say("logRelayFailed", "No relay accepted the relay list. Some gateways may not find this site until your key has one."),
+              written: say("logRelayWritten", "Added the details that let every gateway find this site"),
+              present: say("logRelayPresent", "Your key already had those details, so they were left as they are"),
+              unknown: say("logRelayUnknown", "Could not check, so nothing was added. Some gateways may not find this site until your key has those details."),
+              failed: say("logRelayFailed", "Nothing accepted them. Some gateways may not find this site until your key has those details."),
             }[p.state];
             if (!relayLine) return;
             if (said) relayLine.textContent = said; else relayLine.remove();
@@ -1800,7 +2031,7 @@
         },
       });
       timers.forEach(clearInterval);
-      settle(manifestLine, say("logPublished", "Manifest published, version filed"));
+      settle(manifestLine, say("logPublished", "Published, and this version is filed in the page's history"));
 
       const url = gateway(nc.npub, docPath);
       $("#done-url").textContent = url;
@@ -1811,24 +2042,48 @@
       step(4);
       $("#progress-card").hidden = true;
       $("#done-card").hidden = false;
+      $("#done-card h2").focus({ preventScroll: true });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       timers.forEach(clearInterval);
+      $("#pub-busy").hidden = true;
       line((e && e.message) || String(e), "bad");
       // Retrying is close to free: Blossom addresses blobs by their own hash, so
       // whatever already landed is skipped, and the manifest is merged rather
       // than replaced. Say so, because "try again" after a two minute wait does
       // not look free.
       line(say("logRetryHint", "Nothing was lost. Trying again skips whatever already " +
-        "arrived, and you can change the relays or Blossom servers on the previous step."));
+        "arrived, and you can change where the files are stored on the previous step."));
       $("#retry-row").hidden = false;
     }
   }
 
   $("#retry").onclick = publish;
+  $("#publish-back").onclick = () => { step(3); checkPath(); };
 
   // ---- start -------------------------------------------------------------
   step(1);
+  // The landing page links here knowing which door a visitor wants. ?key=have
+  // opens the choice for somebody who holds a key; ?key=new goes straight to
+  // making one. Plain /deploy.html shows every way in.
+  {
+    const entry = new URLSearchParams(location.search).get("key");
+    if (entry === "new") {
+      // Somebody who came to make a key goes back to the way in they might have
+      // wanted, not to a list that offers the thing they already chose.
+      const back = $("#newkey-back");
+      back.textContent = say("haveTitle", "I already have a key");
+      back.onclick = () => {
+        $("#signin-choose").dataset.mode = "have";
+        $("#nokey-wrap").hidden = false;
+        panel("choose");
+      };
+      $("#way-new").click();
+    } else if (entry === "have") {
+      $("#signin-choose").dataset.mode = "have";
+      $("#nokey-wrap").hidden = false;
+    }
+  }
 })();
 </script>
 </body>

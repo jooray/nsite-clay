@@ -4,99 +4,90 @@
       nc:path="/cs/templates.html"
       nc:edit-gate="hash"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://nostr.download">
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>nsite-clay: šablony</title>
-<meta name="description" content="Dvanáct výchozích bodů pro nsite, který se edituje sám. Vyber si, změň text, změň barvy, publikuj.">
+<meta name="description" content="Dvanáct výchozích bodů pro nsite, který se edituje sám. Vyber si, změň text, změň barvy, zveřejni.">
 <link rel="alternate" hreflang="en" href="/templates.html">
 <link rel="alternate" hreflang="es" href="/es/templates.html">
 <link rel="alternate" hreflang="sk" href="/sk/templates.html">
 <link rel="alternate" hreflang="cs" href="/cs/templates.html">
 <link rel="alternate" hreflang="x-default" href="/templates.html">
 <link rel="icon" href="/nsite-clay-mark.svg">
+<meta name="color-scheme" content="light dark">
+<script src="/site.js"></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
-    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F; --nc-radius: 12px;
-    --violet: #AB82F1; --ink-faint: #6F5D8E;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--nc-bg); color: var(--nc-ink); font: 16.5px/1.68 var(--sans);
-    background-image:
-      radial-gradient(60rem 40rem at 84% -14%, rgba(139,100,225,.17), transparent 62%),
-      radial-gradient(44rem 32rem at 2% 6%, rgba(86,60,170,.13), transparent 60%);
-    background-attachment: fixed;
-  }
-  a { color: var(--violet); text-underline-offset: 3px; }
-  a:hover { color: #C9AAFF; }
-  code { font: .87em var(--mono); color: #D6C4F5; }
-  .wrap { max-width: 66rem; margin: 0 auto; padding: 0 1.4rem; }
+  .stack { padding: 2.4rem 0 1rem; }
+  .stack > * + * { margin-top: 3.2rem; }
+  .intro { max-width: 52rem; }
+  .intro h1 { font-size: clamp(2.3rem, 5.4vw, 4rem); margin-bottom: .4em; }
+  .intro .lede + .lede { margin-top: -.2rem; }
+  .intro pre { max-width: 44rem; margin: 1.4rem 0 0; }
+  .intro a { color: var(--purple); }
 
-  .crumb { display: flex; align-items: center; gap: .55rem; font-size: .85rem;
-           color: var(--ink-faint); padding-top: 3rem; }
-  .crumb img { width: 28px; height: 28px; }
-  .crumb a { color: var(--nc-ink-dim); text-decoration: none; }
-  h1 { font-size: clamp(2.1rem, 6vw, 3rem); letter-spacing: -.03em; margin: 1.1rem 0 .5rem; }
-  .lede { color: var(--nc-ink-dim); font-size: 1.1rem; max-width: 42rem; }
+  /* the board: twelve flyers pinned at their own angles */
+  .grid { display: grid; gap: 2.4rem 1.8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: .6rem 0 0; }
+  .card { position: relative; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); padding: .7rem .7rem 1rem; box-shadow: var(--shadow); transform: rotate(var(--t, 0deg)); transition: transform .2s cubic-bezier(.2,.8,.2,1); }
+  .card:hover, .card:focus-within { transform: rotate(0deg) translateY(-4px); }
+  .card::before { content: ""; position: absolute; top: -.45rem; left: 50%; width: .95rem; height: .95rem; margin-left: -.47rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e86a63, var(--pin) 55%, #6d1815); box-shadow: 0 3px 4px rgba(20, 10, 30, .4); z-index: 1; }
+  .card:nth-child(3n+2)::before { left: 18%; }
+  .card:nth-child(3n)::before { left: 82%; }
+  .card:nth-child(1) { --t: -1.2deg; } .card:nth-child(2) { --t: .8deg; margin-top: 1.2rem; } .card:nth-child(3) { --t: -.6deg; }
+  .card:nth-child(4) { --t: .9deg; } .card:nth-child(5) { --t: -1deg; margin-top: 1rem; } .card:nth-child(6) { --t: .5deg; }
+  .card:nth-child(7) { --t: -.7deg; margin-top: .6rem; } .card:nth-child(8) { --t: 1.1deg; } .card:nth-child(9) { --t: -.9deg; margin-top: 1.2rem; }
+  .card:nth-child(10) { --t: .6deg; } .card:nth-child(11) { --t: -1.1deg; margin-top: .8rem; } .card:nth-child(12) { --t: .7deg; }
+  .card > a.shot { display: block; aspect-ratio: 16 / 10; background: var(--paper-2); overflow: hidden; border: 1px solid var(--paper-edge); }
+  .card > a.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .card .body { display: flex; flex-direction: column; flex: 1; padding: .8rem .35rem 0; }
+  .card .name { align-self: flex-start; font: 800 .74rem/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--purple); border: 2px solid var(--purple); border-radius: 3px; padding: .2rem .45rem; transform: rotate(-2deg); margin-bottom: .6rem; }
+  .card h2 { font-size: 1.3rem; margin: 0 0 .1rem; }
+  .card h2 a { color: var(--ink); text-decoration: none; }
+  .card h2 a:hover { text-decoration: underline; text-decoration-color: var(--purple); }
+  .card p { margin: .4rem 0 0; font-size: .95rem; line-height: 1.5; color: var(--ink-dim); flex: 1; }
+  .card .row { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+  .card .row a { padding: .5rem .8rem; font: 700 .85rem/1.1 var(--text); text-decoration: none; color: var(--ink); border: 2px solid var(--ink); border-radius: 3px; }
+  .card .row a:hover { background: var(--ink); color: var(--paper); }
+  .card .row a.primary { background: var(--purple); border-color: var(--purple); color: var(--on-purple); }
+  .card .row a.primary:hover { background: var(--ink); border-color: var(--ink); }
+  @media (max-width: 62rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .card { margin-top: 0 !important; } }
+  @media (max-width: 40rem) { .grid { grid-template-columns: 1fr; } .card { transform: none; } }
 
-  pre { background: #100722; border: 1px solid var(--nc-edge); border-radius: 12px;
-        padding: .9rem 1.1rem; overflow-x: auto; margin: 1.4rem 0 0; max-width: 42rem;
-        font: .85rem/1.7 var(--mono); color: #D9CCF3; }
-  pre .c { color: var(--ink-faint); }
-
-  .grid { display: grid; gap: 1.4rem; margin: 3rem 0 0;
-          grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); }
-  .card { border: 1px solid var(--nc-edge); border-radius: 14px; background: var(--nc-panel);
-          overflow: hidden; display: flex; flex-direction: column; }
-  .card > a.shot { display: block; aspect-ratio: 16 / 10; background: #100722; overflow: hidden; }
-  .card > a.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center;
-                       display: block; transition: transform .5s ease; }
-  .card:hover > a.shot img { transform: scale(1.03); }
-  .card .missing { display: grid; place-items: center; height: 100%; color: var(--ink-faint);
-                   font: .8rem var(--mono); }
-  .card .body { padding: 1rem 1.1rem 1.15rem; display: flex; flex-direction: column; flex: 1; }
-  .card h2 { font-size: 1.08rem; margin: 0 0 .1rem; }
-  .card h2 a { text-decoration: none; color: inherit; }
-  .card .name { font: .74rem var(--mono); color: var(--violet); letter-spacing: .04em; }
-  .card p { margin: .45rem 0 0; font-size: .92rem; color: var(--nc-ink-dim); flex: 1; }
-  .card .row { display: flex; gap: .5rem; margin-top: .9rem; flex-wrap: wrap; }
-  .card .row a { font: 600 .8rem var(--sans); text-decoration: none; padding: .38rem .75rem;
-                 border-radius: 8px; border: 1px solid var(--nc-edge); color: var(--nc-ink); }
-  .card .row a:hover { border-color: var(--nc-accent); }
-  .card .row a.primary { background: var(--nc-accent); border-color: transparent; color: var(--nc-accent-ink); }
-
-  section.tail { border-top: 1px solid var(--nc-edge); margin-top: 3.5rem; padding: 2.6rem 0 0; }
-  section.tail h2 { font-size: 1.4rem; margin: 0 0 .5rem; }
-  footer { border-top: 1px solid var(--nc-edge); margin-top: 3rem; padding: 2.2rem 0 4rem;
-           color: var(--ink-faint); font-size: .9rem; }
+  .tail { max-width: 52rem; margin-left: auto; }
+  .tail a { color: var(--purple); }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<nav class="nc-nav">
-    <a class="nc-brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
-    <a href="/cs/">Domů</a>
+<div class="page">
+  <nav class="topbar" aria-label="Hlavní">
+    <a class="brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
     <a href="/cs/guide.html">Návod</a>
     <a href="/cs/templates.html" aria-current="page">Šablony</a>
-    <a href="/cs/deploy.html">Zveřejnit</a>
+    <a href="/cs/how.html">Jak to funguje</a>
     <a href="/llms.txt">Pro agenty</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-    <div class="nc-lang"><a href="/templates.html" hreflang="en">EN</a><a href="/es/templates.html" hreflang="es">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs" aria-current="page">CS</a></div>
+    <span class="lang"><a href="/templates.html" hreflang="en">EN</a><a href="/es/templates.html" hreflang="es">ES</a><a href="/sk/templates.html" hreflang="sk">SK</a><a href="/cs/templates.html" hreflang="cs" aria-current="page">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Přepnout mezi světlým a tmavým režimem" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
   </nav>
-  <h1 editable="single-line">Šablony</h1>
-  <p class="lede" editable="single-line">Dvanáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
-  <p class="lede"><a href="/cs/deploy.html">Kteroukoli z nich publikuj přímo z prohlížeče</a>, bez příkazové řádky. Celý postup se snímky obrazovky ukazuje <a href="/cs/guide.html">návod</a>.</p>
 
-  <pre><span class="c"># začni od jedné z nich</span>
+  <main class="stack">
+
+    <section class="flyer intro" data-fix="tape" data-settle style="--tilt:-.5deg" aria-labelledby="top">
+      <h1 id="top" editable="single-line">Šablony</h1>
+      <p class="lede" editable="single-line">Dvanáct výchozích bodů. Každý z nich je funkční stránka s už zapojeným ovládáním editace, takže měníš text a barvy, místo abys stavěl od nuly.</p>
+      <p class="lede"><a href="/cs/deploy.html">Kteroukoli z nich zveřejni přímo z prohlížeče</a>, bez příkazové řádky. Celý postup se snímky obrazovky ukazuje <a href="/cs/guide.html">návod</a>.</p>
+
+      <pre><span class="c"># nebo začni od jedné z nich na svém počítači</span>
 npx nsite-clay init mysite --template=blog --npub=npub1…
 npx nsite-clay deploy mysite --sec=nsec1…</pre>
+    </section>
 
   <div class="grid" id="cards">
 
@@ -221,21 +212,23 @@ npx nsite-clay deploy mysite --sec=nsec1…</pre>
 
   </div>
 
-  <section class="tail">
-    <h2 editable="single-line">Mají společný engine</h2>
-    <div editable>
-      <p class="lede">Každá šablona odkazuje na tentýž <code>/nsite-clay-base.css</code> a tentýž
-        <code>/nsite-clay.js</code> z kořene webu a žádná si nenese kopii. Styluje se přes CSS
-        proměnné, takže lišta, dialogy i feedy jdou za paletou, kterou si šablona nastaví. Změnit
-        engine znamená upravit jeden soubor, ne dvanáct.</p>
-      <p class="lede">Pravidla, kterými se šablona řídí, jsou v
-        <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
-        Jestli tohle předáváš agentovi, nasměruj ho radši na <a href="/llms.txt">llms.txt</a>
-        a nech ho vybrat.</p>
-    </div>
-  </section>
+    <section class="flyer tail" data-fix="pin" style="--tilt:.4deg" aria-labelledby="engine">
+      <h2 id="engine" editable="single-line">Mají společný engine</h2>
+      <div editable>
+        <p class="lede">Každá šablona odkazuje na tentýž <code>/nsite-clay-base.css</code> a tentýž
+          <code>/nsite-clay.js</code> z kořene webu a žádná si nenese kopii. Styluje se přes CSS
+          proměnné, takže lišta, dialogy i feedy jdou za paletou, kterou si šablona nastaví. Změnit
+          engine znamená upravit jeden soubor, ne dvanáct.</p>
+        <p class="lede">Pravidla, kterými se šablona řídí, jsou v
+          <a href="https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md">CONTRACT.md</a>.
+          Jestli tohle předáváš agentovi, nasměruj ho radši na <a href="/llms.txt">llms.txt</a>
+          a nech ho vybrat.</p>
+      </div>
+    </section>
 
-  <footer>
+  </main>
+
+  <footer class="foot">
     <p><a href="/cs/">Domovská stránka</a> · <a href="/cs/guide.html">Návod</a> · <a href="/llms.txt">Pro agenty</a> · <a href="https://github.com/jooray/nsite-clay">Zdrojový kód</a></p>
     <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
       Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.

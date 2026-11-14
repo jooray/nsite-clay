@@ -38,3 +38,4 @@ CLAUDE.md.local
 
 # Local browser review evidence
 .impeccable/review/
+.impeccable/hook.cache.json

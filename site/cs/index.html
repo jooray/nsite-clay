@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="cs"
       nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
-      nc:path="/cs/index.html"
       nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
-      nc:servers="https://cdn.hzrd149.com,https://nostr.download">
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com"
+      nc:path="/cs/index.html" nc:source="/nsite-clay-source.js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>nsite-clay: nsite, který se edituje sám</title>
-<meta name="description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.">
+<title>nsite-clay: webová stránka, která se edituje sama</title>
+<meta name="description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu zveřejní, hostovaný na Nostru.">
+<meta name="color-scheme" content="light dark">
 <link rel="alternate" hreflang="en" href="/">
 <link rel="alternate" hreflang="es" href="/es/">
 <link rel="alternate" hreflang="sk" href="/sk/">
@@ -16,453 +17,256 @@
 <link rel="alternate" hreflang="x-default" href="/">
 <link rel="icon" href="/nsite-clay-mark.svg">
 <meta property="og:title" content="nsite-clay">
-<meta property="og:description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.">
+<meta property="og:description" content="Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu zveřejní, hostovaný na Nostru.">
 <meta property="og:image" content="/nsite-clay.png">
+<script src="/site.js"></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root {
-    --nc-ink: #EFE9F7; --nc-ink-dim: #A491C4; --nc-bg: #0E0518; --nc-panel: #1B0F2E;
-    --nc-edge: #2E1C4A; --nc-accent: #8C64E1; --nc-accent-ink: #12081F;
-    --nc-radius: 12px; --nc-radius-sm: 8px;
+  .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(1.4rem, 4vw, 3rem); align-items: start; }
+  .hero h1 { margin-bottom: .4em; font-size: clamp(2.4rem, 5.3vw, 4.3rem); }
+  .mini .loaf { height: 7.5rem; margin: 0 0 1rem; border: 2px solid var(--ink); background: var(--purple-wash) radial-gradient(circle, var(--purple) 1.6px, transparent 2px) 0 0 / 9px 9px; -webkit-mask: none; position: relative; }
+  .mini .loaf::after { content: "tady bude fotka dnešního pečiva"; position: absolute; inset: auto .5rem .4rem auto; background: #fff; border: 1.5px solid var(--ink); padding: .15rem .45rem; font: 700 .75rem/1.3 var(--text); }
+  .mini .btn { margin-top: 1rem; padding: .6rem .9rem; font-size: .9rem; }
+  .hero .lede { font-size: 1.22rem; }
+  .hero .ostrich { width: clamp(4.4rem, 10vw, 6.2rem); height: auto; display: block; margin: 0 0 1rem -.4rem; }
+  .hero .note { font-size: .88rem; color: var(--ink-dim); margin: .9rem 0 0; }
+  @media (max-width: 52rem) { .hero { grid-template-columns: 1fr; } }
 
-    --bg: #0E0518; --bg-2: #150A24; --panel: #1B0F2E; --edge: #2E1C4A;
-    --ink: #EFE9F7; --ink-dim: #A491C4; --ink-faint: #6F5D8E;
-    --violet: #AB82F1; --violet-2: #8C64E1; --violet-3: #563CAA;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16.5px/1.65 var(--sans);
-    background-image:
-      radial-gradient(60rem 40rem at 78% -12%, rgba(139,100,225,.20), transparent 62%),
-      radial-gradient(46rem 34rem at 6% 8%, rgba(86,60,170,.16), transparent 60%);
-    background-attachment: fixed;
-  }
-  .wrap { max-width: 54rem; margin: 0 auto; padding: 0 1.4rem; }
-  a { color: var(--violet); text-decoration-color: rgba(171,130,241,.35); text-underline-offset: 3px; }
-  a:hover { color: #C9AAFF; }
-  code { font: .88em var(--mono); color: #D6C4F5; }
-  h2 { font-size: 1.45rem; letter-spacing: -.015em; margin: 0 0 .6rem; }
-  h3 { font-size: 1.02rem; margin: 0 0 .35rem; }
-  p { margin: 0 0 1rem; }
-  section { padding: 3.4rem 0; border-top: 1px solid var(--edge); }
-  .lede { color: var(--ink-dim); }
+  /* the example page printed on the flyer */
+  .mini { background: #fff; border: 2px solid var(--ink); transform: rotate(1.4deg); padding: 1.2rem 1.3rem 1.3rem; position: relative; }
+  .mini .bar-top { display: flex; gap: .3rem; margin: -.2rem 0 .9rem; }
+  .mini .bar-top i { width: .55rem; height: .55rem; border-radius: 50%; border: 1.5px solid var(--ink); }
+  .mini .mini-name { font: 800 1.7rem/1.05 var(--display); letter-spacing: -.02em; margin: 0 0 .25em; }
+  .mini p { font-size: .98rem; margin: 0 0 .7em; color: var(--ink); }
+  .mini dl { margin: .8rem 0 0; display: grid; grid-template-columns: 1fr auto; gap: .25rem 1rem; font-size: .98rem; }
+  .mini dt, .mini dd { margin: 0; border-bottom: 1px dotted var(--ink-dim); padding-bottom: .2rem; }
+  .mini dd { font-weight: 700; }
+  .mini [contenteditable]:hover { background: var(--purple-wash); cursor: text; }
+  .mini [contenteditable]:focus { outline: 2px solid var(--purple); outline-offset: 2px; background: var(--purple-wash); }
+  .mini .stamp { position: absolute; right: -.6rem; top: -1.1rem; background: var(--paper); transform: rotate(4deg); }
 
-  /* hero */
-  header { padding: 4.5rem 0 3.6rem; text-align: center; }
-  header img { width: 132px; height: 132px; filter: drop-shadow(0 18px 40px rgba(86,60,170,.55)); }
-  h1 { font-size: clamp(2.5rem, 8vw, 4rem); margin: 1rem 0 .4rem; letter-spacing: -.035em;
-       background: linear-gradient(100deg, #FFFFFF, var(--violet)); -webkit-background-clip: text;
-       background-clip: text; color: transparent; }
-  .tag { font-size: clamp(1.02rem, 2.6vw, 1.2rem); color: var(--ink-dim); max-width: 34rem;
-         margin: 0 auto 1.8rem; }
-  .cta { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; gap: .5rem; font: 600 .92rem/1 var(--sans);
-         padding: .78rem 1.25rem; border-radius: 10px; text-decoration: none;
-         border: 1px solid var(--edge); background: var(--panel); color: var(--ink); }
-  .btn:hover { border-color: var(--violet-3); color: var(--ink); }
-  .btn.primary { background: linear-gradient(160deg, var(--violet-2), var(--violet-3));
-                 border-color: transparent; color: #12081F; }
-  .btn.primary:hover { filter: brightness(1.09); color: #12081F; }
+  .tabs { --n: 6; }
 
-  .shot { margin: 3rem 0 0; }
-  .shot img { width: 100%; height: auto; display: block; border-radius: 14px;
-              border: 1px solid var(--edge); box-shadow: 0 30px 80px -40px rgba(0,0,0,.9); }
-  .shot figcaption { margin-top: .7rem; font-size: .85rem; color: var(--ink-faint); text-align: center; }
+  .flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 2rem 0 1.4rem; counter-reset: s; list-style: none; padding: 0; }
+  .flow li { counter-increment: s; padding: 0 1.4rem 0 0; position: relative; }
+  .flow li::before { content: counter(s); display: block; font: 800 3.6rem/1 var(--display); color: var(--purple); margin-bottom: .2rem; }
+  .flow li + li { padding-left: 1.4rem; border-left: 2px dashed var(--ink-dim); }
+  .flow h3 { font-size: 1.15rem; }
+  .flow p { font-size: .98rem; color: var(--ink-dim); margin: 0; }
+  @media (max-width: 52rem) { .flow { grid-template-columns: 1fr; gap: 1.4rem; } .flow li + li { padding: 1.4rem 0 0; border-left: 0; border-top: 2px dashed var(--ink-dim); } }
 
-  /* the loop */
-  .steps { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-           margin: 1.6rem 0 0; padding: 0; list-style: none; }
-  .steps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-              padding: 1.1rem 1.15rem; }
-  .steps .n { font: 600 .72rem/1 var(--mono); letter-spacing: .1em; color: var(--violet);
-              display: block; margin-bottom: .5rem; }
-  .steps p { margin: 0; color: var(--ink-dim); font-size: .93rem; }
+  .stack > * + * { margin-top: 3.2rem; }
+  .stack { padding: 2.4rem 0 1rem; }
 
-  /* templates as apps */
-  .apps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-          margin: 1.8rem 0 1.4rem; padding: 0; list-style: none; }
-  .apps li { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-             overflow: hidden; display: flex; flex-direction: column; }
-  .apps .thumb { display: block; line-height: 0; }
-  .apps img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center;
-              display: block; border-bottom: 1px solid var(--edge); }
-  .apps .t { display: block; padding: .9rem 1rem .35rem; font: 600 .95rem/1.2 var(--sans); }
-  .apps .t a { text-decoration: none; color: var(--ink); }
-  .apps .t a:hover { color: var(--violet); }
-  .apps p { margin: 0; padding: 0 1rem 1.05rem; color: var(--ink-dim); font-size: .9rem; }
+  /* the other flyers on the board: real templates, pinned at their own angles */
+  .wallof { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.4rem; margin: 1.6rem 0 1.4rem; }
+  .wallof a { display: block; text-decoration: none; color: var(--ink); background: var(--paper-2); padding: .5rem .5rem .7rem; box-shadow: var(--shadow); transform: rotate(var(--t, 0deg)); transition: transform .2s cubic-bezier(.2,.8,.2,1); }
+  .wallof a:hover { transform: rotate(0deg) translateY(-4px); }
+  .wallof img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; background: var(--paper); }
+  .wallof b { display: block; font: 800 1.02rem/1.15 var(--display); margin: .55rem .2rem .1rem; }
+  .wallof span { display: block; font-size: .86rem; line-height: 1.35; color: var(--ink-dim); margin: 0 .2rem; }
+  .wallof a:nth-child(1) { grid-column: span 3; --t: -1.1deg; }
+  .wallof a:nth-child(2) { grid-column: span 3; --t: .9deg; margin-top: 1.4rem; }
+  .wallof a:nth-child(3) { grid-column: span 3; --t: .6deg; }
+  .wallof a:nth-child(4) { grid-column: span 3; --t: -.8deg; margin-top: 1rem; }
+  .wallof a:nth-child(5) { grid-column: span 3; --t: 1.2deg; }
+  @media (max-width: 40rem) { .wallof { grid-template-columns: 1fr 1fr; } .wallof a { grid-column: auto !important; margin-top: 0 !important; } }
 
-  /* code */
-  pre { background: #100722; border: 1px solid var(--edge); border-radius: 12px;
-        padding: 1rem 1.15rem; overflow-x: auto; margin: 0 0 1rem;
-        font: .855rem/1.65 var(--mono); color: #D9CCF3; }
-  pre .c { color: var(--ink-faint); }
-  pre .k { color: var(--violet); }
-  pre .s { color: #9FD8B0; }
+  /* the price, written the way a stall writes one */
+  .price { background: var(--purple-wash); padding: 1.3rem 1.4rem; transform: rotate(-.8deg); border: 2px solid var(--purple); align-self: start; }
+  .price .big { font: 800 3rem/1 var(--display); color: var(--purple); letter-spacing: -.03em; }
+  .price .big small { font-size: 1.1rem; letter-spacing: 0; }
+  .price ul { list-style: none; margin: .8rem 0 0; padding: 0; font-size: .98rem; }
+  .price li { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; border-top: 1px dotted var(--ink-dim); }
+  .price li b { font-weight: 700; }
+  .free { padding: .3rem 0; }
 
-  /* key box */
-  .keybox { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
-            padding: 1.1rem 1.15rem; margin: 1.2rem 0; }
-  .keybox label { display: block; font: 600 .7rem/1 var(--mono); letter-spacing: .1em;
-                  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .55rem; }
-  .keyrow { display: flex; gap: .6rem; align-items: center; }
-  .keyrow input { flex: 1; min-width: 0; font: .82rem var(--mono); padding: .6rem .7rem;
-                  border-radius: 8px; border: 1px solid var(--edge); background: #0B0416;
-                  color: var(--ink); }
-  .keyrow button { font: 600 .82rem var(--sans); padding: .6rem .9rem; border-radius: 8px;
-                   border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink);
-                   cursor: pointer; white-space: nowrap; }
-  .keyrow button:hover { border-color: var(--violet-3); }
+  .limits { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .9rem; }
+  .limits li { padding-top: .8rem; border-top: 1px dotted var(--ink-dim); font-size: .98rem; }
+  .limits strong { display: block; font: 700 1rem var(--display); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 2.4rem; }
+  @media (max-width: 52rem) { .two { grid-template-columns: minmax(0, 1fr); } }
 
-  .cols { display: grid; gap: 1.6rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
-  .limits { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .8rem; }
-  .limits li { padding-left: 1.4rem; position: relative; color: var(--ink-dim); font-size: .95rem; }
-  .limits li::before { content: "·"; position: absolute; left: 0; color: var(--violet-3); }
-  .limits strong { color: var(--ink); font-weight: 600; }
+  .keyslip { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .9rem 0 .4rem; }
+  .keyslip input { flex: 1 1 18rem; font: .82rem var(--mono); }
 
-  footer { border-top: 1px solid var(--edge); padding: 2.6rem 0 3.6rem; color: var(--ink-faint);
-           font-size: .88rem; }
-  footer a { color: var(--ink-dim); }
-
-  /* editing affordances, owner only */
-  [editable]:focus { outline: 2px solid var(--violet-2); outline-offset: 5px; border-radius: 4px; }
-  html[nc\:editable="true"] [editable]:hover:not(:focus) { box-shadow: 0 0 0 1px var(--edge); border-radius: 4px; }
-  .bar { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center;
-         background: var(--panel); border: 1px solid var(--edge); border-radius: 11px;
-         padding: .5rem .6rem; font: .82rem var(--sans); z-index: 50; }
-  .bar button { font: inherit; padding: .38rem .75rem; border-radius: 7px; border: 1px solid var(--edge);
-                background: var(--bg-2); color: var(--ink); cursor: pointer; }
-  .bar button:hover { border-color: var(--violet-3); }
-  .bar .save { background: var(--violet-2); border-color: transparent; color: #12081F; font-weight: 600; }
-  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ink-faint); }
-  html[nc\:status="saving"] .dot { background: var(--violet); }
-  html[nc\:status="saved"] .dot { background: #7FC08C; }
-  html[nc\:status="error"] .dot { background: #E08A8A; }
-  html[nc\:owner-here="true"] .save { display: inline-block; }
-  .save { display: none; }
-  dialog { border: 1px solid var(--edge); border-radius: 14px; background: var(--panel);
-           color: var(--ink); max-width: 32rem; width: calc(100vw - 2rem); padding: 1.4rem;
-           font: .92rem var(--sans); }
-  dialog::backdrop { background: rgba(6,2,12,.7); }
-  dialog h3 { margin-top: 0; }
-  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--edge);
-               display: grid; gap: .5rem; }
-  #nsec-form label { font-size: .8rem; color: var(--ink-dim); }
-  #nsec-form input { font: .8rem var(--mono); padding: .5rem .6rem; border: 1px solid var(--edge);
-                     border-radius: 7px; background: #0B0416; color: var(--ink); width: 100%; }
-  #nsec-form button { justify-self: start; font: inherit; padding: .45rem .85rem; border-radius: 7px;
-                      border: 1px solid var(--edge); background: var(--bg-2); color: var(--ink); cursor: pointer; }
-  #nsec-status { font-size: .8rem; color: #E08A8A; min-height: 1.2em; }
-  .warn { font-size: .78rem; color: var(--ink-faint); margin: 0; }
-  #qr { display: block; margin: 1rem auto; background: #fff; padding: .7rem; border-radius: 10px; }
+  /* owner-only editing affordances */
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { outline: 2px dotted var(--purple-2); outline-offset: 4px; border-radius: 3px; }
+  .who { position: fixed; right: 1rem; bottom: 1rem; display: flex; gap: .5rem; align-items: center; background: var(--paper); color: var(--ink);
+         box-shadow: var(--shadow); padding: .5rem .6rem; font: .85rem var(--text); z-index: 50; }
+  @media (max-width: 40rem) { .who { left: .6rem; right: .6rem; bottom: .6rem; justify-content: space-between; } .foot { padding-bottom: 5rem; } }
+  .who button { font: 700 .85rem var(--text); padding: .4rem .75rem; border: 2px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; border-radius: 3px; }
+  .who button:hover { background: var(--ink); color: var(--paper); }
+  .who .save { background: var(--purple); border-color: var(--purple); color: var(--on-purple); display: none; }
+  html[nc\:owner-here="true"] .who .save { display: inline-block; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; background: #8a8398; }
+  html[nc\:status="saving"] .dot { background: var(--purple-2); }
+  html[nc\:status="saved"] .dot { background: var(--ok); }
+  html[nc\:status="error"] .dot { background: var(--bad); }
+  #nsec-form { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px dashed var(--ink-dim); display: grid; gap: .5rem; }
+  #nsec-status { font-size: .85rem; color: var(--bad); min-height: 1.2em; }
+  .warn { font-size: .85rem; color: var(--ink-dim); margin: 0; }
+  #qr { display: block; margin: 1rem auto; background: #fff; padding: .7rem; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-
-  <nav class="nc-nav">
-    <a class="nc-brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
-    <a href="/cs/" aria-current="page">Domů</a>
+<div class="page">
+  <nav class="topbar" aria-label="Hlavní">
+    <a class="brand" href="/cs/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
     <a href="/cs/guide.html">Návod</a>
     <a href="/cs/templates.html">Šablony</a>
-    <a href="/cs/deploy.html">Zveřejnit</a>
+    <a href="/cs/how.html">Jak to funguje</a>
     <a href="/llms.txt">Pro agenty</a>
     <a href="https://github.com/jooray/nsite-clay">GitHub</a>
-    <div class="nc-lang"><a href="/" hreflang="en">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs" aria-current="page">CS</a></div>
+    <span class="lang"><a href="/" hreflang="en">EN</a><a href="/es/" hreflang="es">ES</a><a href="/sk/" hreflang="sk">SK</a><a href="/cs/" hreflang="cs" aria-current="page">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Přepnout mezi světlým a tmavým režimem" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
   </nav>
 
-  <header>
-    <img src="/nsite-clay-transparent.png" alt="nsite-clay">
-    <h1 editable="single-line">nsite-clay</h1>
-    <p class="tag" editable="single-line">Nsite, který se edituje sám. Jeden HTML soubor, který se upraví a znovu publikuje. Hostovaný na Nostru.</p>
-    <div class="cta">
-      <a class="btn primary" href="/cs/deploy.html">Publikuj web</a>
-      <a class="btn" href="#ai">Napiš ho s AI</a>
-      <a class="btn" href="/cs/guide.html">Přečti si návod</a>
-      <a class="btn" href="#try">Vyzkoušej živé demo</a>
-      <a class="btn" href="https://github.com/jooray/nsite-clay">Zdrojový kód na GitHubu</a>
-    </div>
-    <figure class="shot">
-      <img src="/editing.png" alt="Nadpis publikované stránky se upravuje přímo v prohlížeči, otevřená nabídka bloků" width="1600" height="860">
-      <figcaption editable="single-line">Úprava publikované stránky. Nadpis je živý text, lištu kreslí runtime.</figcaption>
-    </figure>
-  </header>
+  <main class="stack">
 
-  <section id="what">
-    <h2 editable="single-line">Co to je</h2>
-    <div editable>
-      <p class="lede">Otevřeš stránku, přihlásíš se svým klíčem a píšeš do ní. Dokument si
-        serializuje vlastní DOM, pošle ty bajty na Blossom server jako jeden blob adresovaný
-        obsahem a znovu publikuje NIP-5A manifest nsite, který na něj ukazuje. Kdokoli další si
-        stránku načte, dostane obyčejný statický dokument, ve kterém už tvoje změny jsou.</p>
-      <p class="lede">V té smyčce není žádný server, který bys musel provozovat. Manifest drží
-        relaye, bajty drží Blossom servery, zbytek udělá prohlížeč. Vlastnictví je pár klíčů,
-        takže kdo smí tuhle stránku upravovat, není řádek v cizí databázi.</p>
-    </div>
+    <section class="flyer" data-fix="tape" data-settle style="--tilt:-.5deg" aria-labelledby="top">
+      <div class="hero">
+        <div>
+          <img class="ostrich" src="/nsite-clay-transparent.png" alt="">
+          <h1 id="top" editable="single-line">Webová stránka, která se <em>edituje sama.</em></h1>
+          <p class="lede" editable="single-line">Otevři ji, přihlas se svým klíčem, piš a stiskni Uložit. Žije na Nostru, takže není žádný server, který bys musel provozovat, a žádný účet, který bys musel zakládat.</p>
+          <p class="note" editable="single-line">Vyzkoušet je zdarma. Do ukázkové stránky si můžeš psát, co chceš, nic z toho se neuloží.</p>
+        </div>
+        <div class="mini" aria-label="Ukázková stránka">
+          <span class="stamp">ukázka</span>
+          <div class="bar-top" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="loaf" aria-hidden="true"></div>
+          <p class="mini-name" data-demo>Martin chléb</p>
+          <p data-demo>Kvásek a žito z dřevěné pece. Přijď brzy, tmavé bochníky mizí první.</p>
+          <dl>
+            <dt data-demo>Úterý až pátek</dt><dd data-demo>7:00 až 14:00</dd>
+            <dt data-demo>Sobota</dt><dd data-demo>7:00 až 12:00</dd>
+            <dt data-demo>Žitný, 1 kg</dt><dd data-demo>4,20</dd>
+          </dl>
+          <span class="btn primary" data-demo>Objednat na sobotu</span>
+        </div>
+      </div>
 
-    <ol class="steps">
-      <li><span class="n">01 SNAPSHOT</span>
-        <p>Stránka naklonuje vlastní DOM, uklidí ho a serializuje celý dokument.</p></li>
-      <li><span class="n">02 BLOSSOM</span>
-        <p>Ty bajty jdou na Blossom server jako blob adresovaný vlastní sha256.</p></li>
-      <li><span class="n">03 MANIFEST</span>
-        <p>Nahraditelný nsite event přiřadí cestě ten hash. Publikovat ho znamená nasadit.</p></li>
-    </ol>
-    <p style="margin-top:1.4rem" class="lede">Stránka, kterou právě čteš, je jeden z těch
-      dokumentů. Běží na nsite-clay a ukládá se úplně stejně.</p>
-  </section>
+      <nav class="tabs" aria-label="Kde začít">
+        <a class="tab go" href="/cs/deploy.html?key=have"><b editable="single-line">Mám klíč</b><span>Amber nebo rozšíření prohlížeče. Přihlas se a zveřejni.</span><i aria-hidden="true">&rarr;</i></a>
+        <a class="tab go" href="/cs/deploy.html?key=new"><b editable="single-line">Potřebuju klíč</b><span>Vyrobíme ho spolu. Zůstane tvůj.</span><i aria-hidden="true">&rarr;</i></a>
+        <a class="tab" href="/cs/guide.html"><b editable="single-line">Přečti si návod</b><span>Každý krok se snímky obrazovky.</span></a>
+        <a class="tab" href="/cs/templates.html"><b editable="single-line">Šablony</b><span>Dvanáct, všechny zdarma.</span></a>
+        <a class="tab" href="/llms.txt"><b editable="single-line">Pro agenty</b><span>Zadání pro tvého kódovacího agenta.</span></a>
+        <a class="tab" href="#cli"><b editable="single-line">Příkazová řádka</b><span>npx nsite-clay deploy</span></a>
+      </nav>
+    </section>
 
-  <section id="geeks">
-    <h2 editable="single-line">Popis pro Nostr geeky</h2>
-    <div editable>
-      <p class="lede">Nsite je webhosting. Ne dlouhé texty, ale celé HTML soubory. Nic víc nsite
-        není.</p>
-      <p class="lede">nsite-clay k tomu přidává jedinou věc: stránka se upravuje a aktualizuje
-        sama, takže CMS sedí uvnitř statického HTML, ne za ním.</p>
-      <p class="lede">Měníš DOM. Klikej po stránce a uprav, co chceš, nebo si otevři v prohlížeči
-        inspektor DOM a změň to tam. Stránce je to jedno. Nová verze se nahraje na tvoje Blossom
-        servery a znovu se publikuje jeden nahraditelný event s tím, na jaký Blossom hash teď
-        <code>/</code> nebo <code>/about-us</code> ukazuje. Vykreslí to kterákoli nsite
-        gateway.</p>
-    </div>
-  </section>
-
-  <section id="ai">
-    <h2 editable="single-line">Piš a upravuj s AI</h2>
-    <div editable>
-      <p class="lede">V <a href="/cs/deploy.html">publikátoru</a> popiš, jakou stránku chceš, a AI ji napíše:
-        rozvržení, styly, texty, které můžeš upravovat, a prázdné rámečky na tvoje vlastní fotky. Prohlédni si
-        náhled, požádej o změny a zveřejni ji vlastním klíčem.</p>
-      <p class="lede">Na už zveřejněné stránce stiskni Upravit s AI a řekni, co se má změnit, jestli celá stránka, nebo
-        jen část, na kterou jsi klikl. Dokud výsledek nepřijmeš, na stránce se nic nezmění. Zpět ho vrátí a Uložit
-        ho zveřejní.</p>
-      <p class="lede">Za AI můžeš platit třemi způsoby.</p>
-    </div>
-
-    <ol class="steps">
-      <li><span class="n">01 PODPOŘ PROJEKT</span>
-        <p>Výchozí možnost. Zaplatíš jednu Lightning fakturu na 2000 satů a všechno funguje:
-          1000 satů podpoří nsite-clay a 1000 se stane tvým AI kreditem na našem Routstr node. Klíč se uloží
-          zašifrovaný na tvoje vlastní relaye, takže ho máš na každém zařízení, kde se přihlásíš. Kredit, který
-          neutratíš, si můžeš vybrat zpět.</p></li>
-      <li><span class="n">02 VLASTNÍ ROUTSTR NODE</span>
-        <p>V nastavení AI zadej jiný Routstr node a kredit si tam dobij přes Lightning
-          nebo Cashu. Poplatky jdou tomu, kdo ten node provozuje.</p></li>
-      <li><span class="n">03 VLASTNÍ API KLÍČ</span>
-        <p>Použij jakékoli API kompatibilní s OpenAI, které přijímá požadavky
-          z prohlížeče, s vlastním klíčem a modelem podle sebe. Platby zůstanou mezi tebou a tím poskytovatelem.</p></li>
-    </ol>
-
-    <div editable>
-      <p style="margin-top:1.4rem" class="lede"><strong>AI je navíc, všechno ostatní zůstává zdarma.</strong>
-        Editor, dvanáct šablon, skládání z bloků
-        i zveřejňování nikdy nechtějí platbu. Vyber si šablonu, klikni do stránky a piš, přesně jako doteď.</p>
-      <p style="margin-top:1rem">Platby za AI, vracení peněz a podpora: <a href="https://cypherpunk.today/cs/terms/#s3">podmínky</a>.</p>
-    </div>
-  </section>
-
-  <section id="document">
-    <h2 editable="single-line">Celá integrace</h2>
-    <p class="lede" editable="single-line">Jeden atribut říká, kdo soubor vlastní, druhý označí, kam se dá psát, a jeden script tag udělá zbytek.</p>
-<pre><span class="c">&lt;!DOCTYPE html&gt;</span>
-&lt;html lang="en" <span class="k">autosave</span> <span class="k">nc:owner</span>=<span class="s">"npub1…"</span>&gt;
-&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Notes&lt;/title&gt;&lt;/head&gt;
-&lt;body&gt;
-  &lt;h1 <span class="k">editable</span>="single-line"&gt;My notes&lt;/h1&gt;
-  &lt;div <span class="k">editable</span>&gt;
-    &lt;p&gt;Type anything here.&lt;/p&gt;
-  &lt;/div&gt;
-  &lt;script src="/nsite-clay.js"&gt;&lt;/script&gt;
-&lt;/body&gt;
-&lt;/html&gt;</pre>
-    <div editable>
-      <p class="lede">Ulož a otevři soubor v textovém editoru: tvoje slova jsou v HTML. Databází
-        je DOM, takže stav nemá kde jinde bydlet.</p>
-    </div>
-  </section>
-
-  <section id="editing">
-    <h2 editable="single-line">Úpravy</h2>
-    <div class="cols">
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="how">
+      <h2 id="how" editable="single-line">Stiskneš Uložit a stanou se tři věci.</h2>
+      <ol class="flow">
+        <li><h3>Stránka se zkopíruje.</h3><p>Vezme svoje texty a obrázky tak, jak právě jsou, a zabalí je do jednoho souboru.</p></li>
+        <li><h3>Kopie se uloží.</h3><p>Úložný server, kterému se říká Blossom, soubor drží pod jménem odvozeným z jeho obsahu, takže ho nikdo nepozorovaně nepodvrhne.</p></li>
+        <li><h3>Odejde jeden podepsaný vzkaz.</h3><p>Říká: tahle adresa teď ukazuje na tenhle soubor. Relaye ho předají dál. Ten vzkaz je samotné zveřejnění.</p></li>
+      </ol>
       <div editable>
-        <p class="lede">Označ kontejner jako <code>editable</code> a pro vlastníka se z něj stane
-          formátovaný text, pro všechny ostatní obyčejné značky.</p>
-        <p class="lede">Enter začne nový odstavec. Když označíš text, vyjede plovoucí lišta a jejím
-          prvním ovládacím prvkem je nabídka bloků: odstavec, nadpis 1 až 3, citace, blok kódu.</p>
+        <p class="lede">Nic z toho není server, který bys musel provozovat. Vzkaz drží relaye, soubor drží Blossom a zbytek udělá tvůj prohlížeč. Kdo smí stránku upravovat, rozhoduje klíč, ne řádek v cizí databázi. Tahle stránka je jedním z takových dokumentů a ukládá se úplně stejně.</p>
       </div>
-      <div editable>
-        <p class="lede">Klávesové zkratky fungují, jak čekáš, a napsat <code>#&nbsp;</code>,
-          <code>-&nbsp;</code> nebo <code>&gt;&nbsp;</code> na začátek řádku funguje taky.</p>
-        <p class="lede">Do souboru se dostane značkování, jaké mohl napsat člověk ručně. Lišta ani
-          smetí, které prohlížeče při editačních příkazech produkují, se nikdy neuloží.</p>
+      <p><a class="btn" href="/cs/how.html">Jak to funguje podrobně</a></p>
+    </section>
+
+    <section class="flyer" style="--tilt:-.3deg" aria-labelledby="apps">
+      <h2 id="apps" editable="single-line">Dvanáct výchozích bodů, všechny zdarma.</h2>
+      <p class="lede" editable="single-line">Šablona je malá aplikace, která je shodou okolností jediný soubor. Vyber si jednu, vlož svoje vlastní slova a je tvoje.</p>
+      <div class="wallof">
+        <a href="/t/gallery/"><img src="/shots/t-gallery.png" alt="" loading="lazy"><b>Fotogalerie</b><span>Stovky obrázků na plátně, které taháš a přibližuješ.</span></a>
+        <a href="/t/event/"><img src="/shots/t-event.png" alt="" loading="lazy"><b>Pozvánka na akci</b><span>Podrobnosti dost velké, aby se daly přečíst přes celou místnost, a kalendářový soubor ke stažení.</span></a>
+        <a href="/t/links/"><img src="/shots/t-links.png" alt="" loading="lazy"><b>Seznam odkazů</b><span>Linktree, který upravuješ přímo na stránce.</span></a>
+        <a href="/t/personal/"><img src="/shots/t-personal.png" alt="" loading="lazy"><b>Osobní stránka</b><span>Kdo jsi a co píšeš, s poznámkami i články, na jedné adrese, která je tvoje.</span></a>
       </div>
-    </div>
-  </section>
+      <p><a class="btn primary" href="/cs/templates.html">Všech dvanáct</a></p>
+    </section>
 
-  <section id="apps">
-    <h2 editable="single-line">Šablony jako appky</h2>
-    <div editable>
-      <p class="lede">Šablona není barevné schéma. Každá je malá aplikace, která je shodou okolností jediný soubor: čte z relayů, má ovládání a v několika může návštěvník i něco udělat. Stránka může vypadat jakkoli, protože pod ní není nic, co by určovalo, jak má stránka vypadat.</p>
-    </div>
-    <ul class="apps">
-      <li>
-        <a class="thumb" href="/t/gallery/"><img src="/shots/t-gallery.png" alt="Šablona gallery" loading="lazy"></a>
-        <span class="t"><a href="/t/gallery/">Zeď fotek</a></span>
-        <p>Stovky obrázků z jednoho npubu na plátně, které taháš a přibližuješ. Tři rozložení, přepínatelná.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/links/"><img src="/shots/t-links.png" alt="Šablona links" loading="lazy"></a>
-        <span class="t"><a href="/t/links/">Seznam odkazů</a></span>
-        <p>Linktree, který upravuješ přímo na stránce. Přidej odkaz, smaž jiný, nastav zap adresu.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/irc/"><img src="/shots/t-irc.png" alt="Šablona irc" loading="lazy"></a>
-        <span class="t"><a href="/t/irc/">Log kanálu</a></span>
-        <p>Stránka, do které pořád přidáváš řádky. Přihlas se a dole se objeví okno na psaní.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/event/"><img src="/shots/t-event.png" alt="Šablona event" loading="lazy"></a>
-        <span class="t"><a href="/t/event/">Pozvánka na akci</a></span>
-        <p>Detaily dost velké, aby se daly přečíst přes celou místnost, a kalendářový soubor ke stažení.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/phrack/"><img src="/shots/t-phrack.png" alt="Šablona phrack" loading="lazy"></a>
-        <span class="t"><a href="/t/phrack/">Textový soubor</a></span>
-        <p>Sedmdesát devět znaků na řádek, monospace a ASCII čáry, ve tvaru starých zinů.</p>
-      </li>
-      <li>
-        <a class="thumb" href="/t/eco/"><img src="/shots/t-eco.png" alt="Šablona eco" loading="lazy"></a>
-        <span class="t"><a href="/t/eco/">Nízká váha</a></span>
-        <p>Systémové fonty a ze všeho ostatního co nejmíň. Změří a vypíše vlastní přenosovou váhu.</p>
-      </li>
-    </ul>
-    <p><a class="btn" href="/cs/templates.html">Všech dvanáct šablon</a></p>
-  </section>
-
-  <section id="try">
-    <h2 editable="single-line">Vyzkoušej si to s opravdovým klíčem</h2>
-    <div editable>
-      <p class="lede">Pod jednorázovým klíčem je publikovaný živý dokument a ten klíč je veřejný
-        schválně. Otevři ho, klikni na Přihlásit se, vlož nsec a uprav stránku. Tvoje uložení přepíše
-        skutečný dokument pro všechny.</p>
-    </div>
-    <p><a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Otevřít demo</a></p>
-    <div class="keybox">
-      <label for="demokey">Demo klíč. Veřejný, sdílený, ber ho jako pískoviště</label>
-      <div class="keyrow">
-        <input id="demokey" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y">
-        <button type="button" id="copykey">Kopírovat</button>
+    <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="ai">
+      <h2 id="ai" editable="single-line">Nech ji napsat AI. Zaplať jednou, co zbyde, si necháš.</h2>
+      <div class="two">
+        <div editable>
+          <p class="lede">Popiš stránku, jakou chceš, a AI ji napíše: rozvržení, styl, texty a prázdné rámečky na tvoje vlastní fotky. Prohlédni si náhled, požádej o změny a zveřejni ji vlastním klíčem.</p>
+          <p class="lede">Na stránce, která už je online, stiskni Upravit s AI a řekni, co se má změnit, jestli na celé stránce, nebo jen v části, na kterou jsi klikl. Dokud výsledek nepřijmeš, na stránce se nic nezmění. Zpět to vrátí.</p>
+        </div>
+        <div class="price">
+          <div class="big">2000 <small>satů, jednou</small></div>
+          <ul>
+            <li><span>Podpoříš nsite-clay</span><b>1000</b></li>
+            <li><span>Tvůj vlastní AI kredit</span><b>1000</b></li>
+          </ul>
+          <p class="warn" style="margin-top:.8rem;color:var(--ink)">Jedna platba přes Lightning. Kredit je tvůj a co neutratíš, si můžeš vybrat zpět. Celá stránka stojí zhruba 20 satů, takže 1000 vystačí na desítky stránek nebo stovky úprav.</p>
+        </div>
       </div>
-    </div>
-    <p class="warn">Tu stránku může přepsat kdokoli, takže co tam najdeš, jsou zbytky po
-      ostatních. Nikdy nevkládej klíč, na kterém ti záleží, do stránky, kterou jsi nepublikoval
-      sám.</p>
-  </section>
+      <div class="free" editable>
+        <p><strong>AI je navíc. Všechno ostatní zůstává zdarma:</strong> editor, dvanáct šablon, skládání z bloků i zveřejňování nikdy nechtějí platbu.</p>
+        <p>Nechceš platit nám? Nasměruj nastavení AI na jakýkoli jiný Routstr node, nebo použij vlastní klíč k jakékoli službě kompatibilní s OpenAI. Podmínky, vracení peněz a podpora jsou na <a href="https://cypherpunk.today/cs/terms/#s3">stránce s podmínkami</a>.</p>
+      </div>
+    </section>
 
-  <section id="deploy">
-    <h2 editable="single-line">Nasaď si vlastní</h2>
-    <div editable>
-      <p class="lede">Celou tu práci zvládne <a href="/cs/deploy.html">webový publisher</a> v jedné
-        záložce prohlížeče: vybereš šablonu, přihlásíš se klíčem nebo si ho necháš vygenerovat, a
-        stránka je online. Jak to vypadá, ukazuje <a href="/cs/guide.html">návod se snímky
-        obrazovky</a>. Pak už se stránka ukládá sama a publisher nikdy znovu nepotřebuješ.</p>
-      <p class="lede">Stejnou práci udělá CLI, pro každého, kdo chce mít radši adresář na disku
-        a příkaz ke spuštění.</p>
-    </div>
-<pre><span class="c"># vytvoř kostru webu a vygeneruj k němu klíč</span>
+    <section class="flyer" data-fix="pin" style="--tilt:-.6deg" aria-labelledby="cli">
+      <div class="two">
+        <div>
+          <h2 id="cli" editable="single-line">Raději příkazovou řádku?</h2>
+          <pre><span class="c"># vytvoř web a klíč k němu</span>
 npx nsite-clay init mysite
 
-<span class="c"># publikuj ho</span>
+<span class="c"># zveřejni ho</span>
 npx nsite-clay deploy mysite --sec=nsec1…
 
-<span class="c"># nebo nech klíč mimo tenhle stroj a podepisuj přes bunker</span>
+<span class="c"># nebo podepisuj přes vzdálený signer</span>
 npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
-    <div editable>
-      <p class="lede">Tvůj web přistane na <code>https://&lt;npub&gt;.nsite.lol/</code>.
-        Pojmenované weby dostanou vlastní subdoménu, každé uložení založí trvalou verzi s vlastní
-        URL a stejný web servíruje kterákoli NIP-5A gateway. Stačí CNAME z vlastní domény na
-        tvou npub subdoménu a stránku tam servíruje gateway taky, HTTPS na tom jméně ale
-        potřebuje gateway, co pro něj vydává certifikáty.</p>
-      <p class="lede">Soubory se publikují na cestách, které nesou hash obsahu, a každý dokument
-        sleduje vlastní manifest a načte se znovu, jakmile se objeví novější verze. Nikdo nemusí
-        vědět, co je to tvrdý refresh.</p>
-    </div>
-    <p><a class="btn" href="https://github.com/jooray/nsite-clay#deploying">Celý návod na nasazení</a></p>
-  </section>
+          <div editable>
+            <p>Tvůj web poběží na <code>https://&lt;npub&gt;.nsite.lol/</code> a na každé další gateway podle NIP-5A.</p>
+            <p>Většinu takhle vzniklých stránek postaví agent. Nasměruj svého na <a href="/llms.txt"><code>llms.txt</code></a>, zadání napsané přesně pro tohle. Pro web, který už je online, je druhé zadání <a href="/llms-edit.txt"><code>llms-edit.txt</code></a>.</p>
+          </div>
+        </div>
+        <div>
+          <h2 editable="single-line">Co to neumí.</h2>
+          <ul class="limits">
+            <li><strong>Stránku zapisuje jeden klíč.</strong> Žádná společná editace a žádný obsah podle toho, kdo přišel.</li>
+            <li><strong>Když upravuješ ze dvou zařízení naráz, práce jednoho z nich zmizí.</strong> Střet se nedá odhalit.</li>
+            <li><strong>První bajt musíš gateway věřit.</strong> Všechno po něm se kontroluje hashem.</li>
+            <li><strong>Žádný kód na serveru.</strong> Pokud tvůj projekt potřebuje backend, tohle je špatný nástroj.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-  <section id="agents">
-    <h2 editable="single-line">Postavené pro agenty, protože web teď staví agenti</h2>
-    <div editable>
-      <p class="lede">Většinu stránek z tohohle nepostaví člověk ručně, ale agent, a tak k projektu
-        patří instrukce právě pro něj. Nasměruj svého kódovacího agenta na <code>llms.txt</code>
-        a řekni si o stránku, jakou chceš.</p>
-      <p class="lede">Je v nich, na co se tě má zeptat, jak vybrat a předělat šablonu, jak dostat
-        stránku na web přes vzdálený signer místo holého klíče a těch pár věcí, co se obvykle
-        pokazí. Odkazují na dokumentaci, místo aby ji opisovaly, a v projektu
-        postaveném nad nsite-clay fungují jako <code>AGENTS.md</code>.</p>
-      <p class="lede">Na stránku, která už je zveřejněná, je druhý návod. Otevři ji s
-        <code>#edit</code>, přihlas se, otevři nastavení a stiskni <em>Zkopírovat pokyny pro
-        vlastního agenta</em>. V textu je veřejný klíč, relaye, servery a seznam stránek tvého
-        webu a agent se z něj dozví, jak web stáhnout, upravit a znovu zveřejnit tak, aby se dal
-        dál upravovat v prohlížeči. Vyžádá si od tebe odkaz z podpisové aplikace, nikdy ne tvůj
-        klíč.</p>
-    </div>
-    <p><a class="btn primary" href="/llms.txt">llms.txt</a> <a class="btn" href="/llms-edit.txt">llms-edit.txt</a> <a class="btn" href="/cs/templates.html">Šablony</a></p>
-  </section>
+    <section class="flyer" style="--tilt:.4deg;margin-inline:clamp(0rem,6vw,5rem)" aria-labelledby="try">
+      <h2 id="try" editable="single-line">Vyzkoušej si to s opravdovým klíčem.</h2>
+      <div editable>
+        <p class="lede">Živá stránka je zveřejněná pod jednorázovým klíčem a ten klíč je veřejný schválně. Otevři ji, klikni na Přihlásit se, vlož klíč a upravuj. Tvoje uložení přepíše tu stránku pro všechny, takže ber ji jako pískoviště a nikdy nevkládej klíč, na kterém ti záleží, do stránky, kterou jsi nezveřejnil sám.</p>
+      </div>
+      <div class="keyslip">
+        <input id="demokey" type="text" readonly value="nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y" aria-label="Demo klíč">
+        <button class="btn" type="button" id="copykey">Kopírovat</button>
+        <a class="btn primary" href="https://npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u.nsite.lol/">Otevřít demo</a>
+      </div>
+    </section>
 
-  <section id="gateways">
-    <h2 editable="single-line">Gateway, a odkud se servíruje tvoje stránka</h2>
-    <div editable>
-      <p class="lede">Gateway přeloží tvůj manifest a naservíruje soubory. Všechny čtou stejné
-        eventy, takže tvůj web na žádné z nich nevisí. Když jedna nejede, vyměň hostname.</p>
-    </div>
-    <ul class="limits">
-      <li><a href="https://nsite.lol">nsite.lol</a>, <a href="https://nosto.re">nosto.re</a> a
-        <a href="https://nwb.tf">nwb.tf</a> jsou veřejné gateway.</li>
-      <li><a href="https://nsite.run">nsite.run</a>, <a href="https://nsite.cloud">nsite.cloud</a>
-        a <a href="https://shakespeare.to">shakespeare.to</a> jsou referenční implementace.
-        Na nsite.run navíc najdeš nejsrozumitelnější vysvětlení, co to nsite vlastně je.</li>
-      <li>Stačí CNAME z tvé domény na npub subdoménu a stránku tam servíruje kterákoli z nich,
-        přes obyčejné HTTP. HTTPS na tom jméně potřebuje certifikát, a to dnes znamená
-        provozovat gateway sám. <code>npm run devnet</code> rozjede jednu na notebooku.</li>
-    </ul>
-  </section>
+  </main>
 
-  <section id="limits">
-    <h2 editable="single-line">Co to neumí</h2>
-    <ul class="limits">
-      <li><strong>Dokument zapisuje jeden klíč.</strong> Manifest nese jeden podpis. Žádná
-        společná editace, žádný obsah podle toho, kdo přišel.</li>
-      <li><strong>Žádná detekce konfliktů.</strong> Nahraditelný event nemá compare-and-swap,
-        takže když píšeš ze dvou zařízení naráz, práce jednoho z nich potichu zmizí.</li>
-      <li><strong>Prvnímu bajtu musíš u gateway věřit.</strong> Vstupní dokument se nedokáže
-        ověřit sám. Všechno, na čem stojí, se kontroluje hashem, a manifest, bloby i historie
-        leží mimo gateway, takže si to můžeš ověřit přes jinou nebo si spustit vlastní.</li>
-      <li><strong>Žádný kód na serveru.</strong> Jestli tvůj projekt potřebuje backend, tohle je
-        špatný nástroj. I když ho tvůj projekt kromě Nostru nejspíš nepotřebuje. Překvapilo
-        by tě, jak daleko se dá dojít i bez něj.</li>
-    </ul>
-  </section>
-
-  <footer>
+  <footer class="foot">
     <p>MIT-0. Nápad s tvárným HTML a model editace pocházejí z
       <a href="https://hyperclay.com">HyperClay</a> a <a href="https://clayjs.com">ClayJS</a>.
       Hosting stojí na nsites podle <a href="https://github.com/nostr-protocol/nips/blob/master/5A.md">NIP-5A</a>
       a na <a href="https://github.com/hzrd149/blossom">Blossomu</a>.</p>
-    <p><a href="/cs/deploy.html">Publikuj web</a> · <a href="/cs/guide.html">Návod</a> ·
-      <a href="/cs/templates.html">Šablony</a> · <a href="/llms.txt">Pro agenty</a></p>
-    <p><a href="https://github.com/jooray/nsite-clay">github.com/jooray/nsite-clay</a></p>
+    <p><a href="/cs/deploy.html">Zveřejnit web</a> · <a href="/cs/guide.html">Návod</a> ·
+      <a href="/cs/templates.html">Šablony</a> · <a href="/cs/how.html">Jak to funguje</a> · <a href="/llms.txt">Pro agenty</a> ·
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
     <p class="nc-credit">Postavil <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednár</a>.
-      Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.
-      MIT-0.</p>
+      Projekt publikuje jako <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.</p>
   </footer>
 </div>
 
-<div class="bar">
+<div class="who">
   <span class="dot"></span>
   <span id="who">jen ke čtení</span>
   <button id="signin-btn">Přihlásit se</button>
@@ -471,7 +275,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
 
 <dialog id="signin">
   <h3>Přihlas se, ať můžeš stránku upravovat</h3>
-  <p class="lede">Znovu ji publikuje jedině podpis vlastníka. Všichni ostatní dostanou stránku,
+  <p class="lede">Znovu ji zveřejní jedině podpis vlastníka. Všichni ostatní dostanou stránku,
     na kterou se právě díváš.</p>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <button class="btn" id="use-nip07">Rozšíření prohlížeče</button>
@@ -553,8 +357,12 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
     const b = $("#copykey"); b.textContent = "Zkopírováno"; setTimeout(() => (b.textContent = "Kopírovat"), 1400);
   };
 
+  // The example page is a toy for visitors: typing in it works, and none of it is kept.
+  document.querySelectorAll("[data-demo]").forEach((el) => { el.contentEditable = "plaintext-only"; el.spellcheck = false; });
+
   // Nothing half-typed and no transient status text should ever reach the file.
   nc.addDocumentTransform((clone) => {
+    clone.querySelectorAll("[data-demo]").forEach((el) => { el.removeAttribute("contenteditable"); el.removeAttribute("spellcheck"); });
     for (const id of ["nsec-input", "nsec-pass"]) clone.querySelector("#" + id)?.removeAttribute("value");
     const s = clone.querySelector("#nsec-status"); if (s) s.textContent = "";
     clone.querySelector("#nsec-pass")?.setAttribute("hidden", "");

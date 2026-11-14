@@ -122,6 +122,25 @@ export async function upload(server, bytes, { signer, type = "text/html", onServ
   throw lastError;
 }
 
+// Ask every server to drop one blob this key uploaded. BUD-02: a server removes
+// this key's claim on it, and the bytes go once nobody else claims them. One
+// signature covers every server, as an upload's does. Resolves to one row per
+// server and never throws: a server that keeps a blob is reported, not fatal.
+export async function removeAll(servers, hash, { signer, timeouts = TIMEOUTS } = {}) {
+  const signed = await authEvent(signer, { verb: "delete", hash, reason: "Delete an old version" }, timeouts);
+  return Promise.all(servers.map(async (server) => {
+    const base = server.replace(/\/+$/, "");
+    try {
+      const res = await fetch(`${base}/${hash}`, {
+        method: "DELETE", headers: { Authorization: "Nostr " + b64(signed, true) }, ...until(timeouts.head),
+      });
+      return { server: base, state: res.ok ? "deleted" : res.status === 404 ? "gone" : "refused", status: res.status };
+    } catch (err) {
+      return { server: base, state: "refused", status: why(err, timeouts.head) };
+    }
+  }));
+}
+
 // Does this server already serve these exact bytes?
 //
 // Blobs are addressed by their own hash, so the same file uploaded by a hundred

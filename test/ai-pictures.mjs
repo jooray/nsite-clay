@@ -74,6 +74,14 @@ async function open({ balance = 1000000, models = [TEXT, QWEN], native = "ok", r
   return { page, seen };
 }
 
+// The preview is a sandboxed frame. Right after it loads, headless Chrome can
+// route the first click below it to the frame once the page has been scrolled
+// by script, so scroll first and let a frame pass before clicking.
+const press = async (page, sel) => {
+  await page.locator(sel).scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.click(sel);
+};
 const ready = (page, text) => page.waitForFunction((t) => document.querySelector("#ai-status").textContent === t &&
   document.querySelector("#ai-cancel").hidden, text, { timeout: 20000 });
 const generate = async (page) => {
@@ -167,12 +175,12 @@ try {
     // A change to the words: no picture is made, and the model is not told
     // how to redraw any.
     await page.fill("#ai-change", "Put the opening hours at the top.");
-    await page.click("#ai-refine");
+    await press(page, "#ai-refine");
     await ready(page, "Changed. Check it again below.");
     assert(!/nc:redraw/.test(seen.chat.at(-1).messages[0].content), "a change to the words was told about redrawing");
     assert.equal(seen.native.length, asked, "a change to the words made a picture");
     await page.fill("#ai-change", "Make the bench picture warmer.");
-    await page.click("#ai-refine");
+    await press(page, "#ai-refine");
     await ready(page, "Changed. Check it again below.");
     assert(/nc:redraw/.test(seen.chat.at(-1).messages[0].content), "a change to a picture was not told how to redraw it");
     assert.equal(seen.native.length, asked + 1, `redrew ${seen.native.length - asked} pictures`);

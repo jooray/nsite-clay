@@ -1,0 +1,44 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-11-13T14:53:18.640Z",
+        "reason": "agent: #qr img gets its src at runtime from the sign-in dialog, as before the redesign"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "site/**/*.html"
+        ],
+        "createdAt": "2026-11-13T16:35:14.569Z",
+        "reason": "agent: paper drop shadows use a y-offset three-layer elevation tinted near-black, not a zero-offset halo; checked in light and dark screenshots"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/**/*.html"
+        ],
+        "createdAt": "2026-11-13T16:35:53.398Z",
+        "reason": "agent: detector does not load external site.css, where .flyer has clamp(1.4rem,4vw,2.8rem) padding; verified in screenshots"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "site/**/*.html"
+        ],
+        "createdAt": "2026-11-13T16:36:22.190Z",
+        "reason": "agent: detector pairs the dark-scope paper text colours (#483f5a, #322b3f) with the dark wall; that text sits on paper (#e9e6ee, about 8:1), checked in dark screenshots"
+      }
+    ]
+  }
+}

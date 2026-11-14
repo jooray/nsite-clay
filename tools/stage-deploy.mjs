@@ -20,7 +20,7 @@ import { execFileSync } from "node:child_process";
 const LANGS = ["es", "sk", "cs"];
 
 // Paths that exist in every language, so a translated copy must point at its own.
-const LOCALISED = ["/", "/guide.html", "/templates.html", "/docs.html", "/index.html"];
+const LOCALISED = ["/", "/guide.html", "/templates.html", "/docs.html", "/how.html", "/index.html"];
 
 // Only what a crawler and a reader see before the strings table runs.
 const TITLES = {
@@ -60,10 +60,15 @@ for (const page of Object.keys(TITLES)) {
     // The language switcher and the hreflang alternates are the exception:
     // those name every language on purpose, so they are lifted out first and
     // put back untouched.
+    //
+    // The switcher also says which language the reader is in, so the copy has to
+    // move that mark off English and onto itself.
     const kept = [];
     out = out
-      .replace(/<span class="langs">[\s\S]*?<\/span>\s*<\/p>/,
-               (m) => `\u0000${kept.push(m) - 1}\u0000`)
+      .replace(/<span class="langs?">[\s\S]*?<\/span>(\s*<\/p>)?/,
+               (m) => `\u0000${kept.push(
+                 m.replace(/ aria-current="page"/g, "")
+                  .replace(`hreflang="${lang}"`, `hreflang="${lang}" aria-current="page"`)) - 1}\u0000`)
       .replace(/<link rel="alternate"[^>]*>/g, (m) => `\u0000${kept.push(m) - 1}\u0000`);
 
     for (const path of LOCALISED) {
@@ -153,21 +158,32 @@ console.log(`staged ${made} translated page${made === 1 ? "" : "s"} into site/{$
 const SHOTS = join("media", "guide-publish");
 const DEST = join("site", "shots");
 let shots = 0;
+// The pictures of the publisher itself exist once per language, in
+// media/guide-publish/<lang>/, and go to site/shots/<lang>/. The English ones
+// (and the pictures of the edited page, which are the same in every language)
+// sit at the top level.
 try {
-  mkdirSync(DEST, { recursive: true });
-  for (const f of readdirSync(SHOTS)) {
-    if (!f.endsWith(".png")) continue;
-    const to = join(DEST, f);
-    copyFileSync(join(SHOTS, f), to);
-    try { execFileSync("sips", ["--resampleWidth", "1400", to], { stdio: "ignore" }); }
-    catch { /* sips is macOS only; the full-size copy still works */ }
-    shots++;
+  for (const sub of ["", ...LANGS]) {
+    const from = join(SHOTS, sub), to = join(DEST, sub);
+    if (!existsSync(from)) continue;
+    mkdirSync(to, { recursive: true });
+    for (const f of readdirSync(from)) {
+      if (!f.endsWith(".png")) continue;
+      const out = join(to, f);
+      copyFileSync(join(from, f), out);
+      try { execFileSync("sips", ["--resampleWidth", "1400", out], { stdio: "ignore" }); }
+      catch { /* sips is macOS only; the full-size copy still works */ }
+      shots++;
+    }
   }
 } catch { /* no walkthrough has been run yet */ }
 
 if (shots) {
   try {
-    const size = () => readdirSync(DEST).reduce((n, f) => n + statSync(join(DEST, f)).size, 0);
+    const size = (d = DEST) => readdirSync(d).reduce((n, f) => {
+      const p = join(d, f);
+      return n + (statSync(p).isDirectory() ? size(p) : statSync(p).size);
+    }, 0);
     const before = size();
     execFileSync("picopt", ["-q", "-r", DEST], { stdio: "ignore" });
     const saved = before - size();

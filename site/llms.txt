@@ -17,6 +17,8 @@ go wrong. It links the documentation rather than restating it.
   https://nsite-clay.cypherpunk.today/deploy.html
 - Changing a site that is already published, rather than building one:
   https://nsite-clay.cypherpunk.today/llms-edit.txt
+- How a page edits and republishes itself, and where it is served from:
+  https://nsite-clay.cypherpunk.today/how.html
 - Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
 - The block composer template, the one to read before writing a block library:
   https://nsite-clay.cypherpunk.today/t/cms/
@@ -69,8 +71,14 @@ default `wss://relay.nsite.lol`, and may answer 404 elsewhere. The publisher and
 the relays deployed to. A key that already has one keeps it, so deploy to at
 least one relay on it.
 
-There is no account, no password reset, no billing relationship, and no terms of
-service between a person and their own page.
+There is no account, no password reset, and no terms of service between a person
+and their own page. Hosting a page costs the project nothing and nothing is
+charged for it. The one thing that can cost money is the optional AI that writes
+and edits pages (see "Writing and editing with AI" in section 5). Paying for it
+does not create an account either: the payment is a Lightning invoice, the AI key
+is kept encrypted on the person's own relays, and the terms for that purchase are
+at https://cypherpunk.today/terms/#s3. Everything else, the editor, the twelve
+templates, the block composer and publishing, never asks for payment.
 
 ### What nsite-clay adds
 
@@ -437,7 +445,38 @@ what is already at that path, uploads the files and signs the manifest. Nothing
 to install. Send a person there when they only want one of the twelve templates
 with their own words in it, and point them at
 <https://nsite-clay.cypherpunk.today/guide.html> for the walkthrough with
-screenshots. You do not need to do anything in that case.
+screenshots. You do not need to do anything in that case. The publisher goes one
+decision at a time: sign in or make a key, choose a starting point, choose a path,
+publish. `/deploy.html?key=have` opens it at signing in with an existing key
+(extension, Amber or a pasted key) and `/deploy.html?key=new` opens it at making
+a key, which is the right link for someone who has never held one.
+
+### Writing and editing with AI (optional, paid)
+
+The publisher can have AI write a page from a description, and a published page
+can be changed with Edit with AI, either the whole page or only the part the owner
+clicked. Nothing reaches the page until they keep the result, Undo takes it back,
+and Save publishes it. The order is fixed: a key first, then payment, then
+generation. There is no free generation.
+
+- **Simple setup, the default:** one 2000 sat Lightning invoice. 1000 sats support
+  nsite-clay and 1000 sats become the buyer's own AI credit on the project's
+  Routstr node. The credit belongs to them and any unspent part can be withdrawn.
+  The AI key is stored encrypted to their own key on their own relays, so it
+  follows them to any device they sign in on and no file has to be downloaded.
+- **Their own Routstr node:** AI settings can point at any other node, funded with
+  Lightning or Cashu. The fees go to whoever runs that node. This sits under "More
+  options" in the publisher, away from the first-run path.
+- **Their own key:** any OpenAI-compatible API that accepts requests from a browser,
+  with their own key and model. What they pay stays between them and that provider.
+
+Measured on the default model, a complete generated page costs about 17 to 22 sats
+and changing a paragraph costs well under one, so the 1000 sat credit is roughly
+forty page generations or hundreds of edits. Pictures for a generated page are made
+by a picture model at about 24 sats each, up to four per page by default, and the
+builder keeps 150 sats of credit unspent by pictures so the next change can still be
+reserved. Tell the person all of this before they pay, and tell them AI is an extra:
+they can always pick one of the twelve templates and type, or use the command line.
 
 **You publish, from a terminal.** This is the route when you have *built*
 something: a design of your own, a block library, a page that is an app. The
@@ -1175,8 +1214,9 @@ alongside the document.
 - **Relays disagree.** Publish to several, and include `wss://relay.nsite.lol` so
   the gateway sees changes promptly. Verify retention by reading your own events
   back: some relays accept a publish and store nothing.
-- **Blossom servers are picky.** Several refuse `text/html`. `cdn.hzrd149.com` and
-  `nostr.download` work. Do not publish a site to `blossom.primal.net`: it ignores
+- **Blossom servers are picky.** Several refuse `text/html`, and some refuse keys
+  they do not know. `nostr.download` and `blossom.yakihonne.com` work with a new key.
+  `cdn.hzrd149.com` no longer does. Do not publish a site to `blossom.primal.net`: it ignores
   the uploaded type and serves CSS as `text/plain`, which a browser will not apply.
 - **`relay.damus.io` has been unreliable.** Do not put it first.
 - **One key, no conflict detection.** Two devices editing at once lose one side's

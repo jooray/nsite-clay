@@ -12,7 +12,7 @@ export function aggregateHash(paths) {
   return bytesToHex(sha256(new TextEncoder().encode(lines.join(""))));
 }
 
-export function buildManifest(cfg, paths, { title, description, source } = {}) {
+export function buildManifest(cfg, paths, { title, description, source, sealed, expires } = {}) {
   const tags = [
     ...(cfg.site ? [["d", cfg.site]] : []),
     ...Object.entries(paths).map(([path, hash]) => ["path", path, hash]),
@@ -21,6 +21,8 @@ export function buildManifest(cfg, paths, { title, description, source } = {}) {
     ...(title ? [["title", title]] : []),
     ...(description ? [["description", description]] : []),
     ...(source ? [["source", source]] : []),
+    ...(sealed ? [["sealed", "1"]] : []),
+    ...(expires ? [["expiration", String(expires)]] : []),
   ];
   return { kind: siteKind(cfg), created_at: Math.floor(Date.now() / 1000), tags, content: "" };
 }
@@ -29,7 +31,7 @@ export function buildManifest(cfg, paths, { title, description, source } = {}) {
 // id. This is nsite's answer to HyperClay's version history, and it is free:
 // the blobs are already immutable, the snapshot just names a set of them.
 export function buildSnapshot(cfg, manifest) {
-  const keep = manifest.tags.filter((t) => ["path", "x", "server", "title", "description", "source", "A"].includes(t[0]));
+  const keep = manifest.tags.filter((t) => ["path", "x", "server", "title", "description", "source", "A", "sealed", "expiration"].includes(t[0]));
   return {
     kind: 5128,
     created_at: Math.floor(Date.now() / 1000),

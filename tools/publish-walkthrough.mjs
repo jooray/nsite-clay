@@ -23,7 +23,11 @@ import { chromium } from "playwright";
 import { generateSecretKey, getPublicKey, nip19 } from "nostr-tools";
 
 const HEADED = process.argv.includes("--headed");
-const OUT = join("media", "guide-publish");
+const LANG = (process.argv.find((a) => a.startsWith("--lang=")) || "--lang=en").slice(7);
+const OUT = LANG === "en" ? join("media", "guide-publish") : join("media", "guide-publish", LANG);
+// Only the publisher is re-shot with --wizard-only: the pictures of the edited page do not change with it.
+const EDIT = LANG === "en" && !process.argv.includes("--wizard-only");
+const WIZARD = LANG === "en" ? "/deploy.html" : `/${LANG}/deploy.html`;
 const PICTURE = process.env.WALKTHROUGH_PICTURE ||
   join(process.env.TMPDIR || "/tmp", "lunarpunk.jpg");
 
@@ -108,7 +112,7 @@ const check = (label, ok) => {
 };
 
 step("\nThe publisher");
-await page.goto(`${SITE}/deploy.html`, { waitUntil: "networkidle" });
+await page.goto(`${SITE}${WIZARD}`, { waitUntil: "networkidle" });
 await page.waitForFunction(() => window.nc && document.documentElement.getAttribute("nc:ready") === "true");
 await sleep(400);
 await shot("p1-start");
@@ -146,6 +150,11 @@ const templates = await page.locator(".tpl").count();
 check(`the catalogue loads (${templates} templates)`, templates >= 12);
 check("the block composer is offered first",
   (await page.locator(".tpl .name").first().textContent()).trim() === "cms");
+// The step opens on the AI builder; the free templates sit below it. The guide
+// shows the templates, so scroll them into view for the picture.
+await page.locator(".tpl").first().scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, -170));
+await sleep(350);
 await shot("p4-templates");
 
 // Clicking the card is the choice; there is no second button to confirm it.
@@ -200,6 +209,9 @@ if (process.env.WALKTHROUGH_EXTRA) {
 }
 
 // ---------------------------------------------------------------- editing it
+// The edited page looks the same whichever language the publisher was read in,
+// so its pictures are taken once, in the English run.
+if (EDIT) {
 
 step("\nEditing the published page");
 await page.goto(`${siteHost(npub)}/#edit`, { waitUntil: "networkidle" });
@@ -329,10 +341,11 @@ await shot("p12-reader", { fullPage: true });
 await page.setViewportSize({ width: 1180, height: 820 });
 await sleep(300);
 await shot("p13-reader-top");
+}
 
 // --- publishing a second page to the same key -------------------------------
 step("\nA second page under the same key");
-await page.goto(`${SITE}/deploy.html`, { waitUntil: "networkidle" });
+await page.goto(`${SITE}${WIZARD}`, { waitUntil: "networkidle" });
 await page.waitForFunction(() => window.nc && document.documentElement.getAttribute("nc:ready") === "true");
 await page.click("#way-key");
 await page.fill("#key", nsec);
@@ -369,19 +382,20 @@ check("the second page publishes alongside the first", second.endsWith("/notes/"
 // The runtime, the stylesheet and the chrome are the same blobs as the first
 // publish, so a second site under the same key should send only its document.
 const reuse = await page.textContent("#log");
-check("the shared blobs were not uploaded twice", /already there/.test(reuse));
+// The log is in the reader's language, so only the English run can match its words.
+if (LANG === "en") check("the shared blobs were not uploaded twice", /already there/.test(reuse));
 
 check("after publishing there is nothing to go back to",
   await page.locator("#steps li[data-go]").count() === 0);
 
 const stillThere = await fetch(`${GATEWAY}/?npub=${npub}`).then((r) => r.text());
-check("and the first page is still there", stillThere.includes("Nostr meetup Košice"));
+if (EDIT) check("and the first page is still there", stillThere.includes("Nostr meetup Košice"));
 const notes = await fetch(`${GATEWAY}/notes/?npub=${npub}`).then((r) => r.status);
 check("with the new one served from its own path", notes === 200);
 
 // ------------------------------------------------------------------ finished
 
-writeFileSync(join(OUT, "walkthrough.json"), JSON.stringify({
+if (LANG === "en") writeFileSync(join(OUT, "walkthrough.json"), JSON.stringify({
   npub, url, second, when: new Date().toISOString(),
 }, null, 2) + "\n");
 

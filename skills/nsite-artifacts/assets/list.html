@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" nc:autosave nc:edit-gate="always" nc:runtime-owner="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<style>
+  :root {
+    --ink: #1c1b19; --dim: #6f6a61; --bg: #f6f3ec; --card: #fffdf8; --edge: #ddd6c8;
+    --accent: #2f6f4f; --done: #9a948a; --bad: #a33223;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #ece7dc; --dim: #a39c8f; --bg: #171614; --card: #201f1c; --edge: #37342e; --accent: #7fc8a0; --done: #6f6a61; --bad: #e08a7c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 34rem; margin: 0 auto; padding: 1.5rem 1rem 6rem; }
+  h1 { font-size: 1.6rem; line-height: 1.2; margin: .5rem 0 .25rem; text-wrap: balance; }
+  .note { color: var(--dim); margin: 0 0 1.25rem; }
+  .note:empty { display: none; }
+  ul.items { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--edge); border-radius: 12px; overflow: hidden; }
+  ul.items:empty::after { content: "Nothing here yet."; display: block; padding: 1rem; color: var(--dim); }
+  .item { display: flex; align-items: center; gap: .75rem; padding: .7rem .9rem; border-top: 1px solid var(--edge); }
+  .item:first-child { border-top: 0; }
+  .item input[type=checkbox] { flex: none; width: 1.35rem; height: 1.35rem; accent-color: var(--accent); margin: 0; }
+  .item .text { flex: 1; min-width: 0; overflow-wrap: anywhere; outline: none; }
+  .item:has(input:checked) .text { color: var(--done); text-decoration: line-through; }
+  .item button { flex: none; border: 0; background: none; color: var(--dim); font-size: 1.1rem; padding: .3rem .5rem; border-radius: 6px; cursor: pointer; }
+  .item button:hover, .item button:focus-visible { color: var(--bad); }
+  form.add { display: flex; gap: .5rem; margin-top: 1rem; }
+  form.add input { flex: 1; min-width: 0; font: inherit; color: inherit; background: var(--card); border: 1px solid var(--edge); border-radius: 10px; padding: .65rem .8rem; }
+  form.add button { font: inherit; border: 0; border-radius: 10px; padding: .65rem 1rem; background: var(--accent); color: var(--bg); cursor: pointer; }
+  .state { margin-top: 1rem; color: var(--dim); font-size: .9rem; min-height: 1.4em; }
+  .state[data-kind=error] { color: var(--bad); }
+  /* Somebody with the read link sees the list and cannot change it. */
+  html:not([nc\:owner-here="true"]) :is(form.add, .item button) { display: none; }
+  html:not([nc\:owner-here="true"]) .item input { pointer-events: none; }
+</style>
+<script src="/nsite-clay.js"></script>
+</head>
+<body>
+<main>
+  <h1 editable="single-line">{{title}}</h1>
+  <p class="note" editable="single-line">{{note}}</p>
+
+  <ul class="items">{{items}}</ul>
+
+  <form class="add" onsubmit="return listAdd(this)">
+    <input name="text" autocomplete="off" enterkeyhint="done" placeholder="Add an item" aria-label="Add an item" nc:no-persist>
+    <button type="submit">Add</button>
+  </form>
+</main>
+
+<template id="item">
+  <li class="item"><input type="checkbox" aria-label="Done"><span class="text" editable="single-line"></span><button type="button" title="Remove this item" aria-label="Remove this item" onclick="listRemove(this)">&times;</button></li>
+</template>
+
+<script>
+  // The list is the markup. Ticking a box, typing in a row, adding and
+  // removing rows change the document, and the runtime saves the document.
+  function listChanged() {
+    nc.dirty = true;
+    nc.editable.refresh();
+    nc.dispatchEvent(new CustomEvent("nsiteclay:autosave-now"));
+  }
+  function listAdd(form) {
+    const text = form.elements.text.value.trim();
+    if (text) {
+      const row = document.getElementById("item").content.firstElementChild.cloneNode(true);
+      row.querySelector(".text").textContent = text;
+      document.querySelector("ul.items").append(row);
+      form.elements.text.value = "";
+      listChanged();
+    }
+    return false;
+  }
+  function listRemove(button) {
+    button.closest(".item").remove();
+    listChanged();
+  }
+  // The status line is about this tab, not about the list, so it is drawn here
+  // and marked nc:chrome: it is never saved, and changing it is not an edit.
+  const state = document.createElement("p");
+  state.className = "state";
+  state.setAttribute("role", "status");
+  state.setAttribute("aria-live", "polite");
+  state.setAttribute("nc:chrome", "");
+  document.querySelector("main").append(state);
+  nc.addEventListener("nsiteclay:status", (e) => {
+    const s = e.detail.status;
+    state.dataset.kind = s === "error" ? "error" : "";
+    state.textContent = s === "saving" ? "Saving…" : s === "saved" ? "Saved." : s === "error"
+      ? String(e.detail.error || "").replace(/^Error: /, "") : "";
+  });
+</script>
+</body>
+</html>
