@@ -7,7 +7,7 @@
  * the save clone for the same reason. */
 (function () {
   var NPROFILE = "nprofile1qqs9vku0g4dqgpj82ph2z88jt60yaez3ney6urnw3pdgcchgh6qyfacpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgqg5waehxw309aex2mrp0yhxgctdw4eju6t0dmn32s";
-  var RELAYS = ["wss://nostr.cypherpunk.today", "wss://relay.primal.net", "wss://relay.damus.io"];
+  var RELAYS = ["wss://nostr.cypherpunk.today", "wss://relay.primal.net"];
 
   function start() {
     var slot = document.querySelector("[data-news]");

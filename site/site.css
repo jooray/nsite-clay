@@ -288,8 +288,6 @@ dialog::backdrop { background: rgba(14, 8, 24, .72); }
   background: transparent; color: var(--ink); transition: background .12s, color .12s;
 }
 .news .nl__btn:hover { background: var(--ink); color: var(--paper); }
-.news .nl__btn--primary { background: var(--purple); border-color: var(--purple); color: var(--on-purple); }
-.news .nl__btn--primary:hover { background: var(--ink); border-color: var(--ink); color: var(--on-purple); }
 .news .nl :focus-visible { outline: 3px solid var(--purple-2); outline-offset: 3px; }
 .news .nl__skel { background: var(--paper-edge); }
 @media (max-width: 40rem) { .news { min-height: 16rem; } .news .nl { --nl-avatar-size: 48px; } }
