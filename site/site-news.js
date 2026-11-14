@@ -3,7 +3,7 @@
  * The widget (nostr-live.js, vendored next to this file) reads the project's
  * account straight from relays and checks every signature in the visitor's
  * browser. The host is created here and marked nc:transient, so what the widget
- * draws never reaches a save. The stylesheet it injects into <head> is taken off
+ * draws never reaches a save. The stylesheet it injects into the document head is taken off
  * the save clone for the same reason. */
 (function () {
   var NPROFILE = "nprofile1qqs9vku0g4dqgpj82ph2z88jt60yaez3ney6urnw3pdgcchgh6qyfacpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgqg5waehxw309aex2mrp0yhxgctdw4eju6t0dmn32s";

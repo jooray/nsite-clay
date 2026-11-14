@@ -19,6 +19,9 @@ go wrong. It links the documentation rather than restating it.
   https://nsite-clay.cypherpunk.today/llms-edit.txt
 - How a page edits and republishes itself, and where it is served from:
   https://nsite-clay.cypherpunk.today/how.html
+- Not a website but a list, a plan or a small app the user opens on a phone,
+  published encrypted for them and read back later: use the nsite-artifacts skill,
+  https://nsite-clay.cypherpunk.today/agents.html
 - Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
 - The block composer template, the one to read before writing a block library:
   https://nsite-clay.cypherpunk.today/t/cms/

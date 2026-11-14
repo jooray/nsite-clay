@@ -20,7 +20,7 @@ import { execFileSync } from "node:child_process";
 const LANGS = ["es", "sk", "cs"];
 
 // Paths that exist in every language, so a translated copy must point at its own.
-const LOCALISED = ["/", "/guide.html", "/templates.html", "/docs.html", "/how.html", "/index.html"];
+const LOCALISED = ["/", "/guide.html", "/templates.html", "/docs.html", "/how.html", "/agents.html", "/index.html"];
 
 // Only what a crawler and a reader see before the strings table runs.
 const TITLES = {

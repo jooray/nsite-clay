@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="sk"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/sk/agents.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: stránky, ktoré ti spraví agent</title>
+<meta name="description" content="Nech ti AI agent zverejní nákupný zoznam, plán výletu alebo malú aplikáciu ako šifrovanú stránku, pošle ti odkaz a potom si prečíta, čo si na nej zmenil. Inštalácia na skopírovanie pre Claude Code, Codex a iných agentov.">
+<meta name="color-scheme" content="light dark">
+<link rel="alternate" hreflang="en" href="/agents.html">
+<link rel="alternate" hreflang="es" href="/es/agents.html">
+<link rel="alternate" hreflang="sk" href="/sk/agents.html">
+<link rel="alternate" hreflang="cs" href="/cs/agents.html">
+<link rel="alternate" hreflang="x-default" href="/agents.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<script src="/site.js"></script>
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .stack > * + * { margin-top: 3rem; }
+  .stack { padding: 2.4rem 0 1rem; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 2.4rem; }
+  @media (max-width: 52rem) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .gate { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .9rem; }
+  .gate li { padding-top: .8rem; border-top: 1px dotted var(--ink-dim); }
+  .gate strong { display: block; font: 700 1.02rem var(--display); }
+  .snippet { position: relative; margin-top: 1rem; }
+  .snippet pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 5.5rem; }
+  .snippet { margin-bottom: 1rem; }
+  .snippet .copy { position: absolute; top: .6rem; right: .6rem; font-size: .85rem; padding: .3rem .7rem; background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  @media (max-width: 40rem) {
+    .snippet { display: flex; flex-direction: column; }
+    .snippet pre { padding-right: 1rem; font-size: .8rem; }
+    .snippet .copy { position: static; order: -1; align-self: flex-end; margin-bottom: .4rem; border-color: var(--ink); }
+  }
+  .snippet .copy:hover { background: var(--purple); border-color: var(--purple); color: var(--on-purple); }
+  .asks { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .6rem; }
+  .asks li { padding: .7rem .9rem; border-left: 3px solid var(--purple); background: var(--paper-2); font-style: italic; }
+  h3 { margin-top: 1.6rem; }
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { outline: 2px dotted var(--purple-2); outline-offset: 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="topbar" aria-label="Hlavná navigácia">
+    <a class="brand" href="/sk/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/sk/guide.html">Návod</a>
+    <a href="/sk/templates.html">Šablóny</a>
+    <a href="/sk/how.html">Ako to funguje</a>
+    <a href="/sk/agents.html" aria-current="page">Pre agentov</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <span class="lang"><a href="/agents.html" hreflang="en">EN</a><a href="/es/agents.html" hreflang="es">ES</a><a href="/sk/agents.html" hreflang="sk" aria-current="page">SK</a><a href="/cs/agents.html" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Prepnúť medzi svetlým a tmavým režimom" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </nav>
+
+  <main class="stack">
+
+    <section class="flyer" data-fix="tape" data-settle style="--tilt:-.4deg" aria-labelledby="top">
+      <h1 id="top" editable="single-line">Stránky, ktoré ti <em>spraví agent.</em></h1>
+      <div editable class="prose">
+        <p class="lede">Popros svojho AI agenta o nákupný zoznam, zoznam vecí na cestu, plán výletu alebo malú aplikáciu. Spraví stránku, zverejní ju zašifrovanú a pošle ti odkaz. Otvoríš ju v mobile, odškrtávaš a dopisuješ. Agent si potom prečíta, čo si zmenil.</p>
+        <p class="lede">Kľúč je časť odkazu za znakom <code>#</code>. Prehliadač túto časť nikdy neposiela na server, takže relaye a úložné servery majú len nečitateľné bajty. Stránku otvorí každý, kto má odkaz, a nikto iný.</p>
+        <p>Chceš, aby ti agent postavil celý web, ktorý si potom upravuješ sám? To je iná úloha: daj mu <a href="/llms.txt">llms.txt</a>.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="setup">
+      <h2 id="setup" editable="single-line">Nastavenie: vlož toto svojmu agentovi.</h2>
+      <div editable>
+        <p class="lede">Funguje s každým agentom, ktorý vie spúšťať príkazy: Claude Code, Codex, Hermes Agent a ďalšími. Treba len Node.js 18 alebo novší. Žiadny účet, žiadny tvoj kľúč, žiadny vlastný server.</p>
+      </div>
+      <div class="snippet">
+<pre data-copy-source>Nainštaluj si skill nsite-artifacts z nsite-clay. Stiahni tieto súbory z
+https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts/
+do priečinka nsite-artifacts vo svojom adresári so skillmi, s rovnakými cestami:
+
+  SKILL.md
+  scripts/artifact.mjs
+  assets/list.html
+  hooks/guard.mjs
+
+Ak adresár so skillmi nemáš, daj priečinok na trvalé miesto a zapamätaj si,
+kde je. Potom si prečítaj SKILL.md a riaď sa ním vždy, keď ťa poprosím o zoznam,
+plán alebo malú stránku, ktorú si otvorím v mobile, pošlem ďalej alebo upravím.
+Over, že to funguje: node &lt;ten priečinok&gt;/scripts/artifact.mjs help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
+      </div>
+
+      <h3 editable="single-line">Alebo si ho nainštaluj sám, pre Claude Code</h3>
+      <div class="snippet">
+<pre data-copy-source>d=~/.claude/skills/nsite-artifacts
+b=https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts
+mkdir -p "$d/scripts" "$d/assets" "$d/hooks"
+for f in SKILL.md scripts/artifact.mjs assets/list.html hooks/guard.mjs; do
+  curl -fsSL -o "$d/$f" "$b/$f"
+done
+node "$d/scripts/artifact.mjs" help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
+      </div>
+      <div editable>
+        <p>Pre Codex použi priečinok <code>~/.codex/skills/nsite-artifacts</code>. Potom otvor novú reláciu, aby agent skill videl. Ten istý nástroj je aj v balíku pre príkazový riadok: <code>npx nsite-clay artifact help</code>.</p>
+      </div>
+    </section>
+
+    <section class="flyer" style="--tilt:-.3deg" aria-labelledby="ask">
+      <h2 id="ask" editable="single-line">A potom už len povedz.</h2>
+      <ul class="asks">
+        <li>Sprav mi nákupný zoznam na sobotu, ktorý si budem odškrtávať v mobile: mlieko, chlieb, káva, olivový olej.</li>
+        <li>Daj náš výlet do Lisabonu na stránku, ktorú budeme môcť upravovať ja aj partnerka. Týždeň po návrate ju zmaž.</li>
+        <li>Čo ešte ostáva na nákupnom zozname?</li>
+        <li>Sprav mi malý sledovač návykov na každý deň a v nedeľu mi povedz, ako dopadol týždeň.</li>
+        <li>Zdieľaj zoznam vecí na cestu s npub1…, nech ho otvorí len on.</li>
+        <li>Zoznam už nepotrebujem, zmaž ho.</li>
+      </ul>
+      <div editable>
+        <p class="lede" style="margin-top:1.2rem">Agent napíše stránku, nástroj ju zašifruje a zverejní. Model sa kľúča nikdy nedotkne: kľúč existuje len v odkaze, ktorý nástroj vráti. Každá stránka má dátum zániku, 30 dní, ak nepovieš inak.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="who">
+      <h2 id="who" editable="single-line">Kto ju môže otvoriť.</h2>
+      <ul class="gate">
+        <li><strong>Ktokoľvek s odkazom.</strong> Predvolená možnosť. Odkazy sú dva: na čítanie a na úpravy. Ten na úpravy pošli tým, čo majú stránku meniť, a ten na čítanie všetkým ostatným.</li>
+        <li><strong>Len určití ľudia.</strong> Daj agentovi ich npuby. Odkaz potom nenesie žiadny kľúč a každý sa na otvorenie stránky prihlási vlastným Nostr kľúčom.</li>
+        <li><strong>Všetci.</strong> Len keď chceš niečo verejné, napríklad stránku na svoj web. Vtedy nie je šifrovaná.</li>
+      </ul>
+      <div editable>
+        <p style="margin-top:1.2rem">Ak chceš niekomu vziať prístup a odkaz už má, treba nový kľúč, lebo ten starý pozná. Agent to spraví za teba: presunie stránku na nový odkaz a starý zmaže.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:-.5deg" aria-labelledby="padlock">
+      <h2 id="padlock" editable="single-line">Zámok na stránke.</h2>
+      <div class="cols">
+        <div editable>
+          <p>Každá šifrovaná stránka má v dolnom rohu malé tlačidlo so zámkom. Ak si ju otvoril odkazom na úpravy, ukáže oba odkazy na skopírovanie, kedy stránka zanikne a kto ďalší ju môže otvoriť.</p>
+          <p>Odtiaľ môžeš pridať človeka podľa jeho npubu alebo stránku hneď zmazať, bez agenta.</p>
+        </div>
+        <div editable>
+          <p>Cez odkaz na čítanie ponúkne len ten odkaz a dátum zániku. Kto sa prihlásil ako člen, nevidí žiadne odkazy, takže stránka zdieľaná s konkrétnymi ľuďmi sa neroznesie ako odkaz.</p>
+          <p>Ak dvaja uložia v tej istej chvíli, druhé uloženie sa odmietne a ten človek dostane výzvu, aby stránku znova načítal. Nič sa neprepíše.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="flyer" style="--tilt:.3deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="space">
+      <h2 id="space" editable="single-line">Upratuje po sebe.</h2>
+      <ul class="gate">
+        <li><strong>Jedna verzia.</strong> Každé uloženie zmaže verziu, ktorú nahradilo, takže zoznam odškrtaný stokrát zaberie miesto ako jeden. Servery držia len to, čo sa používa.</li>
+        <li><strong>Zánik.</strong> Stránka nesie svoj dátum konca a agent raz denne zmaže všetko, čomu už uplynul. Nastavuje sa to raz a skill agentovi povie ako.</li>
+        <li><strong>Zmazať znamená zmazať.</strong> Či cez zámok, alebo cez agenta, stránka aj všetky jej verzie zmiznú zo serverov, na ktorých boli. Kópia, ktorú si niekto uložil do vlastného zariadenia, mu zostane, ale bez odkazu sa nedá prečítať.</li>
+      </ul>
+    </section>
+
+    <section class="flyer" data-fix="tape" style="--tilt:-.4deg" aria-labelledby="guard">
+      <h2 id="guard" editable="single-line">Voliteľne: strážca mimo modelu.</h2>
+      <div editable>
+        <p class="lede">Nástroj už sám odmietne zverejniť nešifrovanú stránku, ak sa to od neho nežiada dvakrát. Ak to chceš úplne vziať modelu z rúk, pridaj strážcu ako hook. Zablokuje každý príkaz, ktorý by zverejňoval verejne alebo iným nástrojom, a každý pokus prečítať súbor s kľúčmi stránok. Pre Claude Code do <code>~/.claude/settings.json</code>:</p>
+      </div>
+      <div class="snippet">
+<pre data-copy-source>{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash|Read",
+        "hooks": [ { "type": "command",
+                     "command": "node ~/.claude/skills/nsite-artifacts/hooks/guard.mjs" } ] }
+    ]
+  }
+}</pre>
+        <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
+      </div>
+      <div editable>
+        <p>Aj servery si vyberáš sám. Predvolene idú stránky na verejné relaye a na <code>nostr.download</code> a <code>blossom.yakihonne.com</code>. Ak chceš iné, zapíš ich do <code>~/.config/nsite-clay/artifacts/config.json</code>. Ten istý priečinok drží kľúče všetkých stránok, ktoré agent spravil, tak ho nikomu nedávaj a zálohuj si ho, ak ti na stránkach záleží.</p>
+        <p><a class="btn" href="https://github.com/jooray/nsite-clay/blob/main/skills/nsite-artifacts/SKILL.md">Celý skill</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p><a href="/sk/">Domov</a> · <a href="/sk/deploy.html">Zverejni stránku</a> · <a href="/sk/guide.html">Návod</a> ·
+      <a href="/sk/templates.html">Šablóny</a> · <a href="/sk/how.html">Ako to funguje</a> · <a href="/llms.txt">llms.txt</a> ·
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
+    <p>MIT-0.</p>
+  </footer>
+</div>
+
+<script>
+  // Copy buttons: they copy the text of the snippet next to them, exactly.
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    const label = button.textContent;
+    button.addEventListener("click", async () => {
+      const text = button.parentElement.querySelector("[data-copy-source]").textContent;
+      try { await navigator.clipboard.writeText(text); button.textContent = button.dataset.done || "Copied"; }
+      catch { const r = document.createRange(); r.selectNodeContents(button.parentElement.querySelector("pre")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+      setTimeout(() => { button.textContent = label; }, 1800);
+    });
+  }
+</script>
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

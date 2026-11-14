@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es"
+      nc:owner="npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2"
+      nc:path="/es/agents.html"
+      nc:edit-gate="hash"
+      nc:relays="wss://nos.lol,wss://relay.primal.net,wss://nostr.mom,wss://relay.nsite.lol"
+      nc:servers="https://nostr.download,https://blossom.yakihonne.com" nc:source="/nsite-clay-source.js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nsite-clay: páginas que hace tu agente</title>
+<meta name="description" content="Deja que tu agente de IA publique una lista de la compra, un plan de viaje o una pequeña app como página cifrada, te mande el enlace y lea después lo que cambiaste. Instalación para copiar y pegar en Claude Code, Codex y otros agentes.">
+<meta name="color-scheme" content="light dark">
+<link rel="alternate" hreflang="en" href="/agents.html">
+<link rel="alternate" hreflang="es" href="/es/agents.html">
+<link rel="alternate" hreflang="sk" href="/sk/agents.html">
+<link rel="alternate" hreflang="cs" href="/cs/agents.html">
+<link rel="alternate" hreflang="x-default" href="/agents.html">
+<link rel="icon" href="/nsite-clay-mark.svg">
+<script src="/site.js"></script>
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .stack > * + * { margin-top: 3rem; }
+  .stack { padding: 2.4rem 0 1rem; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem 2.4rem; }
+  @media (max-width: 52rem) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .gate { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .9rem; }
+  .gate li { padding-top: .8rem; border-top: 1px dotted var(--ink-dim); }
+  .gate strong { display: block; font: 700 1.02rem var(--display); }
+  .snippet { position: relative; margin-top: 1rem; }
+  .snippet pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 5.5rem; }
+  .snippet { margin-bottom: 1rem; }
+  .snippet .copy { position: absolute; top: .6rem; right: .6rem; font-size: .85rem; padding: .3rem .7rem; background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  @media (max-width: 40rem) {
+    .snippet { display: flex; flex-direction: column; }
+    .snippet pre { padding-right: 1rem; font-size: .8rem; }
+    .snippet .copy { position: static; order: -1; align-self: flex-end; margin-bottom: .4rem; border-color: var(--ink); }
+  }
+  .snippet .copy:hover { background: var(--purple); border-color: var(--purple); color: var(--on-purple); }
+  .asks { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .6rem; }
+  .asks li { padding: .7rem .9rem; border-left: 3px solid var(--purple); background: var(--paper-2); font-style: italic; }
+  h3 { margin-top: 1.6rem; }
+  [editable]:focus { outline: 2px solid var(--purple-2); outline-offset: 5px; border-radius: 3px; }
+  html[nc\:editable="true"] [editable]:hover:not(:focus) { outline: 2px dotted var(--purple-2); outline-offset: 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="topbar" aria-label="Principal">
+    <a class="brand" href="/es/"><img src="/nsite-clay-transparent.png" alt="">nsite-clay</a>
+    <a href="/es/guide.html">Guía</a>
+    <a href="/es/templates.html">Plantillas</a>
+    <a href="/es/how.html">Cómo funciona</a>
+    <a href="/es/agents.html" aria-current="page">Para agentes</a>
+    <a href="https://github.com/jooray/nsite-clay">GitHub</a>
+    <span class="lang"><a href="/agents.html" hreflang="en">EN</a><a href="/es/agents.html" hreflang="es" aria-current="page">ES</a><a href="/sk/agents.html" hreflang="sk">SK</a><a href="/cs/agents.html" hreflang="cs">CS</a></span>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar entre claro y oscuro" aria-pressed="false">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </nav>
+
+  <main class="stack">
+
+    <section class="flyer" data-fix="tape" data-settle style="--tilt:-.4deg" aria-labelledby="top">
+      <h1 id="top" editable="single-line">Páginas que tu agente <em>hace por ti.</em></h1>
+      <div editable class="prose">
+        <p class="lede">Pide a tu agente de IA una lista de la compra, una lista de equipaje, un plan de viaje o una pequeña app. Hace la página, la publica cifrada y te manda un enlace. La abres en el móvil, marcas lo hecho y añades lo que falte. Después el agente lee lo que cambiaste.</p>
+        <p class="lede">La clave es la parte del enlace que va después de <code>#</code>. Los navegadores nunca envían esa parte a un servidor, así que los relays y los servidores de almacenamiento solo guardan bytes ilegibles. Quien tenga el enlace puede abrir la página, y nadie más.</p>
+        <p>¿Quieres que un agente te construya un sitio web entero que luego editas tú? Eso es otro trabajo: dale <a href="/llms.txt">llms.txt</a>.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="setup">
+      <h2 id="setup" editable="single-line">Instalación: pega esto a tu agente.</h2>
+      <div editable>
+        <p class="lede">Funciona con cualquier agente que pueda ejecutar comandos: Claude Code, Codex, Hermes Agent y otros. Necesita Node.js 18 o más reciente y nada más. Sin cuenta, sin tu clave y sin servidor propio.</p>
+      </div>
+      <div class="snippet">
+<pre data-copy-source>Instala el skill nsite-artifacts de nsite-clay. Descarga estos archivos de
+https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts/
+en una carpeta llamada nsite-artifacts dentro de tu directorio de skills, con las mismas rutas:
+
+  SKILL.md
+  scripts/artifact.mjs
+  assets/list.html
+  hooks/guard.mjs
+
+Si no tienes directorio de skills, guarda la carpeta en un lugar permanente y
+recuerda dónde está. Luego lee SKILL.md y síguelo cada vez que te pida una lista,
+un plan o una pequeña página que pueda abrir en el móvil, compartir o editar yo.
+Comprueba que funciona con: node &lt;esa carpeta&gt;/scripts/artifact.mjs help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
+      </div>
+
+      <h3 editable="single-line">O instálalo tú mismo, para Claude Code</h3>
+      <div class="snippet">
+<pre data-copy-source>d=~/.claude/skills/nsite-artifacts
+b=https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts
+mkdir -p "$d/scripts" "$d/assets" "$d/hooks"
+for f in SKILL.md scripts/artifact.mjs assets/list.html hooks/guard.mjs; do
+  curl -fsSL -o "$d/$f" "$b/$f"
+done
+node "$d/scripts/artifact.mjs" help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
+      </div>
+      <div editable>
+        <p>Para Codex, usa la carpeta <code>~/.codex/skills/nsite-artifacts</code>. Después abre una sesión nueva para que el agente vea el skill. La misma herramienta viene también en el paquete de línea de comandos: <code>npx nsite-clay artifact help</code>.</p>
+      </div>
+    </section>
+
+    <section class="flyer" style="--tilt:-.3deg" aria-labelledby="ask">
+      <h2 id="ask" editable="single-line">Y luego, pide.</h2>
+      <ul class="asks">
+        <li>Hazme una lista de la compra para el sábado que pueda ir marcando en el móvil: leche, pan, café, aceite de oliva.</li>
+        <li>Pon nuestro viaje a Lisboa en una página que podamos editar mi pareja y yo. Bórrala una semana después de volver.</li>
+        <li>¿Qué queda en la lista de la compra?</li>
+        <li>Hazme un pequeño registro de hábitos para usar cada día, y el domingo dime cómo fue la semana.</li>
+        <li>Comparte la lista de equipaje con npub1… para que solo esa persona pueda abrirla.</li>
+        <li>Ya no necesito la lista, quítala.</li>
+      </ul>
+      <div editable>
+        <p class="lede" style="margin-top:1.2rem">El agente escribe la página y la herramienta la cifra y la publica. El modelo nunca toca una clave: la clave solo existe dentro del enlace que devuelve la herramienta. Cada página caduca, a los 30 días si no dices otra cosa.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="who">
+      <h2 id="who" editable="single-line">Quién puede abrirla.</h2>
+      <ul class="gate">
+        <li><strong>Quien tenga el enlace.</strong> Es lo normal. Hay dos enlaces: uno para leer y otro para editar. Manda el de edición a quien deba cambiar la página y el de lectura a todos los demás.</li>
+        <li><strong>Solo ciertas personas.</strong> Da al agente sus npubs. Entonces el enlace no lleva ninguna clave, y cada persona entra con su propia clave de Nostr para abrir la página.</li>
+        <li><strong>Todo el mundo.</strong> Solo cuando pides algo público, como una página para tu web. Entonces no va cifrada.</li>
+      </ul>
+      <div editable>
+        <p style="margin-top:1.2rem">Quitarle el acceso a alguien que ya tiene el enlace exige una clave nueva, porque esa persona tiene la antigua. El agente lo hace por ti: mueve la página a un enlace nuevo y borra el antiguo.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:-.5deg" aria-labelledby="padlock">
+      <h2 id="padlock" editable="single-line">El candado de la página.</h2>
+      <div class="cols">
+        <div editable>
+          <p>Cada página cifrada tiene un pequeño botón con un candado en la esquina inferior. Si la abriste con el enlace de edición, muestra los dos enlaces listos para copiar, cuándo caduca la página y quién más puede abrirla.</p>
+          <p>Desde ahí puedes añadir a una persona por su npub o borrar la página al momento, sin pedírselo al agente.</p>
+        </div>
+        <div editable>
+          <p>Con el enlace de lectura solo ofrece ese enlace y la fecha de caducidad. Quien entró como miembro no ve ningún enlace, así que una página compartida con personas concretas no acaba convertida en un enlace.</p>
+          <p>Si dos personas guardan a la vez, el segundo guardado se rechaza y a esa persona se le pide recargar. No se sobrescribe nada.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="flyer" style="--tilt:.3deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="space">
+      <h2 id="space" editable="single-line">Limpia lo que deja.</h2>
+      <ul class="gate">
+        <li><strong>Una versión.</strong> Cada guardado borra la versión que reemplaza, así que una lista marcada cien veces ocupa lo mismo que una. Los servidores solo guardan lo que se usa.</li>
+        <li><strong>Caducidad.</strong> La página lleva su fecha de fin, y el agente hace un barrido diario que borra lo caducado. Se configura una vez; el skill le explica al agente cómo.</li>
+        <li><strong>Borrar es borrar.</strong> Desde el candado o desde el agente, la página y todas sus versiones desaparecen de los servidores donde estaban. Una copia que alguien guardó en su propio dispositivo sigue siendo suya, pero sin el enlace no se puede leer.</li>
+      </ul>
+    </section>
+
+    <section class="flyer" data-fix="tape" style="--tilt:-.4deg" aria-labelledby="guard">
+      <h2 id="guard" editable="single-line">Opcional: un guardián fuera del modelo.</h2>
+      <div editable>
+        <p class="lede">La herramienta ya se niega a publicar una página sin cifrar a menos que se le pida dos veces. Si quieres quitarle eso al modelo por completo, añade el guardián como hook. Bloquea cualquier comando que publicaría en abierto o con otra herramienta, y cualquier intento de leer el archivo con las claves de las páginas. Para Claude Code, en <code>~/.claude/settings.json</code>:</p>
+      </div>
+      <div class="snippet">
+<pre data-copy-source>{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash|Read",
+        "hooks": [ { "type": "command",
+                     "command": "node ~/.claude/skills/nsite-artifacts/hooks/guard.mjs" } ] }
+    ]
+  }
+}</pre>
+        <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
+      </div>
+      <div editable>
+        <p>Los servidores también los eliges tú. Por defecto las páginas van a relays públicos y a <code>nostr.download</code> y <code>blossom.yakihonne.com</code>. Para usar otros, escríbelos en <code>~/.config/nsite-clay/artifacts/config.json</code>. Esa misma carpeta guarda las claves de todas las páginas que hizo el agente: mantenla privada y haz copia si las páginas te importan.</p>
+        <p><a class="btn" href="https://github.com/jooray/nsite-clay/blob/main/skills/nsite-artifacts/SKILL.md">Lee el skill completo</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p><a href="/es/">Inicio</a> · <a href="/es/deploy.html">Publica un sitio</a> · <a href="/es/guide.html">Guía</a> ·
+      <a href="/es/templates.html">Plantillas</a> · <a href="/es/how.html">Cómo funciona</a> · <a href="/llms.txt">llms.txt</a> ·
+      <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
+    <p>MIT-0.</p>
+  </footer>
+</div>
+
+<script>
+  // Copy buttons: they copy the text of the snippet next to them, exactly.
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    const label = button.textContent;
+    button.addEventListener("click", async () => {
+      const text = button.parentElement.querySelector("[data-copy-source]").textContent;
+      try { await navigator.clipboard.writeText(text); button.textContent = button.dataset.done || "Copied"; }
+      catch { const r = document.createRange(); r.selectNodeContents(button.parentElement.querySelector("pre")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+      setTimeout(() => { button.textContent = label; }, 1800);
+    });
+  }
+</script>
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+</body>
+</html>

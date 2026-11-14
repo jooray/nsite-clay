@@ -1,8 +1,8 @@
 /*! nostr-live 1.0.1
    Live Nostr posts for any website. One file, no build step, no dependencies.
 
-     <div data-nostr-live data-nprofile="nprofile1..."></div>
-     <script src="nostr-live.js" defer></script>
+     a div with data-nostr-live and data-nprofile="nprofile1...", and
+     nostr-live.js loaded with a deferred script tag
 
    or  NostrLive.mount(element, { nprofile, relays, limit, layout, ... })
 
@@ -26,7 +26,7 @@
 
   const VERSION = '1.0.1';
   const root = typeof window !== 'undefined' ? window : globalThis;
-  // a nonce on our own <script> is reused for the injected <style> (strict CSP)
+  // a nonce on our own script tag is reused for the injected style element (strict CSP)
   const ownScript = typeof document !== 'undefined' ? document.currentScript : null;
 
   /* ---------------------------------------------------------- 1. config -- */
