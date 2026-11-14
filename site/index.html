@@ -20,6 +20,8 @@
 <meta property="og:description" content="A self-editable nsite. One HTML file that edits and republishes itself, hosted on Nostr.">
 <meta property="og:image" content="/nsite-clay.png">
 <script src="/site.js"></script>
+<script src="/nostr-live.js" defer></script>
+<script src="/site-news.js" defer></script>
 <link rel="stylesheet" href="/nsite-clay-base.css">
 <link rel="stylesheet" href="/site.css">
 <style>
@@ -188,6 +190,12 @@
       <p><a class="btn primary" href="/templates.html">See all twelve</a></p>
     </section>
 
+    <section class="flyer" data-fix="pin" style="--tilt:.35deg;margin-inline:clamp(0rem,2.4vw,2rem)" aria-labelledby="news">
+      <h2 id="news" editable="single-line">What the project posted lately.</h2>
+      <p class="lede" editable="single-line">The project's own notes and articles, read from Nostr relays and signature-checked in your browser.</p>
+      <div class="news" data-news><noscript><p><a href="nostr:nprofile1qqs9vku0g4dqgpj82ph2z88jt60yaez3ney6urnw3pdgcchgh6qyfacpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgqg5waehxw309aex2mrp0yhxgctdw4eju6t0dmn32s">The project on Nostr</a></p></noscript></div>
+    </section>
+
     <section class="flyer" data-fix="tape" style="--tilt:.5deg;margin-inline:clamp(0rem,2vw,1.6rem)" aria-labelledby="ai">
       <h2 id="ai" editable="single-line">Ask AI to write it. Pay once, keep what is left.</h2>
       <div class="two">
@@ -262,7 +270,7 @@ npx nsite-clay deploy mysite --bunker="bunker://…"</pre>
       <a href="/templates.html">Templates</a> · <a href="/how.html">How it works</a> · <a href="/llms.txt">For agents</a> ·
       <a href="https://github.com/jooray/nsite-clay">GitHub</a></p>
     <p class="nc-credit">Built by <a href="https://njump.me/npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9">Juraj Bednar</a>.
-      The project posts as <a href="https://njump.me/npub12edc7326qsryw5rw5yw0yh57fmj9r8jf4c8xazz6333w305qgnms9ypvj2">npub12edc…9ypvj2</a>.</p>
+      The project posts as <a href="https://njump.me/nprofile1qqs9vku0g4dqgpj82ph2z88jt60yaez3ney6urnw3pdgcchgh6qyfacpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgqg5waehxw309aex2mrp0yhxgctdw4eju6t0dmn32s">npub12edc…9ypvj2</a>.</p>
   </footer>
 </div>
 
