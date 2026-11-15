@@ -6,7 +6,7 @@
 // Run: node test/comments.mjs
 import { chromium } from "playwright";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { localPorts } from "./local-ports.mjs";
@@ -32,6 +32,14 @@ t("the page asks for comments", /<html[^>]*\bnc:comments\b/.test(A("read", made.
 const readOnly = A("create", S + "/list.html", "--edit=none", "--title=Fixed");
 t("a page nobody can edit does not", !/\bnc:comments\b/.test(A("read", readOnly.id, "--as=html", "--peek").html || ""));
 A("delete", readOnly.id);
+
+// A page with nothing in it to edit, made with an edit link: the agent is told when it is made.
+writeFileSync(S + "/plain.html", '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Plain</title></head><body><h1>A report</h1><p>Words nobody marked editable.</p></body></html>');
+const plain = A("create", S + "/plain.html", "--edit=link", "--title=Plain", "--expires=1d");
+t("a page with nothing to edit says so when it is made", /no editable text/.test((plain.warnings || []).join(" ")) && /leave comments/.test((plain.warnings || []).join(" ")), JSON.stringify(plain.warnings));
+t("and with comments off it says the edit link does nothing", /lets nobody change anything/.test((A("create", S + "/plain.html", "--edit=link", "--no-comments", "--expires=1d").warnings || []).join(" ")));
+t("a page with editable text says nothing", !(made.warnings || []).some((w) => /no editable/.test(w)));
+A("delete", plain.id);
 
 const browser = await chromium.launch({ channel: "chrome" });
 const ctx = await browser.newContext();

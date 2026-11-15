@@ -345,6 +345,20 @@ function stampPage(html, { npub, relays, servers, edit, comments }) {
   return out;
 }
 
+// A page can be opened with an edit link and still have nothing in it to change:
+// the runtime only lets people type into what is marked editable, and into fields
+// and boxes a page draws itself. An agent that forgets this sends an edit link and
+// the person finds a page they cannot touch. Said when the page is made.
+function editHint(html, { edit, comments }) {
+  if (edit === "none") return null;
+  const editable = /<[a-z][^>]*[\s"']editable(?=[\s=>\/])/i.test(html) || /\scontenteditable\b/i.test(html);
+  const fields = /<(input|textarea|select)\b/i.test(html) || /\bnc\.state\b/.test(html);
+  if (editable || fields) return null;
+  return comments === false
+    ? "this page has no editable text, boxes or fields, and comments are off, so its edit link lets nobody change anything. Mark the text people may change with editable (editable=\"single-line\" on a heading or a row, editable on a container of paragraphs), or leave --no-comments off so they can comment."
+    : "this page has no editable text, boxes or fields, so its edit link only lets people leave comments. That is right for a draft to review. If they should change the words themselves, mark them with editable (editable=\"single-line\" on a heading or a row, editable on a container of paragraphs).";
+}
+
 // Anything a sealed page would load from somewhere else. The shell's policy
 // blocks all of it, so say so now, while the model can still fix the page.
 function foreignLoads(html) {
@@ -715,6 +729,8 @@ async function create(file, opts = {}) {
     fail("a public artifact can be read by anyone and found by anyone who looks. Pass --public as well to confirm that is what was asked for.");
   }
 
+  const hint = editHint(html, a);
+  if (hint) warnings.push(hint);
   const out = await withPool((pool) => putPage(pool, a, keys, html, cfg));
   a.hash = out.hash; a.seenHash = out.hash; a.savedAt = out.manifest.created_at;
   a.blobs = [out.hash];
@@ -964,7 +980,8 @@ async function update(id, file) {
     a.blobs.push(out.hash);
     writeLedger(ledger);
     remember(a, digest(html), html);
-    return { id: a.id, ...linksOf(a, keys), savedAt: new Date(out.manifest.created_at * 1000).toISOString() };
+    const hint = editHint(html, a);
+    return { id: a.id, ...linksOf(a, keys), savedAt: new Date(out.manifest.created_at * 1000).toISOString(), ...(hint ? { warnings: [hint] } : {}) };
   });
 }
 

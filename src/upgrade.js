@@ -489,8 +489,10 @@ export class Upgrade {
     let saved;
     const ok = await modal({
       doc: this.doc,
-      title: plan.version ? `nsite-clay ${plan.version} is available` : "A newer runtime is available",
-      hint: `This page runs ${plan.running}. Updating copies the newer files onto your own Blossom ` +
+      title: plan.version
+        ? (plan.version === plan.running ? `Another build of nsite-clay ${plan.version} is available` : `nsite-clay ${plan.version} is available`)
+        : "A newer runtime is available",
+      hint: `This page runs ${plan.version === plan.running ? "another build of " : ""}${plan.running}. Updating copies the newer files onto your own Blossom ` +
             `servers and republishes your manifest, so nothing of anybody else's ends up in the way.`,
       submitLabel: "Update",
       build: (body) => {
@@ -639,7 +641,13 @@ export class Upgrade {
   notice(plan) {
     return this.bar(
       plan.version
-        ? `nsite-clay ${plan.version} is available. This page runs ${plan.running}.`
+        // The number alone is not what is compared, the files are. The same number
+        // with other files is a build made some other way than a release (a
+        // working copy, a fork), and saying "0.3.28 is available, this runs 0.3.28"
+        // read as a bug.
+        ? (plan.version === plan.running
+          ? `Another build of nsite-clay ${plan.version} is available. This page runs a different one.`
+          : `nsite-clay ${plan.version} is available. This page runs ${plan.running}.`)
         : "A newer nsite-clay runtime is available for this page.",
       [
         ["See what changed", (bar) => { bar.remove(); this.promptFor(plan); }],

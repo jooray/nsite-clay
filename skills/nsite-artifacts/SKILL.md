@@ -4,7 +4,7 @@ description: Publish a small web page for the user and get a link to send them, 
 license: MIT-0
 compatibility: Needs Node.js 18 or newer, outbound network access (HTTPS and WebSocket), and a state directory that survives between sessions.
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
   homepage: https://nsite-clay.cypherpunk.today/
 ---
 
@@ -234,6 +234,17 @@ What the file must be:
 - Do not add `nc:owner`, `nc:relays` or `nc:servers`, and do not link
   `/nsite-clay.js`. The script adds them.
 
+**Give people something to change.** An edit link opens the page for the person, but
+they can only change text marked `editable`, form fields, and whatever your own
+script draws for that. A report with none of those cannot be edited at all; it can
+be commented on (the Comments button below), which is right for a draft to review.
+If they should change the words themselves, mark them: `editable="single-line"` on
+a heading or a row, `editable` on a container of paragraphs. `create` and
+`update` put a `warnings` list in their answer when a page has nothing to edit,
+and for other things you should know. Read it every time and act on it, or tell
+the user what you could not fix. Do not promise the user that they can "comment
+directly" or "edit directly" on a page until you have checked that they can.
+
 **State lives in the page's markup.** There is no server and no database. What
 is in the document when it saves is what the next person sees and what you read
 back. So:
@@ -319,6 +330,15 @@ create a page with an expiry, and tell the user you did:
 - Only if the user asked to be told about changes: a job that runs
   `artifact status` and reports to the user when its `changed` list is not
   empty. Remove it when the page is deleted.
+
+## A page that runs an older version of the tool
+
+Pages made before a new version of this skill do not get its newer abilities until
+they are moved onto the new runtime. After you update the skill, run
+`artifact upgrade` once. It only changes which files the page loads; the page,
+its content and its links stay as they are. A page made by an older tool has no
+Comments button until you do. If the person tells you that a page offers an
+update or does not do what you said, run `artifact upgrade <id>` first.
 
 ## Settings
 
