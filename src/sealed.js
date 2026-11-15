@@ -59,10 +59,17 @@ const WORDS = {
     "Váš kľúč otvorí stránku v tomto prehliadači. Nikam sa neposiela.",
     "Váš klíč otevře stránku v tomto prohlížeči. Nikam se neposílá."],
   scan: ["Show a code for a signer app", "Mostrar un código para una app firmante", "Zobraziť kód pre podpisovaciu aplikáciu", "Zobrazit kód pro podepisovací aplikaci"],
+  openSignerBtn: ["Open your signer app", "Abrir su app firmante", "Otvoriť podpisovaciu aplikáciu", "Otevřít podepisovací aplikaci"],
+  showQr: ["Show QR code", "Mostrar código QR", "Zobraziť QR kód", "Zobrazit QR kód"],
+  hideQr: ["Hide QR code", "Ocultar código QR", "Skryť QR kód", "Skrýt QR kód"],
+  qrHint: ["Scan this with a signer app on another device.", "Escanéelo con una app firmante en otro dispositivo.",
+    "Naskenujte ho podpisovacou aplikáciou na inom zariadení.", "Naskenujte ho podepisovací aplikací na jiném zařízení."],
+  backFromApp: ["Approved, but nothing happened? Try again.", "¿Aprobó y no ocurre nada? Inténtelo de nuevo.",
+    "Schválili ste a nič sa nedeje? Skúste znova.", "Schválili jste a nic se neděje? Zkuste to znovu."],
   openSigner: ["Open in a signer app on this device", "Abrir en una app firmante en este dispositivo", "Otvoriť v podpisovacej aplikácii na tomto zariadení", "Otevřít v podepisovací aplikaci na tomto zařízení"],
   waiting: ["Waiting for the signer…", "Esperando al firmante…", "Čaká sa na podpisovaciu aplikáciu…", "Čeká se na podepisovací aplikaci…"],
   retry: ["Show a new code", "Mostrar un código nuevo", "Zobraziť nový kód", "Zobrazit nový kód"],
-  pasteKey: ["Or paste your key", "O pegue su clave", "Alebo vložte svoj kľúč", "Nebo vložte svůj klíč"],
+  pasteKey: ["Or paste a key", "O pegue una clave", "Alebo vložiť kľúč", "Nebo vložit klíč"],
   password: ["Password for the encrypted key", "Contraseña de la clave cifrada", "Heslo k zašifrovanému kľúču", "Heslo k zašifrovanému klíči"],
   useKey: ["Open the page", "Abrir la página", "Otvoriť stránku", "Otevřít stránku"],
   needKey: ["Enter a key, or use a signer app", "Introduzca una clave o use una app firmante", "Zadajte kľúč alebo použite podpisovaciu aplikáciu", "Zadejte klíč nebo použijte podepisovací aplikaci"],
@@ -306,38 +313,67 @@ export class Sealed {
     await modal({
       doc, title: this.say("signInTitle"), hint: this.say("signInHint"), submitLabel: this.say("useKey"),
       build: (body, h) => {
-        const scan = doc.createElement("button");
-        scan.type = "button"; scan.textContent = this.say("scan");
-        scan.style.cssText = "width:100%;margin-bottom:.4rem";
+        const coarse = !!doc.defaultView.matchMedia?.("(pointer: coarse)").matches;
+        // The signer app is the way in for nearly everybody, so it is the first thing
+        // on the dialog and it is already waiting: the code behind the button is made
+        // when the dialog opens, which is what lets one tap open the app.
+        const open = doc.createElement("a");
+        open.setAttribute("role", "button");
+        open.textContent = this.say("openSignerBtn");
+        open.style.cssText = "display:flex;align-items:center;justify-content:center;min-height:3rem;width:100%;margin:.2rem 0 .6rem;" +
+          "border-radius:var(--nc-radius-sm,8px);background:var(--nc-accent,#6f5ad1);color:var(--nc-accent-ink,#fff);font-weight:700;" +
+          "text-decoration:none;font-size:1.05rem;box-sizing:border-box";
+        const toggle = doc.createElement("button");
+        toggle.type = "button"; toggle.style.cssText = "width:100%;margin:0 0 .4rem";
         const box = doc.createElement("div");
-        const link = doc.createElement("p");
-        link.style.cssText = "text-align:center;margin:.2rem 0 0";
-        const a = doc.createElement("a");
-        link.append(a);
+        box.style.display = coarse ? "none" : "block";
+        const qrNote = doc.createElement("p");
+        qrNote.className = "nc-hint"; qrNote.style.cssText = "text-align:center;margin:0 0 .4rem"; qrNote.textContent = this.say("qrHint");
+        const qrHold = doc.createElement("div");
+        box.append(qrHold, qrNote);
         const again = doc.createElement("button");
-        again.type = "button"; again.textContent = this.say("retry"); again.hidden = true;
-        again.style.cssText = "display:block;margin:.5rem auto 0";
+        again.type = "button"; again.textContent = this.say("retry");
+        again.style.cssText = "display:none;margin:.5rem auto 0";
+        // Back from the app, the tab may have been put to sleep while the answer came
+        // and went. This asks for a new code and a new wait without leaving the dialog.
+        const back = doc.createElement("button");
+        back.type = "button"; back.textContent = this.say("backFromApp");
+        back.style.cssText = "display:none;width:100%;margin:.2rem 0 .4rem";
+        const showQr = (on) => { box.style.display = on ? "block" : "none"; toggle.textContent = this.say(on ? "hideQr" : "showQr"); };
+        toggle.onclick = () => showQr(box.style.display === "none");
+        showQr(!coarse);
         // Each try is a new one-time code: the last one is spent whether or not
         // its answer was seen.
         const start = () => {
           attempt?.cancel?.();
           const { uri, ready, cancel } = nc.connectRemote();
-          attempt = { cancel, done: false };
+          attempt = { cancel, done: false, at: Date.now() };
           const mine = attempt;
-          box.replaceChildren(qrElement(uri, { size: 300 }));
-          a.href = uri; a.textContent = this.say("openSigner");
-          again.hidden = true;
+          qrHold.replaceChildren(qrElement(uri, { size: 300 }));
+          open.href = uri;
+          again.style.display = "none"; back.style.display = "none";
           h.status(this.say("waiting"));
           ready.then(() => { mine.done = true; h.close("done"); }, (e) => {
             if (mine !== attempt) return;
-            mine.done = true; h.status(e?.message || String(e), true); again.hidden = false;
+            mine.done = true; h.status(e?.message || String(e), true); again.style.display = "block";
           });
         };
-        scan.onclick = () => { scan.replaceWith(box, link, again); start(); };
         again.onclick = start;
-        body.append(scan);
-        body._key = field(body, { label: this.say("pasteKey"), type: "password", placeholder: "nsec1… / ncryptsec1…" });
-        body._pass = field(body, { label: this.say("password"), type: "password" });
+        back.onclick = start;
+        // Leaving for the signer and coming back: offer the way out only then.
+        doc.addEventListener("visibilitychange", () => {
+          if (doc.visibilityState === "visible" && attempt && !attempt.done && Date.now() - attempt.at > 1500) back.style.display = "block";
+        });
+        body.append(open, toggle, box, back, again);
+        start();
+        const more = doc.createElement("details");
+        more.style.cssText = "margin-top:.8rem";
+        const sum = doc.createElement("summary");
+        sum.textContent = this.say("pasteKey"); sum.style.cssText = "cursor:pointer;padding:.4rem 0";
+        more.append(sum);
+        body.append(more);
+        body._key = field(more, { label: this.say("pasteKey"), type: "password", placeholder: "nsec1… / ncryptsec1…" });
+        body._pass = field(more, { label: this.say("password"), type: "password" });
         body._pass.parentElement.hidden = true;
         body._key.addEventListener("input", () => {
           body._pass.parentElement.hidden = !body._key.value.trim().startsWith("ncryptsec");

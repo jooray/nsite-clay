@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.30",
+    "released": "2026-11-15",
+    "notes": [
+      "Signing in with a signer app such as Amber is now the first thing you see and one tap opens the app. The code you can scan is behind a button, and it is now readable on a dark page, where before it could not be seen at all. If your phone put the page to sleep while you were in the app, the page now reconnects at once and picks up your approval.",
+      "The start page now opens with the signer app as the first way to sign in, and the pictures in the guide are a quarter of their old size, so the guide opens much faster on a phone."
+    ]
+  },
+  {
     "version": "0.3.29",
     "released": "2026-11-15",
     "notes": [

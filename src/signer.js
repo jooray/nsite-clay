@@ -1,10 +1,52 @@
 // Signer abstraction: NIP-07 extension, NIP-46 remote signer (Amber, nsec.app),
 // or a raw key for local demos. Every signer exposes the same two members the
 // rest of the runtime needs: `pubkey` and `sign(template)`.
-import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from "nostr-tools";
+import { SimplePool, finalizeEvent, generateSecretKey, getPublicKey, nip19 } from "nostr-tools";
 import * as nip49 from "nostr-tools/nip49";
 import { v2 as nip44 } from "nostr-tools/nip44";
 import { BunkerSigner, createAccount, createNostrConnectURI, parseBunkerInput } from "nostr-tools/nip46";
+
+// The relays a signer talks over. A phone sends the browser to the background the
+// moment the signer app opens, and what a background tab does to an open socket
+// differs by browser and by minute: it may keep it, or drop it without a word.
+// The answer from the app (kind 24133) is ephemeral: a relay hands it to whoever
+// is connected at that moment and keeps nothing, so a socket that is down when
+// the person approves loses it for good. The library reconnects, but only after
+// ten seconds, which is longer than most people take in the app. So the sockets
+// here come back within a fraction of a second, and at once when the page is
+// visible again, online again or shown again, which is when an answer that was
+// missed has to be asked for.
+class SignerPool extends SimplePool {
+  constructor() {
+    super({ enablePing: true, enableReconnect: true });
+    this._wake = () => { if (typeof document === "undefined" || document.visibilityState !== "hidden") this.wake(); };
+    if (typeof window !== "undefined") {
+      for (const e of ["online", "pageshow", "focus"]) window.addEventListener(e, this._wake);
+      document.addEventListener("visibilitychange", this._wake);
+    }
+  }
+  async ensureRelay(url, params) {
+    const relay = await super.ensureRelay(url, params);
+    relay.resubscribeBackoff = [300, 600, 1200, 2400, 4000];
+    return relay;
+  }
+  /** Any relay that is down is reconnected now, not when its timer comes round. */
+  wake() {
+    for (const relay of this.relays.values()) {
+      if (relay._connected) continue;
+      clearTimeout(relay.reconnectTimeoutHandle);
+      relay.connect().catch(() => {});
+    }
+  }
+  close(relays) {
+    if (typeof window !== "undefined") {
+      for (const e of ["online", "pageshow", "focus"]) window.removeEventListener(e, this._wake);
+      document.removeEventListener("visibilitychange", this._wake);
+    }
+    return super.close(relays);
+  }
+}
+const signerPool = () => new SignerPool();
 
 // Ask only for what the runtime actually signs. Every entry costs characters in
 // the connect URI and therefore modules in the QR code, so this is the list of
@@ -143,7 +185,7 @@ export class Nip46Signer {
     const sec = clientSecret || generateSecretKey();
     // fromBunker, not the constructor: the constructor's second argument is
     // options, so the bunker pointer would never be set.
-    const bunker = BunkerSigner.fromBunker(sec, parsed);
+    const bunker = BunkerSigner.fromBunker(sec, parsed, { pool: signerPool() });
     // Ask for everything at pairing, including the decryption this needs to read
     // the owner's own AI key back off their relays. nostr-tools' connect() sends
     // an empty permission list, so the signer grants nothing and prompts again
@@ -193,7 +235,7 @@ export class Nip46Signer {
       // one-time secret; it then pins that event.pubkey as the remote signer.
       // The abort signal is the fourth argument, in place of the default five
       // minute deadline.
-      const bunker = await BunkerSigner.fromURI(clientSecret, uri, {}, abort.signal);
+      const bunker = await BunkerSigner.fromURI(clientSecret, uri, { pool: signerPool() }, abort.signal);
       const signer = new Nip46Signer(bunker, clientSecret);
       // Mandatory second phase: event.pubkey is a routing key, not an identity.
       signer.pubkey = await bunker.getPublicKey();
@@ -227,7 +269,7 @@ export class Nip46Signer {
       throw new Error("Not a remembered signer");
     }
     const sec = hexToBytes(client);
-    const bunker = BunkerSigner.fromBunker(sec, { pubkey: remote, relays, secret: null });
+    const bunker = BunkerSigner.fromBunker(sec, { pubkey: remote, relays, secret: null }, { pool: signerPool() });
     const signer = new Nip46Signer(bunker, sec);
     try { signer.pubkey = await deadline(bunker.getPublicKey(), timeout); }
     catch (e) { await signer.close(); throw e; }

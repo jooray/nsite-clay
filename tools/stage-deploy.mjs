@@ -179,17 +179,35 @@ try {
 } catch { /* no walkthrough has been run yet */ }
 
 if (shots) {
-  try {
-    const size = (d = DEST) => readdirSync(d).reduce((n, f) => {
-      const p = join(d, f);
-      return n + (statSync(p).isDirectory() ? size(p) : statSync(p).size);
-    }, 0);
-    const before = size();
-    execFileSync("picopt", ["-q", "-r", DEST], { stdio: "ignore" });
-    const saved = before - size();
-    console.log(`staged ${shots} guide screenshot${shots === 1 ? "" : "s"}` +
-      (saved > 0 ? `, ${(saved / 1024).toFixed(0)} kB smaller after packing` : ""));
-  } catch {
-    console.log(`staged ${shots} guide screenshots, unoptimised (picopt not found)`);
+  // Screenshots of an interface are flat colour, so reducing each to a palette of
+  // at most 256 colours costs nothing a reader can see and takes most of the
+  // bytes away: 23 MB of pictures became about a quarter of that. pngquant
+  // does it, oxipng packs what is left, and either one missing is not an error.
+  const have = (cmd) => { try { execFileSync(cmd, ["--version"], { stdio: "ignore" }); return true; } catch { return false; } };
+  const size = (d = DEST) => readdirSync(d).reduce((n, f) => {
+    const p = join(d, f);
+    return n + (statSync(p).isDirectory() ? size(p) : statSync(p).size);
+  }, 0);
+  const pngs = (d = DEST) => readdirSync(d).flatMap((f) => {
+    const p = join(d, f);
+    return statSync(p).isDirectory() ? pngs(p) : f.endsWith(".png") ? [p] : [];
+  });
+  const before = size();
+  const done = [];
+  if (have("pngquant")) {
+    for (const f of pngs()) {
+      try { execFileSync("pngquant", ["--quality=65-90", "--speed", "1", "--strip", "--force", "--output", f, f], { stdio: "ignore" }); }
+      catch { /* pngquant exits non-zero when it cannot reach the quality: the file is left as it was */ }
+    }
+    done.push("quantised");
   }
+  if (have("oxipng")) {
+    try { execFileSync("oxipng", ["-o", "4", "-q", "--strip", "safe", "-r", DEST], { stdio: "ignore" }); done.push("packed"); } catch { /* optional */ }
+  } else if (have("picopt")) {
+    try { execFileSync("picopt", ["-q", "-r", DEST], { stdio: "ignore" }); done.push("packed"); } catch { /* optional */ }
+  }
+  const saved = before - size();
+  console.log(`staged ${shots} guide screenshot${shots === 1 ? "" : "s"}` +
+    (done.length ? `, ${done.join(" and ")}: ${(saved / 1048576).toFixed(1)} MB smaller (now ${(size() / 1048576).toFixed(1)} MB)`
+      : ", unoptimised (install pngquant and oxipng to shrink them)"));
 }

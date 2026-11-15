@@ -149,9 +149,16 @@
   #signin-choose[data-mode="have"] .group-new { display: none; }
   button.textlink { all: unset; cursor: pointer; color: var(--purple); text-decoration: underline; text-underline-offset: .2em; font-weight: 700; }
   button.textlink:focus-visible { outline: 3px solid var(--purple-2); outline-offset: 3px; }
-  #qrbox { text-align: center; margin: 1rem 0 0; }
-  #qrbox svg { width: min(300px, 100%); height: auto; background: #fff; padding: .6rem; border: 2px solid var(--ink); }
-  #qrbox p { margin: .8rem 0 0; }
+  .way-first { border-color: var(--purple); background: var(--purple-wash); }
+  .app-status { margin: 0 0 1rem; }
+  .app-actions { display: flex; gap: .7rem; flex-wrap: wrap; }
+  .app-actions .btn { flex: 1 1 14rem; justify-content: center; text-align: center; }
+  #app-retry-row { margin-top: 1rem; }
+  /* The code is drawn on its own white tile (the runtime makes it), so it reads
+     on the dark theme too; this only gives it a frame. */
+  #qrbox { text-align: center; margin: 1.1rem 0 0; }
+  #qrbox > div { border: 2px solid var(--ink); border-radius: 3px !important; }
+  #qrbox p { margin: .6rem 0 0; }
 
   /* the key, printed on a ticket nobody can print again */
   .ticket { position: relative; margin: 1.6rem 0 1rem; padding: 1.4rem 1.3rem 1.3rem; background: var(--purple-wash); border: 2px dashed var(--purple); }
@@ -297,13 +304,13 @@
 
           <div class="group group-have">
             <h3 data-t="haveTitle">I already have a key</h3>
+            <button type="button" class="way way-first" id="way-remote">
+              <b data-t="wayApp">Signer app</b>
+              <small data-t="wayAppSub">Amber, nsec.app or another signer app. One tap opens it on your phone, and your key never leaves it.</small>
+            </button>
             <button type="button" class="way" id="way-nip07" hidden>
               <b data-t="wayExt">Browser extension</b>
               <small data-t="wayExtSub">Alby, nos2x and the rest. Nothing to type.</small>
-            </button>
-            <button type="button" class="way" id="way-remote">
-              <b data-t="wayApp">Signer app</b>
-              <small data-t="wayAppSub">Amber or another signer app. Scan a code with your phone and your key never leaves it.</small>
             </button>
             <button type="button" class="way" id="way-key">
               <b data-t="wayKey">Paste a key</b>
@@ -323,9 +330,17 @@
         </div>
 
         <div id="panel-app" hidden>
-          <h2 tabindex="-1" data-t="panelApp">Sign in with a signer app</h2>
-          <p class="sub" data-t="appSub">Open Amber, or another signer app, on your phone and scan this code. Your key stays on the phone.</p>
-          <div id="qrbox"></div>
+          <h2 tabindex="-1" data-t="panelApp">Waiting for your signer app…</h2>
+          <p class="sub" data-t="appSub">Approve the sign-in in your signer app, for example Amber, then come back to this page. Your key stays in the app.</p>
+          <p class="note app-status" id="app-status" role="status"></p>
+          <div class="app-actions">
+            <a class="btn primary" id="app-open" role="button" data-t="qrOpen">Open the app again</a>
+            <button type="button" class="btn" id="app-qr-toggle" aria-controls="qrbox" data-t="qrShow">Show QR code</button>
+          </div>
+          <div id="qrbox" hidden></div>
+          <div id="app-retry-row" hidden>
+            <button type="button" class="btn primary" id="app-retry" data-t="qrRetry">Try again</button>
+          </div>
           <div class="moves"><button type="button" class="btn back-to-choose" data-t="signinBack">Choose another way</button></div>
         </div>
 
@@ -600,8 +615,9 @@
       aiOr: "Empieza por una página ya hecha",
       aiPlaceholder: "Quiero una web para mi cafetería. Tema marrón, servimos flat white de especialidad y hacemos encuentros de Nostr los martes a las 20:00. La dirección es 123 Satoshi Way, 12345 Asunción, Paraguay. Explica que trabajamos café de especialidad. Una sola página, sencilla, con tres fotos. Moderna y con estilo",
       needKey: "Primero pega una clave.", passShort: "Usa al menos ocho caracteres.", newPassDone: "Guardado", copied: "Copiado",
-      qrOpen: "Abrir en tu app de firma", qrWait: "Esperando a la app de firma. Deja esta página abierta mientras lo apruebas.",
-      qrRetry: "Mostrar un código nuevo", qrMissed: "No llegó ninguna respuesta. Muestra un código nuevo e inténtalo otra vez.",
+      qrOpen: "Abrir la app otra vez", qrWait: "Esperando a tu app de firma. Deja esta página abierta mientras lo apruebas.",
+      qrRetry: "Intentarlo de nuevo", qrMissed: "Todavía no ha llegado nada. Si lo aprobaste en la app, inténtalo de nuevo con un código nuevo.",
+      qrShow: "Mostrar código QR", qrHide: "Ocultar código QR", qrScan: "Escanéalo con la app de firma de tu teléfono.",
       tplFailed: "No se pudo cargar la lista de plantillas: ", pathPreview: "Tu página estará en ",
       occTitle: "Ya hay una página aquí", occOtherTitle: "Esta clave ya tiene un sitio",
       occSub: "Al publicar reemplazarás lo que hay en esta ruta. Todo lo demás que esta clave haya publicado se queda donde está, y la versión anterior queda en el historial de la página.",
@@ -620,13 +636,13 @@
       signinTitle: "¿Quién publica?",
       signinSub: "Un sitio pertenece a una clave, no a una cuenta. La clave que entre aquí será la única que pueda cambiar la página después.",
       wayExt: "Extensión del navegador", wayExtSub: "Alby, nos2x y las demás. No hay que escribir nada.",
-      wayApp: "App de firma", wayAppSub: "Amber u otra app de firma. Escanea un código con el teléfono y tu clave no sale de él.",
+      wayApp: "App de firma", wayAppSub: "Amber, nsec.app u otra app de firma. Un toque la abre en tu teléfono y tu clave no sale de ella.",
       wayKey: "Pegar una clave", wayKeySub: "Un nsec, un ncryptsec cifrado o una dirección bunker://.",
       wayNew: "Todavía no tengo clave", wayNewSub: "Crea una aquí en un minuto. Es solo tuya, así que la guardarás antes de seguir.",
       navMain: "Principal", themeSwitch: "Cambiar entre claro y oscuro", stepsLabel: "Pasos",
       haveTitle: "Ya tengo una clave", nothingTitle: "Todavía no tengo nada", signinBack: "Elegir otra forma",
-      panelKey: "Pega tu clave", panelApp: "Entra con una app de firma",
-      appSub: "Abre Amber, u otra app de firma, en tu teléfono y escanea este código. Tu clave se queda en el teléfono.",
+      panelKey: "Pega tu clave", panelApp: "Esperando a tu app de firma…",
+      appSub: "Aprueba el acceso en tu app de firma, por ejemplo Amber, y vuelve a esta página. Tu clave se queda en la app.",
       newTitle: "Crea tu clave", newStamp: "Única copia",
       newSafe: "Esta es la única vez que la verás. Guárdala en un gestor de contraseñas o guarda el archivo donde lo vuelvas a encontrar. Si se pierde, nadie puede recuperarla ni restablecerla por ti.",
       signingIn: "Entrando. Si tu app de firma lo pide, apruébalo allí.",
@@ -712,8 +728,9 @@
       aiOr: "Začni hotovou stránkou",
       aiPlaceholder: "Chcem stránku pre svoju kaviareň. Hnedá téma, robíme hipsterske flat white a každý utorok o 20:00 máme Nostr stretnutie. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguaj. Vysvetli, že robíme špeciálnu kávu. Jednoduchá jednostránka s troma fotkami. Moderné a svíže",
       needKey: "Najprv vlož kľúč.", passShort: "Použi aspoň osem znakov.", newPassDone: "Uložené", copied: "Skopírované",
-      qrOpen: "Otvoriť v podpisovej aplikácii", qrWait: "Čaká sa na podpisovú aplikáciu. Nechaj túto stránku otvorenú, kým to schváliš.",
-      qrRetry: "Zobraziť nový kód", qrMissed: "Neprišla žiadna odpoveď. Zobraz nový kód a skús to znova.",
+      qrOpen: "Otvoriť aplikáciu znova", qrWait: "Čaká sa na tvoju podpisovú aplikáciu. Nechaj túto stránku otvorenú, kým to schváliš.",
+      qrRetry: "Skúsiť znova", qrMissed: "Zatiaľ nič nedorazilo. Ak si to v aplikácii schválil, skús to znova s novým kódom.",
+      qrShow: "Zobraziť QR kód", qrHide: "Skryť QR kód", qrScan: "Naskenuj ho podpisovou aplikáciou v telefóne.",
       tplFailed: "Zoznam šablón sa nepodarilo načítať: ", pathPreview: "Tvoja stránka bude na ",
       occTitle: "Tu už stránka je", occOtherTitle: "Tento kľúč už má stránku",
       occSub: "Zverejnením nahradíš to, čo je na tejto ceste. Všetko ostatné, čo tento kľúč zverejnil, zostane tam, kde je, a stará verzia ostane v histórii stránky.",
@@ -732,13 +749,13 @@
       signinTitle: "Kto zverejňuje?",
       signinSub: "Stránka patrí kľúču, nie účtu. Kľúč, ktorý sa tu prihlási, bude jediný, ktorý ju potom vie zmeniť.",
       wayExt: "Rozšírenie prehliadača", wayExtSub: "Alby, nos2x a ďalšie. Nič netreba písať.",
-      wayApp: "Podpisová aplikácia", wayAppSub: "Amber alebo iná podpisová aplikácia. Naskenuj kód telefónom a kľúč ho neopustí.",
+      wayApp: "Podpisová aplikácia", wayAppSub: "Amber, nsec.app alebo iná podpisová aplikácia. Jedno ťuknutie ju otvorí v telefóne a kľúč ju neopustí.",
       wayKey: "Vložiť kľúč", wayKeySub: "nsec, zašifrovaný ncryptsec alebo adresa bunker://.",
       wayNew: "Kľúč zatiaľ nemám", wayNewSub: "Vyrob si ho tu za chvíľu. Je len tvoj, preto si ho uložíš skôr, než pôjdeš ďalej.",
       navMain: "Hlavná navigácia", themeSwitch: "Prepnúť svetlý a tmavý režim", stepsLabel: "Kroky",
       haveTitle: "Kľúč už mám", nothingTitle: "Zatiaľ nemám nič", signinBack: "Vybrať iný spôsob",
-      panelKey: "Vlož svoj kľúč", panelApp: "Prihlás sa podpisovou aplikáciou",
-      appSub: "Otvor v telefóne Amber alebo inú podpisovú aplikáciu a naskenuj tento kód. Kľúč zostane v telefóne.",
+      panelKey: "Vlož svoj kľúč", panelApp: "Čaká sa na tvoju podpisovú aplikáciu…",
+      appSub: "Schváľ prihlásenie v podpisovej aplikácii, napríklad v Ambere, a vráť sa na túto stránku. Kľúč zostane v aplikácii.",
       newTitle: "Vyrob si kľúč", newStamp: "Jediná kópia",
       newSafe: "Vidíš ho len teraz. Ulož ho do správcu hesiel alebo ulož súbor tam, kde ho znova nájdeš. Ak sa stratí, nikto ho nevie obnoviť ani za teba vynulovať.",
       signingIn: "Prihlasuje sa. Ak o to podpisová aplikácia požiada, schváľ to tam.",
@@ -824,8 +841,9 @@
       aiOr: "Začni hotovou stránkou",
       aiPlaceholder: "Chci stránku pro svoji kavárnu. Hnědé téma, děláme hipsterská flat white a každé úterý ve 20:00 máme Nostr setkání. Adresa je 123 Satoshi Way, 12345 Asunción, Paraguay. Vysvětli, že děláme výběrovou kávu. Jednoduchá jednostránka se třemi fotkami. Moderní a svěží",
       needKey: "Nejdřív vlož klíč.", passShort: "Použij aspoň osm znaků.", newPassDone: "Uloženo", copied: "Zkopírováno",
-      qrOpen: "Otevřít v podpisové aplikaci", qrWait: "Čeká se na podpisovou aplikaci. Nech tuhle stránku otevřenou, dokud to schválíš.",
-      qrRetry: "Zobrazit nový kód", qrMissed: "Nepřišla žádná odpověď. Zobraz nový kód a zkus to znovu.",
+      qrOpen: "Otevřít aplikaci znovu", qrWait: "Čeká se na tvou podpisovou aplikaci. Nech tuhle stránku otevřenou, dokud to schválíš.",
+      qrRetry: "Zkusit znovu", qrMissed: "Zatím nic nedorazilo. Pokud jsi to v aplikaci schválil, zkus to znovu s novým kódem.",
+      qrShow: "Zobrazit QR kód", qrHide: "Skrýt QR kód", qrScan: "Naskenuj ho podpisovou aplikací v telefonu.",
       tplFailed: "Seznam šablon se nepodařilo načíst: ", pathPreview: "Tvoje stránka bude na ",
       occTitle: "Tady už stránka je", occOtherTitle: "Tenhle klíč už má stránku",
       occSub: "Zveřejněním nahradíš to, co je na téhle cestě. Všechno ostatní, co tenhle klíč zveřejnil, zůstane tam, kde je, a stará verze zůstane v historii stránky.",
@@ -844,13 +862,13 @@
       signinTitle: "Kdo zveřejňuje?",
       signinSub: "Stránka patří klíči, ne účtu. Klíč, který se tu přihlásí, bude jediný, který ji pak umí změnit.",
       wayExt: "Rozšíření prohlížeče", wayExtSub: "Alby, nos2x a další. Nic se nemusí psát.",
-      wayApp: "Podpisová aplikace", wayAppSub: "Amber nebo jiná podpisová aplikace. Naskenuj kód telefonem a klíč ho neopustí.",
+      wayApp: "Podpisová aplikace", wayAppSub: "Amber, nsec.app nebo jiná podpisová aplikace. Jedno ťuknutí ji otevře v telefonu a klíč ji neopustí.",
       wayKey: "Vložit klíč", wayKeySub: "nsec, zašifrovaný ncryptsec nebo adresa bunker://.",
       wayNew: "Klíč zatím nemám", wayNewSub: "Vyrob si ho tady za chvíli. Je jen tvůj, takže si ho uložíš, než půjdeš dál.",
       navMain: "Hlavní navigace", themeSwitch: "Přepnout světlý a tmavý režim", stepsLabel: "Kroky",
       haveTitle: "Klíč už mám", nothingTitle: "Zatím nemám nic", signinBack: "Vybrat jiný způsob",
-      panelKey: "Vlož svůj klíč", panelApp: "Přihlas se podpisovou aplikací",
-      appSub: "Otevři v telefonu Amber nebo jinou podpisovou aplikaci a naskenuj tenhle kód. Klíč zůstane v telefonu.",
+      panelKey: "Vlož svůj klíč", panelApp: "Čeká se na tvou podpisovou aplikaci…",
+      appSub: "Schval přihlášení v podpisové aplikaci, například v Amberu, a vrať se na tuhle stránku. Klíč zůstane v aplikaci.",
       newTitle: "Vyrob si klíč", newStamp: "Jediná kopie",
       newSafe: "Vidíš ho jen teď. Ulož ho do správce hesel nebo ulož soubor tam, kde ho znovu najdeš. Pokud se ztratí, nikdo ho neumí obnovit ani za tebe vynulovat.",
       signingIn: "Přihlašuje se. Pokud o to podpisová aplikace požádá, schval to tam.",
@@ -1061,58 +1079,64 @@
   // The signer app. connectRemote() mints the URI and hands back a promise that
   // settles when the signer answers; the code is drawn here rather than fetched,
   // because whoever renders it could answer the connection instead of you.
+  // The first way in, and one tap. The attempt is made when the person taps it,
+  // not before, because one nobody uses keeps relay subscriptions open. On a
+  // phone the same tap opens the app; on a computer that link opens nothing, so
+  // the code is shown right away. The code is drawn here rather than fetched,
+  // because whoever renders it could answer the connection instead of you.
+  const WAIT_MS = 3000;
+  const onPhone = () => !!(window.matchMedia && matchMedia("(pointer: coarse)").matches);
+  function showQr(on) {
+    $("#qrbox").hidden = !on;
+    $("#app-qr-toggle").textContent = on ? say("qrHide", "Hide QR code") : say("qrShow", "Show QR code");
+    $("#app-qr-toggle").setAttribute("aria-expanded", String(on));
+  }
+  function startApp(openIt) {
+    attempt?.cancel?.();
+    const { uri, ready, cancel } = nc.connectRemote();
+    const mine = attempt = { cancel, done: false, at: Date.now() };
+    const status = $("#app-status");
+    const hint = document.createElement("p");
+    hint.className = "note";
+    hint.textContent = say("qrScan", "Scan this with the signer app on your phone.");
+    $("#qrbox").replaceChildren(nc.qrElement(uri, { size: 300 }), hint);
+    $("#app-open").href = uri;
+    $("#app-retry-row").hidden = true;
+    status.classList.remove("bad");
+    status.textContent = say("qrWait", "Waiting for your signer app. Keep this page open while you approve it.");
+    ready.then(
+      () => { mine.done = true; if (mine === attempt) signedIn(); },
+      (e) => {
+        if (mine !== attempt) return;
+        mine.done = true;
+        status.textContent = e?.message || String(e);
+        status.classList.add("bad");
+        $("#app-retry-row").hidden = false;
+      },
+    );
+    // Still inside the tap that asked for the attempt: this is what lets one tap open the app.
+    if (openIt) $("#app-open").click();
+  }
+  // Opening the app puts this tab in the background, and its socket can sleep.
+  // A NIP-46 answer is an ephemeral event, so one missed while nobody was
+  // listening is gone and cannot be fetched later: say so and offer a new code,
+  // which is a new one-time secret.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || !attempt || attempt.done) return;
+    if (Date.now() - attempt.at < WAIT_MS) return;
+    const status = $("#app-status");
+    status.textContent = say("qrMissed", "Nothing came through yet. If you approved it in the app, try again with a new code.");
+    status.classList.add("bad");
+    $("#app-retry-row").hidden = false;
+  });
   $("#way-remote").onclick = () => {
     panel("app");
-    const box = $("#qrbox");
-
-    const start = () => {
-      attempt?.cancel?.();
-      const { uri, ready, cancel } = nc.connectRemote();
-      attempt = { cancel, done: false };
-      const mine = attempt;
-      box.replaceChildren(nc.qrElement(uri, { size: 300 }));
-
-      const open = document.createElement("p");
-      const a = document.createElement("a");
-      a.href = uri;
-      a.textContent = say("qrOpen", "Open in your signer app");
-      open.appendChild(a);
-
-      const status = document.createElement("p");
-      status.className = "note";
-      status.setAttribute("role", "status");
-      status.textContent = say("qrWait", "Waiting for the signer. Keep this page open while you approve it.");
-
-      const again = document.createElement("button");
-      again.type = "button";
-      again.className = "btn";
-      again.textContent = say("qrRetry", "Show a new code");
-      again.hidden = true;
-      again.onclick = start;
-
-      box.append(open, status, again);
-      ready.then(
-        () => { mine.done = true; signedIn(); },
-        (e) => {
-          if (mine !== attempt) return;
-          mine.done = true;
-          status.textContent = e?.message || String(e);
-          status.classList.add("bad");
-          again.hidden = false;
-        },
-      );
-      // Tapping the link foregrounds the signer, which can suspend this tab's
-      // socket. A NIP-46 answer is an ephemeral event, so one missed while we
-      // were not listening is gone: say so and offer a fresh code.
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState !== "visible" || mine !== attempt || mine.done) return;
-        status.textContent = say("qrMissed", "No answer came through. Show a new code and try again.");
-        status.classList.add("bad");
-        again.hidden = false;
-      });
-    };
-    start();
+    const phone = onPhone();
+    showQr(!phone);
+    startApp(phone);
   };
+  $("#app-qr-toggle").onclick = () => showQr($("#qrbox").hidden);
+  $("#app-retry").onclick = () => startApp(onPhone());
 
   // A key for somebody who has none. Generated here, shown once, never stored.
   let fresh = null;

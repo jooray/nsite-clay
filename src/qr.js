@@ -32,9 +32,16 @@ export function qrSvg(text, { size = 220, margin = 2, dark = "#000", light = "#f
 
 // The same thing as an element, ready to append.
 export function qrElement(text, opts = {}, doc = document) {
+  // Still an <svg>, as callers have always had it. The white is the element's own
+  // background with room around it, not the <rect> inside the drawing: a dialog
+  // that resets width and height on everything inside it (nsite-clay's own does)
+  // reduces that rect to nothing, and black modules on a dark panel are a code
+  // nobody can scan. color-scheme and forced-color-adjust keep a browser's dark
+  // mode from inverting it for the same reason.
   const wrap = doc.createElement("div");
   wrap.innerHTML = qrSvg(text, opts);
   const svg = wrap.firstElementChild;
-  svg.style.cssText = `display:block;margin:.8rem auto;border-radius:8px;max-width:100%;height:auto`;
+  svg.style.cssText = "display:block;margin:.8rem auto;max-width:100%;height:auto;box-sizing:border-box;padding:12px;" +
+    "background:#fff;border-radius:12px;color-scheme:only light;forced-color-adjust:none";
   return svg;
 }
