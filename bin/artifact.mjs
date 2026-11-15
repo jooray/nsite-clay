@@ -281,8 +281,12 @@ const RUNTIME_FILES = { "/nsite-clay.js": "text/javascript", "/nsite-clay-source
 // The page links its runtime from its own root, so the artifact's manifest has
 // to name those files. Their blobs are the same for every artifact, so after
 // the first one this uploads nothing: the servers already hold them.
-async function runtimeFiles(cfg, pool, html, sealed) {
-  const wanted = Object.keys(RUNTIME_FILES).filter((p) => html.includes(p) || p === "/nsite-clay.js");
+// `also` is what the page's manifest already carries. A runtime file the page
+// does not name in its markup (the serialiser the editor loads is one) can still be
+// in its manifest from an earlier publish, and an upgrade that leaves it behind
+// leaves the page offering an update to itself.
+async function runtimeFiles(cfg, pool, html, sealed, also = []) {
+  const wanted = Object.keys(RUNTIME_FILES).filter((p) => html.includes(p) || p === "/nsite-clay.js" || also.includes(p));
   if (cfg.runtime) {
     return wanted.map((p) => {
       const file = [join(cfg.runtime, p), join(cfg.runtime, "dist", p), join(cfg.runtime, "templates", "_shared", p)].find(existsSync);
@@ -407,9 +411,9 @@ async function fetchPage(pool, a, keys) {
 
 // The runtime files a page links, on the artifact's own servers. Their blobs
 // are the same for every artifact, so after the first one this uploads nothing.
-async function putRuntime(pool, a, html, cfg, uploader) {
+async function putRuntime(pool, a, html, cfg, uploader, also = []) {
   const paths = {};
-  for (const f of await runtimeFiles(cfg, pool, html, a.sealed)) {
+  for (const f of await runtimeFiles(cfg, pool, html, a.sealed, also)) {
     const hash = f.hash || hashOf(f.bytes);
     const missing = (await Promise.all(a.servers.map(async (s) => ((await held(s, hash)) ? null : s)))).filter(Boolean);
     if (missing.length) {
@@ -1115,7 +1119,7 @@ async function upgrade(id) {
         const keys = await keysFrom({ edit: a.secret });
         const live = await fetchPage(pool, a, keys);
         const uploader = cfg.uploader ? nip19.decode(cfg.uploader).data : keys.sk;
-        const want = await putRuntime(pool, a, live.html, cfg, uploader);
+        const want = await putRuntime(pool, a, live.html, cfg, uploader, Object.keys(live.table));
         const moved = Object.keys(want).filter((p) => live.table[p] !== want[p]);
         if (!moved.length) { current.push(a.id); continue; }
         const out = await publishTable(pool, a, keys.sk, { ...live.table, ...want }, live.manifest);

@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.31",
+    "released": "2026-11-15",
+    "notes": [
+      "Pages that an AI agent publishes for you no longer offer an update to themselves right after they were updated. They kept offering a file they never use, and the offer read as a mistake."
+    ]
+  },
+  {
     "version": "0.3.30",
     "released": "2026-11-15",
     "notes": [

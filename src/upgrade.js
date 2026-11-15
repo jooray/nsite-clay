@@ -224,7 +224,11 @@ export class Upgrade {
     const want = {};
     for (const s of SHARED) if (src.paths[s.canonical]) want[s.canonical] = src.paths[s.canonical];
     const files = [];
-    for (const ref of this.refs()) {
+    // An encrypted page is saved from its live document and never loads the
+    // serialiser, so an upgrade has no reason to install it there. Offering it was
+    // the page offering an update to itself, again and again, because the file it
+    // asks for is one the page does not use and so never has.
+    for (const ref of this.refs(this.doc, { assumeSource: !this.nc.sealed.active })) {
       const want = src.paths[ref.canonical];
       if (!want) continue;                       // that key does not publish this one
       if (mine[ref.path] === want) continue;     // we already serve those bytes

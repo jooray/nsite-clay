@@ -6,7 +6,7 @@
 // Run: node test/comments.mjs
 import { chromium } from "playwright";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { localPorts } from "./local-ports.mjs";
@@ -41,6 +41,24 @@ t("and with comments off it says the edit link does nothing", /lets nobody chang
 t("a page with editable text says nothing", !(made.warnings || []).some((w) => /no editable/.test(w)));
 A("delete", plain.id);
 
+// An upgrade brings every runtime file the page's manifest has up to date, also one its
+// markup no longer names (the editor's serialiser is one). Left behind, the page offers an
+// update to itself.
+{
+  const R2 = S + "/rt2";
+  mkdirSync(R2, { recursive: true });
+  copyFileSync("dist/nsite-clay.js", R2 + "/nsite-clay.js");
+  writeFileSync(R2 + "/nsite-clay-source.js", readFileSync("dist/nsite-clay-source.js", "utf8") + "\n// an earlier build\n");
+  writeFileSync(S + "/lag.html", readFileSync(S + "/list.html", "utf8").replace("<html ", '<html nc:source="/nsite-clay-source.js" '));
+  const old = JSON.parse(execFileSync("node", ["skills/nsite-artifacts/scripts/artifact.mjs", "create", S + "/lag.html", "--edit=link", "--title=Lag", "--expires=1d"],
+    { env: { ...env, NSITE_ARTIFACTS_RUNTIME: R2 }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+  A("update", old.id, S + "/list.html");                       // the markup no longer names the file; the manifest still has it
+  const res = A("upgrade", old.id);
+  t("an upgrade also refreshes a runtime file the page's markup does not name", (res.upgraded || []).some((u) => (u.files || []).includes("/nsite-clay-source.js")), JSON.stringify(res));
+  t("and a second one finds nothing left to do", (A("upgrade", old.id).current || []).includes(old.id));
+  A("delete", old.id);
+}
+
 const browser = await chromium.launch({ channel: "chrome" });
 const ctx = await browser.newContext();
 const p = await ctx.newPage();
@@ -50,6 +68,7 @@ const saved = (pg) => pg.waitForFunction(() => nc.status === "saved" && !nc.dirt
 
 await p.goto(made.editLink); await ready(p);
 await p.waitForSelector("#nc-comments-btn");
+t("an encrypted page is not offered the serialiser it never loads", await p.evaluate(() => nc.sealed.active && nc.upgrade.refs(document, { assumeSource: !nc.sealed.active }).every((r) => r.canonical !== "/nsite-clay-source.js")));
 t("whoever can edit sees the Comments button", await p.locator("#nc-comments-btn").isVisible());
 
 // Words, selected the way a person does, and a comment on them.
