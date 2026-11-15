@@ -3,31 +3,12 @@
     "version": "0.3.32",
     "released": "2026-11-15",
     "notes": [
-      "When two people comment on a page at nearly the same moment, the second save is refused so that it cannot overwrite the first. Until now the person whose save was refused lost the comment they had typed when they reloaded. The comment is now kept in their tab, and after the reload it is put back, on the same words if they are still there, and saved by itself."
-    ]
-  },
-  {
-    "version": "0.3.31",
-    "released": "2026-11-15",
-    "notes": [
-      "Pages that an AI agent publishes for you no longer offer an update to themselves right after they were updated. They kept offering a file they never use, and the offer read as a mistake."
-    ]
-  },
-  {
-    "version": "0.3.30",
-    "released": "2026-11-15",
-    "notes": [
-      "Signing in with a signer app such as Amber is now the first thing you see and one tap opens the app. The code you can scan is behind a button, and it is now readable on a dark page, where before it could not be seen at all. If your phone put the page to sleep while you were in the app, the page now reconnects at once and picks up your approval.",
-      "The start page now opens with the signer app as the first way to sign in, and the pictures in the guide are a quarter of their old size, so the guide opens much faster on a phone.",
-      "When a page offered an update with the same version number as the one it was running, it read as a mistake. It now says it is another build of that version, which is what it is: the number is the same and the files are different."
-    ]
-  },
-  {
-    "version": "0.3.29",
-    "released": "2026-11-15",
-    "notes": [
-      "Pages that an AI agent publishes for you can now be commented on. Select some words, or pick a part of the page, press Comment and write what should be different. The agent finds your comment and where it is, makes the change, answers under it and marks it done. On a phone the Comment button sits at the bottom of the screen, out of the way of the phone's own menu.",
-      "The agent can now see exactly what changed in a page, also when you changed it yourself in the browser, so it can make the rest of the page fit."
+      "Pages that an AI agent publishes for you can now be commented on. Select some words, or pick a part of the page, press Comment and write what should be different. The agent finds your comment and where it is, makes the change, answers under it and marks it done. On a phone the Comment button sits under the selected words, out of the way of the phone's own menu.",
+      "The agent can now see exactly what changed in a page, also when you changed it yourself in the browser, so it can make the rest of the page fit.",
+      "When two people comment on a page at nearly the same moment, the second save is refused so that it cannot overwrite the first. Until now the person whose save was refused lost the comment they had typed when they reloaded. The comment is now kept in their tab, and after the reload it is put back, on the same words if they are still there, and saved by itself.",
+      "Signing in with a signer app such as Amber is now the first thing you see, and one tap opens the app. The code you can scan is behind a button, and it is now readable on a dark page, where before it could not be seen at all. If your phone put the page to sleep while you were in the app, the page now reconnects at once and picks up your approval.",
+      "A page that an agent published kept offering an update to itself, also right after it was updated. It no longer does. When an update has the same version number as the one you run, the offer now says it is another build of that version.",
+      "The pictures in the guide are a quarter of their old size, so the guide opens much faster on a phone."
     ]
   },
   {
