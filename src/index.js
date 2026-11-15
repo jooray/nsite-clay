@@ -86,6 +86,7 @@ class NsiteClay extends EventTarget {
     super();
     this.doc = doc;
     this.cfg = readConfig(doc);
+    Nip46Signer.probe(this.cfg.signerRelays).catch(() => {});
     this.pool = new SimplePool();
     this.signer = null;
     this.editable = new Editable(this);

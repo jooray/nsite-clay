@@ -223,11 +223,42 @@ export class Nip46Signer {
   // worth something, but an nsite origin is a 76 character npub hostname and it
   // pushed the QR from 73 modules to 81. The page title in `name` says who is
   // asking in fewer bytes, and a code nobody can scan says nothing at all.
+  // Which of these relays this network lets us reach, found out once at page
+  // start. Amber stops answering requests when a relay named in the URI will not
+  // connect (it waits out a ten second timeout on each, and the get_public_key
+  // that follows the approval never gets an answer), so a relay that is blocked
+  // or down on this network must not be in the URI. A relay that does not open
+  // within the time is left out; if none opens, all stay, because the probe may
+  // be what is wrong. The result is cached, so the link is ready when tapped.
+  static probe(relays, ms = 3000) {
+    const key = relays.join(",");
+    const cache = (Nip46Signer._probes ||= new Map());
+    if (cache.has(key)) return cache.get(key).promise;
+    const entry = { live: null };
+    entry.promise = Promise.all(relays.map((url) => new Promise((resolve) => {
+      let ws, done = false;
+      const finish = (ok) => { if (done) return; done = true; clearTimeout(timer); try { ws?.close(); } catch {} resolve(ok ? url : null); };
+      const timer = setTimeout(() => finish(false), ms);
+      try { ws = new WebSocket(url); ws.onopen = () => finish(true); ws.onerror = () => finish(false); }
+      catch { finish(false); }
+    }))).then((list) => { list = list.filter(Boolean); entry.live = list.length ? list : relays; return entry.live; });
+    cache.set(key, entry);
+    return entry.promise;
+  }
+
+  static liveRelays(relays) {
+    return Nip46Signer._probes?.get(relays.join(","))?.live || relays;
+  }
+
   static nostrconnect({ relays, name = "nsite-clay", url = "", perms = DEFAULT_PERMS } = {}) {
+    relays = Nip46Signer.liveRelays(relays);
     const clientSecret = generateSecretKey();
     const clientPubkey = getPublicKey(clientSecret);
     const secret = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-    const uri = createNostrConnectURI({ clientPubkey, relays, secret, perms, name, url });
+    // URLSearchParams writes a space as "+", which Amber shows literally
+    // ("Private+page"). %20 is read as a space by every signer.
+    const uri = createNostrConnectURI({ clientPubkey, relays, secret, perms, name, url })
+      .replace(/([?&]name=)([^&]*)/, (_, k, v) => k + v.replace(/\+/g, "%20"));
 
     const abort = new AbortController();
     const promise = (async () => {

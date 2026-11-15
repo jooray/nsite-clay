@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.33",
+    "released": "2026-11-16",
+    "notes": [
+      "Signing in with a signer app such as Amber could hang after you approved. If one of the places the page uses to talk to your signer cannot be reached from your network, Amber stopped answering the page and it kept saying it was waiting. The page now checks which of those places it can reach before it shows the sign-in, and only uses those.",
+      "The connection that Amber shows for a private page is now called Private page, not Private+page."
+    ]
+  },
+  {
     "version": "0.3.32",
     "released": "2026-11-15",
     "notes": [
