@@ -37,6 +37,11 @@ changes nothing for anybody's live site.
 4. `npm run site:build`, which regenerates `site/`, restages the twelve
    templates, the three translations, and `site/runtime.json` from the two files
    above.
+   This also packs the skills (`tools/pack-skills.mjs`) into `dist-skills/` and
+   copies the zips to `site/skills/`, so they go out with the deploy. A skill's
+   version is `metadata.version` in its own `SKILL.md`; bump it when the skill
+   changes. The nsite-clay skill's `references/` are copies of `site/llms.txt`
+   and `site/llms-edit.txt`, refreshed by the same command.
 5. Commit and push.
 6. **Deploy `site/`.** The command is in `CLAUDE.md.local`. The bunker signer
    is normally awake and approves unattended, so deploy as the last step of the
@@ -51,6 +56,14 @@ changes nothing for anybody's live site.
    `npm view nsite-clay version` should name the new version. Keep the `bin`
    path in `package.json` without a leading `./`: npm drops such an entry on
    publish and the package ships with no command.
+
+8. **Attach the skill zips to the GitHub release**, so the versioned files
+   exist somewhere stable:
+   `gh release create v<version> dist-skills/*-*.zip --title "v<version>" --notes-file -`
+   or, if the release already exists,
+   `gh release upload v<version> dist-skills/*-*.zip --clobber`.
+   The glob takes the versioned files only (`nsite-clay-web-builder-0.1.0.zip`), not the
+   stable-named copies, which are served from `/skills/` on the site.
 
 Then check it landed: the manifest should name `/nsite-clay.js`,
 `/nsite-clay-base.css`, `/nsite-clay-chrome.js` and `/runtime.json`, and the

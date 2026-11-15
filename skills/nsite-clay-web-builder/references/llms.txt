@@ -1,0 +1,1272 @@
+# nsite-clay
+
+> A self-editable nsite. One HTML file holds a page's markup, styling, content
+> and state, and republishes itself: the browser serialises the document, stores
+> it on Blossom, and publishes a Nostr event saying which bytes are now the page.
+> Relays hold the pointer, Blossom holds the bytes, and there is no server in
+> between.
+
+This file is the brief for an agent. If you are building someone a website with
+nsite-clay, read all of it before you start. It is long on purpose: it tells you
+what the thing is, what to ask for, which template to begin from, and what will
+go wrong. It links the documentation rather than restating it.
+
+- This brief as an installable skill, one zip file:
+  https://nsite-clay.cypherpunk.today/skills/nsite-clay-web-builder.zip
+- The guide, with screenshots, for the person you are building it for:
+  https://nsite-clay.cypherpunk.today/guide.html
+- The publisher, if they would rather do it themselves in a browser:
+  https://nsite-clay.cypherpunk.today/deploy.html
+- Changing a site that is already published, rather than building one:
+  https://nsite-clay.cypherpunk.today/llms-edit.txt
+- How a page edits and republishes itself, and where it is served from:
+  https://nsite-clay.cypherpunk.today/how.html
+- Not a website but a list, a plan or a small app the user opens on a phone,
+  published encrypted for them and read back later: use the nsite-artifacts skill,
+  https://nsite-clay.cypherpunk.today/agents.html
+- Templates, browsable: https://nsite-clay.cypherpunk.today/templates.html
+- The block composer template, the one to read before writing a block library:
+  https://nsite-clay.cypherpunk.today/t/cms/
+- What a template must do: https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md
+- Runtime reference: https://github.com/jooray/nsite-clay/blob/main/docs/RUNTIME-API.md
+- Where state lives: https://github.com/jooray/nsite-clay/blob/main/docs/state.md
+- Source: https://github.com/jooray/nsite-clay
+- What an nsite is, from the people who built the idea: https://nsite.run
+
+---
+
+## 1. What an nsite is
+
+An nsite is web hosting on Nostr. Not long-form notes rendered as a blog: whole
+HTML files, with their CSS, their images and their JavaScript.
+
+Three pieces, and none of them is a server you rent:
+
+**Blossom** stores bytes and names them by their own SHA-256. Upload a file, get
+back its hash. Ask any Blossom server for that hash and you get exactly those
+bytes or nothing, because the name *is* the checksum. Content-addressed storage,
+so a file cannot be quietly swapped for a different one.
+
+**A Nostr event** maps paths to hashes. `/index.html` is this hash, `/about.html`
+is that one. The event is signed by the site owner's key, and it is *replaceable*,
+meaning a newer one from the same key supersedes it. Publishing a new one is the
+deploy. This is [NIP-5A](https://github.com/nostr-protocol/nips/blob/master/5A.md),
+kind 15128 for a key's main site and 35128 for a named one.
+
+**A gateway** is an ordinary HTTP server that reads the manifest, fetches the
+blobs, checks the bytes hash to what the manifest claims, and serves them. Any
+gateway can serve any site, because they all read the same public events.
+
+### Why this works, and why it is not just a fashion
+
+The address is derived from a key, so nobody assigns it and nobody can revoke it.
+`https://<npub>.nsite.lol/` is yours because you hold the key, not because an
+account exists somewhere.
+
+Nothing is tied to one host. Six public gateways serve the same events today:
+nsite.lol, nsite.run, nosto.re, nwb.tf, nsite.cloud, shakespeare.to. If one is
+down, change the hostname. If all of them are down, run one yourself; the repo
+ships one that fits in a file.
+
+A gateway has to find the page before it can serve it. The reference gateway looks up the owner's
+relay list (kind 10002) on `wss://purplepag.es` and read the site from the
+relays on it, so a key with no relay list shows up on nsite.lol, which reads the
+default `wss://relay.nsite.lol`, and may answer 404 elsewhere. The publisher and
+`nsite-clay deploy` write a relay list for a key that provably has none, naming
+the relays deployed to. A key that already has one keeps it, so deploy to at
+least one relay on it.
+
+There is no account, no password reset, and no terms of service between a person
+and their own page. Hosting a page costs the project nothing and nothing is
+charged for it. The one thing that can cost money is the optional AI that writes
+and edits pages (see "Writing and editing with AI" in section 5). Paying for it
+does not create an account either: the payment is a Lightning invoice, the AI key
+is kept encrypted on the person's own relays, and the terms for that purchase are
+at https://cypherpunk.today/terms/#s3. Everything else, the editor, the twelve
+templates, the block composer and publishing, never asks for payment.
+
+### What nsite-clay adds
+
+An nsite, on its own, is deployed from a terminal like any static site. nsite-clay
+makes the page edit and republish *itself*, so the content management system is
+inside the static HTML rather than behind it.
+
+You change the DOM. Click around the page and edit text, or open your browser's
+inspector and change it there; the page does not care which. The new version is
+uploaded to Blossom and one replaceable event is republished saying which hash
+`/` now points to. Any gateway renders it.
+
+The idea and the editing model come from [HyperClay](https://hyperclay.com) and
+[ClayJS](https://clayjs.com). This is that model with Nostr underneath instead of
+a hosting platform.
+
+---
+
+## 2. The philosophy, briefly
+
+**The document is the database.** There is no separate store. A checklist's state
+is checkboxes in the markup, a board's cards are elements, a theme is an attribute.
+Save the page and open the file in a text editor: everything is right there, in
+HTML, readable by a person.
+
+**The file at rest is the state.** No hydration step, no build. `curl` returns the
+page as a reader sees it, which means crawlers index it and agents can read it
+without executing anything.
+
+**Ownership is a keypair.** "Who may edit this page" is a signature check, not a
+row in somebody's users table.
+
+**One key writes the document.** There is no shared editing, no per-visitor
+content, and no conflict resolution. Two devices editing at once will lose one
+side's work. Say this early rather than building toward it.
+
+### Two places to put things
+
+Relays are also a database, and confusing the two is the main way a page goes
+wrong. The rule, in full at [docs/state.md](https://github.com/jooray/nsite-clay/blob/main/docs/state.md):
+
+**The document holds what the page is.** Layout, copy, settings, application
+state. A kanban board is the page; it has no life anywhere else.
+
+**Relays hold what you published.** A blog post, a note, a photo: things with an
+identity of their own that belong in every Nostr client, not only on this page.
+Put a post only in the markup and Habla, njump and the rest never see it.
+
+**A post can be both**, and usually should be. Publish the event, then bake a
+rendered copy into the page with `nc.compose.bake(event)`. The markup carries
+`nc:from="naddr1…"`, so the page is self-contained and readable with no
+JavaScript and no relay, while the post stays a first-class Nostr object.
+`nc.compose.refreshBaked()` pulls the copies back in line after an edit elsewhere.
+
+**Neither** holds a draft, a filter or a scroll position. That is what the tab is
+doing, not state. Serialisation captures attributes, so anything you put in
+`dataset` is published to everyone, forever.
+
+---
+
+## 3. What you are actually building
+
+One `index.html`. It links three files from the site root and nothing else:
+
+```html
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+```
+
+Your job is the markup, the styling and the words. Sign-in, saving, versions,
+media upload, feeds and the post composer already exist. Writing your own is the
+commonest mistake; check the runtime reference before implementing anything.
+
+The runtime also draws the AI controls: a toolbar button that rewrites a static
+page, with an option to change only the element the owner clicked. A rewrite
+carries the page's live feeds through unchanged. Pages with forms or custom
+scripts use selected-text edits instead, so those features are not lost in a
+static rewrite. Changes have a preview the owner
+accepts or discards, and a settings dialog chooses the provider. An owner can add a crop step
+to a picture upload, and content fields can be given types (`nc:cms-type`) and
+rich text (`@innerHTML`). Nothing AI writes reaches a page without the owner
+keeping it; you never wire that up yourself.
+
+Never copy `nsite-clay.js` or `nsite-clay-base.css` into the site. They live at
+the root so one upgrade fixes every page.
+
+And the part that is easiest to leave out: the page has to be one they can *add*
+to, not only one they can retype. Every list on it needs a way to put another
+item in, every page needs the content form, and a page that grows needs a block
+library. That is §8, it is not optional, and it is the difference between a site
+somebody owns and a picture of one.
+
+---
+
+## 4. Start from a template
+
+Do not start from a blank file.
+
+```bash
+npx nsite-clay init mysite --template=blog --npub=npub1…
+npx nsite-clay deploy mysite --sec=nsec1…
+```
+
+Pick by what the page is *for*, then redesign it. The template gives you a
+working page with the chrome wired up; the design is yours to change.
+
+Ten of the twelve carry a block library, so an owner can add sections you did
+not think of. `gallery` and `irc` do not, on purpose. Check yours with
+`node tools/template-blocks.mjs <name>`.
+
+| Template | For | Look |
+|---|---|---|
+| `cms` | a page assembled from blocks rather than a fixed design | warm paper, one column, generous air; the owner adds and reorders blocks in the browser |
+| `personal` | one person: who you are, what you write | deep blue-black, gold accent, articles as cards and notes as a timeline |
+| `blog` | someone who already writes on Nostr | black, lunar, slow glow; articles in the main column, notes in a sidebar |
+| `project` | a piece of software | warm paper and clay-red, numbered bands, terminal cards for the commands |
+| `event` | a meetup, a gathering, a date and a place | black and white, poster-scale date and venue, downloadable calendar file |
+| `links` | one page holding everything you publish | a contents page with numbered rows and printed destinations, not a stack of buttons |
+| `gallery` | photographs | four rooms over one set: a canvas you drag, a sparse hang, a constellation, a plain column |
+| `terminal` | a project, for people who like terminals | a shell session, phosphor green, readable top to bottom without pressing anything |
+| `phrack` | a long technical write-up | a text file: monospace, 79 columns, ASCII rules, two colours |
+| `brutal` | a manifesto, a zine, a loud event | thick borders, hard shadows, oversized type, flat colour |
+| `eco` | an essay or a small studio | system fonts, almost no images, measures and prints its own page weight |
+| `irc` | a log someone keeps adding to: notes, a journal, a changelog | a channel transcript, monospace, with a composer that appends a line and saves it |
+
+Each is a complete page you can read for the pattern. Their rules are in
+[CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md),
+which is short and binding: shared stylesheet from the root, `nc:edit-gate="hash"`,
+the standard toolbar markup, CSS variables as the styling hook, no CDN links, no
+autosave.
+
+### Choosing when they are not sure
+
+Ask what the page replaces. "My Linktree" is `links`. "My blog" is `blog` if they
+post to Nostr already and `personal` if they mostly want an about page. "Our
+project's site" is `project`, or `terminal` if the audience lives in one. "A
+poster for a thing happening" is `event`. If they want to show pictures, `gallery`.
+If they are a writer who cares about typography and hates decoration, `phrack` or
+`eco`.
+
+### Always ask
+
+- **Their npub.** Required: it goes in `nc:owner` and it is the only key that can
+  ever change the page. Without a Nostr key nothing works.
+- **What the page is for.** This picks the template.
+- **What should come from Nostr**, if anything: their notes, their articles,
+  their photos, somebody else's.
+- **What a stranger should do after thirty seconds.** Read something, come to a
+  thing, hire them, follow them, zap them.
+- **What they do not want.** Most people have a strong opinion about at least one
+  thing they hate on websites, and it is cheaper to hear it now.
+
+Also tell them, without being asked, that one key writes the document: there is
+no shared editing and no second account.
+
+### Ask as well, for a personal homepage
+
+- Whether the page pulls their notes, their long-form posts, or both. Fetch a
+  sample first and design for what is actually there rather than what you
+  assumed: someone posting twice a day in two languages needs a different layout
+  from someone publishing an essay a month.
+- What is at the top: a photo, a sentence, a list of what they are doing now.
+- Which links matter, and whether they want a Lightning address on the page.
+
+Take the picture, banner, name, about line, website and Lightning address from
+their kind-0 profile rather than asking again. Everything above is judgement they
+have and you do not.
+
+---
+
+## 4b. When they already have a page
+
+Sometimes nobody wants a template. They have a page: a hand written one, an
+export from a static site generator, a landing page somebody built them years
+ago. Do not rebuild it from a template and do not talk them out of the design
+they have. Convert it, and leave them something they can add to on their own.
+
+The design is the easy half. The half that decides whether this was worth doing
+is §8: a converted page where the owner can fix a typo but cannot add next
+month's event is a screenshot of their old site, not a site.
+
+### First, whether it can be converted at all
+
+Say so early rather than halfway through.
+
+- **A page a framework renders at runtime.** React, Vue, Svelte and anything
+  else that builds its DOM from JavaScript on load. A save serialises the
+  rendered DOM, so what gets published is a snapshot of one render, and on the
+  next load the framework re-renders over it and the edits are gone. These are
+  not candidates. Their build output usually is, if it is genuinely static HTML.
+- **Anything that redraws itself on a timer.** A carousel, a clock, a widget
+  that polls. Whatever it happens to be showing at the moment of the save is
+  what gets published. Fine for a page where that region is decoration; not fine
+  where it is the content.
+- **Assets on somebody else's server.** Fonts from a CDN, an analytics script,
+  an image hotlinked from elsewhere. They keep working, and they also mean the
+  page is only as durable as those hosts, which is the thing an nsite exists to
+  avoid. Download them into the directory you are going to deploy, or inline
+  them. Google Fonts in particular should be replaced with a system stack. The
+  analytics and the cookie banner that existed to declare it can both go.
+- **A `<script>` in the page** is saved verbatim and runs for every reader. That
+  is the point, and it is also worth reading before you publish somebody else's
+  file.
+
+### Second, how many pages
+
+The source is usually a site rather than a page: a home page, an about page, an
+index of events, one page per event, an index of posts, one page per post. Three
+ways to land that, and this is the decision that costs the most to undo.
+
+**One page.** Sections instead of routes, and the navigation becomes in-page
+anchors. Right more often than it looks: a small site's five pages are usually
+four paragraphs and two lists, and one document is one thing to edit, one save,
+and one place where everything is.
+
+**A page per page.** Each document is its own file with its own `nc:path`, its
+own toolbar and its own editing session. Choose it when the pages are genuinely
+separate and other people link to them. Then write all of them. A link to a page
+you did not build is a link to nothing, and the owner cannot make that page
+appear from inside the browser.
+
+**Posts on Nostr rather than in the file.** A blog is the case where the
+document is the wrong home for the content. Publish the articles as kind 30023
+events and let the page draw them with a feed widget (§10). Adding a post is then
+the composer that already exists, the posts appear in Habla and njump as well as
+on the page, and nothing has to be deployed to publish one. Bake copies into the
+page with `nc.compose.bake()` if it must read with scripting off.
+
+That last route is for writing that has a life of its own. The runtime draws
+notes, articles and pictures and nothing else, so a calendar of events, a list of
+staff, a price table and a room booking stay markup in the document, and §8 is
+how they become things the owner can add to.
+
+### If it is more than one document
+
+- **Every document declares its own `nc:path`**, naming exactly where it lives:
+  `/index.html`, `/coworking/index.html`, `/blog/index.html`. A page that
+  misreports it compares itself against somebody else's bytes and reloads
+  forever, and a page that omits it claims to be `/index.html` and overwrites
+  the home page on its first save.
+- **Link to a directory with the trailing slash**, `href="/coworking/"`. A
+  gateway resolves that to `/coworking/index.html` the way any web server does.
+  `/coworking` without the slash depends on the gateway: nsite.lol serves the
+  directory, nsite.run serves the home page instead. Treat it as a dead link,
+  which is what the runtime does.
+- **Give the site one menu shape.** A `<nav>` inside the `<header>`, outside
+  `<main nc:blocks>`, with one link per page and `aria-current="page"` on this
+  page's own (or mark the menu `nc:nav`). The owner then gets the rest while
+  editing, drawn by the runtime: a Pages button that lists and opens the site's
+  pages, a link dialog that offers those pages and the headings on them, dead
+  links outlined before they save, and "New page" (in this page's design, empty
+  or written by AI), which copies the header, menu, footer, stylesheet and block
+  library, adds the page to this page's menu and publishes both in one manifest.
+  It updates only the menu of the page it was made from; tell the owner the
+  other pages need the link added by hand.
+- **Deploy the whole directory in one command.** A manifest is the entire path
+  table and the CLI builds it from the files on disk, so every page, every
+  picture and the three shared files land in one signed event. Deploying one
+  file at a time is what produces a site whose pages cannot see each other.
+- **A link to a page that does not exist does not stop a save.** The page
+  publishes, and the runtime lists the addresses that lead nowhere in a panel
+  that stays until it is dismissed, with a button that copies the list. Write
+  the pages, or fix the links, and save again. The one thing that still refuses
+  is a save that would leave the document unable to load `/nsite-clay.js` or
+  `/nsite-clay-chrome.js`, because the page that would repair that is the page
+  that no longer loads.
+
+### The conversion itself
+
+**One. Attributes on `<html>`.**
+
+```html
+<html lang="en"
+      nc:owner="npub1…"
+      nc:edit-gate="hash"
+      nc:path="/index.html"
+      nc:source="/nsite-clay-source.js">
+```
+
+`nc:owner` is the only required one. `nc:edit-gate="hash"` keeps the controls
+away from readers, and `nc:path` has to name where this document actually lives
+(see above, and §12). Relays and Blossom servers have working defaults; set
+`nc:relays` and `nc:servers` only if they have their own.
+
+`nc:source` names the file that keeps their formatting when they save. It is a
+third of the runtime and a reader has no use for it, so it is named in an
+attribute rather than loaded by a tag: the page fetches it only when its owner
+signs in to edit. Deploy the file with the page, name it here, and a visitor
+never downloads it. Leave the attribute off and the page still saves; it just
+reprints the file rather than preserving how it was written.
+
+**Two. The three shared files, at the site root, deployed with the page.**
+
+```html
+<link rel="stylesheet" href="/nsite-clay-base.css">
+<script src="/nsite-clay.js"></script>
+<script src="/nsite-clay-chrome.js"></script>
+```
+
+Not from a CDN, and not pasted into the document. They are files in their site,
+uploaded to Blossom and named in their manifest like everything else.
+
+The stylesheet is only needed for the runtime's own dialogs and rails. Their CSS
+is untouched by it; it defines variables and styles elements whose names all
+start with `nc-`.
+
+**Three. The toolbar**, copied verbatim from
+[CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md)
+near the end of `<body>`. Without it there is no way to sign in or save from the
+page, and a person who cannot find the save button has not been given a
+self-editable site. Keep the `data-nc-cms` button in it: the shared stylesheet
+hides that one until the page has an `nc:cms` block, so it costs nothing on a
+page that does not yet have one and appears by itself when it does.
+
+**Four. `editable` on everything a person would change.** §8, layer one. On a
+converted page this is the bulk of the typing and none of the thinking: walk the
+document top to bottom and mark every heading, paragraph, caption, list row,
+button label, date, price and address. Twenty is a low count for a home page.
+Do not stop after the hero.
+
+**Five. Every list becomes a list they can add to.** §8, layer two, and the step
+that separates a conversion from a screenshot. Whatever the source page repeats
+is a shape that needs Add, Duplicate, Delete and reorder: the events, the posts,
+the people, the links, the opening hours. You have the shapes in front of you,
+so there is nothing to invent.
+
+**Six. The content form.** An `nc:cms` rules block covering the whole page, with
+a card list for every repeating shape. §8 again. Do this on every conversion
+rather than only on the ones that look like a CMS, because the person who
+inherits the page did not write it and will not know where to click.
+
+**Seven. Blocks.** A converted page usually already contains its own library:
+the sections that repeat are the shapes. Wrap the region that should grow in
+`nc:blocks`, give each existing section an `nc:block-type`, and lift one of each
+distinct shape into a `<template nc:block>` (§9b). Do not invent shapes and do
+not add CSS the page does not already use. A block added next March has to come
+out looking like the ones that are there today, and on a converted page you have
+the answer in front of you.
+
+**Eight. Deploy the whole directory** (§5), then open the published page with
+`#edit` and go down the list at the end of §8. Do that before handing anything
+over: the checks are all things the owner will try in their first five minutes.
+
+### One thing worth knowing
+
+The runtime does not only save what was typed into an `editable` region. A save
+serialises the live DOM, so a change made from the browser's own inspector, from
+the console, or by the page's own script is published like any other. Nothing
+notices such a change by default, though, so autosave will not fire and the
+unload guard will not warn about it. A page whose own code edits itself can add
+`nc:watch-dom` to `<html>` to have those count as edits too. Leave it off
+otherwise: on a page with a clock in it, it would mark the page unsaved forever.
+
+---
+
+## 5. Getting it online
+
+Two routes to the same three steps. Pick by who is doing it.
+
+**They publish, in a browser.** <https://nsite-clay.cypherpunk.today/deploy.html>
+picks a template, signs in or generates a key with a NIP-49 backup file, checks
+what is already at that path, uploads the files and signs the manifest. Nothing
+to install. Send a person there when they only want one of the twelve templates
+with their own words in it, and point them at
+<https://nsite-clay.cypherpunk.today/guide.html> for the walkthrough with
+screenshots. You do not need to do anything in that case. The publisher goes one
+decision at a time: sign in or make a key, choose a starting point, choose a path,
+publish. `/deploy.html?key=have` opens it at signing in with an existing key
+(extension, Amber or a pasted key) and `/deploy.html?key=new` opens it at making
+a key, which is the right link for someone who has never held one.
+
+### Writing and editing with AI (optional, paid)
+
+The publisher can have AI write a page from a description, and a published page
+can be changed with Edit with AI, either the whole page or only the part the owner
+clicked. Nothing reaches the page until they keep the result, Undo takes it back,
+and Save publishes it. The order is fixed: a key first, then payment, then
+generation. There is no free generation.
+
+- **Simple setup, the default:** one 2000 sat Lightning invoice. 1000 sats support
+  nsite-clay and 1000 sats become the buyer's own AI credit on the project's
+  Routstr node. The credit belongs to them and any unspent part can be withdrawn.
+  The AI key is stored encrypted to their own key on their own relays, so it
+  follows them to any device they sign in on and no file has to be downloaded.
+- **Their own Routstr node:** AI settings can point at any other node, funded with
+  Lightning or Cashu. The fees go to whoever runs that node. This sits under "More
+  options" in the publisher, away from the first-run path.
+- **Their own key:** any OpenAI-compatible API that accepts requests from a browser,
+  with their own key and model. What they pay stays between them and that provider.
+
+Measured on the default model, a complete generated page costs about 17 to 22 sats
+and changing a paragraph costs well under one, so the 1000 sat credit is roughly
+forty page generations or hundreds of edits. Pictures for a generated page are made
+by a picture model at about 24 sats each, up to four per page by default, and the
+builder keeps 150 sats of credit unspent by pictures so the next change can still be
+reserved. Tell the person all of this before they pay, and tell them AI is an extra:
+they can always pick one of the twelve templates and type, or use the command line.
+
+**You publish, from a terminal.** This is the route when you have *built*
+something: a design of your own, a block library, a page that is an app. The
+publisher only ships the templates that are on the project site; a page you wrote
+has to go up from where you wrote it.
+
+```bash
+npx nsite-clay deploy mysite --sec=nsec1…                    # a raw key
+NOSTR_BUNKER_URI="bunker://…" npx nsite-clay deploy mysite   # a remote signer
+```
+
+Prefer the bunker. It keeps the key off the machine running the deploy, which
+matters when that machine is yours rather than theirs. Pass the URI in the
+environment, never as an argument: an argument is visible to every process on the
+box.
+
+The page lands at `https://<their npub>.nsite.lol/`. `--site=blog` makes a
+second, separate site under the same key.
+
+`deploy` takes a directory, not a file, and publishes the whole of it as one
+signed path table. That is how a site with more than one page has to go up: the
+manifest names every document, every picture and the three shared files at once,
+and a page whose sibling is not in the table has a link that leads nowhere. Lay
+the directory out the way the URLs read, `index.html` at the root and
+`coworking/index.html` for `/coworking/`, and give every document its own
+`nc:path`.
+
+You will not have their key, and should not ask for one. Two ways round it:
+build the directory, hand it over and let them run the one deploy command; or
+have them paste a `bunker://` URI from their signer, which signs without the key
+ever reaching your machine. Either way, after the first deploy the page publishes
+itself and they never need either route again.
+
+A custom domain is a CNAME to the *npub subdomain*, not to the gateway, because
+the npub is what the gateway reads out of the hostname:
+`blog.example.com CNAME npub1….nsite.lol`. Do not promise HTTPS on it. The public
+gateways hold a wildcard for their own domain only, so a browser asking for
+`https://blog.example.com` gets a TLS `unrecognized name` alert. Say plain HTTP,
+or a gateway they run themselves.
+
+If they want a page or the whole site gone, that is a terminal job too:
+
+```bash
+npx nsite-clay unpublish                          # the whole root site
+npx nsite-clay unpublish --site=blog              # a named site
+npx nsite-clay unpublish --path=/old-offer.html   # one page, as a new version without it
+npx nsite-clay unpublish --version=v…             # one version out of the history
+```
+
+It prints what it would do and sends nothing until it is run again with `--yes`.
+Be honest with them about what it can do: on Nostr a deletion is a request.
+Relays that implement NIP-09 drop what it names, and Blossom servers delete a
+file when its uploader asks, but neither has to, and a copy somebody saved stays
+saved. To make that as good as it gets, the site is replaced with an empty
+manifest, which every relay honours because a newer one replaces the old, and
+both that and the deletion go to every relay it can find for the key.
+
+To change a site that is already online, start from what is published, not
+from the directory you deployed it from. The owner may have edited it in the
+browser since, and those edits exist only on Blossom:
+
+```bash
+npx nsite-clay pull npub1… site                         # every file, checked against its hash
+NOSTR_BUNKER_URI="bunker://…" npx nsite-clay whoami     # connect once; the connection is saved
+npx nsite-clay deploy site                              # back to the same site and relays
+```
+
+The deploy of a pulled directory keeps a page that was changed in the browser
+after the pull and not here, and stops on one that was changed in both places.
+The whole procedure for an agent handed an existing site is
+<https://nsite-clay.cypherpunk.today/llms-edit.txt>. The owner can also copy a
+filled-in version of it, with the site's own relays, servers and pages, from
+Settings on their page.
+
+Develop against the local stack rather than public infrastructure:
+
+```bash
+npm run devnet     # relay, Blossom and gateway on localhost, all in memory
+```
+
+Deploy into it with `--relays=ws://127.0.0.1:4869 --servers=http://127.0.0.1:4870`
+and open `http://<npub>.localhost:4871/`. Browsers resolve anything under
+`.localhost` to loopback, so the npub sits in the hostname exactly as in
+production. Stop the process and everything it held is gone.
+
+After the first deploy the page publishes itself and they never need a terminal
+again. Tell them that.
+
+---
+
+## 6. Signing in: recommend a remote signer
+
+Three ways in. Steer them to the second.
+
+1. **A NIP-07 browser extension**, Alby or nos2x. Fine on their own machine.
+2. **A remote signer over NIP-46**, Amber on Android, Clave on iPhone, or
+   nsec.app. The key stays on their phone and every save is approved there. The right default for a page
+   served by a gateway, and what you should suggest first.
+3. **Pasting a key into the page.** It works, stays in that one tab (kept there
+   for an hour, never in the browser's lasting storage), and is still the weakest
+   option. Say so rather than defaulting to it.
+
+The toolbar handles all three. You write no sign-in code. The sign-in QR is
+generated in the page, so the connection secret never leaves the browser.
+
+Do not ask for their nsec. You do not need it and you should not have it.
+
+---
+
+## 7. The edit gate
+
+Every template ships `nc:edit-gate="hash"` on `<html>`. Readers see the page and
+nothing to click. The owner adds `#edit` to the URL and the toolbar appears.
+
+Tell them explicitly, because a page with no visible way in looks broken to
+someone who has forgotten:
+
+```
+https://<their npub>.nsite.lol/#edit
+```
+
+Put it in the handover note. `nc.settings.open()` turns the gate off for someone
+who would rather have the toolbar always visible.
+
+After the owner has signed in once, their browser remembers it, and later visits
+to that site open the toolbar without `#edit`. Nobody else's browser changes.
+Signing out forgets it. `#edit` is still the way in on a new device, so it still
+goes in the handover note.
+
+The sign-in itself lasts an hour after they last used it, so moving between the
+pages of their site does not ask them to sign in again. Opening a page, saving or
+editing pushes the hour on. A remote signer or an extension carries over to every
+tab of that browser; a pasted key only within its own tab. You write nothing for
+this.
+
+Autosave is off, deliberately: every save stores the whole page again and files a
+version, so a timer publishes a dozen versions of one paragraph. Leaving with
+unsaved work already warns them.
+
+---
+
+## 8. Making a page editable
+
+The section people skim, and the one that decides whether what you built is a
+website or a picture of one. A page whose owner can fix a typo but cannot add
+next month's event comes back to you within a month, or dies quietly.
+
+Three layers. A page is finished when it has all three, and not before.
+
+### Layer one: the words
+
+- `editable` on a container: rich text, where Enter starts a paragraph and
+  selecting text raises a toolbar with headings, lists, quotes, links, pictures,
+  video and Nostr feeds.
+- `editable="single-line"` on a heading, a caption or a list row: no Enter, no
+  block menu.
+
+Use `single-line` for anything whose element is inline, an `<a>` that is a
+button, a `<span>`, a `<cite>`. Those cannot legally hold a paragraph, and the
+runtime relies on the token to keep one out.
+
+Mark everything a person would plausibly want to change, and read "everything"
+literally: every heading, every paragraph, every caption, the label on every
+button, the address in the footer, the line under the logo, the dates, the
+prices, the quotes, the names. Twenty editable regions is a low count for a
+content page. The question is not whether they would want to change a given
+line, it is whether there is a reason it must never change, and there rarely is.
+
+Form controls persist by default, because that is what "the document is the
+database" means: a checked box is still checked for the next visitor. Put
+`nc:no-persist` on a search box or a filter, where baking the last value into
+the published file would be wrong. Whatever a script puts on the page for one
+visitor, such as an answer from an API, gets `nc:transient` on the nodes it
+creates, never on the authored container they go into. A page with a form is
+worked through in
+[docs/forms.md](https://github.com/jooray/nsite-clay/blob/main/docs/forms.md).
+
+### Layer two: the things there is more than one of
+
+Name every kind of thing on the page. An event, a post, a person, a photograph,
+a link, a price, an opening time. For each one, ask whether the owner can add
+another one next month with nobody's help. Where the answer is no, you have
+built a brochure with editable text, and the first thing they ask for will be
+the thing you left out.
+
+Every repeating shape gets four operations: add, duplicate, delete and reorder.
+Two mechanisms provide them, they cost a few lines each, and a page should have
+both, because they suit different people and different moments.
+
+**A rail on the item**, for the person looking at the page who wants to change
+the thing in front of them:
+
+```html
+<section class="events">
+  <h2 editable="single-line">What is coming up</h2>
+
+  <div class="event-list">
+    <article class="event">
+      <p class="event-when" editable="single-line">27 May, 19:00</p>
+      <h3 class="event-title" editable="single-line">Agentic organisations</h3>
+      <div class="event-body" editable><p>An evening about what happens when…</p></div>
+      <menu class="nc-gear nc-gear-rail">
+        <button type="button" title="Move this event up" aria-label="Move this event up"
+                onclick="nc.dom.moveClosest(this, -1, '.event')">↑</button>
+        <button type="button" title="Move this event down" aria-label="Move this event down"
+                onclick="nc.dom.moveClosest(this, 1, '.event')">↓</button>
+        <button type="button" title="Duplicate this event" aria-label="Duplicate this event"
+                onclick="nc.dom.cloneClosest(this, '.event')">⧉</button>
+        <button type="button" title="Delete this event" aria-label="Delete this event"
+                onclick="nc.dom.removeClosestAsk(this, '.event', 'this event')">✕</button>
+      </menu>
+    </article>
+  </div>
+
+  <menu class="nc-gear nc-gear-row">
+    <button type="button" onclick="nc.dom.addFrom('tpl-event', '.event-list')">Add an event</button>
+  </menu>
+</section>
+
+<template id="tpl-event">
+  <article class="event">
+    <p class="event-when" editable="single-line">A date</p>
+    <h3 class="event-title" editable="single-line">The name of it</h3>
+    <div class="event-body" editable><p>What it is.</p></div>
+    <menu class="nc-gear nc-gear-rail">…the same four buttons…</menu>
+  </article>
+</template>
+```
+
+**Use that rail on every repeating shape, and do not design another one.** It is
+the strip the runtime draws on a block, with the same four operations in the
+same order: move back, move on, `⧉` duplicate, `✕` delete. The two move buttons
+point the way the items run, so a stack of events takes `↑` and `↓` and a row or
+a wrapping grid of cards takes `←` and `→`. `nc-gear-rail` does the whole of it,
+so a page carries no CSS for it: put the `<menu>` last inside the item and the
+strip lands at the end of it, hard against the right edge, faint until the
+pointer is on the item. An owner who has learnt what the icons mean on an event
+has learnt what they mean on a post, a card and a person, and a page whose
+events say Duplicate while its team says Copy has taught them nothing twice.
+
+It takes its own line rather than floating over the item's corner, which is what
+the block rail does. A block is big and mostly empty at the top; an item is a
+card three lines long, where a floating strip covers the words it is there to
+help edit, and where whichever item happens to end up flush with its block's
+corner would wear two sets of buttons on the same pixels. The line costs height
+in edit mode and nothing at all to a reader.
+
+Every button carries the same sentence twice, as `title` and as `aria-label`,
+and that sentence names the kind of thing rather than saying "this item":
+"Delete this event", "Move this picture earlier". Both are needed and neither is
+decoration. Without the `aria-label` a screen reader reads the character and
+announces "right arrow button"; without the `title` there is nothing to hover
+when the picture is not obvious. It is the only place the icon is ever
+explained.
+
+The one control that is not an icon is **Add**, and that is deliberate. It sits
+at the end of the list rather than on any item, it is the thing a new owner will
+look for first, and a labelled `Add an event` button is what they will find. Use
+`nc-gear-row` for it, name the thing in the label, and never abbreviate it to a
+`+`.
+
+Two details in there are the ones that go wrong. `.event-list` holds events and
+nothing else, because `addFrom` appends: a container that also held the heading
+and the Add button would take the new event after the button. And the shape
+lives in a `<template>`, which renders nothing, is saved with the page, and
+gives the owner an empty event rather than a copy of last month's.
+
+Repeat this for every shape on the page. A page with events, posts and people
+has three of these, not one.
+
+**A card list in the content form**, for the person who would rather fill in
+fields than click into a page, which is most people who did not write it. That
+is the next part.
+
+### Layer three: the sections nobody thought of
+
+A block library, §9b. The owner adds whole sections in your design, months after
+you have gone. Ten of the twelve shipped templates carry one, and a converted
+page nearly always should.
+
+### The content form, and why every page should have one
+
+Editing in place suits whoever wrote the page. It does not suit the person who
+inherits it and wants to change the price, the date and the third paragraph
+without hunting for them, and it gives them nowhere at all to press "add". So
+describe the page's fields in a rules block and let the runtime generate a form:
+
+```html
+<script type="application/json" nc:cms>
+{
+  "title":  ".site-title",
+  "hero":   "img.hero@src",
+  "open":   ".status@data-open",
+  "tags":   ".tag[]",
+  "events": [".event", {
+    "date":  ".event-when",
+    "title": ".event-title",
+    "text":  ".event-body",
+    "link":  "a.event-link@href"
+  }],
+  "people": [".person", { "name": ".person-name", "role": ".person-role" }]
+}
+</script>
+```
+
+The button is already in the toolbar in
+[CONTRACT.md](https://github.com/jooray/nsite-clay/blob/main/templates/_shared/CONTRACT.md):
+
+```html
+<button class="nc-owner-only" data-nc-cms>Edit content</button>
+```
+
+Leave it in whether or not the page has rules yet. The shared stylesheet hides
+it until there is an `nc:cms` block, so it appears by itself the day one is
+added.
+
+`nc.cms.open()` draws a panel down the right hand side with one control per
+field. Typing writes straight through to the element and marks the page unsaved;
+the panel itself is `nc:chrome`, so it is never part of the file. The rules are,
+because they are part of the page.
+
+The grammar:
+
+| Written as | Means |
+|---|---|
+| `".title"` | the element's text |
+| `"img.hero@src"`, `".x@data-y"` | an attribute; an `<img src>` gets the picture picker, with upload, cropping and the files already on the site |
+| `".agree@checked"` | a checkbox, which persists like any other input |
+| `".tag[]"` | one field per matching element, with Add and Remove |
+| `[".post", { … }]` | a card per match, with Add, Duplicate, Remove and reorder |
+| `{ "author": { … } }` | a labelled group, purely for tidiness |
+
+The card list is the one that matters and the one to reach for by default. Every
+repeating shape on the page should appear as one, so the panel offers "Add
+events" beside the events and "Add people" beside the people. Add copies the
+last item, so a new event arrives in the page's own design with last month's
+words in it, ready to type over.
+
+For a list that can legitimately be emptied, keep one item as the shape to copy
+and mark it `nc:cms-template hidden`. It is never offered as content, and Add
+clones it rather than the last item. Give it an ordinary class as well, say
+`class="event event-shape"`, and point the gears at `.event:not(.event-shape)`,
+so reordering does not count a hidden element nobody can see.
+
+### Every picture on the page needs a rule
+
+An `img@src` rule is not an extra: it is the only way the owner can change a
+picture. The rule turns into a "Choose a picture" button that uploads a file to
+their own Blossom servers, offers the files already on their site, crops to a
+shape before uploading, and takes a pasted URL. Without the rule they need HTML.
+
+So write one for every `<img>` that is content, not only the hero:
+
+```html
+<img id="shop-front" nc:crop="16:9" alt="The shop from the street">
+```
+
+```json
+{ "photo": "#shop-front@src" }
+```
+
+`nc:crop` names the shape the layout wants, `"16:9"`, `"4:3"` or `"1:1"`. The
+picker offers that crop first, so a picture somebody uploads from a phone
+arrives the right shape instead of stretching the page. Without it the picker
+measures the element on screen and offers that, which is usually right, so
+`nc:crop` is worth writing only where the measurement would be wrong: an image
+the CSS has not sized yet, or one whose shape should not follow the photograph
+currently in it. The shape can be changed inside the crop window either way.
+
+**Build the page with pictures missing rather than with pictures invented.** You
+are usually writing a page for a business whose photographs you do not have.
+Write the `<img>` with the wanted picture described in `alt` and no `src` at
+all, and the shared stylesheet draws a dashed frame with that description in it:
+the layout is correct, the gap is obviously a gap, and the content form already
+has a row for filling it. Never point an `<img>` at a stock photo service, a
+placeholder service or a URL you have guessed; those are links to somebody
+else's server that break, and the owner ends up with a page they cannot fix.
+
+Write rules for the whole page rather than for the parts you found interesting.
+A field that is not in the rules is a field the owner has to go and find.
+
+### Before you hand it over
+
+Open the published page with `#edit`, sign in as the owner, and answer these
+without opening a text editor:
+
+- Can I change every word I can see?
+- Can I add a second one of every kind of thing on this page? The events, the
+  posts, the people, the links?
+- Can I delete one, and put them in a different order?
+- Can I add a section that is not on the page yet?
+- Can I change a picture, and put a new one in?
+- Does "Edit content" list everything on the page, and does Add work in every
+  list it shows?
+- Does Save go through, and does the page still look right after a reload?
+
+Every "no" is work that is not finished. These are the first five minutes of
+somebody's ownership of their own site.
+
+---
+
+## 9. When the page is an app, not a document
+
+A board, a checklist or a directory needs more than typing. Put the controls on
+the thing they act on and mark them `nc-gear`, so they appear only for a
+signed-in owner who is editing:
+
+```html
+<article class="card" data-status="active">
+  <h3 editable="single-line">Fix Blossom sync</h3>
+  <menu class="nc-gear nc-gear-rail">
+    <button type="button" title="Move this card up" aria-label="Move this card up"
+            onclick="nc.dom.moveClosest(this, -1, '.card')">↑</button>
+    <button type="button" title="Move this card down" aria-label="Move this card down"
+            onclick="nc.dom.moveClosest(this, 1, '.card')">↓</button>
+    <button type="button" title="Duplicate this card" aria-label="Duplicate this card"
+            onclick="nc.dom.cloneClosest(this, '.card')">⧉</button>
+    <button type="button" title="Delete this card" aria-label="Delete this card"
+            onclick="nc.dom.removeClosestAsk(this, '.card', 'this card')">✕</button>
+  </menu>
+</article>
+```
+
+Same rail as §8, because it is the same job. A card is a repeating shape like an
+event, and the person who learnt the icons on one should not have to learn them
+again on the other.
+
+**Do not put `clay="no-save"` on a gear.** That strips it from the save, so the
+pattern works exactly once and the published page has no controls. A gear is part
+of the app and belongs in the file; the rules above keep it away from readers.
+`clay="no-save"` is for markup that must never be written at all, such as a
+composer holding a half-typed line. To have a control that both persists and is
+never itself written, draw it from a script that persists.
+
+`nc.dom` gives you `clone`, `remove`, `move`, `moveTo`, `insert`, `addFrom` a
+`<template>`, `toggle` and `set`, plus `cloneClosest` and friends so a control
+addresses the block it sits in. Every one arms the new markup for editing and
+marks the page unsaved, which is the bookkeeping you would otherwise forget.
+
+`move` reorders within one parent. A card going from one column to the next
+crosses parents, so that is `moveTo(el, container)` or, from a gear,
+`moveToClosest(this, '.card', '.col-cards', 1)`, which steps through the
+containers in document order. The node itself travels, so anything typed into it
+comes along.
+
+Point those at a container that holds **only** the items. `moveTo` appends, so a
+column whose element also contains a heading and an "Add" button would take the
+card after the button. Give the column an inner `.col-cards` and target that.
+
+A shape that moves between containers as well as within one puts those two
+buttons in the same rail rather than in a second menu beside it. Two strips on
+one card is two things to aim at, and the second one lands on top of the first.
+
+```html
+<menu class="nc-gear nc-gear-rail">
+  <button type="button" title="Move this card one column left"
+          aria-label="Move this card one column left"
+          onclick="nc.dom.moveToClosest(this, '.card', '.col', -1)">&larr;</button>
+  <button type="button" title="Move this card one column right"
+          aria-label="Move this card one column right"
+          onclick="nc.dom.moveToClosest(this, '.card', '.col', 1)">&rarr;</button>
+  …then up, down, duplicate and delete…
+</menu>
+```
+
+Read the document back as data with `nc.dom.all(".card")` and
+`nc.dom.by(".card", "data-status")`. The DOM is the query engine; there is no
+model to keep in sync with the view, because the view is the model.
+
+State with no visual form goes in a JSON block through `nc.state.get()`,
+`.set()` and `.update()`, which escapes the closing tag that would otherwise end
+the block and the rest of your page.
+
+`nc.dom` calls `nc.editable.refresh()` for you. You need it yourself only for
+markup you inserted some other way, before focusing it, or the new region will
+not be typeable.
+
+### The controls, and where the rest of this lives
+
+A gear belongs to one card or one row. A block (§9b) is a whole section. The
+content form (§8) is the same page seen as fields, and it is where a repeating
+shape gets its Add button for whoever would rather not click into the page. Most
+pages want all three, and they mix freely; `templates/cms/index.html` uses them
+together.
+
+### What an app here can and cannot do
+
+This layer exists because of HyperClay, which makes a single HTML file editable
+by its owner and lets that file be a real application. It is worth knowing
+exactly where the two part company, because the wrong assumption in either
+direction wastes an afternoon.
+
+**Your own JavaScript survives the save.** A save is a serialisation of the live
+DOM with a short list of removals, not a pass through a sanitiser. Inline
+`onclick` handlers, `<script>` blocks, `<template>` elements, custom attributes
+and data attributes are all authored markup and come back byte for byte. The
+sanitiser guards two doors only: HTML pasted into an editable region, and
+content fetched from a relay. Neither one touches what you wrote.
+
+**What the save does remove**, and therefore what you can rely on being absent
+from the published file: anything marked `clay="no-save"`, anything the runtime
+injected (`nc:chrome`), anything fetched at view time (`nc:transient`), and the
+runtime's own state attributes on `<html>`. Everything else stays.
+
+**A gear must not carry the page's own layout class.** `.nc-gear` hides with
+`!important` and the reveal rule restores it the same way, because a page
+stylesheet loads after the shared one and a gear that lost that fight would show
+its controls to every reader. So `class="nc-gear chips"` will not get your
+`display: flex`. Use `nc-gear-rail` for the controls on a repeating item and
+`nc-gear-row` for a row of worded buttons, or write your own rule against
+`html[nc\:owner-here="true"][nc\:editing="true"]`.
+
+**Anything a script does for the current view alone must be undone before the
+save**, because the save serialises the DOM as it stands. `nc:no-persist` covers
+an input's value and nothing else: a class your filter hangs on hidden cards, or
+a `data-theme` you applied from `nc.state`, will be written into the file as
+though someone had authored it. Strip those in `nc.addDocumentTransform(clone =>
+…)`, which runs on the copy being saved and cannot affect what the reader is
+looking at.
+
+**Form state is persisted for you.** HyperClay asks for a `persist` attribute on
+an input. Here it is the default: a checkbox the owner ticks, a value typed into
+a text field and a selected option are all written into the outgoing file. Opt a
+control out with `nc:no-persist`, which is what a search box wants so a
+half-typed filter is not published. Password and file inputs are never written.
+
+**One writer, and the writer is a key.** HyperClay logs an owner in against a
+server; here the page checks a signature, so there is no account and no server
+to run. The consequence is that only the key holder can save. A visitor can
+change the page in front of them, and nothing they do reaches anyone else.
+Anything that needs a stranger's input to be recorded belongs on relays, as a
+Nostr event they sign themselves, not in the document.
+
+**No conflict detection.** Two devices editing under one key will lose one
+side's work. Version history means it can be recovered, not that it cannot
+happen.
+
+**Every save republishes the whole document.** This is the real budget. A page
+that saves on every keystroke, or one that grows without bound because a script
+appends to it, becomes expensive to load and slow to publish. Keep the document
+the size of a document.
+
+**No server-side anything.** No request handling, no scheduled work, no secrets.
+A key in the file is a key you have published.
+
+---
+
+## 9b. Blocks: a page they can extend without you
+
+A finished page is a page that goes stale, because the next thing they want to
+add is a thing you did not build. Blocks are the answer: you design the page, and
+they add sections to it afterwards, in your design, with no editor and no you.
+
+Mark the container. Every element child of it is a block:
+
+```html
+<main nc:blocks>
+  <section nc:block-type="intro">…</section>
+  <section nc:block-type="work">…</section>
+</main>
+```
+
+In edit mode the runtime draws a rail on each block (move, duplicate, configure,
+delete) and a `+` between them that opens a palette. The palette is built from
+the document's own library, which is a set of inert `<template>` elements:
+
+```html
+<template nc:block="picture" nc:label="Picture" nc:icon="▥"
+          nc:group="Media" nc:on-add="image" nc:hint="Upload one or paste a URL.">
+  <section class="b-picture">
+    <figure>
+      <img nc:slot src="…" alt="">
+      <figcaption editable="single-line">Caption</figcaption>
+    </figure>
+  </section>
+</template>
+```
+
+**Write every shape in the page's own markup and classes.** That is the whole
+trick and the only part you can get wrong: a block added next March has to come
+out looking like the ones you wrote today, so a library for a monospace zine
+produces monospace, and one for a card grid produces a card. Do not reach for
+generic markup, and do not add CSS for the library that the page does not
+already use.
+
+`nc:on-add` runs a picker once the block lands and `nc:slot` marks what it acts
+on: `image`, `video`, `feed`, `post`. Backing out of the picker removes the block
+again, so a cancelled "add a picture" leaves nothing behind.
+
+A `<template>` renders nothing and is saved with the page, so the library travels
+with the file. Whoever opens the document next has the palette, with nothing to
+fetch and nothing to install. Nothing the rail draws is written to disk; a reader
+gets plain markup.
+
+Ten of the twelve shipped templates carry a library. Read one before writing
+yours: `templates/cms/index.html` is the fullest, twelve shapes over four groups,
+and it is browsable at <https://nsite-clay.cypherpunk.today/t/cms/>.
+`templates/phrack/index.html` and `templates/terminal/index.html` show the same
+idea bent hard into a particular design. `gallery` and `irc` deliberately have
+none, which is the other lesson: a page whose content is redrawn from a live feed
+on every load has nothing persisted to make a block of.
+
+Reach for a block when the owner will want sections you have not thought of.
+Reach for a gear (§9) when the control belongs to one card or one row. The two
+mix freely; `templates/cms/index.html` uses both.
+
+Check your work: `node tools/template-blocks.mjs <name>` loads the page in a
+browser and tests the reader's view, the rails, the insert points, the library,
+that adding a block adds one, that nothing the runtime draws reaches a save, and
+that the page does not scroll sideways.
+
+---
+
+## 10. Nostr content on the page
+
+A feed is markup. It fetches at view time, verifies every signature in the
+browser and sanitises what it shows:
+
+```html
+<div nc:feed="articles" nc:authors="npub1…, npub1…" nc:limit="5"
+     nc:style="grid" nc:pinned="my-first-post"></div>
+```
+
+`nc:feed` is `notes` (kind 1), `articles` (kind 30023) or `images` (kind 20).
+Also `nc:limit`, `nc:style` (`list` or `grid`), `nc:min-length` to drop
+one-liners, `nc:topic` for a single tag, and `nc:feed-relays` to override.
+
+Pinning an article uses its slug, not its event id: kind 30023 is replaceable, so
+the id changes every time the author fixes a typo and an id-pin breaks.
+
+Style feeds by overriding what they emit rather than rebuilding it. Each item is
+an `<article class="nc-item">` containing a `<header class="nc-by">` with
+`.nc-avatar`, `.nc-name` and `.nc-when` inside it, then the body as a sibling:
+`.nc-title` and `.nc-summary` for an article, `.nc-text` for a note, `.nc-pics`
+for pictures, and an optional `<footer class="nc-tags">`. Add `nc-feed-cards` to
+the widget for boxed items and `nc-feed-spread` to push the date to the right;
+without them an item is a plain line, which is what a log or a list wants.
+
+A display name comes from a kind-0 profile and is free text: some are a whole
+sentence. The base stylesheet clips `.nc-name`, so do not undo that unless you
+have somewhere for a long one to go.
+
+A feed is fetched, not stored, so a save keeps the widget's configuration and
+none of the posts. A reader with scripting off sees an empty block. Design for
+that, or bake the posts in as well.
+
+The composer (`nc.compose.open()`) lists what the owner has published and writes
+more: short notes and long-form articles, with an option to bake a copy into the
+page as it publishes.
+
+---
+
+### Where a post opens
+
+`nc:open-with` on a feed decides what a click does. Leave it out and the post
+opens in the page, which is usually what you want: the event is already there
+from drawing the card, so it costs no relay call, and closing it does not
+navigate. Otherwise `yakihonne`, `primal`, `njump`, or a URL of your own with
+`{id}`, `{npub}`, `{kind}` and `{d}` in it.
+
+Do not assemble those URLs yourself. An article and a note are at different
+paths in every one of these clients, and the name picks the right one:
+
+    yakihonne  /article/<naddr>   /note/<nevent>
+    primal     /a/<naddr>         /e/<nevent>
+    njump      /<naddr>           /<nevent>
+
+## 11. The design is yours to write
+
+There is no theme system, no skin, no config. A page is one HTML file and you
+write its CSS, so whatever you can build in HTML and CSS is what the page looks
+like: a poster, a zine in 79 monospace columns, a shell session, a photo wall.
+All twelve shipped templates are that and nothing more, which is why they look
+nothing like each other.
+
+The runtime draws a few surfaces of its own, and they follow you rather than the
+other way round. Set the variables and the toolbar, the dialogs, the version
+list, the pickers, the text toolbar, the toasts, the feeds, the block rails and
+the post reader all come out in your palette. You never restyle the chrome
+directly and you never fight it.
+
+So the job for a page somebody asked you for is: pick the nearest template as a
+starting point, or start from `cms` if the shape is "a page", write the design,
+write the words, mark what is editable, and give it a block library so they can
+add to it later. Then §5 to get it online.
+
+Work in this order; it saves rewriting.
+
+1. **The variables.** `--nc-ink`, `--nc-ink-dim`, `--nc-bg`, `--nc-panel`,
+   `--nc-edge`, `--nc-accent`, `--nc-accent-ink`, `--nc-ok`, `--nc-bad`,
+   `--nc-radius`, `--nc-radius-sm`, `--nc-shadow`, `--nc-chrome-font`,
+   `--nc-mono`. `--nc-ok` and `--nc-bad` drive the toolbar's status dot, so a
+   template that leaves them gets a green and red that may clash with its
+   palette. These reach every surface the
+   runtime draws: the toolbar, the dialogs, the version list, the pickers, the
+   floating text toolbar, the toasts and the feeds. A square, shadowless design
+   sets `--nc-radius: 0` and `--nc-shadow: none` and the chrome squares off with
+   it.
+2. **The content.** Real words. Mark everything editable.
+3. **The layout and type.** Your own rules, under the variables.
+4. **The feeds.** Restyle, do not rebuild.
+5. **The gears and the content form.** Every repeating shape gets both, §8.
+6. **The block library.** Last, because it copies the shapes you just settled.
+
+Images: a page that phones home is not a page they own, so no CDN, no third
+party fonts, no analytics. An SVG inline or as a `data:` URI costs one request
+of zero bytes and cannot go away. A photograph goes on Blossom, where the rest
+of the page already lives, either through the picture picker or by deploying it
+alongside the document.
+
+---
+
+## 12. Things that will bite you
+
+- **A link to a page that is not in the site does not stop a save.** The page
+  publishes, and the runtime shows the addresses that lead nowhere in a panel
+  that stays until it is dismissed, with a button that copies the list. It is a
+  list of work, not a failure. What still refuses is a save that would leave the
+  document unable to load `/nsite-clay.js` or `/nsite-clay-chrome.js`, because
+  the page that would repair that is the page that no longer loads. Deploy the
+  whole directory with the CLI rather than hand-editing the path table.
+- **A deploy is the whole site.** The manifest is one path table, so a
+  directory that lacks a page the owner made in the browser would take that page
+  down. The CLI refuses and names the page. Pull the site first.
+- **A directory link needs its trailing slash.** A gateway reads `/coworking/`
+  as `/coworking/index.html`, the way any web server does. `/coworking` is a
+  different path: some gateways resolve it and some serve the home page, so the
+  runtime counts it as a dead link. `/about` does not find `/about.html` either.
+- **Every page needs its own `nc:path`.** A document defaults to `/index.html`,
+  so a site with more than one editable page, an about page, a translation,
+  anything, needs `nc:path="/about.html"` on each `<html>` or saving one of them
+  overwrites another. This is silent until someone loses a page.
+- **Assets are content-fingerprinted.** `/logo-9f2a1e.png` changes when the file
+  changes. Never hardcode a fingerprint you saw once.
+- **Relays disagree.** Publish to several, and include `wss://relay.nsite.lol` so
+  the gateway sees changes promptly. Verify retention by reading your own events
+  back: some relays accept a publish and store nothing.
+- **Blossom servers are picky.** Several refuse `text/html`, and some refuse keys
+  they do not know. `nostr.download` and `blossom.yakihonne.com` work with a new key.
+  `cdn.hzrd149.com` no longer does. Do not publish a site to `blossom.primal.net`: it ignores
+  the uploaded type and serves CSS as `text/plain`, which a browser will not apply.
+- **`relay.damus.io` has been unreliable.** Do not put it first.
+- **One key, no conflict detection.** Two devices editing at once lose one side's
+  work.
+- **The gateway is trusted for the first byte.** Everything the document loads
+  afterwards is hash-checked and every event is signature-checked, but the entry
+  document cannot verify itself. Running a local gateway removes the trust.
+
+---
+
+## 13. Writing
+
+The words matter more than the design and they are the part most often left as
+filler. No em or en dashes. No "there are several ways to". No sentence that
+announces what the next sentence is about to do. No "crucial", "seamless",
+"robust", "vibrant". Write what the page is, for someone who has not seen it.
+
+If the page is in a language other than English, write it as a native speaker
+would, with that language's punctuation and typography. Slovak and Czech take
+`„…"` quotation marks and a spaced en dash rather than an em dash, sentence-case
+headings, lowercase months, a decimal comma and a space before `%`.
+
+Those rules are the short list. The long one is
+[humanizer](https://github.com/jooray/humanizer), a skill that names the habits
+which mark prose as machine-written and says what to write instead: inflated
+symbolism, promotional adjectives, vague attribution, the rule of three, the
+sentence that says a thing is not merely X but Y. It has its own section for
+Slovak and Czech, where the giveaway is usually an English draft translated word
+by word. If you have it, run the page's words through it before you hand the
+page over.
+
+---
+
+## 14. Handing it over
+
+Tell them, in this order:
+
+1. The address of their page.
+2. The same address with `#edit`, which is how they get the controls.
+3. How to add a thing, by name: "Edit content in the toolbar has an Add button
+   under Events", or "the Add an event button at the end of the list". Say it
+   about each kind of thing on the page. This is the question they will actually
+   have, and a page that can do it but never said so is a page that cannot.
+4. Which key controls it, and that losing it means losing the ability to change
+   the page.
+5. That the page now updates itself and they will not need a terminal again.
+
+That is the whole operating manual.

@@ -400,6 +400,29 @@ browser. It asks the owner for a `bunker://` link from Amber, Clave or another
 NIP-46 signer, never for the key, and keeps that one connection for later runs.
 The text is generated from a template in the page, with no AI involved.
 
+## Skills
+
+Two skills for Claude and other agents that read the Agent Skills format live in
+`skills/` and are released as zip files.
+
+- **nsite-clay-web-builder** is for building someone a website that they can edit themselves
+  in the browser and that is published on Nostr. It sends the agent to the full
+  brief, `llms.txt`, and to `llms-edit.txt` for changing a site that is already
+  live.
+- **nsite-artifacts** is for short-lived pages: a shopping list, a plan or a
+  report, encrypted, shared by link and deleted after some days.
+
+To install one in Claude Code, download the zip and unzip it into
+`~/.claude/skills/`, so that `~/.claude/skills/nsite-clay-web-builder/SKILL.md` exists. In
+Claude.ai, upload the zip under Settings, Capabilities, Skills. The latest
+version is always at
+
+- <https://nsite-clay.cypherpunk.today/skills/nsite-clay-web-builder.zip>
+- <https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip>
+
+and each release also carries the versioned files (`nsite-clay-web-builder-0.1.0.zip`) on
+GitHub. `npm run skills:pack` builds them into `dist-skills/`.
+
 ## Templates
 
 Twelve starting points, all sharing one stylesheet and one runtime so an engine

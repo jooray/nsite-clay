@@ -68,45 +68,37 @@
       <div editable class="prose">
         <p class="lede">Ask your AI agent for a shopping list, a packing list, a trip plan or a small app. It makes the page, publishes it encrypted, and sends you a link. You open it on your phone, tick things off and add to it. Later the agent reads back what you changed.</p>
         <p class="lede">The key is the part of the link after <code>#</code>. Browsers never send that part to a server, so the relays and storage servers only ever hold scrambled bytes. Whoever has the link can open the page, and nobody else can.</p>
-        <p>Want an agent to build you a whole website you edit yourself? That is a different job: point it at <a href="/llms.txt">llms.txt</a>.</p>
+        <p>Want an agent to build you a whole website you edit yourself? That is a different job, with its own skill: <a href="/skills/nsite-clay-web-builder.zip">nsite-clay-web-builder.zip</a>. Or point the agent at <a href="/llms.txt">llms.txt</a>.</p>
       </div>
     </section>
 
     <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="setup">
-      <h2 id="setup" editable="single-line">Set it up: paste this to your agent.</h2>
+      <h2 id="setup" editable="single-line">Set it up in one step.</h2>
       <div editable>
-        <p class="lede">It works with any agent that can run shell commands: Claude Code, Codex, Hermes Agent and others. It needs Node.js 18 or newer and nothing else. No account, no key of yours, no server to run.</p>
+        <p class="lede">It works with any agent that can run shell commands: Claude Code, Codex, Hermes Agent and others. It needs Node.js 18 or newer and nothing else. No account, no key of yours, no server to run. The skill is one zip file.</p>
       </div>
+      <p><a class="btn primary" href="/skills/nsite-artifacts.zip">Download nsite-artifacts.zip</a></p>
+
+      <h3 editable="single-line">Claude Code or Codex: one command</h3>
       <div class="snippet">
-<pre data-copy-source>Install the nsite-artifacts skill from nsite-clay. Download these files from
-https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts/
-into a folder named nsite-artifacts in your skills directory, keeping the paths:
+<pre data-copy-source>curl -fsSL -o /tmp/nsite-artifacts.zip https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip &amp;&amp;
+unzip -oq /tmp/nsite-artifacts.zip -d ~/.claude/skills &amp;&amp;
+node ~/.claude/skills/nsite-artifacts/scripts/artifact.mjs help</pre>
+        <button type="button" class="btn copy" data-copy>Copy</button>
+      </div>
+      <div editable>
+        <p>That unpacks the skill into your skills folder and checks that it runs. For Codex, use <code>~/.codex/skills</code> instead of <code>~/.claude/skills</code>. Start a new session afterwards so the agent sees the skill. The same tool also comes with the command line package: <code>npx nsite-clay artifact help</code>. In Claude.ai, upload the zip under Settings, Capabilities, Skills, if your plan lets the agent run code and reach the network.</p>
+      </div>
 
-  SKILL.md
-  scripts/artifact.mjs
-  assets/list.html
-  hooks/guard.mjs
-
-If you do not have a skills directory, put the folder somewhere permanent and
+      <h3 editable="single-line">Or paste this to your agent</h3>
+      <div class="snippet">
+<pre data-copy-source>Install the nsite-artifacts skill. Download https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip
+and unzip it into your skills directory, so that nsite-artifacts/SKILL.md exists
+there. If you do not have a skills directory, unzip it somewhere permanent and
 remember where it is. Then read SKILL.md and follow it whenever I ask for a list,
-a plan or a small page I can open on my phone, share, or edit myself. Check that
-it works with: node &lt;that folder&gt;/scripts/artifact.mjs help</pre>
+a plan or a small page I can open on my phone, share, comment on, or edit myself.
+Check that it works with: node &lt;that folder&gt;/scripts/artifact.mjs help</pre>
         <button type="button" class="btn copy" data-copy>Copy</button>
-      </div>
-
-      <h3 editable="single-line">Or install it yourself, for Claude Code</h3>
-      <div class="snippet">
-<pre data-copy-source>d=~/.claude/skills/nsite-artifacts
-b=https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts
-mkdir -p "$d/scripts" "$d/assets" "$d/hooks"
-for f in SKILL.md scripts/artifact.mjs assets/list.html hooks/guard.mjs; do
-  curl -fsSL -o "$d/$f" "$b/$f"
-done
-node "$d/scripts/artifact.mjs" help</pre>
-        <button type="button" class="btn copy" data-copy>Copy</button>
-      </div>
-      <div editable>
-        <p>For Codex, use <code>~/.codex/skills/nsite-artifacts</code> as the folder. Start a new session afterwards so the agent sees the skill. The same tool also comes with the command line package: <code>npx nsite-clay artifact help</code>.</p>
       </div>
     </section>
 
@@ -122,6 +114,15 @@ node "$d/scripts/artifact.mjs" help</pre>
       </ul>
       <div editable>
         <p class="lede" style="margin-top:1.2rem">The agent writes the page, the tool encrypts and publishes it. The model never handles a key: the key only exists inside the link the tool hands back. Every page has an expiry, 30 days unless you say otherwise.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="comments">
+      <h2 id="comments" editable="single-line">Say what should be different.</h2>
+      <div editable>
+        <p class="lede">Every page you can edit has a Comments button in its corner. Select some words and press Comment, or pick a part of the page, and type what you want changed. It is saved with the page. Then tell your agent you have commented: it finds each comment and exactly where it sits, makes the change, answers under the comment and marks it resolved.</p>
+        <p>You can also change the page yourself, in the browser. The agent keeps a copy of the page as it last saw it, so it can tell exactly what you changed and make the rest of the page fit.</p>
+        <p>Send the edit link to the people who should comment, because a comment is saved with the page. Whoever has only the read link can look but not comment.</p>
       </div>
     </section>
 

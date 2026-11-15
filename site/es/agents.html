@@ -68,45 +68,37 @@
       <div editable class="prose">
         <p class="lede">Pide a tu agente de IA una lista de la compra, una lista de equipaje, un plan de viaje o una pequeña app. Hace la página, la publica cifrada y te manda un enlace. La abres en el móvil, marcas lo hecho y añades lo que falte. Después el agente lee lo que cambiaste.</p>
         <p class="lede">La clave es la parte del enlace que va después de <code>#</code>. Los navegadores nunca envían esa parte a un servidor, así que los relays y los servidores de almacenamiento solo guardan bytes ilegibles. Quien tenga el enlace puede abrir la página, y nadie más.</p>
-        <p>¿Quieres que un agente te construya un sitio web entero que luego editas tú? Eso es otro trabajo: dale <a href="/llms.txt">llms.txt</a>.</p>
+        <p>¿Quieres que un agente te construya un sitio web entero que luego editas tú? Eso es otro trabajo, con su propio skill: <a href="/skills/nsite-clay-web-builder.zip">nsite-clay-web-builder.zip</a>. O dale al agente <a href="/llms.txt">llms.txt</a>.</p>
       </div>
     </section>
 
     <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="setup">
-      <h2 id="setup" editable="single-line">Instalación: pega esto a tu agente.</h2>
+      <h2 id="setup" editable="single-line">Instálalo en un solo paso.</h2>
       <div editable>
-        <p class="lede">Funciona con cualquier agente que pueda ejecutar comandos: Claude Code, Codex, Hermes Agent y otros. Necesita Node.js 18 o más reciente y nada más. Sin cuenta, sin tu clave y sin servidor propio.</p>
+        <p class="lede">Funciona con cualquier agente que pueda ejecutar comandos: Claude Code, Codex, Hermes Agent y otros. Necesita Node.js 18 o más reciente y nada más. Sin cuenta, sin tu clave y sin servidor propio. El skill es un único archivo zip.</p>
       </div>
+      <p><a class="btn primary" href="/skills/nsite-artifacts.zip">Descargar nsite-artifacts.zip</a></p>
+
+      <h3 editable="single-line">Claude Code o Codex: un solo comando</h3>
       <div class="snippet">
-<pre data-copy-source>Instala el skill nsite-artifacts de nsite-clay. Descarga estos archivos de
-https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts/
-en una carpeta llamada nsite-artifacts dentro de tu directorio de skills, con las mismas rutas:
+<pre data-copy-source>curl -fsSL -o /tmp/nsite-artifacts.zip https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip &amp;&amp;
+unzip -oq /tmp/nsite-artifacts.zip -d ~/.claude/skills &amp;&amp;
+node ~/.claude/skills/nsite-artifacts/scripts/artifact.mjs help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
+      </div>
+      <div editable>
+        <p>Eso descomprime el skill en tu carpeta de skills y comprueba que funciona. Para Codex, usa <code>~/.codex/skills</code> en lugar de <code>~/.claude/skills</code>. Después abre una sesión nueva para que el agente vea el skill. La misma herramienta viene también en el paquete de línea de comandos: <code>npx nsite-clay artifact help</code>. En Claude.ai, sube el zip en Ajustes, Capacidades, Skills, si tu plan permite que el agente ejecute código y acceda a la red.</p>
+      </div>
 
-  SKILL.md
-  scripts/artifact.mjs
-  assets/list.html
-  hooks/guard.mjs
-
-Si no tienes directorio de skills, guarda la carpeta en un lugar permanente y
-recuerda dónde está. Luego lee SKILL.md y síguelo cada vez que te pida una lista,
-un plan o una pequeña página que pueda abrir en el móvil, compartir o editar yo.
+      <h3 editable="single-line">O pega esto a tu agente</h3>
+      <div class="snippet">
+<pre data-copy-source>Instala el skill nsite-artifacts. Descarga https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip
+y descomprímelo en tu directorio de skills, de modo que exista nsite-artifacts/SKILL.md
+allí. Si no tienes un directorio de skills, descomprímelo en un lugar permanente y
+recuerda dónde está. Luego lee SKILL.md y síguelo siempre que te pida una lista,
+un plan o una página pequeña que pueda abrir en el móvil, compartir, comentar o editar yo mismo.
 Comprueba que funciona con: node &lt;esa carpeta&gt;/scripts/artifact.mjs help</pre>
         <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
-      </div>
-
-      <h3 editable="single-line">O instálalo tú mismo, para Claude Code</h3>
-      <div class="snippet">
-<pre data-copy-source>d=~/.claude/skills/nsite-artifacts
-b=https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts
-mkdir -p "$d/scripts" "$d/assets" "$d/hooks"
-for f in SKILL.md scripts/artifact.mjs assets/list.html hooks/guard.mjs; do
-  curl -fsSL -o "$d/$f" "$b/$f"
-done
-node "$d/scripts/artifact.mjs" help</pre>
-        <button type="button" class="btn copy" data-copy data-done="Copiado">Copiar</button>
-      </div>
-      <div editable>
-        <p>Para Codex, usa la carpeta <code>~/.codex/skills/nsite-artifacts</code>. Después abre una sesión nueva para que el agente vea el skill. La misma herramienta viene también en el paquete de línea de comandos: <code>npx nsite-clay artifact help</code>.</p>
       </div>
     </section>
 
@@ -122,6 +114,15 @@ node "$d/scripts/artifact.mjs" help</pre>
       </ul>
       <div editable>
         <p class="lede" style="margin-top:1.2rem">El agente escribe la página y la herramienta la cifra y la publica. El modelo nunca toca una clave: la clave solo existe dentro del enlace que devuelve la herramienta. Cada página caduca, a los 30 días si no dices otra cosa.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="comments">
+      <h2 id="comments" editable="single-line">Di qué debería ser distinto.</h2>
+      <div editable>
+        <p class="lede">Cada página que puedes editar tiene un botón Comentarios en una esquina. Selecciona unas palabras y pulsa Comentar, o elige una parte de la página, y escribe qué quieres cambiar. Se guarda con la página. Luego dile a tu agente que has comentado: encuentra cada comentario y dónde está exactamente, hace el cambio, responde debajo del comentario y lo marca como resuelto.</p>
+        <p>También puedes cambiar la página tú mismo, en el navegador. El agente guarda una copia de la página tal como la vio por última vez, así que sabe exactamente qué cambiaste y puede ajustar el resto de la página.</p>
+        <p>Envía el enlace de edición a quienes deban comentar, porque un comentario se guarda con la página. Quien solo tiene el enlace de lectura puede mirar, pero no comentar.</p>
       </div>
     </section>
 

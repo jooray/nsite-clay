@@ -199,6 +199,7 @@ export class Sealed {
     const secret = await unwrap(this.shell.wraps, signer.pubkey, where.owner, (pk, c) => signer.nip44Decrypt(pk, c));
     if (!secret) { this._lock("not-a-member"); return false; }
     this._lock("members");     // while it decrypts; replaced by the page a moment later
+    this._member = signer.pubkey;      // who is looking, for the page's own comments
     return this._tryOpen(secret, "member");
   }
 
@@ -207,7 +208,7 @@ export class Sealed {
   _write(plain, keys, via = "link") {
     const doc = this.nc.doc;
     const win = doc.defaultView;
-    win[HANDOVER] = { keys, shell: this.shell, plain, via };
+    win[HANDOVER] = { keys, shell: this.shell, plain, via, member: via === "member" ? this._member || null : null };
     try { this.nc.destroy(); } catch {}
     // The policy goes in first, so it governs everything the page brings. It is
     // the shell's policy, not anything from inside the ciphertext.

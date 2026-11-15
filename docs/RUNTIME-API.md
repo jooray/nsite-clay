@@ -437,6 +437,44 @@ Input rules at the start of a block: `# `, `## `, `### `, `- `, `1. `, `> `, ` `
 A save keeps the `editable` attribute as an inert marker and drops the rest: no
 `contenteditable`, no toolbar, no editor debris in the markup.
 
+## Comments
+
+`nc:comments` on `<html>` turns on comments for whoever can save the page. They get a Comments
+button; selecting words offers a Comment bubble, and the panel can also comment on a picked part of
+the page or on the page as a whole. The comment is saved with the page straight away, so nothing
+else holds it and an agent that reads the page back finds it. `nsite-artifacts` stamps the attribute
+on every page that can be edited; `--no-comments` leaves it off.
+
+The markup is the interface:
+
+```html
+<aside nc:comments hidden>
+  <article nc:comment="c7k2f9" nc:state="open" nc:by="Jana" nc:at="2026-11-15T10:30:00.000Z">
+    <blockquote nc:quote>the selected words</blockquote>
+    <p nc:text>What they said.</p>
+    <p nc:reply nc:by="Agent" nc:at="2026-11-15T11:02:00.000Z">The answer.</p>
+  </article>
+</aside>
+```
+
+`nc:by` is the profile name of whoever commented as a member of the page or signed in with their own key, and `nc:pk` their npub. Nobody types a name. A comment made through an edit link has neither, because the page's own key says nothing about who is typing.
+
+Where it was made, `<mark nc:c="c7k2f9">` wraps the words or `nc:c="c7k2f9"` sits on the element
+that was picked. Marks exist only while a comment is open: resolving a comment unwraps them, and
+reopening it in the browser puts them back on the same words if they are still there once.
+
+| Call | Does |
+|---|---|
+| `nc.comments.list()` | every comment: `id`, `state`, `by`, `at`, `quote`, `text`, `replies` |
+| `nc.comments.add({ text, by, range, element })` | comment on a Range, on an element, or on the page; saves |
+| `nc.comments.replyTo(id, text, by)` | answer a comment |
+| `nc.comments.resolve(id, on = true)` | resolve or reopen |
+| `nc.comments.remove(id)` | delete it and its anchors |
+| `nc.comments.show(id)` | scroll to what it is about |
+
+Readers, who cannot save, see no button and no highlights. A page that rewrites itself should keep
+the `aside` and the marks.
+
 ## Save markers
 
 | Marker | Effect |

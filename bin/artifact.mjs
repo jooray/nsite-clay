@@ -28,7 +28,7 @@ import { finalizeEvent, getPublicKey, nip19, SimplePool, verifyEvent } from "nos
 import { useWebSocketImplementation } from "nostr-tools/pool";
 import { sha256 } from "@noble/hashes/sha2";
 import { bytesToHex } from "@noble/hashes/utils";
-import { parse } from "parse5";
+import { parse, serialize } from "parse5";
 import WebSocket from "ws";
 import {
   assertShell, b64u, buildShell, keysFrom, newSecret, openText, parseShell, sealText, shellPolicy, unb64u, wrapFor,
@@ -329,11 +329,14 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 // What the tool decides and the model does not: whose page this is and where
 // it lives. Whatever the file said about those is replaced.
-function stampPage(html, { npub, relays, servers }) {
+function stampPage(html, { npub, relays, servers, edit, comments }) {
   if (!/<html\b/i.test(html)) fail("that file is not an HTML document: it has no <html> element");
+  // Comments are for pages somebody can change: a comment is saved with the page.
+  const withComments = comments !== false && edit !== "none";
   let out = html.replace(/<html\b([^>]*)>/i, (_, attrs) => {
     const kept = attrs.replace(/\s+nc:(owner|site|path|relays|servers|sealed|expires)(="[^"]*")?/g, "");
-    return `<html${kept} nc:owner="${npub}" nc:path="/index.html" nc:relays="${relays.join(",")}" nc:servers="${servers.join(",")}">`;
+    const has = /\bnc:comments\b/.test(kept);
+    return `<html${kept}${withComments && !has ? " nc:comments" : ""} nc:owner="${npub}" nc:path="/index.html" nc:relays="${relays.join(",")}" nc:servers="${servers.join(",")}">`;
   });
   if (!/<script\b[^>]*\bsrc\s*=\s*["']?\/nsite-clay(-[0-9a-f]{8})?\.js/i.test(out)) {
     const tag = `<script src="/nsite-clay.js"></script>`;
@@ -476,6 +479,8 @@ function digest(html) {
     if (!tag) { for (const c of node.childNodes || []) walk(c); return; }
     if (SKIP.has(tag) && tag !== "head") return;
     if (tag === "head") return;
+    // The comments are read with `comments`, not as a part of the page's words.
+    if (tag === "aside" && has(node, "nc:comments")) return;
     if (BLOCK.has(tag)) flush();
     if (/^h[1-6]$/.test(tag)) line += "#".repeat(Number(tag[1])) + " ";
     if (tag === "li" && !(node.childNodes || []).some((c) => c.tagName === "input")) line += "- ";
@@ -519,11 +524,131 @@ function changes(before, after) {
   return out;
 }
 
+// What the page is made of, line by line, in the order it appears: the words,
+// ticks and fields of `digest`, and nothing that only the browser's editor adds.
+// A person may have changed the page with the ordinary editing tools, so
+// "what did they do" is answered from a copy of the page as it was last read,
+// kept here, and not from anything the page says about itself.
+function diffOps(a, b) {
+  // Myers' O(ND) shortest edit script, so a long page with a short edit is quick.
+  const n = a.length, m = b.length, max = n + m, off = max;
+  let v = new Int32Array(2 * max + 2), trace = [];
+  for (let d = 0; d <= max; d++) {
+    trace.push(v.slice());
+    for (let k = -d; k <= d; k += 2) {
+      let x = (k === -d || (k !== d && v[off + k - 1] < v[off + k + 1])) ? v[off + k + 1] : v[off + k - 1] + 1;
+      let y = x - k;
+      while (x < n && y < m && a[x] === b[y]) { x++; y++; }
+      v[off + k] = x;
+      if (x >= n && y >= m) return backtrack(trace, a, b, off, d);
+    }
+  }
+  return [];
+}
+function backtrack(trace, a, b, off, dEnd) {
+  const ops = [];
+  let x = a.length, y = b.length;
+  for (let d = dEnd; d > 0; d--) {
+    const v = trace[d], k = x - y;
+    const prevK = (k === -d || (k !== d && v[off + k - 1] < v[off + k + 1])) ? k + 1 : k - 1;
+    const prevX = v[off + prevK], prevY = prevX - prevK;
+    while (x > prevX && y > prevY) { ops.push([" ", a[x - 1]]); x--; y--; }
+    if (x === prevX) ops.push(["+", b[y - 1]]); else ops.push(["-", a[x - 1]]);
+    x = prevX; y = prevY;
+  }
+  while (x > 0 && y > 0) { ops.push([" ", a[x - 1]]); x--; y--; }
+  return ops.reverse();
+}
+
+// One tag to a line, so a diff of a page saved on a single line still says where.
+const lined = (html) => serialize(parse(html)).replace(/>\s*</g, ">\n<").replace(/\r/g, "").split("\n").filter((l) => l.trim());
+
+/** A unified diff of two pages: `-` was there, `+` is there now. */
+function unifiedDiff(beforeHtml, afterHtml, { context = 2, limit = 24000 } = {}) {
+  const ops = diffOps(lined(beforeHtml), lined(afterHtml));
+  const out = [];
+  let added = 0, removed = 0;
+  const keep = new Array(ops.length).fill(false);
+  ops.forEach(([t], i) => {
+    if (t === " ") return;
+    t === "+" ? added++ : removed++;
+    for (let j = Math.max(0, i - context); j <= Math.min(ops.length - 1, i + context); j++) keep[j] = true;
+  });
+  let gap = false, size = 0, truncated = false;
+  for (let i = 0; i < ops.length; i++) {
+    if (!keep[i]) { gap = true; continue; }
+    if (gap && out.length) out.push("@@");
+    gap = false;
+    const line = ops[i][0] + ops[i][1].slice(0, 400);
+    size += line.length + 1;
+    if (size > limit) { truncated = true; break; }
+    out.push(line);
+  }
+  return { added, removed, diff: out.join("\n"), ...(truncated ? { truncated: true } : {}) };
+}
+
+// ----------------------------------------------------------- comments on a page
+
+const BLOCKS = new Set(["p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "td", "th", "figcaption", "blockquote", "dd", "dt", "label", "pre", "summary", "div", "section", "article", "main"]);
+const textOfNode = (n) => n.nodeName === "#text" ? n.value : (n.childNodes || []).map(textOfNode).join("");
+const squash = (s) => s.replace(/\s+/g, " ").trim();
+
+/**
+ * Every comment on a page, as the page's own runtime wrote it (see
+ * src/comments.js): who, when, what was selected, what they said, the replies,
+ * and where in the page the words sit, so an agent can act on a comment without
+ * reading the whole page to find it.
+ */
+function commentsOf(html) {
+  const found = [], anchors = new Map(), order = [];
+  const attr = (n, k) => n.attrs?.find((a) => a.name === k)?.value;
+  const walk = (n) => {
+    if (n.tagName) {
+      order.push(n);
+      if (n.tagName === "article" && attr(n, "nc:comment") != null && n.parentNode?.tagName === "aside" && attr(n.parentNode, "nc:comments") != null) found.push(n);
+      for (const id of (attr(n, "nc:c") || "").split(/\s+/).filter(Boolean)) {
+        if (!anchors.has(id)) anchors.set(id, []);
+        anchors.get(id).push(n);
+      }
+    }
+    for (const c of n.childNodes || []) walk(c);
+  };
+  walk(parse(html));
+  const headingBefore = (node) => {
+    const at = order.indexOf(node);
+    for (let i = at; i >= 0; i--) if (/^h[1-6]$/.test(order[i].tagName) && !order[i].parentNode?.attrs?.some((a) => a.name === "nc:comments")) return squash(textOfNode(order[i])).slice(0, 120);
+    return "";
+  };
+  return found.map((art) => {
+    const id = attr(art, "nc:comment");
+    const kids = (art.childNodes || []).filter((c) => c.tagName);
+    const first = anchors.get(id)?.[0];
+    let block = first;
+    while (block && !BLOCKS.has(block.tagName)) block = block.parentNode;
+    return {
+      id,
+      state: attr(art, "nc:state") === "resolved" ? "resolved" : "open",
+      by: attr(art, "nc:by") || "",
+      ...(attr(art, "nc:pk") ? { npub: attr(art, "nc:pk") } : {}),
+      at: attr(art, "nc:at") || "",
+      quote: squash(kids.filter((c) => c.tagName === "blockquote").map(textOfNode).join(" ")),
+      text: kids.filter((c) => c.tagName === "p" && attr(c, "nc:text") != null).map(textOfNode).join("\n").trim(),
+      replies: kids.filter((c) => c.tagName === "p" && attr(c, "nc:reply") != null)
+        .map((r) => ({ by: attr(r, "nc:by") || "", at: attr(r, "nc:at") || "", text: textOfNode(r).trim() })),
+      anchored: !!first,
+      ...(first ? { where: { heading: headingBefore(first), block: squash(textOfNode(block || first)).slice(0, 240) } } : {}),
+    };
+  });
+}
+
 const seenFile = (a) => join(HOME, "seen", a.id + ".txt");
-function remember(a, text) {
+const seenHtmlFile = (a) => join(HOME, "seen", a.id + ".html");
+function remember(a, text, html) {
   mkdirSync(join(HOME, "seen"), { recursive: true, mode: 0o700 });
   writeFileSync(seenFile(a), text, { mode: 0o600 });
+  if (html != null) writeFileSync(seenHtmlFile(a), html, { mode: 0o600 });
 }
+function seenHtml(a) { try { return readFileSync(seenHtmlFile(a), "utf8"); } catch { return null; } }
 
 // ----------------------------------------------------------------- commands
 
@@ -560,6 +685,7 @@ async function create(file, opts = {}) {
     title: opts.title || one(flags.title) || "", visibility, edit, sealed: visibility !== "public",
     members, created: now(), expires, relays: cfg.relays.map(norm), servers: cfg.servers.map(norm),
     shellTitle: one(flags["shell-title"]) || undefined,
+    comments: !flags["no-comments"] && edit !== "none",
   };
   a.url = siteUrl(cfg, a.pubkey);
   const html = stampPage(opts.html ?? readFileSync(file, "utf8"), a);
@@ -595,7 +721,7 @@ async function create(file, opts = {}) {
   const ledger = readLedger();
   ledger.artifacts[a.id] = a;
   writeLedger(ledger);
-  remember(a, digest(html));
+  remember(a, digest(html), html);
   if (out.refused.length) warnings.push(`stored on ${out.servers.length} of ${a.servers.length} servers. Refused: ${out.refused.join("; ")}`);
   if (out.relays.length < a.relays.length) warnings.push(`accepted by ${out.relays.length} of ${a.relays.length} relays`);
   return { id: a.id, title: a.title, visibility, edit, ...linksOf(a, keys),
@@ -628,7 +754,10 @@ function listPage() {
   return { file: out, items: items.length, next: `create ${out} --edit=link --title="${title}"` };
 }
 
-async function read(id) {
+// The page as it is, against the page as this tool last saw it. Reading is what
+// "seen" means: the next status or read reports only what came after this one.
+// --peek looks without moving that mark.
+async function look(id) {
   const ledger = readLedger();
   const a = entryOf(ledger, id);
   const keys = await keysFrom({ edit: a.secret });
@@ -636,24 +765,145 @@ async function read(id) {
   const text = digest(page.html);
   let before = "";
   try { before = readFileSync(seenFile(a), "utf8"); } catch { /* first read */ }
+  const beforeHtml = seenHtml(a);
   const changed = page.hash !== a.seenHash;
-  const out = {
-    id: a.id, title: a.title, changed, savedAt: new Date(page.manifest.created_at * 1000).toISOString(),
-    ...(changed ? { changes: changes(before, text) } : {}),
+  const mark = () => {
+    if (flags.peek) return;
+    a.seenHash = page.hash; a.hash = page.hash; a.savedAt = page.manifest.created_at;
+    if (!a.blobs.includes(page.hash)) a.blobs.push(page.hash);
+    writeLedger(ledger);
+    remember(a, text, page.html);
   };
+  return { a, page, text, before, beforeHtml, changed, mark,
+    savedAt: new Date(page.manifest.created_at * 1000).toISOString() };
+}
+
+// What a person said on the page since this tool last looked: new comments,
+// and ones that got a reply or changed state.
+function commentSummary(now, beforeHtml) {
+  const was = new Map(beforeHtml ? commentsOf(beforeHtml).map((c) => [c.id, c]) : []);
+  const fresh = [];
+  for (const c of now) {
+    const old = was.get(c.id);
+    const isNew = !old;
+    const answered = !!old && c.replies.length > old.replies.length;
+    const moved = !!old && c.state !== old.state;
+    if (isNew || answered || moved) fresh.push({ ...c, news: isNew ? "new" : answered ? "reply" : "state" });
+  }
+  return fresh;
+}
+
+async function read(id) {
+  const r = await look(id);
+  const { a, page, text } = r;
+  const now = commentsOf(page.html);
+  const out = {
+    id: a.id, title: a.title, changed: r.changed, savedAt: r.savedAt,
+    ...(r.changed ? { changes: changes(r.before, text) } : {}),
+    // Said once, and where to look: the list itself comes from `comments`.
+    ...(now.length ? { comments: { open: now.filter((c) => c.state === "open").length, resolved: now.filter((c) => c.state === "resolved").length,
+      newSinceLastRead: commentSummary(now, r.beforeHtml).map((c) => c.id) } } : {}),
+  };
+  // `changes` knows words and ticks. When the page itself was edited, which is
+  // what an ordinary editing tool does, the diff of the markup says exactly what.
+  if (flags.diff && r.changed) {
+    out.diff = r.beforeHtml == null ? { note: "no earlier copy of this page was kept, so there is nothing to compare with" }
+      : unifiedDiff(r.beforeHtml, page.html);
+  }
   const want = one(flags.as) || "text";
   if (want === "html") out.html = page.html;
   else out.text = text;
   if (flags.out) { writeFileSync(resolve(one(flags.out)), page.html); out.file = resolve(one(flags.out)); delete out.html; }
-  // Reading is what "seen" means: the next status or read reports only what
-  // came after this one. --peek looks without moving that mark.
-  if (!flags.peek) {
-    a.seenHash = page.hash; a.hash = page.hash; a.savedAt = page.manifest.created_at;
-    if (!a.blobs.includes(page.hash)) a.blobs.push(page.hash);
-    writeLedger(ledger);
-    remember(a, text);
-  }
+  r.mark();
   return out;
+}
+
+// What changed in the page since this tool last read it: a unified diff of the
+// markup, the changes to the words, and the comments added or answered. Reading
+// this way moves the mark like `read` does.
+async function diff(id) {
+  const r = await look(id);
+  const now = commentsOf(r.page.html);
+  const out = { id: r.a.id, title: r.a.title, changed: r.changed, savedAt: r.savedAt };
+  if (r.changed) {
+    out.changes = changes(r.before, r.text);
+    out.markup = r.beforeHtml == null ? { note: "no earlier copy of this page was kept" } : unifiedDiff(r.beforeHtml, r.page.html);
+    const fresh = commentSummary(now, r.beforeHtml);
+    if (fresh.length) out.comments = fresh;
+  }
+  r.mark();
+  return out;
+}
+
+// The comments on a page, with where each one is, newest news first. Open ones
+// unless --all. This is the way to read a page somebody has been commenting on:
+// it does not print the page.
+async function comments(id) {
+  const r = await look(id);
+  const all = commentsOf(r.page.html);
+  const fresh = new Map(commentSummary(all, r.beforeHtml).map((c) => [c.id, c.news]));
+  const shown = (flags.all ? all : all.filter((c) => c.state === "open")).map((c) => ({ ...c, ...(fresh.has(c.id) ? { news: fresh.get(c.id) } : {}) }));
+  shown.sort((x, y) => (fresh.has(y.id) - fresh.has(x.id)) || String(x.at).localeCompare(String(y.at)));
+  const out = {
+    id: r.a.id, title: r.a.title, pageChanged: r.changed, savedAt: r.savedAt,
+    open: all.filter((c) => c.state === "open").length, resolved: all.filter((c) => c.state === "resolved").length,
+    ...(r.changed ? { changes: changes(r.before, r.text).length + " changed lines since you last read it; run read or diff to see them" } : {}),
+    comments: shown,
+  };
+  if (!all.length) out.note = "no comments on this page" + (r.a.comments === false || r.a.edit === "none" ? " (comments are off for it: it cannot be edited by link or members)" : "");
+  r.mark();
+  return out;
+}
+
+// Change one comment inside the page's markup, and publish it. The page is
+// edited as text so nothing else in it moves: a reply is a paragraph added to
+// the comment, resolving flips its state and takes the highlight off the words.
+const COMMENT_ID = /^[A-Za-z0-9]{3,16}$/;
+async function commentAct(id, cid, kind) {
+  if (!id || !cid) fail(`usage: ${kind} <id> <comment-id>${kind === "reply" ? ' --text="…"' : ""} (see: comments <id>)`);
+  if (!COMMENT_ID.test(cid)) fail(`"${cid}" is not a comment id`);
+  const text = one(flags.text);
+  if (kind === "reply" && (!text || text === true)) fail('reply needs --text="what you did or answer"');
+  const by = String(one(flags.by) || "Agent");
+  const cfg = settings();
+  const ledger = readLedger();
+  const a = entryOf(ledger, id);
+  const keys = await keysFrom({ edit: a.secret });
+  return withPool(async (pool) => {
+    const live = await fetchPage(pool, a, keys);
+    if (live.hash !== a.seenHash && !flags.force) {
+      fail(`${a.id} was changed after you last read it. Run "comments ${a.id}" to see what changed, then ${kind} again.`);
+    }
+    const re = new RegExp(`<article\\b[^>]*\\bnc:comment="${cid}"[^>]*>[\\s\\S]*?</article>`);
+    const art = re.exec(live.html)?.[0];
+    if (!art) fail(`no comment "${cid}" on ${a.id}. Run "comments ${a.id} --all" for the ids.`);
+    let next = art;
+    if (kind === "reply") {
+      const p = `<p nc:reply nc:by="${esc(by)}" nc:at="${new Date().toISOString()}">${esc(text)}</p>`;
+      next = next.replace(/<\/article>$/, p + "</article>");
+    }
+    if (kind === "resolve" || (kind === "reply" && flags.resolve)) next = next.replace(/\bnc:state="[^"]*"/, 'nc:state="resolved"');
+    if (kind === "reopen") next = next.replace(/\bnc:state="[^"]*"/, 'nc:state="open"');
+    let html = live.html.replace(art, () => next);
+    if (/nc:state="resolved"/.test(next)) {
+      // The highlight goes: words wrapped for this comment are unwrapped, and its
+      // id comes off anything else it was attached to.
+      html = html.replace(new RegExp(`<mark\\b[^>]*\\bnc:c="${cid}"[^>]*>([\\s\\S]*?)</mark>`, "g"), "$1")
+        .replace(/\bnc:c="([^"]*)"/g, (m, ids) => {
+          const rest = ids.split(/\s+/).filter((t) => t && t !== cid);
+          return rest.length === ids.split(/\s+/).filter(Boolean).length ? m : rest.length ? `nc:c="${rest.join(" ")}"` : "";
+        });
+    }
+    adoptMembers(a, live.shell);
+    html = stampPage(html, a);
+    const out = await putPage(pool, a, keys, html, cfg, { live: live.manifest, table: live.table });
+    a.hash = out.hash; a.seenHash = out.hash; a.savedAt = out.manifest.created_at;
+    a.blobs.push(out.hash);
+    writeLedger(ledger);
+    remember(a, digest(html), html);
+    const now = commentsOf(html).find((c) => c.id === cid);
+    return { id: a.id, comment: cid, state: now?.state, replies: now?.replies.length, savedAt: new Date(out.manifest.created_at * 1000).toISOString() };
+  });
 }
 
 async function status(id) {
@@ -713,7 +963,7 @@ async function update(id, file) {
     a.hash = out.hash; a.seenHash = out.hash; a.savedAt = out.manifest.created_at;
     a.blobs.push(out.hash);
     writeLedger(ledger);
-    remember(a, digest(html));
+    remember(a, digest(html), html);
     return { id: a.id, ...linksOf(a, keys), savedAt: new Date(out.manifest.created_at * 1000).toISOString() };
   });
 }
@@ -880,9 +1130,13 @@ async function links(id) {
 const HELP = `nsite-artifacts: publish a page, read what people changed, take it down.
 
   list-page --title=T [--item=…]… [--items=file|-] [--note=…] [--out=list.html]
-  create <file.html> [--visibility=link|private|public] [--edit=none|link|members]
+  create <file.html> [--visibility=link|private|public] [--edit=none|link|members] [--no-comments]
          [--member=npub]… [--member-read=npub]… [--expires=30d|never] [--title=T]
-  read <id> [--as=text|html] [--out=file.html] [--peek]
+  read <id> [--as=text|html] [--out=file.html] [--diff] [--peek]
+  diff <id>              what changed in the page since you last read it, as a diff
+  comments <id> [--all] [--peek]       what people wrote on the page, and where
+  reply <id> <comment> --text="…" [--resolve] [--by=Agent]
+  resolve <id> <comment>   |   reopen <id> <comment>
   status [id]
   update <id> <file.html> [--expires=…] [--force]
   share <id> --member=npub | --member-read=npub
@@ -898,6 +1152,10 @@ or NSITE_ARTIFACTS_RELAYS, _SERVERS, _GATEWAY, _RUNTIME, _UPLOADER, _HOME.`;
 
 const commands = {
   create: () => create(positional[0]), "list-page": listPage, read: () => read(positional[0]),
+  diff: () => diff(positional[0]), comments: () => comments(positional[0]),
+  reply: () => commentAct(positional[0], positional[1], "reply"),
+  resolve: () => commentAct(positional[0], positional[1], "resolve"),
+  reopen: () => commentAct(positional[0], positional[1], "reopen"),
   status: () => status(positional[0]), update: () => update(positional[0], positional[1]),
   share: () => share(positional[0]), rekey: () => rekey(positional[0]), links: () => links(positional[0]),
   list, delete: () => del(positional[0]), sweep, upgrade: () => upgrade(positional[0]),

@@ -39,3 +39,7 @@ CLAUDE.md.local
 # Local browser review evidence
 .impeccable/review/
 .impeccable/hook.cache.json
+
+# skill zips: packed by tools/pack-skills.mjs, copied into site/skills/ by site:build
+dist-skills/
+site/skills/

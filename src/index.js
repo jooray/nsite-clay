@@ -31,6 +31,7 @@ import { Blocks } from "./blocks.js";
 import { Undo } from "./undo.js";
 import { Upgrade, stamp, unstamp } from "./upgrade.js";
 import { Pages, hrefOf } from "./pages.js";
+import { Comments } from "./comments.js";
 import { qrSvg, qrElement } from "./qr.js";
 import { agentInstructions, siteFacts } from "./agent-brief.js";
 import { toast, notice, field, modal, checkbox } from "./ui.js";
@@ -102,6 +103,7 @@ class NsiteClay extends EventTarget {
     this.ai = new Ai(this);
     this.upgrade = new Upgrade(this);
     this.pages = new Pages(this);
+    this.comments = new Comments(this);
     this.sealed = new Sealed(this);
     this.version = VERSION;
     this.status = "idle";
@@ -1128,6 +1130,7 @@ nc.ready = (async () => {
   nc.undo.start();
   nc.ai.start();
   nc.pages.start();
+  nc.comments.start();
   // Not at load. The serialiser and its parser are a third of the runtime and
   // only somebody about to save has any use for them, so the fetch waits until
   // this page is being edited. A reader never pays for it.

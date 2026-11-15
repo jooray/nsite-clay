@@ -1,10 +1,10 @@
 ---
 name: nsite-artifacts
-description: Publish a small web page for the user and get a link to send them, such as a shopping list, todo list, packing list, trip plan, report or one-off tool. The page can be private to people who have the link, editable by them in the browser, and deleted automatically after a number of days. Also use it to read back what the user ticked, added or changed on a page you published earlier, to change that page, or to take it down. Use when the user asks for a list or page they can open on their phone, share with family, or edit themselves.
+description: Publish a small web page for the user and get a link to send them, such as a shopping list, todo list, packing list, trip plan, report, draft, proposal or one-off tool. The page can be private to people who have the link, editable by them in the browser, and deleted automatically after a number of days. People can comment on it by selecting words or picking a part of the page, and you read those comments, answer them and change the page. Also use it to read back what the user ticked, added or changed on a page you published earlier, to see exactly what changed, to change that page, or to take it down. Use when the user asks for a list or page they can open on their phone, share with family, review, or edit themselves.
 license: MIT-0
 compatibility: Needs Node.js 18 or newer, outbound network access (HTTPS and WebSocket), and a state directory that survives between sessions.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   homepage: https://nsite-clay.cypherpunk.today/
 ---
 
@@ -32,7 +32,9 @@ that says what to do, and exits non-zero. Read that sentence and act on it.
    or schedules are `link` (the default) or `private`.
 3. **Do not write a link into long-term memory, a log, a summary or a commit.**
    A link is a key. To get it again, run `artifact links <id>`. Remember the
-   `id` and the title instead.
+   `id` and the title instead. `create`, `update`, `share`, `rekey` and
+   `links` print links as part of their answer: do not repeat them in a report
+   or summary of what you did, say that you sent the link to the user.
 4. **Read before you change.** If the user may have edited the page, run
    `artifact read <id>` first, then build your change on what you read. The
    script refuses an update that would overwrite an edit you have not seen.
@@ -90,9 +92,111 @@ changes, schedule `artifact status` (see Scheduling below).
 `status` also lists pages under `deleted` that somebody deleted from the page
 itself. Do not make them again unless the user asks.
 
+### What exactly changed
+
+The user may change the page with the ordinary editing tools, not only by
+ticking boxes, so `read` keeps a copy of the page as you last saw it and can
+show the difference:
+
+    artifact diff <id>         what changed since you last read it, as a diff
+    artifact read <id> --diff  the same, together with the text
+
+`diff` answers with `changes` (the words and ticks, as in `read`), `markup` (a
+unified diff of the page, `-` was there and `+` is there now, with a few lines
+around each change) and `comments` that are new or were answered. If you changed
+the page yourself with `update`, that copy is the one later changes are measured
+against. A diff with nothing in it means nothing changed.
+
+`diff`, `read` and `comments` all count as reading: afterwards the page is
+"seen", and the next one of them reports only what is newer. Add `--peek` to any
+of them to look without that. For a quick look at the whole page use plain
+`read`, which prints it as text; `--as=html` is for editing, it writes a file and
+only tells you where.
+
+## Comments: let the user say what should be different
+
+Every page you make that people can edit has a **Comments** button in its
+corner. The user selects some words on the page and presses Comment, or picks a
+part of the page, types what they want, and it is saved with the page. You read
+it and act on it. This is much easier for them than describing, in a chat,
+which sentence on which page they mean.
+
+**Encourage it.** When you give the user a page that is a draft, a plan, a
+proposal, a report or anything they may want changed, say once, in one sentence:
+"Select any words you want changed and press Comment, and I will see it."
+Send the `editLink` (or the `link` of a page made with `--edit=link`) to
+whoever should comment: commenting needs the right to edit, because a comment is
+saved with the page. Someone with only the read link can look but not comment.
+
+Find the comments, do not read the page for them:
+
+    artifact comments <id>         open comments, new ones first
+    artifact comments <id> --all   resolved ones too
+
+    { "open": 2, "resolved": 1, "comments": [
+      { "id": "c7k2f9", "news": "new", "state": "open", "by": "Jana", "npub": "npub1…",
+        "at": "2026-11-15T10:30:00.000Z",
+        "quote": "Milk",                       <- the words they selected
+        "text": "Oat milk, please.",          <- what they said
+        "where": { "heading": "Shopping",     <- the section it is in
+                   "block": "Milk" },         <- the paragraph or row around it
+        "anchored": true, "replies": [] } ] }
+
+`by` and `npub` say who wrote it: the profile name of a person who opened the page
+as a member or signed in with their own Nostr key. A comment made through a plain
+link has neither, because nobody said who they are; the commenter is nobody you
+need to ask for a name. `news` is `new` for a comment you have not seen, `reply` when somebody answered
+one of yours, `state` when it was resolved or reopened. A comment on a part of
+the page, not on words, has the text of that part as `quote`. `anchored: false`
+means the words were removed from the page; the comment still stands.
+
+Act on a comment the way you would act on a request in chat, then close it:
+
+    artifact reply <id> <comment> --text="Changed to oat milk." --resolve --by=Claude
+
+That adds your answer under the comment, marks it resolved and takes the
+highlight off the words, so the person sees what you did. Without `--resolve` the
+comment stays open, which is right when you asked them something. `artifact
+resolve <id> <comment>` and `reopen` change only the state. To change the page
+itself, do it with `read --as=html`, `update` as usual, and answer the comment
+afterwards; `reply` reads the page fresh and changes nothing else in it.
+`--by` is the name shown under your answer; leave it out and it says Agent.
+
+You may rewrite or delete the commented words. A resolved comment needs no
+highlight: `reply --resolve` takes off whatever is left of it, so it does not
+matter whether you kept the `<mark>` around your new words, and a resolved
+comment showing `anchored: false` is normal. Keep the mark only for a comment
+you leave open.
+
+A comment can be short or ambiguous ("do sushi", "shorter"). Make the smallest
+change that satisfies it, and say in your reply how you read it, so they can
+correct you. When the choice really matters, reply **without** `--resolve` and
+ask. Do not change anything the comments do not ask for.
+
+If somebody saved the page since you last read it, `reply` tells you to look
+again first.
+
+Check for comments when the user says they have commented or looked at the page
+("I left some comments", "have a look at it"), and with `status` when a
+scheduled check says the page changed. Do not poll. Do not resolve a comment you
+have not acted on. When you reply to several, group them into one `update` and
+then reply to each.
+
+Comments are saved in the page's markup as `<aside nc:comments hidden>` with
+one `<article nc:comment="id">` each. Keep that block, and the
+`<mark nc:c="…">` of every comment that is still open, when you rewrite a page
+yourself, or those comments are lost.
+Switch comments off for a page with `--no-comments` on `create`.
+
 ## Changing a page you published
 
-    artifact read <id> --as=html --out=/tmp/page.html
+Change only what the user asked for or what has to follow from it. If after
+reading the page nothing needs to change, say so and do not `update`. If the
+user edited the page themselves and something in their edit looks wrong or odd (a
+time that does not fit, a figure that does not add up), leave it as they wrote it,
+point it out, and ask: it may be on purpose.
+
+    artifact read <id> --as=html --out=/tmp/page.html       answers { "file": "/tmp/page.html", … }
     (edit /tmp/page.html: add rows, change text, keep everything else as it is)
     artifact update <id> /tmp/page.html
 

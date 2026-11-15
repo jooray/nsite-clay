@@ -11,6 +11,8 @@ nsite-clay, read all of it before you start. It is long on purpose: it tells you
 what the thing is, what to ask for, which template to begin from, and what will
 go wrong. It links the documentation rather than restating it.
 
+- This brief as an installable skill, one zip file:
+  https://nsite-clay.cypherpunk.today/skills/nsite-clay-web-builder.zip
 - The guide, with screenshots, for the person you are building it for:
   https://nsite-clay.cypherpunk.today/guide.html
 - The publisher, if they would rather do it themselves in a browser:

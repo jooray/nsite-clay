@@ -68,45 +68,37 @@
       <div editable class="prose">
         <p class="lede">Popros svojho AI agenta o nákupný zoznam, zoznam vecí na cestu, plán výletu alebo malú aplikáciu. Spraví stránku, zverejní ju zašifrovanú a pošle ti odkaz. Otvoríš ju v mobile, odškrtávaš a dopisuješ. Agent si potom prečíta, čo si zmenil.</p>
         <p class="lede">Kľúč je časť odkazu za znakom <code>#</code>. Prehliadač túto časť nikdy neposiela na server, takže relaye a úložné servery majú len nečitateľné bajty. Stránku otvorí každý, kto má odkaz, a nikto iný.</p>
-        <p>Chceš, aby ti agent postavil celý web, ktorý si potom upravuješ sám? To je iná úloha: daj mu <a href="/llms.txt">llms.txt</a>.</p>
+        <p>Chceš, aby ti agent postavil celý web, ktorý si potom upravuješ sám? To je iná úloha, s vlastným skillom: <a href="/skills/nsite-clay-web-builder.zip">nsite-clay-web-builder.zip</a>. Alebo mu daj <a href="/llms.txt">llms.txt</a>.</p>
       </div>
     </section>
 
     <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="setup">
-      <h2 id="setup" editable="single-line">Nastavenie: vlož toto svojmu agentovi.</h2>
+      <h2 id="setup" editable="single-line">Nastav to jedným krokom.</h2>
       <div editable>
-        <p class="lede">Funguje s každým agentom, ktorý vie spúšťať príkazy: Claude Code, Codex, Hermes Agent a ďalšími. Treba len Node.js 18 alebo novší. Žiadny účet, žiadny tvoj kľúč, žiadny vlastný server.</p>
+        <p class="lede">Funguje s každým agentom, ktorý vie spúšťať príkazy: Claude Code, Codex, Hermes Agent a ďalšími. Treba len Node.js 18 alebo novší. Žiadny účet, žiadny tvoj kľúč, žiadny vlastný server. Skill je jeden zip súbor.</p>
       </div>
+      <p><a class="btn primary" href="/skills/nsite-artifacts.zip">Stiahnuť nsite-artifacts.zip</a></p>
+
+      <h3 editable="single-line">Claude Code alebo Codex: jeden príkaz</h3>
       <div class="snippet">
-<pre data-copy-source>Nainštaluj si skill nsite-artifacts z nsite-clay. Stiahni tieto súbory z
-https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts/
-do priečinka nsite-artifacts vo svojom adresári so skillmi, s rovnakými cestami:
-
-  SKILL.md
-  scripts/artifact.mjs
-  assets/list.html
-  hooks/guard.mjs
-
-Ak adresár so skillmi nemáš, daj priečinok na trvalé miesto a zapamätaj si,
-kde je. Potom si prečítaj SKILL.md a riaď sa ním vždy, keď ťa poprosím o zoznam,
-plán alebo malú stránku, ktorú si otvorím v mobile, pošlem ďalej alebo upravím.
-Over, že to funguje: node &lt;ten priečinok&gt;/scripts/artifact.mjs help</pre>
-        <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
-      </div>
-
-      <h3 editable="single-line">Alebo si ho nainštaluj sám, pre Claude Code</h3>
-      <div class="snippet">
-<pre data-copy-source>d=~/.claude/skills/nsite-artifacts
-b=https://raw.githubusercontent.com/jooray/nsite-clay/main/skills/nsite-artifacts
-mkdir -p "$d/scripts" "$d/assets" "$d/hooks"
-for f in SKILL.md scripts/artifact.mjs assets/list.html hooks/guard.mjs; do
-  curl -fsSL -o "$d/$f" "$b/$f"
-done
-node "$d/scripts/artifact.mjs" help</pre>
+<pre data-copy-source>curl -fsSL -o /tmp/nsite-artifacts.zip https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip &amp;&amp;
+unzip -oq /tmp/nsite-artifacts.zip -d ~/.claude/skills &amp;&amp;
+node ~/.claude/skills/nsite-artifacts/scripts/artifact.mjs help</pre>
         <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
       </div>
       <div editable>
-        <p>Pre Codex použi priečinok <code>~/.codex/skills/nsite-artifacts</code>. Potom otvor novú reláciu, aby agent skill videl. Ten istý nástroj je aj v balíku pre príkazový riadok: <code>npx nsite-clay artifact help</code>.</p>
+        <p>Ten rozbalí skill do tvojho priečinka so skillmi a overí, že beží. Pre Codex použi <code>~/.codex/skills</code> namiesto <code>~/.claude/skills</code>. Potom otvor novú reláciu, aby agent skill videl. Ten istý nástroj je aj v balíku pre príkazový riadok: <code>npx nsite-clay artifact help</code>. V Claude.ai nahraj zip v Nastaveniach, Schopnostiach, Skills, ak tvoj plán dovoľuje agentovi spúšťať kód a pripájať sa na sieť.</p>
+      </div>
+
+      <h3 editable="single-line">Alebo vlož toto svojmu agentovi</h3>
+      <div class="snippet">
+<pre data-copy-source>Nainštaluj skill nsite-artifacts. Stiahni https://nsite-clay.cypherpunk.today/skills/nsite-artifacts.zip
+a rozbaľ ho do svojho priečinka so skillmi tak, aby tam existoval nsite-artifacts/SKILL.md.
+Ak priečinok so skillmi nemáš, rozbaľ ho niekde trvalo a zapamätaj si kde. Potom
+prečítaj SKILL.md a riaď sa ním vždy, keď ťa požiadam o zoznam, plán alebo malú
+stránku, ktorú si otvorím v mobile, môžem zdieľať, komentovať alebo upravovať sám.
+Over, že funguje, príkazom: node &lt;ten priečinok&gt;/scripts/artifact.mjs help</pre>
+        <button type="button" class="btn copy" data-copy data-done="Skopírované">Kopírovať</button>
       </div>
     </section>
 
@@ -122,6 +114,15 @@ node "$d/scripts/artifact.mjs" help</pre>
       </ul>
       <div editable>
         <p class="lede" style="margin-top:1.2rem">Agent napíše stránku, nástroj ju zašifruje a zverejní. Model sa kľúča nikdy nedotkne: kľúč existuje len v odkaze, ktorý nástroj vráti. Každá stránka má dátum zániku, 30 dní, ak nepovieš inak.</p>
+      </div>
+    </section>
+
+    <section class="flyer" data-fix="pin" style="--tilt:.4deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="comments">
+      <h2 id="comments" editable="single-line">Povedz, čo má byť inak.</h2>
+      <div editable>
+        <p class="lede">Každá stránka, ktorú môžeš upravovať, má v rohu tlačidlo Komentáre. Označ pár slov a stlač Komentovať, alebo vyber časť stránky a napíš, čo chceš zmeniť. Uloží sa spolu so stránkou. Potom povedz agentovi, že si komentoval: nájde každý komentár aj presne, kde sa nachádza, urobí zmenu, odpovie pod komentárom a označí ho ako vyriešený.</p>
+        <p>Stránku môžeš meniť aj sám, v prehliadači. Agent si drží kópiu stránky tak, ako ju videl naposledy, takže presne vie, čo si zmenil, a vie prispôsobiť zvyšok stránky.</p>
+        <p>Odkaz na úpravy pošli tým, ktorí majú komentovať, lebo komentár sa ukladá spolu so stránkou. Kto má len odkaz na čítanie, môže sa pozrieť, ale komentovať nemôže.</p>
       </div>
     </section>
 

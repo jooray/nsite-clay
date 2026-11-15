@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.3.29",
+    "released": "2026-11-15",
+    "notes": [
+      "Pages that an AI agent publishes for you can now be commented on. Select some words, or pick a part of the page, press Comment and write what should be different. The agent finds your comment and where it is, makes the change, answers under it and marks it done. On a phone the Comment button sits at the bottom of the screen, out of the way of the phone's own menu.",
+      "The agent can now see exactly what changed in a page, also when you changed it yourself in the browser, so it can make the rest of the page fit."
+    ]
+  },
+  {
     "version": "0.3.28",
     "released": "2026-11-14",
     "notes": [
