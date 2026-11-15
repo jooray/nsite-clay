@@ -56,6 +56,8 @@ const WORDS = {
   lost: ["The commented words are no longer on the page.", "Las palabras comentadas ya no están en la página.",
     "Komentované slová už na stránke nie sú.", "Komentovaná slova už na stránce nejsou."],
   page: ["whole page", "toda la página", "celá stránka", "celá stránka"],
+  restored: ["Your comment was saved again after the page reloaded.", "Su comentario se guardó de nuevo tras recargar la página.",
+    "Váš komentár sa po obnovení stránky uložil znova.", "Váš komentář se po obnovení stránky uložil znovu."],
 };
 
 const CHROME_SKIP = "[nc\\:chrome], aside[nc\\:comments], script, style, template, textarea, select, option, noscript";
@@ -259,6 +261,10 @@ export class Comments {
     const p = doc.createElement("p"); p.setAttribute("nc:text", ""); p.textContent = text;
     art.append(q, p);
     this.container(true).append(art);
+    // Written down before anything is saved. A save is refused when somebody else
+    // saved the page first, and the person is then asked to reload, which would
+    // take a comment that exists only in this copy with it.
+    this._pending({ id, text, by, pk, at: art.getAttribute("nc:at"), quote, kind: range ? "words" : element ? "part" : "page" });
     this._changed();
     return id;
   }
@@ -362,15 +368,73 @@ export class Comments {
   async _save() {
     clearTimeout(this._timer);
     this._timer = setTimeout(async () => {
-      try { await this.nc.save(); toast(this.say("saved"), { doc: this.doc }); }
+      try { await this.nc.save(); this._pending(null); toast(this.say("saved"), { doc: this.doc }); }
       catch (e) { toast(this.say("failed", { why: e?.message || String(e) }), { doc: this.doc }); }
     }, 600);
+  }
+
+  // ---- comments that did not get saved --------------------------------------
+
+  _pendingKey() {
+    const c = this.nc.cfg;
+    return `nsite-clay.comments-pending:${c.owner || ""}:${c.site || ""}:${c.path || ""}`;
+  }
+  _store() { try { return this.doc.defaultView.sessionStorage; } catch { return null; } }
+
+  /** Remember one more unsaved comment, or with null forget them all (the page was saved with them in it). */
+  _pending(record) {
+    const store = this._store();
+    if (!store) return;
+    try {
+      if (record === null) { store.removeItem(this._pendingKey()); return; }
+      const all = JSON.parse(store.getItem(this._pendingKey()) || "[]");
+      if (!all.some((x) => x.id === record.id)) all.push(record);
+      store.setItem(this._pendingKey(), JSON.stringify(all.slice(-20)));
+    } catch { /* storage full or blocked: the comment still works, it is only not kept across a reload */ }
+  }
+
+  /**
+   * After a reload: comments this tab wrote and the page never saved are put back,
+   * on the words they were made on if those are still there, without an anchor if
+   * not, and saved. Nobody retypes anything.
+   */
+  _restore() {
+    if (this._restored) return;
+    const store = this._store();
+    if (!store) return;
+    let all = [];
+    try { all = JSON.parse(store.getItem(this._pendingKey()) || "[]"); } catch { return; }
+    this._restored = true;
+    if (!all.length) return;
+    const have = new Set(this.list().map((c) => c.id));
+    let added = 0;
+    for (const rec of all) {
+      if (have.has(rec.id) || !rec.text) continue;
+      const doc = this.doc;
+      const art = doc.createElement("article");
+      art.setAttribute("nc:comment", rec.id);
+      art.setAttribute("nc:state", "open");
+      if (rec.by) art.setAttribute("nc:by", rec.by);
+      if (rec.pk) art.setAttribute("nc:pk", rec.pk);
+      art.setAttribute("nc:at", rec.at || new Date().toISOString());
+      const q = doc.createElement("blockquote"); q.setAttribute("nc:quote", ""); q.textContent = rec.quote || this.say("page");
+      const p = doc.createElement("p"); p.setAttribute("nc:text", ""); p.textContent = rec.text;
+      art.append(q, p);
+      this.container(true).append(art);
+      if (rec.kind === "words" || rec.kind === "part") this._reanchor({ id: rec.id, quote: rec.quote || "" });
+      added++;
+    }
+    if (added) {
+      this._changed();
+      toast(this.say("restored"), { doc: this.doc });
+    } else this._pending(null);
   }
 
   // ---- drawing ------------------------------------------------------------------
 
   sync() {
     const want = this.can;
+    if (want) setTimeout(() => this._restore(), 0);
     let btn = this.doc.getElementById("nc-comments-btn");
     if (!want) { btn?.remove(); this._closeAll(); return; }
     const open = this.list().filter((c) => c.state === "open").length;

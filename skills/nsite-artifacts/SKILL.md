@@ -4,7 +4,7 @@ description: Publish a small web page for the user and get a link to send them, 
 license: MIT-0
 compatibility: Needs Node.js 18 or newer, outbound network access (HTTPS and WebSocket), and a state directory that survives between sessions.
 metadata:
-  version: "0.3.2"
+  version: "0.3.3"
   homepage: https://nsite-clay.cypherpunk.today/
 ---
 
@@ -274,7 +274,9 @@ back. So:
 - Keep the page the size of a page. No logs that grow without end.
 
 Two people editing at the same moment: the second save is refused and that
-person is told to reload. Nothing is overwritten. If the user says a change
+person is told to reload. Nothing is overwritten. A comment somebody was writing is
+kept in their tab and put back and saved by itself after the reload; any other
+unsaved edit is not, and has to be made again. If the user says a change
 "did not stick", that is why; tell them to reload and do it again.
 
 `assets/list.html` is a complete working example of all of this.

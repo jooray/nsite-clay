@@ -162,6 +162,30 @@ t("the page as last seen is kept to compare with", existsSync(S + "/home/seen/" 
 const withDiff = (() => { A("update", made.id, S + "/list.html", "--force"); return A("read", made.id, "--diff", "--peek"); })();
 t("read --diff works against a copy the agent made itself", withDiff.changed === false || !!withDiff.diff);
 
+// Two people comment at nearly the same moment. The second save is refused, because it would
+// overwrite the first; the comment of the one who was refused must not be lost.
+{
+  const readyEdit = (pg) => pg.waitForFunction(() => document.documentElement.getAttribute("nc:ready") === "true" && !document.documentElement.hasAttribute("nc:sealed"), null, { timeout: 20000 });
+  const ca = await browser.newContext(); const pa = await ca.newPage();
+  const cb = await browser.newContext(); const pb = await cb.newPage();
+  for (const pg of [pa, pb]) { await pg.goto(made.editLink); await readyEdit(pg); await pg.waitForSelector("#nc-comments-btn"); }
+  // The second parent writes a comment, but the copy of the page has not saved yet.
+  await pa.evaluate(() => { nc.comments.__save = nc.comments._save; nc.comments._save = async () => {}; });
+  await pa.evaluate(() => nc.comments.add({ text: "Second parent, typed before the first had saved.", element: document.querySelector("h1") }));
+  // The first parent comments and saves.
+  await pb.evaluate(() => nc.comments.add({ text: "First parent.", element: document.querySelector("h1") }));
+  await until(async () => A("comments", made.id, "--peek").comments.some((c) => c.text === "First parent."));
+  await pa.evaluate(() => { nc.comments._save = nc.comments.__save; });
+  const refused = await pa.evaluate(async () => { try { await nc.save(); return "saved"; } catch (e) { return String(e.message); } });
+  t("a save from a copy somebody else has since replaced is refused", refused !== "saved" && /newer|published|copy/i.test(refused), refused);
+  t("the comment is kept in the tab", await pa.evaluate(() => Object.keys(sessionStorage).some((k) => k.startsWith("nsite-clay.comments-pending") && /Second parent/.test(sessionStorage.getItem(k)))));
+  await pa.reload(); await readyEdit(pa); await pa.waitForSelector("#nc-comments-btn");
+  const both = await until(async () => { const c = A("comments", made.id, "--peek").comments.map((x) => x.text); return c.includes("First parent.") && c.some((x) => /^Second parent/.test(x)); }, 20000);
+  t("after the reload it is put back and saved, and the first one is still there", !!both, JSON.stringify(A("comments", made.id, "--peek").comments.map((x) => x.text)));
+  t("nothing is left waiting once it is saved", await pa.evaluate(() => !Object.keys(sessionStorage).some((k) => k.startsWith("nsite-clay.comments-pending"))));
+  await ca.close(); await cb.close();
+}
+
 // A phone: no mouse, so the selection settling is what offers the comment, the
 // button sits at the bottom clear of the phone's own menu, and the form is at the top.
 {

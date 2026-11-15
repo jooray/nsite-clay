@@ -472,6 +472,8 @@ reopening it in the browser puts them back on the same words if they are still t
 | `nc.comments.remove(id)` | delete it and its anchors |
 | `nc.comments.show(id)` | scroll to what it is about |
 
+Every comment is a save of the whole page. When somebody else saved first, the save is refused; the comment is kept in the tab's `sessionStorage` (`nsite-clay.comments-pending:<owner>:<site>:<path>`) and, after the reload, added again with its original id, on its words if they are still there, and saved. Replies and resolving are not kept this way.
+
 Readers, who cannot save, see no button and no highlights. A page that rewrites itself should keep
 the `aside` and the marks.
 

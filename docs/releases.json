@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.32",
+    "released": "2026-11-15",
+    "notes": [
+      "When two people comment on a page at nearly the same moment, the second save is refused so that it cannot overwrite the first. Until now the person whose save was refused lost the comment they had typed when they reloaded. The comment is now kept in their tab, and after the reload it is put back, on the same words if they are still there, and saved by itself."
+    ]
+  },
+  {
     "version": "0.3.31",
     "released": "2026-11-15",
     "notes": [
