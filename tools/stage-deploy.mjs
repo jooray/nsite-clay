@@ -15,6 +15,8 @@
 // any page needs.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 
 const LANGS = ["es", "sk", "cs"];
@@ -157,7 +159,22 @@ console.log(`staged ${made} translated page${made === 1 ? "" : "s"} into site/{$
 // actually draws them and are packed losslessly on the way.
 const SHOTS = join("media", "guide-publish");
 const DEST = join("site", "shots");
-let shots = 0;
+let shots = 0, fresh = 0, bytes = 0;
+// A picture is optimised once. Resizing and palette reduction are not
+// guaranteed to give the same bytes on another machine or after a tool update,
+// and different bytes are a different hash: a new blob on every Blossom server
+// for a picture nobody changed. So the optimised result is kept in
+// ~/.cache/nsite-clay/shots/ (shared by every checkout on this machine), named by the hash of the original and of the recipe, and a
+// later build copies it back unchanged. Only an original that changed is
+// processed again, and only that one is uploaded again.
+const RECIPE = "v1 width=1400 pngquant=65-90 oxipng=4";
+const CACHE = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "nsite-clay", "shots");
+const have = (cmd) => { try { execFileSync(cmd, ["--version"], { stdio: "ignore" }); return true; } catch { return false; } };
+const canQuant = have("pngquant"), canPack = have("oxipng") || have("picopt");
+// A copy made without the optimisers is smaller in no way worth keeping, so it
+// is not cached: a machine that has them will make the real one.
+const cacheable = canQuant && canPack;
+mkdirSync(CACHE, { recursive: true });
 // The pictures of the publisher itself exist once per language, in
 // media/guide-publish/<lang>/, and go to site/shots/<lang>/. The English ones
 // (and the pictures of the edited page, which are the same in every language)
@@ -169,45 +186,33 @@ try {
     mkdirSync(to, { recursive: true });
     for (const f of readdirSync(from)) {
       if (!f.endsWith(".png")) continue;
-      const out = join(to, f);
-      copyFileSync(join(from, f), out);
-      try { execFileSync("sips", ["--resampleWidth", "1400", out], { stdio: "ignore" }); }
-      catch { /* sips is macOS only; the full-size copy still works */ }
-      shots++;
+      const out = join(to, f), src = readFileSync(join(from, f));
+      const key = createHash("sha256").update(RECIPE).update("\0").update(src).digest("hex");
+      const cached = join(CACHE, key + ".png");
+      if (existsSync(cached)) { copyFileSync(cached, out); }
+      else {
+        fresh++;
+        copyFileSync(join(from, f), out);
+        try { execFileSync("sips", ["--resampleWidth", "1400", out], { stdio: "ignore" }); }
+        catch { /* sips is macOS only; the full-size copy still works */ }
+        if (canQuant) {
+          try { execFileSync("pngquant", ["--quality=65-90", "--speed", "1", "--strip", "--force", "--output", out, out], { stdio: "ignore" }); }
+          catch { /* pngquant exits non-zero when it cannot reach the quality: the file is left as it was */ }
+        }
+        if (have("oxipng")) {
+          try { execFileSync("oxipng", ["-o", "4", "-q", "--strip", "safe", out], { stdio: "ignore" }); } catch { /* optional */ }
+        } else if (have("picopt")) {
+          try { execFileSync("picopt", ["-q", out], { stdio: "ignore" }); } catch { /* optional */ }
+        }
+        if (cacheable) copyFileSync(out, cached);
+      }
+      shots++; bytes += statSync(out).size;
     }
   }
 } catch { /* no walkthrough has been run yet */ }
 
 if (shots) {
-  // Screenshots of an interface are flat colour, so reducing each to a palette of
-  // at most 256 colours costs nothing a reader can see and takes most of the
-  // bytes away: 23 MB of pictures became about a quarter of that. pngquant
-  // does it, oxipng packs what is left, and either one missing is not an error.
-  const have = (cmd) => { try { execFileSync(cmd, ["--version"], { stdio: "ignore" }); return true; } catch { return false; } };
-  const size = (d = DEST) => readdirSync(d).reduce((n, f) => {
-    const p = join(d, f);
-    return n + (statSync(p).isDirectory() ? size(p) : statSync(p).size);
-  }, 0);
-  const pngs = (d = DEST) => readdirSync(d).flatMap((f) => {
-    const p = join(d, f);
-    return statSync(p).isDirectory() ? pngs(p) : f.endsWith(".png") ? [p] : [];
-  });
-  const before = size();
-  const done = [];
-  if (have("pngquant")) {
-    for (const f of pngs()) {
-      try { execFileSync("pngquant", ["--quality=65-90", "--speed", "1", "--strip", "--force", "--output", f, f], { stdio: "ignore" }); }
-      catch { /* pngquant exits non-zero when it cannot reach the quality: the file is left as it was */ }
-    }
-    done.push("quantised");
-  }
-  if (have("oxipng")) {
-    try { execFileSync("oxipng", ["-o", "4", "-q", "--strip", "safe", "-r", DEST], { stdio: "ignore" }); done.push("packed"); } catch { /* optional */ }
-  } else if (have("picopt")) {
-    try { execFileSync("picopt", ["-q", "-r", DEST], { stdio: "ignore" }); done.push("packed"); } catch { /* optional */ }
-  }
-  const saved = before - size();
-  console.log(`staged ${shots} guide screenshot${shots === 1 ? "" : "s"}` +
-    (done.length ? `, ${done.join(" and ")}: ${(saved / 1048576).toFixed(1)} MB smaller (now ${(size() / 1048576).toFixed(1)} MB)`
-      : ", unoptimised (install pngquant and oxipng to shrink them)"));
+  console.log(`staged ${shots} guide screenshot${shots === 1 ? "" : "s"} (${(bytes / 1048576).toFixed(1)} MB): ` +
+    (fresh ? `${fresh} optimised now, ${shots - fresh} reused unchanged from ${CACHE}` : "all reused unchanged, same bytes as the last build") +
+    (cacheable ? "" : "; install pngquant and oxipng to shrink them"));
 }
