@@ -4,7 +4,7 @@ description: Publish a small web page for the user and get a link to send them, 
 license: MIT-0
 compatibility: Needs Node.js 18 or newer, outbound network access (HTTPS and WebSocket), and a state directory that survives between sessions.
 metadata:
-  version: "0.3.3"
+  version: "0.3.4"
   homepage: https://nsite-clay.cypherpunk.today/
 ---
 
