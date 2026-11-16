@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.34",
+    "released": "2026-11-16",
+    "notes": [
+      "Signing in with the Amber signer app could still hang after you approved. After the approval the page sent Amber one extra request that Amber does not answer, and then waited for it. The page now sends only what it needs, so the approval completes."
+    ]
+  },
+  {
     "version": "0.3.33",
     "released": "2026-11-16",
     "notes": [

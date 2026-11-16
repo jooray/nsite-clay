@@ -266,7 +266,14 @@ export class Nip46Signer {
       // one-time secret; it then pins that event.pubkey as the remote signer.
       // The abort signal is the fourth argument, in place of the default five
       // minute deadline.
-      const bunker = await BunkerSigner.fromURI(clientSecret, uri, { pool: signerPool() }, abort.signal);
+      // skipSwitchRelays: after the approval nostr-tools sends a switch_relays
+      // request by default. Amber answers neither it nor the get_public_key
+      // that follows a second later (seen on a Pixel with Amber: the request
+      // never reaches its log), and the sign-in sits on "Waiting for the
+      // signer". We chose the relays ourselves and have no use for another
+      // set, so only the get_public_key below is sent, as the Rails clients
+      // do.
+      const bunker = await BunkerSigner.fromURI(clientSecret, uri, { pool: signerPool(), skipSwitchRelays: true }, abort.signal);
       const signer = new Nip46Signer(bunker, clientSecret);
       // Mandatory second phase: event.pubkey is a routing key, not an identity.
       signer.pubkey = await bunker.getPublicKey();
