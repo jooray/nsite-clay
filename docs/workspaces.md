@@ -140,3 +140,39 @@ prints no secret. `workspace adopt <file>` on the other machine takes it in.
 key: the other machine can then add its own pages, and sees the pages made
 elsewhere only as a count. `adopt <edit link>` of a workspace page brings the
 workspace with it.
+
+## On your own infrastructure: a gateway that serves only keys it knows
+
+A workspace is what makes a closed gateway practical. A gateway you run
+yourself should not serve any npub that asks, or anybody can host a page under
+your domain. With one key per page you would have to allow every page; with a
+workspace you allow its one npub once and every page of it works. This is how
+the project's owner runs it (on `*.nst.cypherpunk.today`, whose gateway also
+re-checks a manifest every few seconds, so a save shows up at once instead of
+after hours):
+
+```json
+{
+  "servers": ["https://blossom.example", "https://nostr.download", "https://blossom.yakihonne.com", "https://blossom.data.haus"],
+  "gateway": "https://{host}.gateway.example",
+  "uploader": "<nsec of a key your Blossom server allows>",
+  "workspace": "default"
+}
+```
+
+- `gateway` takes `{host}` (the npub) or `{hex}`; links come out as
+  `https://<npub>.gateway.example/<id>/#…`.
+- `uploader` carries the bytes, so only that key needs to be allowed on the
+  Blossom server; the workspace key only signs the manifest.
+- Leave `relays` at the defaults unless your own relay accepts the manifest
+  kinds (15128, 35128) and deletions (5) from the workspace key. A relay that
+  accepts only allow-listed authors refuses them, and put first in `relays`
+  it stops every publish, because the tool takes the first relay to be the one
+  the gateway reads (`gatewayRelay` says otherwise). Make sure the gateway
+  reads the relays you publish to.
+- Leave `runtime` unset: the runtime is taken from the project's signed
+  manifest and copied onto your servers with the page, so your gateway serves
+  it from the workspace's own host.
+- Run `workspace init` once, add the npub it prints to the gateway's
+  allowlist, and every later `create` lands in it. Pages made earlier keep
+  their own key and link.
