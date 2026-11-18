@@ -207,6 +207,19 @@ await nc.publishFiles(files, { servers, relays, onProgress })   // a whole site,
 // "manifest" { uploaded, reused }. Server states: checking, present, absent, signing,
 // sending, ok, failed. Every network call has a timeout (nc has none to override;
 // blossom.js TIMEOUTS: head 20s, get 60s, put 120s, signer 180s)
+nc.retireAfter                     // sealed pages: seconds a replaced version is kept, 172800.
+                                   //   The manifest names it as ["retired", <sha256>, <unix time>];
+                                   //   a later save deletes it once it is this old, every relay
+                                   //   returns the newer manifest and the gateway serves its page
+                                   //   (checked only on the canonical host). See src/retire.js.
+                                   //   A page that is not the site's /index.html adds its path,
+                                   //   ["retired", <sha256>, <time>, <path>], and only ever
+                                   //   deletes its own: many pages can share one manifest.
+                                   // A sealed page whose read key is its own and not derived from
+                                   //   the signing key (a workspace page, docs/workspaces.md) opens
+                                   //   with #e=<sk>&k=<K>; its manifest saves carry no expiration,
+                                   //   and its padlock's delete takes out its own path only.
+                                   //   Sealed.FEATURES names this for tools that check a runtime.
 await nc.currentManifest()         // the live nsite manifest event
 await nc.versions()                // kind-5128 snapshots, newest first
 await nc.readVersion(snap)         // that version's HTML, fetched and hash-verified

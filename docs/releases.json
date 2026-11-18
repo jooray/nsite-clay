@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.4.0",
+    "released": "2026-11-18",
+    "notes": [
+      "After you saved a page, it could stay broken for several hours with a \"Bad Gateway\" message, even though everything had been saved correctly. The previous version of the page was deleted at once, while the public gateway was still looking for it. Now the old version is kept for two days and removed only once the new one is confirmed on every relay and on the gateway.",
+      "A save now checks that your page can really be read back from your storage servers before it is announced. If that check fails, the page keeps showing the version you had before instead of going dark.",
+      "Several pages can now live inside one site, each with its own private link, so you no longer need a new site for every page. This is optional and changes nothing for the pages you already have."
+    ]
+  },
+  {
     "version": "0.3.34",
     "released": "2026-11-16",
     "notes": [

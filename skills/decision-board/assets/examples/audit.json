@@ -1,0 +1,66 @@
+{
+  "schema": 3,
+  "title": "Notes app: decisions before 1.0",
+  "lang": "en",
+  "subtitle": "Open questions from the code review.",
+  "project": { "state": "waiting_on_you", "summary": "Two decisions and one test stand between us and the 1.0 release." },
+  "items": [
+    {
+      "id": "token-expiry", "priority": "P0", "area": "backend",
+      "title": "How long do login tokens live?",
+      "why": "Tokens never expire today, so a stolen phone keeps access forever.",
+      "details": {
+        "context": "The server issues a token at login and accepts it until the user logs out. There is no refresh step and no server-side list of active tokens.",
+        "decision": "Pick a lifetime. Short tokens need a silent refresh in the app; long ones only need a re-login screen.",
+        "why": "1.0 freezes the API. Adding expiry later forces every old client to log in again at once.",
+        "recommendation": "30 days with silent refresh keeps people logged in on a phone they use, and a lost phone loses access within a month. It costs one endpoint and a retry in the app."
+      },
+      "options": [
+        { "id": "30d", "label": "30 days, refreshed silently while the app is used", "recommended": true },
+        { "id": "7d", "label": "7 days, then log in again" },
+        { "id": "never", "label": "Keep no expiry" }
+      ],
+      "choice": null, "note": ""
+    },
+    {
+      "id": "export-format", "priority": "P2", "area": "app",
+      "title": "Export format",
+      "why": "People asked for an export, and we have to pick one format to support first.",
+      "details": {
+        "context": "Notes are stored as Markdown with a small front matter block. Attachments sit next to them.",
+        "decision": "Which format the Export button writes.",
+        "why": "It is the most requested feature in the beta feedback.",
+        "recommendation": "A zip of Markdown files is what we store anyway. It opens everywhere and needs no converter."
+      },
+      "options": [
+        { "id": "md-zip", "label": "Zip of Markdown files", "recommended": true, "pros": ["Opens in any editor"], "cons": ["Attachments are loose files"] },
+        { "id": "json", "label": "One JSON file", "pros": ["Easy to import again"], "cons": ["Nobody can read it by hand"] }
+      ],
+      "choice": null, "note": ""
+    },
+    {
+      "id": "beta-name", "priority": "P3", "kind": "text", "later": true,
+      "title": "What should the public beta be called?",
+      "why": "The store listing needs a name by the end of the month."
+    },
+    { "id": "ci", "priority": "P1", "area": "build", "title": "Run tests in CI on every push", "status": "shipped", "options": [] }
+  ],
+  "testing": [
+    {
+      "id": "sync-two-phones",
+      "title": "Sync between two phones",
+      "steps": ["Install the beta on two phones.", "Edit the same note on both while one is offline.", "Bring it back online."],
+      "expect": "Both edits survive, the later one on top.",
+      "result": null, "note": ""
+    }
+  ],
+  "commands": { "draft": "", "log": [] },
+  "done": [
+    { "title": "Tests run on every push", "detail": "CI runs the whole suite in about four minutes.", "at": "2026-11-16T10:00:00Z" }
+  ],
+  "next": [
+    { "title": "Token refresh endpoint", "detail": "Waits for the token decision." },
+    { "title": "Export button" }
+  ],
+  "evidence": [ { "title": "Method", "items": ["Read the sync and auth modules, ran the test suite, tried login on two devices."] } ]
+}

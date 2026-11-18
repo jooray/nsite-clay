@@ -11,8 +11,10 @@
 //   read key    K    HKDF-SHA256(sk). Decrypts the page. Cannot sign, and does
 //                    not lead back to sk, so a read link is never an edit link.
 //
-// Web Crypto and CompressionStream only: both are in every current browser and
-// in Node 18 and later, so there is no dependency to audit and none to bundle.
+// Web Crypto and raw DEFLATE only, so there is no dependency to audit and none
+// to bundle. Every current browser has both as globals. Node has Web Crypto as
+// a global only from 19 and "deflate-raw" streams only from 20.12, so the
+// command line tool hands in node:crypto and node:zlib through usePlatform().
 import { getPublicKey } from "nostr-tools";
 import { v2 as nip44 } from "nostr-tools/nip44";
 
@@ -36,29 +38,51 @@ export function unb64u(text) {
   return out;
 }
 
+let wc = globalThis.crypto;
+let codec = null;
+
+/**
+ * Where Web Crypto and raw DEFLATE come from, for a platform without them as
+ * globals. `deflate` and `inflate` take and return a Uint8Array (sync or async)
+ * and must be raw DEFLATE (RFC 1951), which is what the browser's
+ * CompressionStream("deflate-raw") writes, so either side opens the other's.
+ */
+export function usePlatform({ crypto, deflate, inflate } = {}) {
+  if (crypto) wc = crypto;
+  if (deflate && inflate) codec = { deflate, inflate };
+}
+
 const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 
 // ---------------------------------------------------------------------- keys
 
-export function newSecret() { return crypto.getRandomValues(new Uint8Array(32)); }
+export function newSecret() { return wc.getRandomValues(new Uint8Array(32)); }
 
 /** The read key that belongs to an artifact's secret key. One way. */
 export async function readKeyOf(sk) {
-  const ikm = await crypto.subtle.importKey("raw", sk, "HKDF", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits(
+  const ikm = await wc.subtle.importKey("raw", sk, "HKDF", false, ["deriveBits"]);
+  const bits = await wc.subtle.deriveBits(
     { name: "HKDF", hash: "SHA-256", salt: enc.encode(LABEL), info: enc.encode("read") }, ikm, 256);
   return new Uint8Array(bits);
 }
 
 /**
  * Everything a link or a ledger entry gives you, from whichever secret it
- * held. `edit` wins: an edit secret implies the read key.
+ * held. An edit secret alone implies the read key. Both together are a page
+ * that shares its signing key with other pages (a workspace, where one key
+ * signs one site with many pages): there the read key is the page's own and
+ * does not follow from the signing key, so a link to one page opens that page
+ * only. `split` says which of the two it is.
  */
 export async function keysFrom({ edit, read }) {
   if (edit) {
     const sk = typeof edit === "string" ? unb64u(edit) : edit;
     if (sk.length !== 32) throw new Error("An edit secret is 32 bytes");
-    return { sk, pubkey: getPublicKey(sk), K: await readKeyOf(sk) };
+    const own = await readKeyOf(sk);
+    const given = read ? (typeof read === "string" ? unb64u(read) : read) : null;
+    if (given && given.length !== 32) throw new Error("A read key is 32 bytes");
+    const split = !!given && hex(given) !== hex(own);
+    return { sk, pubkey: getPublicKey(sk), K: split ? given : own, ...(split ? { split: true } : {}) };
   }
   const K = typeof read === "string" ? unb64u(read) : read;
   if (!K || K.length !== 32) throw new Error("A read key is 32 bytes");
@@ -81,8 +105,8 @@ async function pipe(bytes, stream) {
   const out = new Blob([bytes]).stream().pipeThrough(stream);
   return new Uint8Array(await new Response(out).arrayBuffer());
 }
-const deflate = (bytes) => pipe(bytes, new CompressionStream("deflate-raw"));
-const inflate = (bytes) => pipe(bytes, new DecompressionStream("deflate-raw"));
+const deflate = async (bytes) => codec ? new Uint8Array(await codec.deflate(bytes)) : pipe(bytes, new CompressionStream("deflate-raw"));
+const inflate = async (bytes) => codec ? new Uint8Array(await codec.inflate(bytes)) : pipe(bytes, new DecompressionStream("deflate-raw"));
 
 // Padmé (Nikitin et al., PETS 2019): round the length up so that at most
 // log log of it is visible, for at most about 12% more bytes. Without it the
@@ -110,9 +134,9 @@ export async function sealText(html, K, where) {
   const body = new Uint8Array(Math.max(padme(packed.length + 4), 64));
   new DataView(body.buffer).setUint32(0, packed.length);
   body.set(packed, 4);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await crypto.subtle.importKey("raw", K, "AES-GCM", false, ["encrypt"]);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aad(where) }, key, body));
+  const iv = wc.getRandomValues(new Uint8Array(12));
+  const key = await wc.subtle.importKey("raw", K, "AES-GCM", false, ["encrypt"]);
+  const ct = new Uint8Array(await wc.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aad(where) }, key, body));
   const out = new Uint8Array(12 + ct.length);
   out.set(iv); out.set(ct, 12);
   return b64u(out);
@@ -121,10 +145,10 @@ export async function sealText(html, K, where) {
 /** The reverse. Throws on a wrong key, a moved blob or a damaged one. */
 export async function openText(text, K, where) {
   const raw = unb64u(text);
-  const key = await crypto.subtle.importKey("raw", K, "AES-GCM", false, ["decrypt"]);
+  const key = await wc.subtle.importKey("raw", K, "AES-GCM", false, ["decrypt"]);
   let body;
   try {
-    body = new Uint8Array(await crypto.subtle.decrypt(
+    body = new Uint8Array(await wc.subtle.decrypt(
       { name: "AES-GCM", iv: raw.subarray(0, 12), additionalData: aad(where) }, key, raw.subarray(12)));
   } catch { throw Object.assign(new Error("This key does not open this page"), { code: "wrong-key" }); }
   const len = new DataView(body.buffer, body.byteOffset).getUint32(0);
@@ -138,10 +162,18 @@ export async function openText(text, K, where) {
  * from the artifact's key to theirs, so they open it with
  * nip44_decrypt(<artifact pubkey>, c), which Amber and every bunker answer.
  */
-export function wrapFor(sk, memberHex, role, K) {
-  const secret = role === "edit" ? sk : K;
-  const c = nip44.encrypt(b64u(secret), nip44.utils.getConversationKey(sk, memberHex));
+export function wrapFor(sk, memberHex, role, K, { split = false } = {}) {
+  // A page whose read key does not follow from its signing key hands an
+  // editor both, as "<edit>.<read>".
+  const secret = role === "edit" ? b64u(sk) + (split ? "." + b64u(K) : "") : b64u(K);
+  const c = nip44.encrypt(secret, nip44.utils.getConversationKey(sk, memberHex));
   return { p: memberHex, r: role, c };
+}
+
+/** The fragment that opens a page: `e=…` (and `&k=…` for a split page) or `k=…`. */
+export function fragmentOf(keys, { edit = true } = {}) {
+  if (edit && keys.sk) return `e=${b64u(keys.sk)}${keys.split ? `&k=${b64u(keys.K)}` : ""}`;
+  return `k=${b64u(keys.K)}`;
 }
 
 /** A member's side: `decrypt(pubkey, ciphertext)` is their signer's nip44Decrypt. */
@@ -150,7 +182,9 @@ export async function unwrap(wraps, memberHex, ownerHex, decrypt) {
   for (const w of mine) {
     try {
       const secret = await decrypt(ownerHex, w.c);
-      return w.r === "edit" ? { edit: secret } : { read: secret };
+      if (w.r !== "edit") return { read: secret };
+      const [edit, read] = String(secret).split(".");
+      return read ? { edit, read } : { edit };
     } catch { /* the next entry */ }
   }
   return null;

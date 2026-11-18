@@ -410,7 +410,9 @@ Two skills for Claude and other agents that read the Agent Skills format live in
   brief, `llms.txt`, and to `llms-edit.txt` for changing a site that is already
   live.
 - **nsite-artifacts** is for short-lived pages: a shopping list, a plan or a
-  report, encrypted, shared by link and deleted after some days.
+  report, encrypted, shared by link and deleted after some days. Each page is its
+  own site under a fresh key, or, if the owner asks for it, a page of one
+  workspace site under one key (`docs/workspaces.md`).
 
 To install one in Claude Code, download the zip and unzip it into
 `~/.claude/skills/`, so that `~/.claude/skills/nsite-clay-web-builder/SKILL.md` exists. In

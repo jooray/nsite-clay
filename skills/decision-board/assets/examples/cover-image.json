@@ -1,0 +1,52 @@
+{
+  "schema": 3,
+  "title": "Blog post: pick a cover image",
+  "lang": "en",
+  "subtitle": "For the post about learning to bake bread at home.",
+  "project": { "state": "waiting_on_you", "summary": "The draft is ready. It needs a cover and a title before it goes out." },
+  "items": [
+    {
+      "id": "cover", "priority": "P0", "layout": "grid",
+      "title": "Which cover image?",
+      "why": "The cover is what people see in feeds and link previews.",
+      "details": {
+        "context": "All three were made for this post at 1440 by 896 pixels. The page shows small copies; the links open nothing outside this page.",
+        "recommendation": "The warm landscape matches the tone of the post and still reads at thumbnail size."
+      },
+      "options": [
+        { "id": "warm", "label": "Warm landscape", "recommended": true, "image": "covers/a.webp", "alt": "A warm sunset over dark hills",
+          "pros": ["Reads well when small"], "cons": ["Says nothing about bread"] },
+        { "id": "blocks", "label": "Geometric blocks", "image": "covers/b.webp", "alt": "Coloured rectangles on dark blue",
+          "pros": ["Fits the blog's other covers"], "cons": ["Cold for a cosy topic"] },
+        { "id": "type", "label": "Title as type", "image": "covers/c.webp", "alt": "The word Title in large serif type",
+          "preview": "Uses the post title in large serif letters.", "cons": ["Text is hard to read in a small preview"] }
+      ],
+      "choice": null, "note": ""
+    },
+    {
+      "id": "headline", "priority": "P1",
+      "title": "Which headline?",
+      "why": "The headline is also the link text when the post is shared.",
+      "details": {
+        "context": "Most visits to the blog come from search and from shared links, where only the headline and the cover show.",
+        "recommendation": "The plain one tells a reader what they get. The question works only for people who already have the problem."
+      },
+      "options": [
+        { "id": "plain", "label": "Baking bread at home, week by week", "recommended": true, "preview": "Says what the post is. 36 characters." },
+        { "id": "question", "label": "Why does my bread not rise?", "preview": "Answers the question most readers search for." }
+      ],
+      "choice": null, "note": ""
+    },
+    {
+      "id": "anything-else", "priority": "P3", "kind": "text",
+      "title": "Anything to change in the draft?",
+      "why": "Write it here or select words on the page and press Comment."
+    }
+  ],
+  "done": [
+    { "title": "Draft written", "detail": "About 1200 words, with the four photos from the kitchen.", "at": "2026-11-17T08:00:00Z" }
+  ],
+  "next": [
+    { "title": "Publish as a draft on the blog", "detail": "With the cover and headline you pick." }
+  ]
+}

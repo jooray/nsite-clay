@@ -155,7 +155,7 @@ Ověř, že funguje, příkazem: node &lt;ta složka&gt;/scripts/artifact.mjs he
     <section class="flyer" style="--tilt:.3deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="space">
       <h2 id="space" editable="single-line">Uklízí po sobě.</h2>
       <ul class="gate">
-        <li><strong>Jedna verze.</strong> Každé uložení smaže verzi, kterou nahradilo, takže seznam odškrtaný stokrát zabere místo jako jeden. Servery drží jen to, co se používá.</li>
+        <li><strong>Jedna verze.</strong> Uložení si verzi, kterou nahradilo, ponechá dva dny, protože brána ji ještě může podávat ze své cache, a pak ji smaže. Seznam odškrtaný stokrát tak nakonec zabere místo jako jeden a servery drží jen to, co se používá.</li>
         <li><strong>Zánik.</strong> Stránka nese své datum konce a agent jednou denně smaže všechno, čemu už uplynulo. Nastavuje se to jednou a skill agentovi řekne jak.</li>
         <li><strong>Smazat znamená smazat.</strong> Ať přes zámek, nebo přes agenta, stránka i všechny její verze zmizí ze serverů, na kterých byly. Kopie, kterou si někdo uložil do vlastního zařízení, mu zůstane, ale bez odkazu se nedá přečíst.</li>
       </ul>

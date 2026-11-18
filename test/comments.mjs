@@ -149,6 +149,8 @@ t("reopening highlights the words again", await p.locator('mark[nc\\:c]').filter
 await until(async () => A("comments", made.id, "--peek").open === 3);
 
 // A change made with the ordinary editing tools: ticking a box, retyping a word.
+// Measured against the last read, which is the agent's last look at the page.
+A("read", made.id);
 await p.evaluate(() => nc.comments.resolve(document.querySelectorAll("article[nc\\:comment]")[1].getAttribute("nc:comment"), true));
 await p.locator(".item", { hasText: "Bread" }).locator("input").check();
 await p.evaluate(() => { const e = [...document.querySelectorAll(".item .text")].find((x) => x.textContent === "Eggs"); e.textContent = "Eggs, a dozen"; nc.dirty = true; });
@@ -157,7 +159,9 @@ const df = A("diff", made.id);
 t("diff says what a person did", df.changed && df.changes.some((c) => c.change === "checked" && c.line === "Bread") && df.changes.some((c) => c.line === "Eggs, a dozen" || /Eggs, a dozen/.test(c.line)), JSON.stringify(df.changes));
 t("and shows the markup that changed", df.markup?.added > 0 && /\+.*checked/.test(df.markup.diff) && /Eggs, a dozen/.test(df.markup.diff), JSON.stringify(df.markup).slice(0, 500));
 t("a state change is news", df.comments?.some((c) => c.news === "state"), JSON.stringify(df.comments?.map((c) => [c.id, c.news])));
-t("a diff with nothing new is empty", A("diff", made.id).changed === false);
+t("a diff does not count as reading, so the next one still shows it", A("diff", made.id).changed === true);
+A("read", made.id);
+t("after a read, a diff with nothing new is empty", A("diff", made.id).changed === false);
 t("the page as last seen is kept to compare with", existsSync(S + "/home/seen/" + made.id + ".html"));
 const withDiff = (() => { A("update", made.id, S + "/list.html", "--force"); return A("read", made.id, "--diff", "--peek"); })();
 t("read --diff works against a copy the agent made itself", withDiff.changed === false || !!withDiff.diff);

@@ -2,6 +2,7 @@
 import { bytesToHex } from "@noble/hashes/utils";
 import { sha256 } from "@noble/hashes/sha2";
 import { siteKind } from "./config.js";
+import { retiredTags } from "./retire.js";
 
 // NIP-5A aggregate hash: sha256 over sorted "<hash> <path>\n" lines,
 // path tags only, order-independent. Identifies a site *version*.
@@ -12,7 +13,7 @@ export function aggregateHash(paths) {
   return bytesToHex(sha256(new TextEncoder().encode(lines.join(""))));
 }
 
-export function buildManifest(cfg, paths, { title, description, source, sealed, expires } = {}) {
+export function buildManifest(cfg, paths, { title, description, source, sealed, expires, retired } = {}) {
   const tags = [
     ...(cfg.site ? [["d", cfg.site]] : []),
     ...Object.entries(paths).map(([path, hash]) => ["path", path, hash]),
@@ -23,6 +24,8 @@ export function buildManifest(cfg, paths, { title, description, source, sealed, 
     ...(source ? [["source", source]] : []),
     ...(sealed ? [["sealed", "1"]] : []),
     ...(expires ? [["expiration", String(expires)]] : []),
+    // Versions a save replaced and that are not deleted yet; see retire.js.
+    ...retiredTags(retired),
   ];
   return { kind: siteKind(cfg), created_at: Math.floor(Date.now() / 1000), tags, content: "" };
 }

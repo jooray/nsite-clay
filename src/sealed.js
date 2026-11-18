@@ -13,8 +13,10 @@
 // run, and nothing the page does later is consulted.
 import { nip19 } from "nostr-tools";
 import {
-  assertShell, b64u, buildShell, keysFrom, openText, parseFragment, parseShell, sealText, unwrap, wrapFor,
+  assertShell, b64u, buildShell, fragmentOf, keysFrom, openText, parseFragment, parseShell, sealText, unwrap, wrapFor,
 } from "./seal.js";
+import { buildManifest, manifestPaths } from "./manifest.js";
+import { mergeRetired, namedHashes, retiredOf } from "./retire.js";
 import { LocalSigner } from "./signer.js";
 import { hashText, removeAll } from "./blossom.js";
 import { field, modal, toast } from "./ui.js";
@@ -124,9 +126,17 @@ const WORDS = {
 const HANDOVER = "__ncSealed";
 const IDENTITY = ["nc:owner", "nc:site", "nc:path", "nc:relays", "nc:servers"];
 const ENGINE = /^\/nsite-clay(-[0-9a-f]{8})?\.js$/;
+// The files every page of a site shares, at its root.
+const RUNTIME_PATH = /^\/nsite-clay[-a-z0-9]*\.(js|css)$/;
 const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 
 export class Sealed {
+  // What a tool asks of a runtime before it puts a page with its own read key
+  // under a shared signing key (a workspace page) on it: an older runtime
+  // would not open such a page, and its delete button would take down the
+  // whole site instead of the one page. Searched for as text in the bundle.
+  static FEATURES = "nc-split-keys-1 nc-workspace-delete-1";
+
   constructor(nc) {
     this.nc = nc;
     const win = nc.doc.defaultView;
@@ -151,7 +161,11 @@ export class Sealed {
   }
 
   _store() { try { return this.nc.doc.defaultView.sessionStorage; } catch { return null; } }
-  _slot(attrs) { return `nsite-clay.sealed:${attrs["nc:owner"]}:${attrs["nc:site"] || ""}`; }
+  // One remembered key per page. The root page keeps the slot it always had.
+  _slot(attrs) {
+    const path = attrs["nc:path"] || "/index.html";
+    return `nsite-clay.sealed:${attrs["nc:owner"]}:${attrs["nc:site"] || ""}${path === "/index.html" ? "" : ":" + path}`;
+  }
 
   // ---- first boot: the shell --------------------------------------------
 
@@ -284,10 +298,11 @@ export class Sealed {
       b.type = "button";
       const go = () => {
         // Out of whatever was pasted: a sentence around it, a space after it.
-        const m = /[#&]([ke])=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/.exec(input.value);
-        const given = m ? parseFragment(`${m[1]}=${m[2]}`) : {};
+        const found = [...input.value.matchAll(/[#&]([ke])=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/g)].map((m) => `${m[1]}=${m[2]}`);
+        const given = parseFragment(found.join("&"));
         if (!given.edit && !given.read) { toast(this.say("notALink"), { doc }); return; }
-        doc.location.hash = given.edit ? "e=" + given.edit : "k=" + given.read;
+        // A page in a workspace needs both halves of its edit link.
+        doc.location.hash = given.edit ? "e=" + given.edit + (given.read ? "&k=" + given.read : "") : "k=" + given.read;
       };
       b.addEventListener("click", go);
       input.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
@@ -412,7 +427,7 @@ export class Sealed {
   links() {
     const base = this.nc.doc.location.href.split("#")[0];
     const k = this.state?.keys;
-    return k ? { read: `${base}#k=${b64u(k.K)}`, edit: k.sk ? `${base}#e=${b64u(k.sk)}` : null } : null;
+    return k ? { read: `${base}#${fragmentOf(k, { edit: false })}`, edit: k.sk ? `${base}#${fragmentOf(k)}` : null } : null;
   }
 
   // ---- saving ------------------------------------------------------------
@@ -459,15 +474,15 @@ export class Sealed {
     if (!this.canEdit) throw new Error("Only someone who can edit this page can share it");
     const { keys } = this.state;
     const rest = this.members.filter((w) => w.p !== pubkey);
-    this.state.wraps = [...rest, wrapFor(keys.sk, pubkey, role, keys.K)];
+    this.state.wraps = [...rest, wrapFor(keys.sk, pubkey, role, keys.K, { split: !!keys.split })];
     this.state.shellChanged = true;
   }
 
   // ---- cleaning up -------------------------------------------------------
 
-  // The version a save has just replaced. Asked of every server and not waited
-  // for: the save is done either way, and a server that keeps the old blob
-  // costs only its own disk.
+  // A version a save replaced, once it is safe to delete (see retire.js).
+  // Asked of every server and not waited for: the save is done either way, and
+  // a server that keeps the old blob costs only its own disk.
   retire(hash, servers, signer) {
     const by = this.signer() || signer;
     if (!by || !hash) return null;
@@ -487,8 +502,18 @@ export class Sealed {
     const now = Math.floor(Date.now() / 1000);
     const events = (await nc.pool.querySync(cfg.relays, { kinds: [15128, 5128, 10002], authors: [owner] }).catch(() => []))
       .filter((e) => e.pubkey === owner);
+    // A page that shares its site with other pages takes only itself out.
+    const newest = events.filter((e) => e.kind === 15128).sort((a, b) => b.created_at - a.created_at)[0];
+    const others = newest ? Object.keys(manifestPaths(newest)).filter((p) => p !== cfg.path && !RUNTIME_PATH.test(p)) : [];
+    if (this.state.keys.split || cfg.path !== "/index.html" || others.length) return this._removeOwnPath(newest, events);
     const pages = new Set([nc._ownHash, nc._servedHash].filter(Boolean));
-    for (const ev of events) for (const t of ev.tags) if (t[0] === "path" && t[1] === cfg.path) pages.add(t[2]);
+    for (const ev of events) {
+      for (const t of ev.tags) {
+        if (t[0] === "path" && t[1] === cfg.path) pages.add(t[2]);
+        // Versions a save replaced and kept for a while; see retire.js.
+        if (t[0] === "retired" && /^[0-9a-f]{64}$/.test(t[1] || "")) pages.add(t[1]);
+      }
+    }
     const at = Math.max(now, ...events.map((e) => e.created_at + 1));
     const day = String(now + 86400);
     const send = async (ev) => {
@@ -506,6 +531,38 @@ export class Sealed {
     const servers = [...new Set([...cfg.servers, ...(this.state.shell.attrs["nc:servers"] || "").split(/[,\s]+/).filter(Boolean)])];
     const rows = [];
     for (const hash of pages) rows.push(...await removeAll(servers, hash, { signer }));
+    try { this._store()?.removeItem(this._slot(this.state.shell.attrs)); } catch {}
+    return { relays: took, blobs: rows };
+  }
+
+  // One page of a workspace: a manifest without this path, everything else in
+  // it kept as it is, and then this path's own versions deleted, never a blob
+  // that a path of the new manifest still names.
+  async _removeOwnPath(newest, events) {
+    const nc = this.nc, cfg = nc.cfg, signer = this.signer();
+    const paths = newest ? manifestPaths(newest) : {};
+    delete paths[cfg.path];
+    const pages = new Set([nc._ownHash, nc._servedHash].filter(Boolean));
+    for (const ev of events.filter((e) => e.kind === 15128)) {
+      for (const t of ev.tags) if (t[0] === "path" && t[1] === cfg.path) pages.add(t[2]);
+      for (const r of retiredOf(ev)) if (r.path === cfg.path) pages.add(r.hash);
+    }
+    const keep = mergeRetired([retiredOf(newest)], Object.values(paths)).filter((r) => r.path !== cfg.path);
+    const draft = buildManifest(cfg, paths, { sealed: true, retired: keep });
+    // What the manifest carried that this runtime does not write itself (other
+    // pages' servers, say) stays.
+    const own = new Set(draft.tags.map((t) => t[0]));
+    for (const t of newest?.tags || []) if (!own.has(t[0]) && !["expiration", "d"].includes(t[0])) draft.tags.push(t);
+    for (const t of newest?.tags || []) if (t[0] === "server" && !draft.tags.some((x) => x[0] === "server" && x[1] === t[1])) draft.tags.push(t);
+    if (newest && draft.created_at <= newest.created_at) draft.created_at = newest.created_at + 1;
+    const manifest = await signer.sign(draft);
+    const out = await Promise.allSettled(nc.pool.publish(cfg.relays, manifest));
+    const took = out.filter((r) => r.status === "fulfilled").length;
+    if (!took) throw new Error("No relay answered, so nothing was deleted. Try again in a moment.");
+    const named = namedHashes([manifest]);
+    const servers = [...new Set([...cfg.servers, ...(this.state.shell.attrs["nc:servers"] || "").split(/[,\s]+/).filter(Boolean)])];
+    const rows = [];
+    for (const hash of pages) if (!named.has(hash)) rows.push(...await removeAll(servers, hash, { signer }));
     try { this._store()?.removeItem(this._slot(this.state.shell.attrs)); } catch {}
     return { relays: took, blobs: rows };
   }

@@ -12,6 +12,7 @@ import { readConfig, siteAddress, siteKind, toHex } from "./config.js";
 import { LocalSigner, Nip07Signer, Nip46Signer } from "./signer.js";
 import { fetchVerified, has, hashBytes, hashText, signUploads, uploadAll } from "./blossom.js";
 import { aggregateHash, buildManifest, buildSnapshot, manifestPaths, manifestServers, pathKnown } from "./manifest.js";
+import { RETIRE_AFTER, MAX_RETIRED, etagHash, mergeRetired, planRetired, retiredOf } from "./retire.js";
 import { ensureRelayList } from "./relay-list.js";
 import { snapshot, captureSnapshot } from "./snapshot.js";
 import { Source } from "./source.js";
@@ -88,6 +89,9 @@ class NsiteClay extends EventTarget {
     this.cfg = readConfig(doc);
     Nip46Signer.probe(this.cfg.signerRelays).catch(() => {});
     this.pool = new SimplePool();
+    // How long a replaced version of a sealed page is kept before a later save
+    // may delete it. See retire.js.
+    this.retireAfter = RETIRE_AFTER;
     this.signer = null;
     this.editable = new Editable(this);
     this.media = new Media(this);
@@ -502,12 +506,19 @@ class NsiteClay extends EventTarget {
       const { hash } = await uploadAll(this.cfg.servers, bytes, { signer: this.signer, type: "text/html" });
       paths[this.cfg.path] = hash;
 
+      // A sealed page keeps no history, but the version this save replaces is
+      // only retired here, named in the manifest, and deleted on a later save
+      // once nothing can still be serving it. See retire.js.
+      const retire = sealed ? await this._planRetired(live, paths) : null;
       // A replaceable event is replaced only by a newer one, and on a tie the
       // relay keeps whichever id sorts lower. Two saves in the same second, which
       // a new page published right after a save is, would otherwise have the
       // relay accept the second and go on serving the first.
+      // A page that shares its site with others (a workspace) never puts its
+      // own expiry on the manifest: relays would drop every page with it.
+      const shared = this.cfg.path !== "/index.html" || !!this.sealed.state?.keys.split;
       const draft = buildManifest(this.cfg, paths, sealed
-        ? { sealed: true, expires: this.sealed.expires }
+        ? { sealed: true, expires: shared ? null : this.sealed.expires, retired: retire.keep }
         : { title: this.doc.title });
       if (this._manifest && draft.created_at <= this._manifest.created_at) draft.created_at = this._manifest.created_at + 1;
       const manifest = await this.signer.sign(draft);
@@ -517,12 +528,10 @@ class NsiteClay extends EventTarget {
       // A sealed page keeps no history. Its versions are ciphertext nobody
       // browses, each one a whole copy of the page, and an artifact that saves
       // on every tick would otherwise leave hundreds behind on somebody else's
-      // free server. So no snapshot names the old one, and the old one goes.
+      // free server. So no snapshot names the old ones, and the ones retired
+      // long enough ago, on a page every relay and the gateway now agree on, go.
       if (sealed) {
-        const before = live[this.cfg.path];
-        if (before && before !== hash && !Object.values(paths).includes(before)) {
-          this.sealed.retire(before, this.cfg.servers, this.signer);
-        }
+        for (const r of retire.purge) this.sealed.retire(r.hash, this.cfg.servers, this.signer);
       } else if (snapshotVersion) {
         version = await this.signer.sign(buildSnapshot(this.cfg, manifest));
         this.pool.publish(this.cfg.relays, version).forEach((p) => p.catch(() => {}));
@@ -539,6 +548,54 @@ class NsiteClay extends EventTarget {
       this._set("error", { error: String(err) });
       throw err;
     }
+  }
+
+  // Which retired versions this save names, and which it deletes. The version
+  // the save replaces is named and never deleted here: it is what a gateway is
+  // serving right now. Older ones go once they are old enough and the manifest
+  // being replaced is the one every relay returns and the gateway serves, which
+  // means nothing still points at them.
+  async _planRetired(live, paths) {
+    const now = Math.floor(Date.now() / 1000);
+    const before = live[this.cfg.path];
+    const inUse = Object.values(paths);
+    const named = mergeRetired([retiredOf(this._bootManifest), retiredOf(this._manifest)], inUse);
+    // A page of a site with many (a workspace) names the path it retired from,
+    // and plans only its own: another page's old version may still be what a
+    // gateway serves for that page.
+    const path = this.cfg.path;
+    const tagged = path !== "/index.html";
+    const fresh = before && !inUse.includes(before) ? [{ hash: before, at: now, ...(tagged ? { path } : {}) }] : [];
+    const older = named.filter((r) => r.hash !== before && (r.path ? r.path === path : !tagged));
+    const others = named.filter((r) => r.hash !== before && !older.includes(r));
+    const worth = older.some((r) => now - r.at >= this.retireAfter) || older.length > MAX_RETIRED;
+    const settled = worth ? await this._settled(this._manifest).catch(() => false) : false;
+    const plan = planRetired(older, { now, after: this.retireAfter, settled });
+    return { purge: plan.purge, keep: mergeRetired([others, plan.keep, fresh], inUse) };
+  }
+
+  // True when every relay returns `manifest` as this page's newest and the
+  // gateway this tab was served from serves that manifest's bytes for this
+  // path. Only answerable on the page's canonical host; anywhere else, no.
+  async _settled(manifest) {
+    if (!manifest || !this.onCanonicalHost() || !this.cfg.relays.length) return false;
+    const want = manifestPaths(manifest)[this.cfg.path];
+    if (!want) return false;
+    const f = this.cfg.site
+      ? { kinds: [manifest.kind], authors: [this.cfg.owner], "#d": [this.cfg.site] }
+      : { kinds: [manifest.kind], authors: [this.cfg.owner] };
+    const answers = await Promise.all(this.cfg.relays.map((r) =>
+      this.pool.querySync([r], f, { maxWait: 4000 }).catch(() => [])));
+    const agree = answers.every((evs) => {
+      const top = evs.filter(verifyEvent).sort((a, b) => b.created_at - a.created_at)[0];
+      return top && top.id === manifest.id;
+    });
+    if (!agree) return false;
+    const url = new URL(this.cfg.path === "/index.html" ? "/" : this.cfg.path, this.doc.location.origin);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return false;
+    const got = etagHash(res.headers.get("etag")) || hashBytes(new Uint8Array(await res.arrayBuffer()));
+    return got === want;
   }
 
   // A manifest is the whole path table, so a save that cannot read the current

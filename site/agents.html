@@ -155,7 +155,7 @@ Check that it works with: node &lt;that folder&gt;/scripts/artifact.mjs help</pr
     <section class="flyer" style="--tilt:.3deg;margin-inline:clamp(0rem,3vw,2.4rem)" aria-labelledby="space">
       <h2 id="space" editable="single-line">It cleans up after itself.</h2>
       <ul class="gate">
-        <li><strong>One version.</strong> Each save deletes the version it replaced, so a list ticked a hundred times takes the space of one. Storage servers hold only what is in use.</li>
+        <li><strong>One version.</strong> A save keeps the version it replaced for two days, because a gateway can go on serving that one from its cache, and then deletes it. A list ticked a hundred times ends up taking the space of one, and storage servers hold only what is in use.</li>
         <li><strong>Expiry.</strong> The page carries its end date, and the agent runs a daily sweep that deletes what is past it. Set that up once; the skill tells the agent how.</li>
         <li><strong>Delete means delete.</strong> From the padlock or from the agent, the page and every version of it are removed from the servers it was put on. A copy somebody saved on their own device stays theirs, but without the link it is unreadable.</li>
       </ul>

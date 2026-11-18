@@ -279,6 +279,11 @@ function resolvePubkey(req) {
   return null;
 }
 
+// A gateway that keeps the manifest it read for a while, the way nsite.lol was
+// measured doing for hours: DEVNET_GATEWAY_CACHE_MS=<ms>. Off by default.
+const GATEWAY_CACHE_MS = Number(process.env.DEVNET_GATEWAY_CACHE_MS || 0);
+const gatewayCache = new Map();   // "kind:pubkey:d" -> { manifest, at }
+
 createServer(async (req, res) => {
   const target = resolvePubkey(req);
   if (!target) {
@@ -286,9 +291,12 @@ createServer(async (req, res) => {
     return res.end("Add ?npub=npub1… (or point a wildcard hostname here).\n");
   }
   const kind = target.d ? 35128 : 15128;
-  const manifest = stored()
+  const key = `${kind}:${target.pubkey}:${target.d}`;
+  const cached = gatewayCache.get(key);
+  let manifest = cached && Date.now() - cached.at < GATEWAY_CACHE_MS ? cached.manifest : stored()
     .filter((ev) => ev.kind === kind && ev.pubkey === target.pubkey && (!target.d || dTag(ev) === target.d))
     .sort((a, b) => b.created_at - a.created_at)[0];
+  if (GATEWAY_CACHE_MS && manifest && !(cached && cached.manifest === manifest)) gatewayCache.set(key, { manifest, at: Date.now() });
   if (!manifest) { res.writeHead(404, { "Content-Type": "text/plain" }); return res.end("no manifest published\n"); }
 
   let path = new URL(req.url, "http://localhost").pathname;
@@ -313,6 +321,9 @@ createServer(async (req, res) => {
     // Deliberately no caching: the whole point of a local gateway is seeing the
     // change you just published, not the one you published a minute ago.
     "Cache-Control": "no-store",
+    // What nsite.lol sends: the blob's sha256, so a client can tell which
+    // version it was served without hashing the bytes.
+    ETag: `W/"${entry[2]}"`,
   });
   res.end(blob.bytes);
 }).listen(GATEWAY_PORT, "127.0.0.1");

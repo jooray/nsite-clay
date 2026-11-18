@@ -1,6 +1,7 @@
 import * as esbuild from "esbuild";
 import { gzipSync } from "node:zlib";
 import { readFileSync, writeFileSync } from "node:fs";
+import { artifactBuildOptions } from "./tools/artifact-build.mjs";
 
 // A published page's only record of which runtime it runs is the content hash in
 // its asset URL, which says nothing to a person. The version goes in so the
@@ -36,12 +37,9 @@ for (const [outfile, format, globalName, entry] of [
 
 // The agent skill's tool, as one file with its dependencies inside, so an agent
 // in a container runs it with node and nothing else. Same source as
-// `nsite-clay artifact`.
-await esbuild.build({
-  entryPoints: ["bin/artifact.mjs"], bundle: true, minify: true, platform: "node", format: "esm", target: "node18",
-  outfile: "skills/nsite-artifacts/scripts/artifact.mjs", legalComments: "none",
-  banner: { js: `// nsite-artifacts ${version}. Built from bin/artifact.mjs and src/seal.js of nsite-clay (nostr-tools, @noble/hashes, parse5 and ws inside). MIT-0.\n// One file, nothing to install: node artifact.mjs help\nimport { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);` },
-});
+// `nsite-clay artifact`. The options live in tools/artifact-build.mjs so the
+// test suite can rebuild it in memory and refuse a stale copy.
+await esbuild.build(artifactBuildOptions(version));
 {
   const b = readFileSync("skills/nsite-artifacts/scripts/artifact.mjs");
   console.log("skills/nsite-artifacts/scripts/artifact.mjs", (b.length / 1024).toFixed(1) + "KB");

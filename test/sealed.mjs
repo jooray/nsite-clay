@@ -69,7 +69,11 @@ t("the page saved itself", await p.evaluate(() => document.querySelector(".state
 
 const after = await (await fetch(made.url)).text();
 t("what it saved is a shell again", after.includes("application/nc-sealed") && !/Coffee|Milk/.test(after) && after !== served);
-t("the version it replaced is deleted from Blossom", await until(async () => (await blobStatus(sha(served))) === 404), await blobStatus(sha(served)));
+// Not deleted at once: a gateway can go on serving the older manifest for hours.
+const manifestNow = async (npub) => { const evs = await p.evaluate(({ RP, pk }) => new Promise((r) => { const ws = new WebSocket("ws://127.0.0.1:" + RP); const got = []; ws.onopen = () => ws.send(JSON.stringify(["REQ", "m", { kinds: [15128], authors: [pk] }])); ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d[0] === "EVENT") got.push(d[2]); else { ws.close(); r(got); } }; }), { RP, pk: nip19.decode(npub).data }); return evs.sort((a, b) => b.created_at - a.created_at)[0]; };
+const madeNpub = made.url.match(/npub1[a-z0-9]+/)[0];
+t("the version it replaced is kept on Blossom for now", await blobStatus(sha(served)) === 200, await blobStatus(sha(served)));
+t("and named in the manifest as retired", (await manifestNow(madeNpub))?.tags.some((x) => x[0] === "retired" && x[1] === sha(served)), JSON.stringify((await manifestNow(madeNpub))?.tags));
 const st = A("status", made.id);
 t("the agent sees that something changed", st.changed === true, JSON.stringify(st));
 const rd = A("read", made.id);
@@ -77,12 +81,16 @@ t("and reads exactly what", rd.changed && JSON.stringify(rd.changes) === JSON.st
 t("the text has every row and its state", /\[x\] Milk\n\[x\] Bread\n\[ \] Eggs\n\[ \] Coffee/.test(rd.text), rd.text);
 t("a second read reports no change", A("read", made.id).changed === false);
 
+// From here on a replaced version may go as soon as nothing serves it.
+await p.evaluate(() => { nc.retireAfter = 0; });
 // Something on the page tries to get it published in the clear.
 await p.evaluate(() => { document.documentElement.removeAttribute("nc:sealed"); document.documentElement.setAttribute("nc:owner", "npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsclcak"); window.__ncSealed2 = 1; document.title = "Leaky title"; });
 await p.locator(".item", { hasText: "Eggs" }).locator("input").check();
 await p.waitForFunction(() => document.querySelector(".state").textContent === "Saved." && !nc.dirty, null, { timeout: 30000 }).catch(() => {});
 await p.waitForTimeout(500);
 const third = await (await fetch(made.url)).text();
+t("a later save deletes a retired version once the relay and the gateway serve what replaced it", await until(async () => (await blobStatus(sha(served))) === 404), await blobStatus(sha(served)));
+t("but never the version that save itself replaced", await blobStatus(sha(after)) === 200);
 t("a page that drops its own sealed mark still saves sealed", third.includes("application/nc-sealed") && !/Eggs|Leaky/.test(third) && third !== after, third.slice(0, 200));
 const relayEvents = await p.evaluate((RP) => new Promise((r) => { const ws = new WebSocket("ws://127.0.0.1:" + RP); const got = []; ws.onopen = () => ws.send(JSON.stringify(["REQ", "x", { kinds: [15128, 5128] }])); ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d[0] === "EVENT") got.push(d[2]); else { ws.close(); r(got); } }; }), RP);
 const mine = relayEvents.filter((e) => e.pubkey === nip19.decode(made.url.match(/npub1[a-z0-9]+/)[0]).data);
@@ -234,7 +242,7 @@ t("and its edit link signs in", await e.evaluate(() => nc.isOwner));
   const up2 = A("update", panelPage.id, S + "/panel.html");
   const afterAgent = await (await fetch(panelPage.url)).text();
   t("an agent's update keeps the person added in the browser", !!up2.savedAt && afterAgent.includes(friend), JSON.stringify(up2));
-  t("and deletes the version it replaced", await until(async () => (await blobStatus(sha(shared))) === 404));
+  t("and keeps the version it replaced until nothing can be serving it", await blobStatus(sha(shared)) === 200);
 
   await q.goto(panelPage.url + "?fresh=1" + panelPage.editLink.slice(panelPage.url.length)); await ready(q);
   await q.click("#nc-sealed-menu"); await q.waitForSelector(".nc-ui [data-delete]");
@@ -318,7 +326,7 @@ t("KNOWN GAP: a script on the page can still navigate away with data", /leaked=M
 
 // Deleting.
 const gone = A("delete", made.id);
-t("delete removes the page's blob; the older versions were removed as it was saved", gone.deleted && gone.blobs.deleted === 1 && !gone.blobs.refused.length, JSON.stringify(gone));
+t("delete removes every version's blob, the retired ones too", gone.deleted && gone.blobs.deleted >= 2 && !gone.blobs.refused.length && await blobStatus(sha(served)) === 404 && await blobStatus(sha(after)) === 404, JSON.stringify(gone));
 const res = await fetch(made.url);
 t("and the gateway stops serving it", res.status === 404, res.status);
 t("the key is dropped from the ledger", !JSON.parse(readFileSync(S + "/home/ledger.json", "utf8")).artifacts[made.id].secret);

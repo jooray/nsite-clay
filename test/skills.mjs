@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { packAll } from "../tools/pack-skills.mjs";
+import { build } from "esbuild";
+import { artifactBuildOptions, ARTIFACT_OUT } from "../tools/artifact-build.mjs";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const SKILLS = join(ROOT, "skills");
@@ -32,7 +34,8 @@ function names(buf) {
 }
 
 const expected = {
-  "nsite-artifacts": ["SKILL.md", "assets/list.html", "hooks/guard.mjs", "scripts/artifact.mjs"],
+  "decision-board": ["SKILL.md", "LICENSE", "README.md", "CHANGELOG.md", "scripts/board.mjs", "scripts/config.mjs", "scripts/notify.mjs", "scripts/watch.sh", "scripts/lib/render.mjs", "references/schema.md", "references/config.md", "assets/examples/cover-image.json", "assets/examples/covers/a.webp", "locales/sk.json"],
+  "nsite-artifacts": ["SKILL.md", "assets/list.html", "hooks/guard.mjs", "scripts/artifact.mjs", "references/workspace.md"],
   "nsite-clay-web-builder": ["SKILL.md", "references/llms-edit.txt", "references/llms.txt"],
 };
 for (const [name, files] of Object.entries(expected)) {
@@ -63,6 +66,15 @@ for (const [ref, site] of [["llms.txt", "llms.txt"], ["llms-edit.txt", "llms-edi
 {
   const un = spawnSync("unzip", ["-p", join(tmp, "a", "nsite-artifacts.zip"), "nsite-artifacts/scripts/artifact.mjs"], { maxBuffer: 1 << 26 });
   if (!un.error) check(un.stdout.equals(readFileSync(join(SKILLS, "nsite-artifacts/scripts/artifact.mjs"))), "artifact.mjs in the zip equals the repo file");
+}
+
+// The bundled script is what bin/artifact.mjs builds to now. The tests run the
+// bundle, so a stale one would pass them and ship.
+{
+  const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+  const r = await build({ ...artifactBuildOptions(version), write: false });
+  const fresh = Buffer.from(r.outputFiles[0].contents);
+  check(fresh.equals(readFileSync(join(ROOT, ARTIFACT_OUT))), `${ARTIFACT_OUT} is built from the current bin/artifact.mjs (run npm run build)`);
 }
 
 // A deliberately bad skill is refused.
