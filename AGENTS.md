@@ -47,7 +47,8 @@ changes nothing for anybody's live site.
    is normally awake and approves unattended, so deploy as the last step of the
    release rather than handing it back to be done by hand. Ask only if the
    signer does not answer. Until this runs, no existing page can find the
-   release.
+   release. The deploy names `https://blossom.cypherpunk.today` first in
+   `--servers`, so every blob is also on the owner's own Blossom.
 7. **Publish to npm**, so `npx nsite-clay` gets the same version. The account
    uses a passkey, which npm can only ask for in a real terminal: hand the
    owner `npm publish --ignore-scripts` to run in their own terminal (the
