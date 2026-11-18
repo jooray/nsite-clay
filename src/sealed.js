@@ -184,14 +184,21 @@ export class Sealed {
     try { wraps = JSON.parse(doc.querySelector('script[type="application/nc-keys"]')?.textContent || "{}").wraps || []; } catch {}
     const policy = doc.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute("content") || "";
     if (!sealed) { this._lock("damaged"); return new Promise(() => {}); }
-    this.shell = { attrs, sealed, wraps, policy, title: doc.title, text };
+    const served = { attrs, sealed, wraps, policy, title: doc.title, text };
+    // A newer shell this tab fetched from Blossom because the gateway is still
+    // serving this one (see reopen). Tried first; this one is the fallback.
+    const newer = this._newer(served);
 
     const given = parseFragment(doc.location.hash);
     let kept = null;
     try { kept = JSON.parse(this._store()?.getItem(this._slot(attrs)) || "null"); } catch {}
-    for (const secret of [given, kept]) {
-      if (!secret || (!secret.edit && !secret.read)) continue;
-      if (await this._tryOpen(secret, "link")) return new Promise(() => {});
+    for (const shell of newer ? [newer.shell, served] : [served]) {
+      this.shell = shell;
+      this._served = shell === served ? null : newer.hash;
+      for (const secret of [given, kept]) {
+        if (!secret || (!secret.edit && !secret.read)) continue;
+        if (await this._tryOpen(secret, "link")) return new Promise(() => {});
+      }
     }
     this._lock(given.edit || given.read ? "wrong-key" : wraps.length ? "members" : "no-key");
     return new Promise(() => {});
@@ -209,8 +216,29 @@ export class Sealed {
     let plain;
     try { plain = await openText(this.shell.sealed, keys.K, where); } catch { return false; }
     try { this._store()?.setItem(this._slot(this.shell.attrs), JSON.stringify(secret)); } catch {}
-    this._write(plain, keys, via);
+    this._write(plain, keys, via, { served: this._served || null });
     return true;
+  }
+
+  // Where reopen leaves a newer shell for the next boot of this tab: one per page.
+  _newerSlot(attrs) { return "nsite-clay.newer:" + this._slot(attrs).slice("nsite-clay.sealed:".length); }
+
+  // The shell reopen left, when the address this tab is at asks for it (its
+  // ?v= is that shell's hash), it still hashes to that, it is this page's, and
+  // it is not what the gateway served anyway.
+  _newer(served) {
+    let got = null;
+    try {
+      const v = new URL(this.nc.doc.location.href).searchParams.get("v");
+      if (!v) return null;
+      got = JSON.parse(this._store()?.getItem(this._newerSlot(served.attrs)) || "null");
+      if (!got?.hash || got.hash.slice(0, 12) !== v || hashText(got.text) !== got.hash) return null;
+    } catch { return null; }
+    const next = parseShell(got.text);
+    if (!next || next.sealed === served.sealed) return null;
+    for (const a of ["nc:owner", "nc:site", "nc:path"]) if ((next.attrs[a] || "") !== (served.attrs[a] || "")) return null;
+    return { hash: got.hash, shell: { attrs: next.attrs, sealed: next.sealed, wraps: next.wraps,
+      policy: next.policy || served.policy, title: next.title, text: got.text } };
   }
 
   // A member with no link: their signer opens the key that was wrapped to them.
@@ -226,10 +254,10 @@ export class Sealed {
 
   // `via` is how it was opened. A page shared with keys and not by link must
   // not grow links because somebody opened its panel.
-  _write(plain, keys, via = "link") {
+  _write(plain, keys, via = "link", { served = null } = {}) {
     const doc = this.nc.doc;
     const win = doc.defaultView;
-    win[HANDOVER] = { keys, shell: this.shell, plain, via, member: via === "member" ? this._member || null : null };
+    win[HANDOVER] = { keys, shell: this.shell, plain, via, member: via === "member" ? this._member || null : null, served };
     try { this.nc.destroy(); } catch {}
     // The policy goes in first, so it governs everything the page brings. It is
     // the shell's policy, not anything from inside the ciphertext.
@@ -429,6 +457,56 @@ export class Sealed {
     const k = this.state?.keys;
     return k ? { read: `${base}#${fragmentOf(k, { edit: false })}`, edit: k.sk ? `${base}#${fragmentOf(k)}` : null } : null;
   }
+
+  /**
+   * Show a newer version of this page without asking the gateway for it.
+   *
+   * `text` is the shell the owner's manifest names for this path, fetched from
+   * Blossom by `hash` and checked against it by the caller. A gateway can go on
+   * serving the manifest it read hours ago, and with it the shell being
+   * replaced, so a reload there opens the old page again. So the newer shell
+   * is left in this tab's session storage and the tab reloads at the address
+   * that names its hash (?v=); the first boot there opens it in place of the
+   * shell the gateway sent (see open and _newer), and tells the page which
+   * bytes it shows. A reload and not a rewrite of this document: the page's own
+   * scripts have already run in this window, and running them again in it
+   * fails on every top-level `let` and `const` they declare.
+   *
+   * False, and nothing changed, when the shell is not this page's, does not
+   * open with this tab's key, links a runtime file this gateway does not serve
+   * yet (an upgrade the gateway has not caught up with: the page would come up
+   * without its engine), or cannot be kept for the reload.
+   */
+  async reopen(text, hash, url) {
+    if (!this.state) return false;
+    const next = parseShell(text);
+    if (!next) return false;
+    const now = this.state.shell.attrs;
+    for (const a of ["nc:owner", "nc:site", "nc:path"]) if ((next.attrs[a] || "") !== (now[a] || "")) return false;
+    let plain;
+    try { plain = await openText(next.sealed, this.state.keys.K, this.where(next.attrs)); } catch { return false; }
+    const doc = this.nc.doc;
+    const runtime = [...plain.matchAll(/<(?:script|link)\b[^>]*?\b(?:src|href)\s*=\s*["']?(\/[^"'\s>]+)/gi)]
+      .map((m) => m[1].split(/[?#]/)[0]).filter((p) => RUNTIME_PATH.test(p));
+    for (const p of new Set(runtime)) {
+      try {
+        const res = await fetch(new URL(p, doc.location.origin), { method: "HEAD", credentials: "same-origin" });
+        if (!res.ok) return false;
+      } catch { return false; }
+    }
+    const slot = this._newerSlot(now);
+    const kept = JSON.stringify({ hash, text });
+    try {
+      const store = this._store();
+      store.setItem(slot, kept);
+      if (store.getItem(slot) !== kept) return false;
+    } catch { return false; }
+    doc.location.replace(url);
+    return true;
+  }
+
+  /** The hash of the shell this document was opened from, when it is not what this address serves. */
+  get served() { return this.state?.served || null; }
 
   // ---- saving ------------------------------------------------------------
 

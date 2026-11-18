@@ -4,6 +4,7 @@
     "released": "2026-11-18",
     "notes": [
       "After you saved a page, it could stay broken for several hours with a \"Bad Gateway\" message, even though everything had been saved correctly. The previous version of the page was deleted at once, while the public gateway was still looking for it. Now the old version is kept for two days and removed only once the new one is confirmed on every relay and on the gateway.",
+      "When an open page said a newer version had been published, pressing Reload could bring back the old version for hours, because the server in front of the page had not caught up yet. Encrypted pages now fetch the newer version directly, other pages say they are waiting for the server, and the notice no longer comes back once you see the latest version.",
       "A save now checks that your page can really be read back from your storage servers before it is announced. If that check fails, the page keeps showing the version you had before instead of going dark.",
       "Several pages can now live inside one site, each with its own private link, so you no longer need a new site for every page. This is optional and changes nothing for the pages you already have."
     ]

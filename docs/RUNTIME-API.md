@@ -227,7 +227,11 @@ await nc.restore(snap)             // republish that version's path table as cur
 
 nc.editable.enable() / .disable()  // re-run enable() after inserting new [editable] nodes
 nc.editable.block("H2")            // what the block menu calls
-nc.reloadToLatest()                // reload through a URL no cache can satisfy
+nc.reloadToLatest(hash)            // reload through a URL no cache can satisfy (?v=<hash>), unchecked
+await nc.showLatest(hash, { onStatus, waitMs })
+                                   // what the newer-version notice's Reload does: reload when the
+                                   //   gateway serves `hash`; a sealed page fetches it from Blossom
+                                   //   instead; else ask again for waitMs (60 s). → "reloading" | false
 
 // blocks: a page built out of markup rather than out of rows
 nc.blocks.open() / .add(name, { container, before })
@@ -371,14 +375,29 @@ await nc.pages.newPage({ ai })       // the dialog; publishes and opens the page
 
 A gateway serves pages with a cache lifetime (an hour on nsite.lol, and the site has no say in it),
 so after a save the plain address of a page, or Back, can show it as it was. At its canonical
-address, unless `nc:autoreload="false"`, the runtime handles three cases:
+address, unless `nc:autoreload="false"`, the runtime handles four cases:
 
 - **An old copy as the page opens.** It compares the bytes the browser holds for this address (not a
   fresh fetch, which would always look current) with the manifest. When they differ and nothing is
-  unsaved, it asks the gateway until it serves the new bytes, then reloads at the same address.
+  unsaved, it asks the gateway until it serves the new bytes, then reloads at the same address (a
+  sealed page goes to Blossom instead, as below).
   Back and Forward from memory (`pageshow` with `persisted`) are checked the same way. This happens
   once per version per tab; if the old bytes come back again, the reader gets the banner instead
   of a loop.
+- **A gateway that is behind.** A gateway can go on serving the manifest it read before a save for
+  hours, so the page's address answers with the version being replaced and a reload opens it again
+  under the same notice. Reload in the notice (and a reader's automatic reload) therefore goes
+  through `nc.showLatest(hash)`: it reloads only once the gateway serves the new bytes, and asks
+  the address it reloads at (`?v=<hash>`) with `cache: "reload"` first, so an old copy the browser
+  kept there from an earlier attempt is not what opens. A sealed page does not wait for
+  the gateway at all: the shell is fetched from the Blossom servers the owner's manifest names,
+  checked against the hash, kept in the tab's session storage and opened by the next boot in place
+  of the shell the gateway sends; the page is told which bytes it shows, so it is not taken for an
+  old copy and its saves go through. Only the runtime files still come from the gateway, so when
+  the newer version links a runtime file the gateway does not serve yet, it waits like a plain page.
+  A plain page waits, saying so, and when the gateway has not caught up after a minute the notice
+  says the server is still sending the previous version and offers to try again. The notice goes
+  away as soon as the page on screen is the version the relays name.
 - **The browser that saved.** After a save or a restore, each changed page's addresses
   (`/about/index.html` and `/about/`, and this tab's own) are fetched with `cache: "reload"` until
   the gateway serves the new bytes, which leaves the cache holding them.

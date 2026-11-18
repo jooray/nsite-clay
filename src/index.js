@@ -866,10 +866,16 @@ class NsiteClay extends EventTarget {
     // The bytes on screen, which are what the browser keeps under this address,
     // not what the gateway would serve now. Asking the network here made a copy
     // kept from before a save look current, which is the copy this is for.
-    try {
-      const res = await fetch(this.doc.location.href, { cache: "force-cache" });
-      this._servedHash = hashText(await res.text());
-    } catch { return; }
+    // A sealed page opened from Blossom, past a gateway still serving the old
+    // shell (see showLatest), is the one exception: what this address holds is
+    // not what is on screen, and the handover says what is.
+    if (this.sealed.served) this._servedHash = this.sealed.served;
+    else {
+      try {
+        const res = await fetch(this.doc.location.href, { cache: "force-cache" });
+        this._servedHash = hashText(await res.text());
+      } catch { return; }
+    }
     const f = this.cfg.site
       ? { kinds: [35128], authors: [this.cfg.owner], "#d": [this.cfg.site] }
       : { kinds: [15128], authors: [this.cfg.owner] };
@@ -879,16 +885,19 @@ class NsiteClay extends EventTarget {
   }
 
   _onManifest(ev) {
+    if (ev.pubkey !== this.cfg.owner) return;
     if (this._manifest && this._manifest.created_at > ev.created_at) return;
     this._manifest = ev;
     const latest = manifestPaths(ev)[this.cfg.path];
     if (!latest || !this._servedHash) return;
     const tried = `nsite-clay.stale:${this.cfg.path}:${latest}`;
-    if (latest === this._servedHash) {         // we are the current version
-      try { this.doc.defaultView.sessionStorage.removeItem(tried); } catch {}
+    if (latest === this._servedHash || latest === this._ownHash) {
+      // We are the current version, or this tab saved it and is ahead. Any
+      // notice about an older one is out of date itself.
+      if (latest === this._servedHash) try { this.doc.defaultView.sessionStorage.removeItem(tried); } catch {}
+      this._clearOutdated();
       return;
     }
-    if (latest === this._ownHash) return;      // our own save; this tab is ahead
     this.doc.documentElement.setAttribute("nc:outdated", "true");
     this._emit("nsiteclay:outdated", { served: this._servedHash, latest });
     // Found as the page opened, this is an old copy the browser kept rather
@@ -904,8 +913,16 @@ class NsiteClay extends EventTarget {
       } catch {}
       if (!again && !this._reloadOffered) {
         this._reloadOffered = true;
-        this._refreshOne(this.doc.location.href, latest, 20000).then((ok) => {
-          if (ok && !this.dirty) return this.doc.location.reload();
+        // A sealed page can be opened from Blossom when the gateway is behind,
+        // so it does not wait for the gateway at all; see showLatest.
+        const done = this.sealed.state
+          ? this.showLatest(latest, { waitMs: 0 }).then((r) => r !== false)
+          : this._refreshOne(this.doc.location.href, latest, 20000).then((ok) => {
+            if (ok && !this.dirty) { this.doc.location.reload(); return true; }
+            return false;
+          });
+        done.catch(() => false).then((ok) => {
+          if (ok) return;
           this._reloadOffered = false;
           this._offerReload(latest);
         });
@@ -913,6 +930,15 @@ class NsiteClay extends EventTarget {
       }
     }
     this._offerReload(latest);
+  }
+
+  // The banner and the attribute go once the page on screen is the latest.
+  _clearOutdated() {
+    this.doc.documentElement.removeAttribute("nc:outdated");
+    this._reloadBanner?.remove();
+    this._reloadBanner = null;
+    clearInterval(this._reloadTick);
+    this._reloadOffered = false;
   }
 
   // A save changes what each of its pages' addresses should serve, while the
@@ -977,26 +1003,99 @@ class NsiteClay extends EventTarget {
       await new Promise((r) => setTimeout(r, gap));
       if (signal?.aborted) return false;
       onStatus({ attempt, waited: Math.round((waitMs - (until - Date.now())) / 1000) });
-      let served;
-      try {
-        const url = new URL(this.doc.location.href);
-        url.searchParams.set("v", String(Date.now()));
-        const res = await fetch(url.toString(), { cache: "reload" });
-        if (!res.ok) continue;
-        served = hashText(await res.text());
-      } catch { continue; }
-      if (served === hash) { this.reloadToLatest(hash); return true; }
+      const at = await this._serves(hash);
+      if (at) { this._goServed(hash, at); return true; }
     }
+    return false;
+  }
+
+  // The address reloadToLatest(hash) goes to.
+  _latestUrl(hash) {
+    const url = new URL(this.doc.location.href);
+    url.searchParams.set("v", String(hash || Date.now()).slice(0, 12));
+    return url.toString();
+  }
+
+  // Whether the gateway serves `hash` now, asked at an address nothing can have
+  // cached. When it does, the address reloadToLatest(hash) opens is asked too,
+  // with cache: "reload", because that is the entry the navigation will be
+  // answered from: an earlier reload there, while the gateway was behind, left
+  // the old bytes under it for the hour nsite.lol's cache header allows. Should
+  // that address still answer with them, the fresh one is opened instead.
+  async _serves(hash) {
+    const same = (res) => res.ok ? res.text().then((t) => hashText(t) === hash) : false;
+    const fresh = new URL(this.doc.location.href);
+    fresh.searchParams.set("v", String(Date.now()));
+    try {
+      if (!await same(await fetch(fresh.toString(), { cache: "reload", credentials: "same-origin" }))) return false;
+    } catch { return false; }
+    try {
+      if (await same(await fetch(this._latestUrl(hash), { cache: "reload", credentials: "same-origin" }))) return true;
+    } catch {}
+    return fresh.toString();
+  }
+
+  // Open what _serves found.
+  _goServed(hash, at) {
+    if (typeof at === "string") this.doc.location.replace(at);
+    else this.reloadToLatest(hash);
+  }
+
+  /**
+   * Show the version of this page the relays name, `hash`, and say how it went.
+   *
+   * What the banner's Reload does. A reload alone is not enough: the gateway
+   * can go on serving the manifest it read hours ago, so the address of this
+   * page answers with the bytes being replaced, and a reload opens the old
+   * page again under a banner saying there is a newer one.
+   *
+   * 1. When the gateway already serves `hash`, reload into it.
+   * 2. A sealed page is fetched from the Blossom servers the owner's manifest
+   *    names, checked against `hash`, and handed to the next boot of this tab,
+   *    which opens it with the key it holds instead of the shell the gateway
+   *    sends (Sealed.reopen). Only the runtime comes from the gateway.
+   * 3. Otherwise ask the gateway again, with a widening gap, for `waitMs`.
+   *
+   * Resolves "reloading" (the tab is on its way to the newer version), or
+   * false when the newer version could not be had in time; then nothing has
+   * changed and it is safe to offer the button again. `onStatus` is told
+   * "checking", "fetching", "waiting" (with `waited` in seconds) and "failed".
+   */
+  async showLatest(hash, { onStatus = () => {}, waitMs = 60000, signal } = {}) {
+    if (!hash) { this.reloadToLatest(); return "reloading"; }
+    onStatus({ step: "checking" });
+    let at = await this._serves(hash);
+    if (at) { this._goServed(hash, at); return "reloading"; }
+    if (this.sealed.state) {
+      onStatus({ step: "fetching" });
+      const m = this._manifest && manifestPaths(this._manifest)[this.cfg.path] === hash ? this._manifest : null;
+      const shellServers = (this.sealed.state.shell.attrs["nc:servers"] || "").split(/[,\s]+/).filter(Boolean);
+      const servers = [...new Set([...(m ? manifestServers(m) : []), ...this.cfg.servers, ...shellServers])];
+      try {
+        const text = await fetchVerified(servers, hash);
+        if (signal?.aborted) return false;
+        if (await this.sealed.reopen(text, hash, this._latestUrl(hash))) return "reloading";
+      } catch { /* no server had it; the gateway may still catch up */ }
+    }
+    const until = Date.now() + waitMs;
+    for (let attempt = 0; Date.now() < until; attempt++) {
+      if (signal?.aborted) return false;
+      await new Promise((r) => setTimeout(r, Math.min(2000 * Math.pow(1.4, attempt), 15000)));
+      if (signal?.aborted) return false;
+      onStatus({ step: "waiting", waited: Math.round((waitMs - (until - Date.now())) / 1000) });
+      at = await this._serves(hash);
+      if (at) { this._goServed(hash, at); return "reloading"; }
+    }
+    onStatus({ step: "failed" });
     return false;
   }
 
   // Reload through a fresh URL rather than location.reload(): the document and
   // its assets are served with a cache lifetime, and a plain reload is entitled
-  // to hand back the very bytes we are trying to replace.
+  // to hand back the very bytes we are trying to replace. It does not check
+  // what that address serves; showLatest does.
   reloadToLatest(hash) {
-    const url = new URL(this.doc.location.href);
-    url.searchParams.set("v", String(hash || Date.now()).slice(0, 12));
-    this.doc.location.replace(url.toString());
+    this.doc.location.replace(this._latestUrl(hash));
   }
 
   // Editing controls appear when the gate is open. With nc:edit-gate="hash"
@@ -1118,7 +1217,7 @@ class NsiteClay extends EventTarget {
   _offerReload(latest) {
     if (this._reloadOffered) return;
     this._reloadOffered = true;
-    const banner = this.doc.createElement("div");
+    const banner = this._reloadBanner = this.doc.createElement("div");
     banner.setAttribute("nc:chrome", "");       // never reaches a save
     banner.setAttribute("role", "status");
     banner.style.cssText = "position:fixed;z-index:2147483647;left:50%;bottom:1rem;" +
@@ -1130,13 +1229,52 @@ class NsiteClay extends EventTarget {
     btn.textContent = "Reload";
     btn.style.cssText = "font:inherit;cursor:pointer;border:1px solid #4a5560;background:#1c2329;" +
       "color:inherit;border-radius:7px;padding:.25rem .7rem";
-    btn.onclick = () => this.reloadToLatest(latest);
     banner.append(msg, btn);
     this.doc.body.appendChild(banner);
 
     const lang = ["en", "es", "sk", "cs"].indexOf((this.doc.documentElement.lang || "en").slice(0, 2).toLowerCase());
     const say = (words) => words[Math.max(lang, 0)];
     btn.textContent = say(["Reload", "Recargar", "Načítať znova", "Načíst znovu"]);
+    // Not a bare reload: the gateway may still be serving the version this
+    // replaces, and then a reload shows it again under this same notice. See
+    // showLatest, which says what it is doing, and says so when it could not.
+    let busy = false;
+    const go = async () => {
+      if (busy) return;
+      if (this.dirty && !this.doc.defaultView.confirm(say([
+        "Reloading discards your unsaved changes. Reload anyway?",
+        "Al recargar se pierden los cambios sin guardar. ¿Recargar de todos modos?",
+        "Opätovné načítanie zahodí neuložené zmeny. Načítať aj tak?",
+        "Opětovné načtení zahodí neuložené změny. Načíst i tak?"]))) return;
+      busy = true;
+      clearInterval(this._reloadTick);
+      btn.disabled = true;
+      const onStatus = ({ step, waited }) => {
+        if (step === "waiting") {
+          msg.textContent = say([`Waiting for the server to send the newer version (${waited} s)…`,
+            `Esperando a que el servidor envíe la versión más reciente (${waited} s)…`,
+            `Čaká sa, kým server pošle novšiu verziu (${waited} s)…`,
+            `Čeká se, až server pošle novější verzi (${waited} s)…`]);
+        } else if (step !== "failed") {
+          msg.textContent = say(["Getting the newer version…", "Obteniendo la versión más reciente…",
+            "Načítava sa novšia verzia…", "Načítá se novější verze…"]);
+        }
+      };
+      // Asked already, so the browser's own leave-the-page prompt does not ask again.
+      const wasDirty = this.dirty;
+      this._dirty = false;
+      const done = await this.showLatest(latest, { onStatus }).catch(() => false);
+      if (done) return;
+      if (wasDirty) this._dirty = true;
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = say(["Try again", "Reintentar", "Skúsiť znova", "Zkusit znovu"]);
+      msg.textContent = say(["The server is still sending the previous version of this page. Try again in a few minutes.",
+        "El servidor todavía envía la versión anterior de esta página. Inténtelo de nuevo dentro de unos minutos.",
+        "Server stále posiela predchádzajúcu verziu tejto stránky. Skúste to znova o pár minút.",
+        "Server stále posílá předchozí verzi této stránky. Zkuste to znovu za pár minut."]);
+    };
+    btn.onclick = go;
     if (this.dirty) {
       msg.textContent = say(["A newer version of this page was published. You have unsaved changes.",
         "Se publicó una versión más reciente de esta página. Tiene cambios sin guardar.",
@@ -1155,12 +1293,24 @@ class NsiteClay extends EventTarget {
         "Někdo tuto stránku změnil. Načtěte ji znovu a uvidíte změny."]);
       return;
     }
+    // A reader's copy follows by itself. Through showLatest, so a gateway that
+    // keeps serving the old bytes ends in the notice above and not in a page
+    // that reloads every few seconds forever.
     let n = 5;
-    msg.textContent = `A newer version was published. Reloading in ${n}…`;
-    const tick = setInterval(() => {
-      if (this.dirty) { clearInterval(tick); msg.textContent = "A newer version was published."; return; }
-      if (--n <= 0) { clearInterval(tick); this.reloadToLatest(latest); return; }
-      msg.textContent = `A newer version was published. Reloading in ${n}…`;
+    const counting = () => say([`A newer version was published. Reloading in ${n}…`,
+      `Se publicó una versión más reciente. Se recarga en ${n}…`,
+      `Bola zverejnená novšia verzia. Načíta sa o ${n}…`,
+      `Byla zveřejněna novější verze. Načte se za ${n}…`]);
+    msg.textContent = counting();
+    const tick = this._reloadTick = setInterval(() => {
+      if (this.dirty) {
+        clearInterval(tick);
+        msg.textContent = say(["A newer version was published.", "Se publicó una versión más reciente.",
+          "Bola zverejnená novšia verzia.", "Byla zveřejněna novější verze."]);
+        return;
+      }
+      if (--n <= 0) { clearInterval(tick); go(); return; }
+      msg.textContent = counting();
     }, 1000);
   }
 
