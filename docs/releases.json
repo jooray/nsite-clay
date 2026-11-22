@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.4.2",
+    "released": "2026-11-22",
+    "notes": [
+      "You can now change the title of your page and its small icon (the favicon) in Settings, without touching the page's source. The title is what shows in the browser tab and when the page is shared. For the icon you can paste an address or upload a picture."
+    ]
+  },
+  {
     "version": "0.4.1",
     "released": "2026-11-22",
     "notes": [
