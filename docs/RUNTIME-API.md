@@ -26,7 +26,7 @@ carrying a `ready` promise. Everything else is safe once that resolves.
 |---|---|---|
 | `nc:owner` | yes | npub or 64-hex of the key allowed to save this document |
 | `nc:relays` | no | comma list. Default `wss://nos.lol,wss://relay.damus.io,wss://relay.primal.net` |
-| `nc:servers` | no | comma list of Blossom servers. Default `https://nostr.download,https://blossom.yakihonne.com` |
+| `nc:servers` | no | comma list of Blossom servers. Default `https://nostr.download,https://blossom.yakihonne.com`. The owner can change the list in Settings (not on a sealed page); the change is saved with the page |
 | `nc:site` | no | nsite `d` tag. Absent means the root site (kind 15128); set means a named site (kind 35128), 1 to 13 characters of `[a-z0-9-]` |
 | `nc:path` | no | this document's path inside the manifest. Default `/index.html` |
 | `autosave` | no | save once edits settle (2.5 s debounce, 15 s throttle). `⌘S` / `Ctrl+S` works either way |

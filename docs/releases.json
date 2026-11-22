@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.4.1",
+    "released": "2026-11-22",
+    "notes": [
+      "You can now change which storage servers (Blossom servers) your page is kept on. Servers sometimes change their address or shut down, and until now a page that depended on one had to be edited by hand in its source. Open Settings, replace the addresses in the new list, and save the page. A mistyped address is refused with a message instead of being saved."
+    ]
+  },
+  {
     "version": "0.4.0",
     "released": "2026-11-18",
     "notes": [

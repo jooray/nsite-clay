@@ -7,7 +7,7 @@
 // are visible in the markup, and a save persists them like everything else.
 //
 // Nothing private goes here. Anyone can read a published page.
-import { modal, checkbox, toast } from "./ui.js";
+import { modal, checkbox, field, toast } from "./ui.js";
 import { agentRow } from "./agent-brief.js";
 
 // The one line here that is about this browser rather than this page. It is
@@ -22,7 +22,39 @@ const WORDS = {
     "Este navegador recuerda que el propietario inició sesión aquí y mantiene la sesión hasta que pase una hora sin usarla, así que las demás páginas se abren con la sesión iniciada. Al desmarcar esta casilla o al cerrar sesión se olvidan las dos cosas.",
     "Tento prehliadač si pamätá, že sa tu prihlásil vlastník, a nechá ho prihláseného, kým neprejde hodina bez použitia, takže ďalšie stránky sa otvoria už prihlásené. Zrušením tejto voľby alebo odhlásením sa zabudne oboje.",
     "Tento prohlížeč si pamatuje, že se tu přihlásil vlastník, a nechá ho přihlášeného, dokud neuplyne hodina bez použití, takže další stránky se otevřou už přihlášené. Zrušením této volby nebo odhlášením se zapomene obojí."],
+  servers: ["Blossom servers (one address per line)", "Servidores Blossom (una dirección por línea)",
+    "Servery Blossom (jedna adresa na riadok)", "Servery Blossom (jedna adresa na řádek)"],
+  serversNote: ["Where this page's files are stored. If one of them changes its address or shuts down, replace it here and save the page: the files are uploaded to the new list. The first one that answers is used.",
+    "Donde se guardan los archivos de esta página. Si uno cambia de dirección o cierra, sustitúyelo aquí y guarda la página: los archivos se suben a la nueva lista. Se usa el primero que responda.",
+    "Kde sú uložené súbory tejto stránky. Ak niektorý zmení adresu alebo zanikne, nahraďte ho tu a stránku uložte: súbory sa nahrajú na nový zoznam. Použije sa prvý, ktorý odpovie.",
+    "Kde jsou uloženy soubory této stránky. Pokud některý změní adresu nebo zanikne, nahraďte ho tady a stránku uložte: soubory se nahrají na nový seznam. Použije se první, který odpoví."],
+  serversBad: ["is not a web address. Use something like https://blossom.example.com",
+    "no es una dirección web. Usa algo como https://blossom.example.com",
+    "nie je webová adresa. Použite napríklad https://blossom.example.com",
+    "není webová adresa. Použijte například https://blossom.example.com"],
+  serversNone: ["Keep at least one Blossom server, or the page has nowhere to be stored.",
+    "Deja al menos un servidor Blossom, o la página no tendrá dónde guardarse.",
+    "Ponechajte aspoň jeden server Blossom, inak sa stránka nemá kde uložiť.",
+    "Ponechte alespoň jeden server Blossom, jinak se stránka nemá kam uložit."],
 };
+
+// One address per line (commas and spaces also work). Returns the cleaned
+// list, or throws a message naming the entry that is not a web address.
+export function parseServers(text, say = (k) => k) {
+  const out = [];
+  for (const raw of String(text || "").split(/[\s,]+/).filter(Boolean)) {
+    let u;
+    try { u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : "https://" + raw); } catch { u = null; }
+    const local = u && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname);
+    if (!u || !(u.protocol === "https:" || (u.protocol === "http:" && local)) || !u.hostname) {
+      throw new Error(`${raw} ${say("serversBad")}`);
+    }
+    const url = u.origin + (u.pathname === "/" ? "" : u.pathname.replace(/\/+$/, ""));
+    if (!out.includes(url)) out.push(url);
+  }
+  if (!out.length) throw new Error(say("serversNone"));
+  return out;
+}
 
 export class Settings {
   constructor(nc) {
@@ -63,6 +95,17 @@ export class Settings {
     this.nc._emit("nsiteclay:settings", { editGate: m });
   }
 
+  // The Blossom servers the page's files live on. A server can change its
+  // domain or close, and a page that cannot be saved to any of its servers is
+  // stuck, so the owner can replace them without touching the markup.
+  get servers() { return this.nc.cfg.servers.slice(); }
+  set servers(list) {
+    this.root.setAttribute("nc:servers", list.join(","));
+    this.nc.cfg.servers = list.slice();
+    this.nc.dirty = true;
+    this.nc._emit("nsiteclay:settings", { servers: list.slice() });
+  }
+
   // The front door to a runtime upgrade. It has to be here rather than on the
   // toolbar: the toolbar is markup in the document, so a page published before a
   // button existed will never grow one, whereas every template already carries a
@@ -91,7 +134,10 @@ export class Settings {
 
   async open() {
     const before = { autosave: this.autosave, editGate: this.editGate };
-    let autosave, gate, remember;
+    let autosave, gate, remember, servers;
+    // A sealed page keeps its servers in its shell, which a save does not
+    // rewrite from here, so the field is only offered on an ordinary page.
+    const editServers = !this.nc.sealed?.active;
     const out = await modal({
       doc: this.doc,
       title: "Page settings",
@@ -110,6 +156,14 @@ export class Settings {
           remember = checkbox(body, { label: this.say("remember"), checked: this.nc.editorRemembered,
             note: this.say("rememberNote") });
         }
+        if (editServers) {
+          servers = field(body, { label: this.say("servers"), rows: 3, value: this.servers.join("\n") });
+          servers.spellcheck = false;
+          const note = this.doc.createElement("p");
+          note.className = "nc-hint";
+          note.textContent = this.say("serversNote");
+          body.append(note);
+        }
         this.runtimeRow(body);
         const ai = this.doc.createElement("button"); ai.type = "button";
         ai.textContent = this.nc.ai.say("settings"); ai.onclick = () => this.nc.ai.settings();
@@ -119,7 +173,8 @@ export class Settings {
         agentRow(this.nc, body);
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always",
-        remember: remember ? remember.checked : undefined }),
+        remember: remember ? remember.checked : undefined,
+        servers: servers ? parseServers(servers.value, (k) => this.say(k)) : undefined }),
     });
     if (!out) return null;
     // A browser preference, not a page attribute: it takes effect now and there
@@ -127,7 +182,9 @@ export class Settings {
     if (out.remember !== undefined && out.remember !== this.nc.editorRemembered) this.nc.rememberEditor(out.remember);
     if (out.autosave !== before.autosave) this.autosave = out.autosave;
     if (out.editGate !== before.editGate) this.editGate = out.editGate;
-    if (out.autosave !== before.autosave || out.editGate !== before.editGate) {
+    const serversChanged = !!out.servers && out.servers.join(",") !== this.servers.join(",");
+    if (serversChanged) this.servers = out.servers;
+    if (out.autosave !== before.autosave || out.editGate !== before.editGate || serversChanged) {
       toast("Settings changed. Save the page to keep them.", { doc: this.doc });
     }
     return out;
