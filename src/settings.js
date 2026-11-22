@@ -22,6 +22,16 @@ const WORDS = {
     "Este navegador recuerda que el propietario inició sesión aquí y mantiene la sesión hasta que pase una hora sin usarla, así que las demás páginas se abren con la sesión iniciada. Al desmarcar esta casilla o al cerrar sesión se olvidan las dos cosas.",
     "Tento prehliadač si pamätá, že sa tu prihlásil vlastník, a nechá ho prihláseného, kým neprejde hodina bez použitia, takže ďalšie stránky sa otvoria už prihlásené. Zrušením tejto voľby alebo odhlásením sa zabudne oboje.",
     "Tento prohlížeč si pamatuje, že se tu přihlásil vlastník, a nechá ho přihlášeného, dokud neuplyne hodina bez použití, takže další stránky se otevřou už přihlášené. Zrušením této volby nebo odhlášením se zapomene obojí."],
+  title: ["Page title (shown in the browser tab and in search results)", "Título de la página (se muestra en la pestaña del navegador y en los buscadores)",
+    "Názov stránky (zobrazuje sa na karte prehliadača a vo vyhľadávaní)", "Název stránky (zobrazuje se na kartě prohlížeče a ve vyhledávání)"],
+  icon: ["Favicon (address of a small picture)", "Favicon (dirección de una imagen pequeña)",
+    "Favicon (adresa malého obrázka)", "Favicon (adresa malého obrázku)"],
+  iconUpload: ["Upload a picture…", "Subir una imagen…", "Nahrať obrázok…", "Nahrát obrázek…"],
+  iconUploading: ["Uploading…", "Subiendo…", "Nahráva sa…", "Nahrává se…"],
+  iconBad: ["The favicon is not a web address or a picture. Use https://… or upload one.",
+    "El favicon no es una dirección web ni una imagen. Usa https://… o sube una.",
+    "Favicon nie je webová adresa ani obrázok. Použite https://… alebo nahrajte obrázok.",
+    "Favicon není webová adresa ani obrázek. Použijte https://… nebo nahrajte obrázek."],
   servers: ["Blossom servers (one address per line)", "Servidores Blossom (una dirección por línea)",
     "Servery Blossom (jedna adresa na riadok)", "Servery Blossom (jedna adresa na řádek)"],
   serversNote: ["Where this page's files are stored. If one of them changes its address or shuts down, replace it here and save the page: the files are uploaded to the new list. The first one that answers is used.",
@@ -54,6 +64,18 @@ export function parseServers(text, say = (k) => k) {
   }
   if (!out.length) throw new Error(say("serversNone"));
   return out;
+}
+
+// The favicon is whatever <link rel="icon"> says, or nothing.
+export function iconLink(doc) { return doc.querySelector('link[rel~="icon" i]'); }
+
+export function parseIcon(text, say = (k) => k) {
+  const v = String(text || "").trim();
+  if (!v) return "";
+  if (/^data:image\//i.test(v) || /^\/(?!\/)/.test(v)) return v;
+  let u; try { u = new URL(v); } catch { u = null; }
+  if (!u || !(u.protocol === "https:" || (u.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(u.hostname)))) throw new Error(say("iconBad"));
+  return u.href;
 }
 
 export class Settings {
@@ -95,6 +117,29 @@ export class Settings {
     this.nc._emit("nsiteclay:settings", { editGate: m });
   }
 
+  get title() { return this.doc.title || ""; }
+  set title(text) {
+    this.doc.title = text;
+    // A share preview that still shows the old name would contradict the tab.
+    for (const m of this.doc.querySelectorAll('meta[property="og:title"], meta[name="twitter:title"]')) m.setAttribute("content", text);
+    this.nc.dirty = true;
+    this.nc._emit("nsiteclay:settings", { title: text });
+  }
+
+  get icon() { return iconLink(this.doc)?.getAttribute("href") || ""; }
+  set icon(href) {
+    let link = iconLink(this.doc);
+    if (!href) link?.remove();
+    else {
+      if (!link) { link = this.doc.createElement("link"); link.setAttribute("rel", "icon"); this.doc.head.appendChild(link); }
+      link.setAttribute("href", href);
+      link.removeAttribute("type");          // the old type would no longer describe the new file
+      link.removeAttribute("sizes");
+    }
+    this.nc.dirty = true;
+    this.nc._emit("nsiteclay:settings", { icon: href });
+  }
+
   // The Blossom servers the page's files live on. A server can change its
   // domain or close, and a page that cannot be saved to any of its servers is
   // stuck, so the owner can replace them without touching the markup.
@@ -134,7 +179,7 @@ export class Settings {
 
   async open() {
     const before = { autosave: this.autosave, editGate: this.editGate };
-    let autosave, gate, remember, servers;
+    let autosave, gate, remember, servers, title, icon;
     // A sealed page keeps its servers in its shell, which a save does not
     // rewrite from here, so the field is only offered on an ordinary page.
     const editServers = !this.nc.sealed?.active;
@@ -156,6 +201,22 @@ export class Settings {
           remember = checkbox(body, { label: this.say("remember"), checked: this.nc.editorRemembered,
             note: this.say("rememberNote") });
         }
+        title = field(body, { label: this.say("title"), value: this.title });
+        icon = field(body, { label: this.say("icon"), value: this.icon.startsWith("data:") ? "" : this.icon,
+          placeholder: this.icon.startsWith("data:") ? "(built in)" : "https://…" });
+        const pick = this.doc.createElement("input");
+        pick.type = "file"; pick.accept = "image/*"; pick.hidden = true;
+        const up = this.doc.createElement("button");
+        up.type = "button"; up.textContent = this.say("iconUpload");
+        up.onclick = () => pick.click();
+        pick.onchange = async (e) => {
+          const file = pick.files?.[0]; if (!file) return;
+          up.disabled = true; up.textContent = this.say("iconUploading");
+          try { icon.value = (await this.nc.media.upload(file)).url; }
+          catch (err) { toast(String(err.message || err), { doc: this.doc }); }
+          finally { up.disabled = false; up.textContent = this.say("iconUpload"); pick.value = ""; }
+        };
+        body.append(up, pick);
         if (editServers) {
           servers = field(body, { label: this.say("servers"), rows: 3, value: this.servers.join("\n") });
           servers.spellcheck = false;
@@ -174,6 +235,9 @@ export class Settings {
       },
       onSubmit: () => ({ autosave: autosave.checked, editGate: gate.checked ? "hash" : "always",
         remember: remember ? remember.checked : undefined,
+        title: title.value.trim() || this.title,
+        // Left as it was when the box was left alone, so a built-in icon survives.
+        icon: icon.value.trim() === (this.icon.startsWith("data:") ? "" : this.icon) ? undefined : parseIcon(icon.value, (k) => this.say(k)),
         servers: servers ? parseServers(servers.value, (k) => this.say(k)) : undefined }),
     });
     if (!out) return null;
@@ -184,7 +248,11 @@ export class Settings {
     if (out.editGate !== before.editGate) this.editGate = out.editGate;
     const serversChanged = !!out.servers && out.servers.join(",") !== this.servers.join(",");
     if (serversChanged) this.servers = out.servers;
-    if (out.autosave !== before.autosave || out.editGate !== before.editGate || serversChanged) {
+    const titleChanged = out.title !== this.title;
+    if (titleChanged) this.title = out.title;
+    const iconChanged = out.icon !== undefined;
+    if (iconChanged) this.icon = out.icon;
+    if (out.autosave !== before.autosave || out.editGate !== before.editGate || serversChanged || titleChanged || iconChanged) {
       toast("Settings changed. Save the page to keep them.", { doc: this.doc });
     }
     return out;

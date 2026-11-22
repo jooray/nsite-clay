@@ -10,7 +10,7 @@ import { chromium } from "playwright";
 const NSEC = "nsec1064etpv2gs3ttywm7w5enrqdssdg6dawz9fxz0vs34ac545l6jfqk3987y";
 const NPUB = "npub16kwfcualkq4kz6vgs8tze0j4jkpgs53h48ghmpnj80s7cvfjspwsh4uk9u";
 const html = `<!doctype html><html lang="en" nc:owner="${NPUB}" nc:servers="https://old.example,https://gone.example" ` +
-  `nc:runtime-owner="off" nc:autoreload="false"><head><title>T</title></head><body><main><p editable>x</p></main>` +
+  `nc:runtime-owner="off" nc:autoreload="false"><head><title>T</title><meta property="og:title" content="T"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg/%3E"></head><body><main><p editable>x</p></main>` +
   `<script src="/nsite-clay.js"></script></body></html>`;
 const server = createServer((q, r) => {
   const p = new URL(q.url, "http://l").pathname;
@@ -60,6 +60,30 @@ try {
   }));
   t("the document and the running config take the cleaned list",
     s.attr === "https://old.example,https://blossom.new.example" && s.cfg.join() === s.attr && s.dirty && s.saved, JSON.stringify(s));
+
+  // The title and the favicon, from the same dialog.
+  await open();
+  const box = await p.inputValue("dialog.nc-ui input[type=text]");
+  t("the title field starts with the page's title", box === "T", box);
+  const inputs = p.locator("dialog.nc-ui input[type=text]");
+  await inputs.nth(0).fill("Bakery");
+  await inputs.nth(1).fill("javascript:alert(1)");
+  await p.click("dialog.nc-ui .nc-primary");
+  t("a favicon that is not an image address is refused", /favicon/i.test(await p.textContent("dialog.nc-ui .nc-status")));
+  await inputs.nth(1).fill("https://cdn.example/icon.png");
+  await p.click("dialog.nc-ui .nc-primary");
+  await p.waitForSelector("dialog.nc-ui", { state: "detached" });
+  const f = await p.evaluate(() => ({ title: document.title, og: document.querySelector('meta[property="og:title"]').content,
+    icon: document.querySelector('link[rel~="icon"]').outerHTML, saved: nc.getHTML() }));
+  t("title and favicon change in the document", f.title === "Bakery" && f.og === "Bakery" &&
+    f.icon === '<link rel="icon" href="https://cdn.example/icon.png">' && /<title>Bakery<\/title>/.test(f.saved), JSON.stringify(f).slice(0, 300));
+
+  // Leaving the favicon box alone keeps a built-in icon.
+  await p.evaluate(() => nc.settings.icon = "data:image/svg+xml,%3Csvg/%3E");
+  await open();
+  await p.click("dialog.nc-ui .nc-primary");
+  await p.waitForSelector("dialog.nc-ui", { state: "detached" });
+  t("an untouched built-in favicon is kept", await p.evaluate(() => nc.settings.icon.startsWith("data:image/svg+xml")));
 } finally {
   await browser.close(); server.close();
 }
